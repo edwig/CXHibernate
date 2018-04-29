@@ -280,20 +280,33 @@ CXSession::InsertObject(CXObject* p_object)
   else
   {
     // Insert as a SOAP Message
+    // InsertObjectFromInternet(table,p_object);
     return false;
   }
   // Add object to the cache
   if(p_object->IsPersistent())
   {
-    AddObjectInCache(p_object,p_object->GetPrimaryKey());
+    return AddObjectInCache(p_object,p_object->GetPrimaryKey());
   }
-  return true;
+  return false;
 }
 
 bool
 CXSession::DeleteObject(CXObject* p_object)
 {
-  return false;
+  CXTable* table = p_object->BelongsToTable();
+
+  if (m_master)
+  {
+    DeleteObjectInDatabase(table,p_object);
+  }
+  else
+  {
+    // DeleteObjectFromInternet(table,p_object);
+    return false;
+  }
+
+  return RemoveObjectFromCache(p_object,p_object->GetPrimaryKey());
 }
 
 
@@ -318,6 +331,11 @@ CXSession::ClearCache(CString p_table /*= ""*/)
   {
     if (p_table.IsEmpty() || p_table.CompareNoCase(it->first) == 0)
     {
+      for(auto& object : *it->second)
+      {
+        delete object.second;
+      }
+      it->second->clear();
       delete it->second;
       it = m_cache.erase(it);
     }
@@ -362,6 +380,30 @@ CXSession::AddObjectInCache(CXObject* p_object, VariantSet& p_primary)
     if(tit == it->second->end())
     {
       it->second->insert(std::make_pair(hash,p_object));
+      return true;
+    }
+  }
+  return false;
+}
+
+// And remove again from the cache
+bool
+CXSession::RemoveObjectFromCache(CXObject* p_object, VariantSet& p_primary)
+{
+  CString hash = CXPrimaryHash(p_primary);
+  CString tableName = p_object->BelongsToTable()->TableName();
+  tableName.MakeLower();
+
+  CXCache::iterator it = m_cache.find(tableName);
+  if (it != m_cache.end())
+  {
+    TableCache* tcache = it->second;
+    TableCache::iterator tit = tcache->find(hash);
+    if (tit != tcache->end())
+    {
+      // Destroy the CXObject derived object
+      delete tit->second;
+      tcache->erase(tit);
       return true;
     }
   }
@@ -590,5 +632,35 @@ CXSession::InsertObjectInDatabase(CXTable* p_table,CXObject* p_object)
   record->Inserted();
 
   // Go save the record
+  return dset->Synchronize(m_mutation);
+}
+
+bool
+CXSession::DeleteObjectInDatabase(CXTable* p_table,CXObject* p_object)
+{
+  // Getting the database record
+  SQLDataSet*  dset = p_table->GetDataSet();
+  SQLRecord* record = p_object->GetDatabaseRecord();
+  if(record == nullptr || dset == nullptr)
+  {
+    return false;
+  }
+
+  // If object was **NOT** in the database, removal did work ok
+  if(p_object->IsPersistent() == false)
+  {
+    return true;
+  }
+
+  // Set the record to the delete status
+  record->Delete();
+
+  // New mutation ID for this update action
+  ++m_mutation;
+
+  // BEWARE: We need not "Serialize" our object
+  // We take the assumption that the primary key is "immutable"
+
+  // Go delete the record
   return dset->Synchronize(m_mutation);
 }

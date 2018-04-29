@@ -128,22 +128,22 @@ namespace UnitTest
       if(OpenSession())
       {
         CXTable* test_numbers = m_session.FindTable("test_number");
-        TestNumber numbers(test_numbers);
-        numbers.SetID(10);
-        numbers.SetField1(42);
-        numbers.SetField2(89975.123);
-        numbers.SetField3("300.77");
+        TestNumber* numbers = new TestNumber(test_numbers);
+        numbers->SetID(10);
+        numbers->SetField1(42);
+        numbers->SetField2(89975.123);
+        numbers->SetField3("300.77");
 
         // Insert this object in the database
-        m_session.InsertObject(&numbers);
+        m_session.InsertObject(numbers);
 
         // Test that it is in the database
         int num = TestRecordCount("test_number","id",10);
         Assert::AreEqual(num,1);
         Logger::WriteMessage("Test_number record 10 Inserted!");
 
-        // Delete the object again
-        m_session.DeleteObject(&numbers);
+        // Delete the object again and destroy the derived object!
+        m_session.DeleteObject(numbers);
 
         // Test that it is gone
         num = TestRecordCount("test_number", "id", 10);

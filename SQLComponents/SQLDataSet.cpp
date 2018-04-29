@@ -1207,6 +1207,11 @@ SQLDataSet::Deletes(int p_mutationID)
                              ++deletes;
                              break;
       }
+      // Iterator cannot continue after last removed item
+      if(m_records.empty())
+      {
+        break;
+      }
     }
     else
     {
@@ -1569,12 +1574,12 @@ SQLDataSet::ForgetRecord(SQLRecord* p_record,bool p_force)
   RecordSet::iterator it = find(m_records.begin(),m_records.end(),p_record);
   if(it != m_records.end())
   {
+    // Remove from m_objects. Maybe does nothing!
+    ForgetPrimaryObject(p_record);
+
     // Try to release the record
     if(p_record->Release())
     {
-      // Remove from m_objects. Maybe does nothing!
-      ForgetPrimaryObject(p_record);
-
       // Remove from m_records
       m_records.erase(it);
 

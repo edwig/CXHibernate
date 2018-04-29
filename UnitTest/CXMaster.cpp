@@ -33,27 +33,27 @@ CXMaster::DeSerialize(SOAPMessage& p_msg)
 void
 CXMaster::Serialize(SQLRecord& p_record,int p_mutation /*= 0*/)
 {
-  CXObject::PreSerialize(p_record);
+  PreSerialize(p_record);
 
   p_record.ModifyField("id",          m_id,         p_mutation);
   p_record.ModifyField("invoice",     m_invoice,    p_mutation);
   p_record.ModifyField("description", m_description,p_mutation);
   p_record.ModifyField("total",       m_total,      p_mutation);
 
-  CXObject::PostSerialize(p_record);
+  PostSerialize(p_record);
 }
 
 void
 CXMaster::DeSerialize(SQLRecord& p_record)
 {
-  CXObject::PreDeSerialize(p_record);
+  PreDeSerialize(p_record);
 
   m_id          = (long)    p_record["id"];
   m_invoice     = (long)    p_record["invoice"];
   m_description = (CString) p_record["description"];
   m_total       = (bcd)     p_record["total"];
 
-  CXObject::PostDeSerialize(p_record);
+  PostDeSerialize(p_record);
 }
 
 // Setters

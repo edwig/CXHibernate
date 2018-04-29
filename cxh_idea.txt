@@ -1,0 +1,125 @@
+Marlin-SOAP => ServiceDataSet => SQLComponents => ODBC Database
+Marlin-SOAP <= ServiceDataSet <= SQLComponents <= ODBC Database
+
+<Envelope>
+<Header>
+   <Action>Update</Action>
+</Header>
+<Body>
+  <Entity name="master_Entity">
+    <Primary>
+      <Column name="ID"  type="int">45</Column>
+	  <Column name="ORG" type="string">A</Column>
+	</Primary>
+  
+    <Column name="Budget"  type="decimal">15000000</Column>
+	<Column name="Address" type="string">J.F. Kennedy Avenue 15</Column>
+  </Entity>
+</Body>
+</Envelope>
+
+=> Transforms to
+
+
+Update master_Entity
+   set budget  = 1500000
+      ,address = 'J.F. Kennedy Avenue 15'
+ where id  = 45
+   and org = 'A';
+   
+ 
+
+
+<Envelope>
+<Header>
+   <Action>Insert</Action>
+</Header>
+<Body>
+  <Entity name="master_Entity">
+    <Primary>
+      <Column name="ID"  type="int">45</Column>
+      <Column name="ORG" type="string">A</Column>
+    </Primary>
+    <Column name="Budget"  type="decimal">15000000</Column>
+    <Column name="Address" type="string">J.F. Kennedy Avenue 15</Column>
+  </Entity>
+</Body>
+</Envelope>
+
+=> Transforms to
+
+insert into master_Entity(id,org,budget,address)
+values (45,'A',15000000,'J.F. Kennedy Avenue 15');
+
+<Envelope>
+<Header>
+   <Action>Delete</Action>
+</Header>
+<Body>
+  <Entity name="master_Entity">
+    <Primary>
+      <Column name="ID"  type="int">45</Column>
+      <Column name="ORG" type="string">A</Column>
+    </Primary>
+  </Entity>
+</Body>
+</Envelope>
+
+=> Transforms to
+
+delete from master_Entity
+ where id  = 45
+   and org = 'A';
+
+  
+  
+<Envelope>
+<Header>
+  <Action>Select</Action>
+</Header>
+<Body>
+  <Entity name="master_table">
+     <Filter>
+	   <Column>ID</Column>
+	   <Operator>=</Operator>
+	   <Value>24</Value>
+     </Filter>
+  </Entity>
+</Body>
+</Envelope>  
+
+=> Transforms to
+
+SELECT *
+  FROM master_table
+ WHERE id = 24;
+ 
+<Envelope>
+<Header>
+  <Action>SET</Action>
+</Header>
+<Body>
+  <SET>
+    <Entity name="master_table">
+      <Column name="ID"      type="int">45</Column>
+      <Column name="ORG"     type="string">A</Column>
+      <Column name="Budget"  type="decimal">15000000</Column>
+	    <Column name="Address" type="string">J.F. Kennedy Avenue 15</Column>
+    </Entity>
+  </SET>
+</Body>
+ 
+ 
+ 
+ --------------------                            ----------------------
+ SET CLIENT                                      SET MASTER
+ 
+ 1) Status: STABLE             <-                STATUS: STABLE
+ 2) Status: UDATE 
+ 3) Status: UPDATE + SENT      ->                STATUS: UPDATE
+                                                 STATUS: UPDATE + SYNC
+    OK or ROLLBACK ?           <- OK / ROLLBACK
+ 4) Status: STABLE			   <-                Status: STABLE
+ 
+ 
+ 

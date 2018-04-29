@@ -33,26 +33,26 @@ TestNumber::DeSerialize(SOAPMessage& p_msg)
 void
 TestNumber::Serialize(SQLRecord& p_record,int p_mutation /*= 0*/)
 {
-  CXObject::PreSerialize(p_record);
+  PreSerialize(p_record);
 
   p_record.ModifyField("id",     m_id,     p_mutation);
   p_record.ModifyField("field1", m_field1, p_mutation);
   p_record.ModifyField("field2", m_field2, p_mutation);
   p_record.ModifyField("field3", m_field3, p_mutation);
 
-  CXObject::PostSerialize(p_record);
+  PostSerialize(p_record);
 }
 
 void
 TestNumber::DeSerialize(SQLRecord& p_record)
 {
-  CXObject::PreDeSerialize(p_record);
+  PreDeSerialize(p_record);
 
   m_id     = (long)   p_record["id"];
   m_field1 = (int)    p_record["field1"];
   m_field2 = (double) p_record["field2"];
   m_field3 = (bcd)    p_record["field3"];
 
-  CXObject::PostDeSerialize(p_record);
+  PostDeSerialize(p_record);
 }
 

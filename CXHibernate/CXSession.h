@@ -37,39 +37,50 @@ using TableMap   = std::map<CString,CXTable*>;
 using TableCache = std::map<CString,CXObject*>;
 using CXCache    = std::map<CString,TableCache*>;
 
+typedef enum _cxh_roles
+{
+  CXH_Database_role
+ ,CXH_Filestore_role
+ ,CXH_Internet_role
+}
+CXHRole;
+
 class CXSession
 {
 public:
+  // Construct as a internet slave
   CXSession();
+  // Construct as a filestore handler
+  CXSession(CString p_directory);
+  // Construct as a database master handler
   CXSession(CString p_database,CString p_user,CString p_password);
+  // DTOR
  ~CXSession();
 
-  // Set master (database) or slave (Distant SOAP) role of the session
-  void SetMaster(bool p_master);
-
+  // Changing our role (database, filestore, internet)
+  void          ChangeRole(CXHRole p_role);
   // Alternate database 
-  void SetDatabase(SQLDatabase* p_database);
-
+  void          SetDatabase(SQLDatabase* p_database);
+  // Setting an alternate filestore location
+  void          SetBaseDirectory(CString p_directory);
   // Add a table to the session
-  bool AddTable(CXTable* p_table,CString p_name = "");
-
+  bool          AddTable(CXTable* p_table,CString p_name = "");
   // Finding a table
   CXTable*      FindTable(CString p_name);
-
-  // GETTERS
-
   // Find if the database is correctly opened
   bool          GetDatabaseIsOpen();
+  // Get a master mutation ID, to put actions into one (1) commit
+  int           GetMutationID();
  
   // QUERY INTERFACE
   CXObject*     SelectObject(CString p_tableName,SQLVariant*   p_primary,CreateCXO p_create);
   CXObject*     SelectObject(CString p_tableName,VariantSet&   p_primary,CreateCXO p_create);
   CXResultSet   SelectObject(CString p_tableName,SQLFilter*    p_filter ,CreateCXO p_create);
   CXResultSet   SelectObject(CString p_tableName,SQLFilterSet& p_filters,CreateCXO p_create);
-  bool          UpdateObject(CXObject* p_object);
-  bool          InsertObject(CXObject* p_object);
-  bool          DeleteObject(CXObject* p_object);
-  // Remove object from the result cache
+  bool          UpdateObject(CXObject* p_object,int p_mutationID = 0);
+  bool          InsertObject(CXObject* p_object,int p_mutationID = 0);
+  bool          DeleteObject(CXObject* p_object,int p_mutationID = 0);
+  // Remove object from the result cache without any database/internet actions
   bool          RemoveObject(CXObject* p_object);
 
 private:
@@ -82,25 +93,42 @@ private:
   bool          RemoveObjectFromCache(CXObject* p_object, VariantSet& p_primary);
   // Create a filters set for a DataSet
   bool          CreateFilterSet(CXTable* p_table,VariantSet& p_primary,SQLFilterSet& p_filters);
+  // Create a filestore name for an object
+  CString       CreateFilestoreName(CXTable* p_table,VariantSet& p_primary);
+  // Save a SOAPMessage on the filesystem
+  bool          SaveSOAPMessage(SOAPMessage& p_message,CString p_fileName);
 
   // Try to find an object in the cache
   CXObject*     FindObjectInCache   (CString p_tableName,VariantSet& p_primary);
   // Try to find an object in the database
-  CXObject*     FindObjectInDatabase(CString p_table,VariantSet& p_primary,CreateCXO p_create);
+  CXObject*     FindObjectInDatabase (CString p_table,VariantSet& p_primary,CreateCXO p_create);
+  // Try to find an object in the filestore
+  CXObject*     FindObjectInFilestore(CString p_table,VariantSet& p_primary,CreateCXO p_create);
   // Try to find an object via the SOAP interface
-  CXObject*     FindObjectOnInternet(CString p_table,VariantSet& p_primary,CreateCXO p_create);
+  CXObject*     FindObjectOnInternet (CString p_table,VariantSet& p_primary,CreateCXO p_create);
 
-  void          SelectObjectsFromDatabase(CString p_table,SQLFilterSet& p_filters,CreateCXO p_create);
-  void          SelectObjectsFromInternet(CString p_table,SQLFilterSet& p_filters,CreateCXO p_create);
+  // SELECT objects
+  void          SelectObjectsFromDatabase (CString p_table,SQLFilterSet& p_filters,CreateCXO p_create);
+  void          SelectObjectsFromFilestore(CString p_table,SQLFilterSet& p_filters,CreateCXO p_create);
+  void          SelectObjectsFromInternet (CString p_table,SQLFilterSet& p_filters,CreateCXO p_create);
   // DML operations in the database
-  bool          UpdateObjectInDatabase(CXTable* p_table,CXObject* p_object);
-  bool          InsertObjectInDatabase(CXTable* p_table,CXObject* p_object);
-  bool          DeleteObjectInDatabase(CXTable* p_table,CXObject* p_object);
+  bool          UpdateObjectInDatabase (CXTable* p_table,CXObject* p_object,int p_mutationID = 0);
+  bool          InsertObjectInDatabase (CXTable* p_table,CXObject* p_object,int p_mutationID = 0);
+  bool          DeleteObjectInDatabase (CXTable* p_table,CXObject* p_object,int p_mutationID = 0);
+  // DML operations in the filestore
+  bool          UpdateObjectInFilestore(CXTable* p_table,CXObject* p_object,int p_mutationID = 0);
+  bool          InsertObjectInFilestore(CXTable* p_table,CXObject* p_object,int p_mutationID = 0);
+  bool          DeleteObjectInFilestore(CXTable* p_table,CXObject* p_object,int p_mutationID = 0);
+  // DML operations on the internet
+  bool          UpdateObjectInInternet (CXTable* p_table,CXObject* p_object,int p_mutationID = 0);
+  bool          InsertObjectInInternet (CXTable* p_table,CXObject* p_object,int p_mutationID = 0);
+  bool          DeleteObjectInInternet (CXTable* p_table,CXObject* p_object,int p_mutationID = 0);
 
-  bool          m_master;      // Master/Slave role of the session
-  bool          m_ownDatabase; // We own / destroy this database
-  SQLDatabase*  m_database;    // Currently using database connection
-  TableMap      m_tables;      // All table metadata definitions that we know of
-  CXCache       m_cache;       // All cached objects of all known tables
-  int           m_mutation;    // Mutation id
+  CXHRole       m_role;           // Master/Slave role of the session
+  bool          m_ownDatabase;    // We own / destroy this database
+  CString       m_baseDirectory;  // Base directory for filestore role
+  SQLDatabase*  m_database;       // Currently using database connection
+  TableMap      m_tables;         // All table metadata definitions that we know of
+  CXCache       m_cache;          // All cached objects of all known tables
+  int           m_mutation;       // Mutation id
 };

@@ -156,6 +156,30 @@ namespace UnitTest
       }
     }
 
+    TEST_METHOD(T05_SelectToFilestore)
+    {
+      Logger::WriteMessage("Getting all records from the DETAIL table and save in FILESTORE");
+      if (OpenSession())
+      {
+        SQLVariant one((long)1);
+        SQLFilter filter("line", OP_GreaterEqual, &one);
+
+        CXResultSet set = m_session.SelectObject("detail",&filter,CXO_FACTORY(CXDetail));
+
+        m_session.SetBaseDirectory("C:\\WWW\\Testing");
+        m_session.ChangeRole(CXHRole::CXH_Filestore_role);
+
+        for(auto& object : set)
+        {
+          m_session.InsertObject(object);
+        }
+      }
+      else
+      {
+        Assert::Fail(L"Database was not opened");
+      }
+    }
+
     // Open a CXHibernate session and add the 'master' and 'detail' tables
     bool OpenSession()
     {
@@ -174,35 +198,16 @@ namespace UnitTest
         if(m_database.IsOpen())
         {
           m_session.SetDatabase(&m_database);
-          m_session.SetMaster(true);
 
-          CXTable* master  = new CXTable("", "master");
-          CXTable* detail  = new CXTable("", "detail");
-          CXTable* numbers = new CXTable("", "test_number");
-          if(master->GetMetaInfoFromDatabase(m_database))
-          {
-            m_session.AddTable(master);
-          }
-          else
-          {
-            Assert::Fail(L"Table structure of 'master' table not found");
-          }
-          if(detail->GetMetaInfoFromDatabase(m_database))
-          {
-            m_session.AddTable(detail);
-          }
-          else
-          {
-            Assert::Fail(L"Table structure of 'detail' table not found");
-          }
-          if(numbers->GetMetaInfoFromDatabase(m_database))
-          {
-            m_session.AddTable(numbers);
-          }
-          else
-          {
-            Assert::Fail(L"Table structure of 'test_number' table not found");
-          }
+          CXTable* master  = new CXTable("sysdba","master");
+          CXTable* detail  = new CXTable("sysdba","detail");
+          CXTable* numbers = new CXTable("sysdba","test_number");
+
+          // Do the 'lazy' stuff by reading the definition from the database
+          // assuming that the definition corresponds with ours
+          ReadTableDefinition(master);
+          ReadTableDefinition(detail);
+          ReadTableDefinition(numbers);
           return true;
         }
         return false;
@@ -212,6 +217,18 @@ namespace UnitTest
         Assert::AreEqual(s,"");
       }
       return false;
+    }
+
+    void ReadTableDefinition(CXTable* p_table)
+    {
+      if(p_table->GetMetaInfoFromDatabase(m_database))
+      {
+        m_session.AddTable(p_table);
+      }
+      else
+      {
+        Assert::Fail(L"Table structure of table not found");
+      }
     }
 
     int TestRecordCount(CString p_table, CString p_column, int p_value)

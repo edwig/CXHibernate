@@ -29,6 +29,9 @@
 #include "CXPrimaryHash.h"
 #include <SQLQuery.h>
 #include <SQLTransaction.h>
+#include <EnsureFile.h>
+#include <SOAPMessage.h>
+#include <io.h>
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -38,7 +41,16 @@ static char THIS_FILE[] = __FILE__;
 
 // CTOR Default session (slave side of the session)
 CXSession::CXSession()
-          :m_master(false)
+          :m_role(CXH_Internet_role)
+          ,m_database(nullptr)
+          ,m_mutation(0)
+{
+}
+
+// CTOR Filestore session
+CXSession::CXSession(CString p_directory)
+          :m_baseDirectory(p_directory)
+          ,m_role(CXH_Filestore_role)
           ,m_database(nullptr)
           ,m_mutation(0)
 {
@@ -48,12 +60,10 @@ CXSession::CXSession()
 CXSession::CXSession(CString p_database,CString p_user,CString p_password)
           :m_mutation(0)
           ,m_ownDatabase(true)
+          ,m_role(CXH_Database_role)
 {
   m_database = new SQLDatabase();
-  if(m_database->Open(p_database,p_user,p_password))
-  {
-    m_master = true;
-  }
+  m_database->Open(p_database,p_user,p_password);
 }
 
 // DTOR: Free all tables and records
@@ -72,9 +82,9 @@ CXSession::~CXSession()
 }
 
 void
-CXSession::SetMaster(bool p_master)
+CXSession::ChangeRole(CXHRole p_role)
 {
-  m_master = p_master;
+  m_role = p_role;
 }
 
 bool 
@@ -97,6 +107,15 @@ CXSession::SetDatabase(SQLDatabase* p_database)
   }
   m_database = p_database;
   m_ownDatabase = false;
+  m_role = CXH_Database_role;
+}
+
+// Setting an alternate filestore location
+void 
+CXSession::SetBaseDirectory(CString p_directory)
+{
+  m_role = CXH_Filestore_role;
+  m_baseDirectory = p_directory;
 }
 
 // Add a table to the session
@@ -126,7 +145,7 @@ CXSession::AddTable(CXTable* p_table,CString p_name /*=""*/)
   m_cache.insert(std::make_pair(table, tcache));
 
   // On the master side, we need a SQLDataSet for the database
-  if(m_master)
+  if(m_role == CXH_Database_role)
   {
     SQLDataSet* dset = new SQLDataSet();
 
@@ -159,6 +178,13 @@ CXSession::FindTable(CString p_name)
   return nullptr;
 }
 
+// Get a master mutation ID, to put actions into one (1) commit
+int
+CXSession::GetMutationID()
+{
+  return ++m_mutation;
+}
+
 //////////////////////////////////////////////////////////////////////////
 //
 // QUERY INTERFACE
@@ -185,14 +211,19 @@ CXSession::SelectObject(CString p_table,VariantSet& p_primary,CreateCXO p_create
   }
 
   // If not found, search in database / SOAP connection
-  if(m_master)
+  if(m_role == CXH_Database_role)
   {
     object = FindObjectInDatabase(p_table,p_primary,p_create);
   }
-  else
+  else if(m_role == CXH_Internet_role)
   {
     // Query for object on SOAP connection
     object = FindObjectOnInternet(p_table,p_primary,p_create);
+  }
+  else
+  {
+    // Query for object in the filestore
+    object = FindObjectInFilestore(p_table,p_primary,p_create);
   }
 
   // Place in cache
@@ -228,13 +259,17 @@ CXSession::SelectObject(CString p_table,SQLFilterSet& p_filters,CreateCXO p_crea
   TableCache* tcache = new TableCache();
   m_cache.insert(std::make_pair(p_table, tcache));
 
-  if(m_master)
+  if(m_role == CXH_Database_role)
   {
     SelectObjectsFromDatabase(p_table,p_filters,p_create);
   }
-  else
+  else if(m_role == CXH_Internet_role)
   {
     SelectObjectsFromInternet(p_table,p_filters,p_create);
+  }
+  else // CXH_Filestore_role
+  {
+    SelectObjectsFromFilestore(p_table,p_filters,p_create);
   }
 
   // Getting the result set
@@ -252,36 +287,45 @@ CXSession::SelectObject(CString p_table,SQLFilterSet& p_filters,CreateCXO p_crea
 
 // Update an object
 bool
-CXSession::UpdateObject(CXObject* p_object)
+CXSession::UpdateObject(CXObject* p_object,int p_mutationID /*= 0*/)
 {
   CXTable* table = p_object->BelongsToTable();
 
-  if(m_master)
+  if(m_role == CXH_Database_role)
   {
-    return UpdateObjectInDatabase(table,p_object);
+    return UpdateObjectInDatabase(table,p_object,p_mutationID);
   }
-  else
+  else if(m_role == CXH_Internet_role)
   {
     // Save as a SOAP message
+    // UpdateObjectInInternet(table,p_object);
     return false;
+  }
+  else // CXH_Filestore_role
+  {
+    UpdateObjectInFilestore(table,p_object);
   }
   return true;
 }
 
 bool
-CXSession::InsertObject(CXObject* p_object)
+CXSession::InsertObject(CXObject* p_object,int p_mutationID /*= 0*/)
 {
   CXTable* table = p_object->BelongsToTable();
 
-  if(m_master)
+  if(m_role == CXH_Database_role)
   {
-    InsertObjectInDatabase(table,p_object);
+    InsertObjectInDatabase(table,p_object,p_mutationID);
   }
-  else
+  else if(m_role == CXH_Internet_role)
   {
     // Insert as a SOAP Message
-    // InsertObjectFromInternet(table,p_object);
+    // InsertObjectInInternet(table,p_object);
     return false;
+  }
+  else // CXH_Filestore_role
+  {
+    InsertObjectInFilestore(table,p_object,p_mutationID);
   }
   // Add object to the cache
   if(p_object->IsPersistent())
@@ -292,23 +336,33 @@ CXSession::InsertObject(CXObject* p_object)
 }
 
 bool
-CXSession::DeleteObject(CXObject* p_object)
+CXSession::DeleteObject(CXObject* p_object,int p_mutationID /*= 0*/)
 {
   CXTable* table = p_object->BelongsToTable();
 
-  if (m_master)
+  if(m_role == CXH_Database_role)
   {
-    DeleteObjectInDatabase(table,p_object);
+    DeleteObjectInDatabase(table,p_object,p_mutationID);
   }
-  else
+  else if(m_role == CXH_Internet_role)
   {
-    // DeleteObjectFromInternet(table,p_object);
+    // DeleteObjectInInternet(table,p_object);
     return false;
+  }
+  else // CXH_Filestore_role
+  {
+    DeleteObjectInFilestore(table,p_object,p_mutationID);
   }
 
   return RemoveObjectFromCache(p_object,p_object->GetPrimaryKey());
 }
 
+// Remove object from the result cache without any database/internet actions
+bool
+CXSession::RemoveObject(CXObject* p_object)
+{
+  return RemoveObjectFromCache(p_object,p_object->GetPrimaryKey());
+}
 
 //////////////////////////////////////////////////////////////////////////
 //
@@ -438,6 +492,53 @@ CXSession::CreateFilterSet(CXTable* p_table,VariantSet& p_primary,SQLFilterSet& 
   return true;
 }
 
+// Create a filestore name for an object
+CString
+CXSession::CreateFilestoreName(CXTable* p_table,VariantSet& p_primary)
+{
+  CString tablename = p_table->FullQualifiedTableName();
+  tablename.Replace(".","_");
+
+  CString fileName = m_baseDirectory;
+  if(fileName.Right(1) != '\\')
+  {
+    fileName += "\\";
+  }
+  fileName += tablename;
+  fileName += "\\";
+
+  EnsureFile ensure(fileName);
+  if(ensure.CheckCreateDirectory())
+  {
+    return "";
+  }
+
+  fileName += "Object_";
+
+  fileName += CXPrimaryHash(p_primary);
+  fileName += ".xml";
+
+  return fileName;
+}
+
+bool
+CXSession::SaveSOAPMessage(SOAPMessage& p_message, CString p_fileName)
+{
+  bool result = false;
+  FILE* file = nullptr;
+  if(fopen_s(&file, p_fileName, "w") == 0 && file)
+  {
+    CString contents = p_message.GetSoapMessage();
+    if(fwrite(contents.GetString(),contents.GetLength(),1,file) == 1)
+    {
+      result = true;
+    }
+    // Close and flush the file
+    fclose(file);
+  }
+  return result;
+}
+
 // Try to find an object in the cache
 // It's a double map lookup (table, object)
 CXObject*
@@ -511,6 +612,39 @@ CXSession::FindObjectInDatabase(CString p_table,VariantSet& p_primary,CreateCXO 
   return object;
 }
 
+// Try to find an object in the filestore
+CXObject*
+CXSession::FindObjectInFilestore(CString p_table,VariantSet& p_primary,CreateCXO p_create)
+{
+  CXTable* table = FindTable(p_table);
+
+  // See if we can create a directory and filename
+  CString filename = CreateFilestoreName(table,p_primary);
+  if(filename.IsEmpty())
+  {
+    return false;
+  }
+
+  // Test if we can access this file
+  if(_access(filename, 0) == 0)
+  {
+    // Try to delete it
+    SOAPMessage p_message;
+    if(p_message.LoadFile(filename))
+    {
+      // Create our object by the creation factory
+      CXObject* object = (*p_create)(table);
+
+      // Fill in our object from the message
+      object->DeSerialize(p_message);
+
+      return object;
+    }
+  }
+  return false;
+}
+
+
 // Try to find an object via the SOAP interface
 CXObject*
 CXSession::FindObjectOnInternet(CString p_table,VariantSet& p_primary,CreateCXO p_create)
@@ -580,28 +714,37 @@ CXSession::SelectObjectsFromDatabase(CString p_table,SQLFilterSet& p_filters,Cre
 }
 
 void
+CXSession::SelectObjectsFromFilestore(CString p_table,SQLFilterSet& p_filters,CreateCXO p_create)
+{
+
+}
+
+void
 CXSession::SelectObjectsFromInternet(CString p_table,SQLFilterSet& p_filters,CreateCXO p_create)
 {
 
 }
 
 bool
-CXSession::UpdateObjectInDatabase(CXTable* p_table,CXObject* p_object)
+CXSession::UpdateObjectInDatabase(CXTable* p_table,CXObject* p_object,int p_mutationID /*= 0*/)
 {
   SQLRecord* record = p_object->GetDatabaseRecord();
   SQLDataSet*  dset = p_table->GetDataSet();
 
   // New mutation ID for this update action
-  ++m_mutation;
+  if(p_mutationID == 0)
+  {
+    p_mutationID = GetMutationID();
+  }
 
   // Serialize object to database record
-  p_object->Serialize(*record, m_mutation);
-  return dset->Synchronize(m_mutation);
+  p_object->Serialize(*record,p_mutationID);
+  return dset->Synchronize(p_mutationID);
 }
 
 // Insert a new object in the database
 bool
-CXSession::InsertObjectInDatabase(CXTable* p_table,CXObject* p_object)
+CXSession::InsertObjectInDatabase(CXTable* p_table,CXObject* p_object,int p_mutationID /*= 0*/)
 {
   SQLDataSet*    dset = p_table->GetDataSet();
   SQLRecord*   record = dset->InsertRecord();
@@ -624,19 +767,22 @@ CXSession::InsertObjectInDatabase(CXTable* p_table,CXObject* p_object)
   }
 
   // New mutation ID for this update action
-  ++m_mutation;
+  if(p_mutationID == 0)
+  {
+    p_mutationID = GetMutationID();
+  }
 
   // Now serialize our object with the 'real' values
-  p_object->Serialize(*record,m_mutation);
+  p_object->Serialize(*record,p_mutationID);
   // Set the record to 'insert-only'
   record->Inserted();
 
   // Go save the record
-  return dset->Synchronize(m_mutation);
+  return dset->Synchronize(p_mutationID);
 }
 
 bool
-CXSession::DeleteObjectInDatabase(CXTable* p_table,CXObject* p_object)
+CXSession::DeleteObjectInDatabase(CXTable* p_table,CXObject* p_object,int p_mutationID /*= 0*/)
 {
   // Getting the database record
   SQLDataSet*  dset = p_table->GetDataSet();
@@ -656,11 +802,89 @@ CXSession::DeleteObjectInDatabase(CXTable* p_table,CXObject* p_object)
   record->Delete();
 
   // New mutation ID for this update action
-  ++m_mutation;
+  if(p_mutationID == 0)
+  {
+    p_mutationID = GetMutationID();
+  }
 
   // BEWARE: We need not "Serialize" our object
   // We take the assumption that the primary key is "immutable"
 
   // Go delete the record
-  return dset->Synchronize(m_mutation);
+  return dset->Synchronize(p_mutationID);
+}
+
+// DML operations in the filestore
+bool
+CXSession::UpdateObjectInFilestore(CXTable* p_table, CXObject* p_object, int p_mutationID /*= 0*/)
+{
+  // See if we can create a directory and filename
+  CString filename = CreateFilestoreName(p_table,p_object->GetPrimaryKey());
+  if (filename.IsEmpty())
+  {
+    return false;
+  }
+
+  // Create a SOAP message object
+  SOAPMessage msg(DEFAULT_NAMESPACE, "Object");
+  XMLElement* entity = msg.SetParameter("Entity", "");
+  msg.SetAttribute(entity, "name", p_table->TableName());
+
+  // Serialize our object
+  p_object->Serialize(msg);
+
+  // Test if we can access this file
+  if(_access(filename, 0) == 0)
+  {
+    // Save to the file: overwriting the file
+    return SaveSOAPMessage(msg,filename);
+  }
+  // File did not exist, non-existing objects cannot be updated!
+  return false;
+}
+
+bool
+CXSession::InsertObjectInFilestore(CXTable* p_table,CXObject* p_object,int p_mutationID /*= 0*/)
+{
+  // See if we can create a directory and filename
+  CString filename = CreateFilestoreName(p_table,p_object->GetPrimaryKey());
+  if(filename.IsEmpty())
+  {
+    return false;
+  }
+
+  // Create a SOAP message object
+  CString namesp(DEFAULT_NAMESPACE);
+  CString action("Object");
+  SOAPMessage msg(namesp,action,SoapVersion::SOAP_12);
+  XMLElement* entity = msg.SetParameter("Entity","");
+  msg.SetAttribute(entity,"name",p_table->TableName());
+
+  // Serialize our object
+  p_object->Serialize(msg);
+
+  // Save to the file: overwriting the file
+  return SaveSOAPMessage(msg,filename);
+}
+
+bool
+CXSession::DeleteObjectInFilestore(CXTable* p_table, CXObject* p_object, int p_mutationID /*= 0*/)
+{
+  // See if we can create a directory and filename
+  CString filename = CreateFilestoreName(p_table,p_object->GetPrimaryKey());
+  if(filename.IsEmpty())
+  {
+    return false;
+  }
+
+  // Test if we can access this file
+  if(_access(filename, 0) == 0)
+  {
+    // Try to delete it
+    if(DeleteFile(filename))
+    {
+      return true;
+    }
+  }
+  return false;
 }

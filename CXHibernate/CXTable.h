@@ -45,7 +45,7 @@ public:
   CString   SchemaName();
   CString   TableName();
   CString   SchemaTableName();
-  CString   FullQualifiedTableName(SQLInfoDB* p_info);
+  CString   FullQualifiedTableName();
   CString   DMLTableName(SQLInfoDB* p_info);
 
   // GETTERS

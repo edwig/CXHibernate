@@ -90,6 +90,9 @@ private:
 
   void          SelectObjectsFromDatabase(CString p_table,SQLFilterSet& p_filters,CreateCXO p_create);
   void          SelectObjectsFromInternet(CString p_table,SQLFilterSet& p_filters,CreateCXO p_create);
+  // DML operations in the database
+  bool          UpdateObjectInDatabase(CXTable* p_table, CXObject* p_object);
+  bool          InsertObjectInDatabase(CXTable* p_table,CXObject* p_object);
 
   bool          m_master;      // Master/Slave role of the session
   bool          m_ownDatabase; // We own / destroy this database

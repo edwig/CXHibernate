@@ -152,7 +152,7 @@ CXSession::FindTable(CString p_name)
 {
   p_name.MakeLower();
   TableMap::iterator it = m_tables.find(p_name);
-  if(it == m_tables.end())
+  if(it != m_tables.end())
   {
     return it->second;
   }
@@ -250,20 +250,52 @@ CXSession::SelectObject(CString p_table,SQLFilterSet& p_filters,CreateCXO p_crea
   return set;
 }
 
+// Update an object
 bool
 CXSession::UpdateObject(CXObject* p_object)
 {
-  CXTable*    table = p_object->BelongsToTable();
-  SQLRecord* record = p_object->GetDatabaseRecord();
-  SQLDataSet*  dset = table->GetDataSet();
+  CXTable* table = p_object->BelongsToTable();
 
-  // New mutation ID for this update action
-  ++m_mutation;
-
-  // Serialize object to database record
-  p_object->Serialize(*record,m_mutation);
-  return dset->Synchronize(m_mutation);
+  if(m_master)
+  {
+    return UpdateObjectInDatabase(table,p_object);
+  }
+  else
+  {
+    // Save as a SOAP message
+    return false;
+  }
+  return true;
 }
+
+bool
+CXSession::InsertObject(CXObject* p_object)
+{
+  CXTable* table = p_object->BelongsToTable();
+
+  if(m_master)
+  {
+    InsertObjectInDatabase(table,p_object);
+  }
+  else
+  {
+    // Insert as a SOAP Message
+    return false;
+  }
+  // Add object to the cache
+  if(p_object->IsPersistent())
+  {
+    AddObjectInCache(p_object,p_object->GetPrimaryKey());
+  }
+  return true;
+}
+
+bool
+CXSession::DeleteObject(CXObject* p_object)
+{
+  return false;
+}
+
 
 //////////////////////////////////////////////////////////////////////////
 //
@@ -286,13 +318,7 @@ CXSession::ClearCache(CString p_table /*= ""*/)
   {
     if (p_table.IsEmpty() || p_table.CompareNoCase(it->first) == 0)
     {
-      for (auto& object : *it->second)
-      {
-        delete object.second;
-      }
-      it->second->clear();
       delete it->second;
-
       it = m_cache.erase(it);
     }
     else
@@ -515,4 +541,54 @@ void
 CXSession::SelectObjectsFromInternet(CString p_table,SQLFilterSet& p_filters,CreateCXO p_create)
 {
 
+}
+
+bool
+CXSession::UpdateObjectInDatabase(CXTable* p_table,CXObject* p_object)
+{
+  SQLRecord* record = p_object->GetDatabaseRecord();
+  SQLDataSet*  dset = p_table->GetDataSet();
+
+  // New mutation ID for this update action
+  ++m_mutation;
+
+  // Serialize object to database record
+  p_object->Serialize(*record, m_mutation);
+  return dset->Synchronize(m_mutation);
+}
+
+// Insert a new object in the database
+bool
+CXSession::InsertObjectInDatabase(CXTable* p_table,CXObject* p_object)
+{
+  SQLDataSet*    dset = p_table->GetDataSet();
+  SQLRecord*   record = dset->InsertRecord();
+  MColumnMap& columns = p_table->GetColumnInfo();
+  SQLVariant zero;
+
+  // See if dataset is empty
+  if(dset->GetNumberOfRecords() == 1 && dset->GetNumberOfFields() == 0)
+  {
+    for (auto& column : columns)
+    {
+      dset->InsertField(column.m_column, &zero);
+    }
+  }
+
+  // Set the values on the record
+  for(int ind = 0;ind < dset->GetNumberOfFields();++ind)
+  {
+    record->SetField(ind,&zero);
+  }
+
+  // New mutation ID for this update action
+  ++m_mutation;
+
+  // Now serialize our object with the 'real' values
+  p_object->Serialize(*record,m_mutation);
+  // Set the record to 'insert-only'
+  record->Inserted();
+
+  // Go save the record
+  return dset->Synchronize(m_mutation);
 }

@@ -10,8 +10,6 @@ public:
   // CTOR of an CXObject
   CXDetail(CXTable* p_table);
 
-  // DECLARE_CXO_FACTORY(CXMaster);
-
   // Bring the contents of the class to a SOAPMessage or a SQLRecord
   virtual void Serialize(SOAPMessage& p_message,int p_mutation = 0);
   virtual void Serialize(SQLRecord&   p_record, int p_mutation = 0);

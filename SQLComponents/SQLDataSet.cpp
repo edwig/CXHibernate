@@ -616,7 +616,7 @@ SQLDataSet::ReadRecordFromQuery(SQLQuery& p_query,bool p_modifiable,bool p_appen
     record->AddField(var);
   }
 
-  // Construct the primarykey (possibly from more than 1 field)
+  // Construct the primary key (possibly from more than 1 field)
   CString key = MakePrimaryKey(record);
 
   if(key.IsEmpty())
@@ -950,13 +950,16 @@ SQLDataSet::GetCurrentField(int p_num)
 }
 
 // Insert new record
+// If the set was previously closed, it is now OPEN for transactions
+// because there is at least one record in the dataset
 SQLRecord* 
 SQLDataSet::InsertRecord()
 {
-  SQLRecord* record = new SQLRecord(this);
+  SQLRecord* record = new SQLRecord(this,true);
   m_records.push_back(record);
   m_current = (int)(m_records.size() - 1);
   m_status |= SQL_Insertions;
+  m_open    = true;
   return record;
 }
 
@@ -1066,12 +1069,19 @@ SQLDataSet::Synchronize(int p_mutationID /*=0*/)
     return true;
   }
   // Check preliminary conditions
-  if(m_primaryTableName.IsEmpty() ||    // Needs the primary table name of the dataset
-     !GetPrimaryKeyInfo()         ||    // Needs primary key info for doing updates/deletes
-     !CheckPrimaryKeyColumns()    )     // Needs all of the primary key columns
+  if(m_primaryTableName.IsEmpty())
   {
-    // No primary key, cannot do updates/deletes
+    // Needs the primary table name of the dataset
     return false;
+  }
+  if(m_status & (SQL_Record_Deleted | SQL_Record_Updated))
+  {
+    if(!GetPrimaryKeyInfo()     ||    // Needs primary key info for doing updates/deletes
+       !CheckPrimaryKeyColumns())     // Needs all of the primary key columns
+    {
+      // No primary key, cannot do updates/deletes
+      return false;
+    }
   }
 
   // Save status before a possible throw

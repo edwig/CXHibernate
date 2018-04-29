@@ -74,6 +74,15 @@ SQLRecord::Release()
   return false;
 }
 
+// Set the status of the record to 'Inserted'
+void
+SQLRecord::Inserted()
+{
+  m_status = SQL_Record_Insert;
+  m_dataSet->SetStatus(SQL_Insertions,SQL_Record_Updated);
+}
+
+
 // Set this record's status to a deleted record
 void
 SQLRecord::Delete()

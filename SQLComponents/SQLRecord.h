@@ -95,6 +95,8 @@ public:
   // See if a field is modified
   bool        IsModified(int p_num);
   bool        IsModified(CString p_name);
+  // Set the status of the record to 'Inserted'
+  void        Inserted();
   // Set the status of the record to 'Deleted'
   void        Delete();
   // Reset the mutation stacks after database upgrade of the record

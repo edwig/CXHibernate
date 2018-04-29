@@ -3,8 +3,10 @@
 #include <CXSession.h>
 #include <SQLComponents.h>
 #include <SQLVariant.h>
+#include <SQLQuery.h>
 #include "CXMaster.h"
 #include "CXDetail.h"
+#include "TestNumber.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -21,7 +23,7 @@ namespace UnitTest
 	{
 	public:
 		
-		TEST_METHOD(SelectMaster)
+		TEST_METHOD(T01_SelectMaster)
 		{
       Logger::WriteMessage("Getting a record from the MASTER table");
       if(OpenSession())
@@ -44,7 +46,7 @@ namespace UnitTest
       }
 		}
 
-    TEST_METHOD(SelectDetails)
+    TEST_METHOD(T02_SelectDetails)
     {
       Logger::WriteMessage("Getting all records from the DETAIL table with 'line > 1'");
       if(OpenSession())
@@ -67,7 +69,7 @@ namespace UnitTest
       }
     }
 
-    TEST_METHOD(UpdateTest)
+    TEST_METHOD(T03_UpdateTest)
     {
       Logger::WriteMessage("Updating a record from the MASTER table");
       if (OpenSession())
@@ -119,6 +121,41 @@ namespace UnitTest
       text.Format("Part amount    : %s", p_detail->GetAmount().AsString()); Logger::WriteMessage(text);
     }
 
+    TEST_METHOD(T04_InsertDelete)
+    {
+      Logger::WriteMessage("Insert a record into the TEST_NUMBER table");
+
+      if(OpenSession())
+      {
+        CXTable* test_numbers = m_session.FindTable("test_number");
+        TestNumber numbers(test_numbers);
+        numbers.SetID(10);
+        numbers.SetField1(42);
+        numbers.SetField2(89975.123);
+        numbers.SetField3("300.77");
+
+        // Insert this object in the database
+        m_session.InsertObject(&numbers);
+
+        // Test that it is in the database
+        int num = TestRecordCount("test_number","id",10);
+        Assert::AreEqual(num,1);
+        Logger::WriteMessage("Test_number record 10 Inserted!");
+
+        // Delete the object again
+        m_session.DeleteObject(&numbers);
+
+        // Test that it is gone
+        num = TestRecordCount("test_number", "id", 10);
+        Assert::AreEqual(num,0);
+        Logger::WriteMessage("Test_number record 10 Deleted again!");
+      }
+      else
+      {
+        Assert::Fail(L"Database was not opened");
+      }
+    }
+
     // Open a CXHibernate session and add the 'master' and 'detail' tables
     bool OpenSession()
     {
@@ -139,8 +176,9 @@ namespace UnitTest
           m_session.SetDatabase(&m_database);
           m_session.SetMaster(true);
 
-          CXTable* master = new CXTable("", "master");
-          CXTable* detail = new CXTable("", "detail");
+          CXTable* master  = new CXTable("", "master");
+          CXTable* detail  = new CXTable("", "detail");
+          CXTable* numbers = new CXTable("", "test_number");
           if(master->GetMetaInfoFromDatabase(m_database))
           {
             m_session.AddTable(master);
@@ -157,6 +195,14 @@ namespace UnitTest
           {
             Assert::Fail(L"Table structure of 'detail' table not found");
           }
+          if(numbers->GetMetaInfoFromDatabase(m_database))
+          {
+            m_session.AddTable(numbers);
+          }
+          else
+          {
+            Assert::Fail(L"Table structure of 'test_number' table not found");
+          }
           return true;
         }
         return false;
@@ -166,6 +212,38 @@ namespace UnitTest
         Assert::AreEqual(s,"");
       }
       return false;
+    }
+
+    int TestRecordCount(CString p_table, CString p_column, int p_value)
+    {
+      int result = 0;
+
+      if(m_database.IsOpen() == false)
+      {
+        return -1;
+      }
+      try
+      {
+        CString sql("SELECT COUNT(*) FROM ");
+        sql += p_table;
+        sql += " WHERE ";
+        sql += p_column;
+        sql.AppendFormat(" = %d", p_value);
+        SQLQuery query(m_database);
+        SQLTransaction trans(&m_database,"count");
+
+        query.DoSQLStatement(sql);
+        if(query.GetRecord())
+        {
+          result = query[1];
+        }
+        trans.Commit();
+      }
+      catch(CString& er)
+      {
+        Logger::WriteMessage(CString("Failed: ") + er);
+      }
+      return result;
     }
 
     CXSession   m_session;

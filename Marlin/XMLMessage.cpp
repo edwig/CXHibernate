@@ -445,6 +445,7 @@ XMLMessage::PrintElements(XMLElement* p_element
     if(p_element->GetType() & XDT_Type)
     {
       temp.Format(" type=\"%s\"",XmlDataTypeToString(p_element->GetType() & XDT_MaskTypes).GetString());
+      message += temp;
     }
 
     // After the attributes, empty value or value

@@ -28,6 +28,7 @@
 #include "CXObject.h"
 #include "CXTable.h"
 #include <SQLRecord.h>
+#include <SOAPMessage.h>
 
 
 #ifdef _DEBUG
@@ -127,7 +128,7 @@ CXObject::GetDatabaseRecord()
 //////////////////////////////////////////////////////////////////////////
 
 void 
-CXObject::PreSerialize(SOAPMessage& p_msg)
+CXObject::PreSerialize(SOAPMessage& p_msg,XMLElement* p_entity)
 {
 }
 
@@ -137,8 +138,9 @@ CXObject::PreSerialize(SQLRecord& p_rec)
 }
 
 void
-CXObject::PostSerialize(SOAPMessage& p_msg)
+CXObject::PostSerialize(SOAPMessage& p_message,XMLElement* p_entity)
 {
+  FillPrimaryKey(p_message,p_entity);
 }
 
 void
@@ -149,12 +151,13 @@ CXObject::PostSerialize(SQLRecord& p_record)
 }
 
 void
-CXObject::PreDeSerialize(SOAPMessage& p_msg)
+CXObject::PreDeSerialize(SOAPMessage& p_message,XMLElement* p_entity)
 {
+  FillPrimaryKey(p_message,p_entity);
 }
 
 void
-CXObject::PostDeSerialize(SOAPMessage& p_msg)
+CXObject::PostDeSerialize(SOAPMessage& p_msg,XMLElement* p_entity)
 {
 }
 
@@ -192,6 +195,39 @@ CXObject::FillPrimaryKey(SQLRecord& p_record)
     {
       SQLVariant* var = new SQLVariant(p_record.GetField(key));
       m_primaryKey.push_back(var);
+    }
+  }
+}
+
+void
+CXObject::FillPrimaryKey(SOAPMessage& p_message, XMLElement* p_entity)
+{
+  // See if already filled in
+  if(!m_primaryKey.empty())
+  {
+    return;
+  }
+
+  WordList keys = m_table->GetPrimaryKeyAsList();
+  for(auto& key : keys)
+  {
+    key.MakeLower();
+    XMLElement* keyelem = p_message.FindElement(p_entity,key,false);
+    if(keyelem)
+    {
+      XMLAttribute* attrib = p_message.FindAttribute(keyelem,"type");
+      if(attrib)
+      {
+        XmlDataType xmltype = StringToXmlDataType(attrib->m_value);
+        int odbcType = XmlDataTypeToODBC(xmltype);
+
+        if(odbcType)
+        {
+          SQLVariant* var = new SQLVariant();
+          var->SetData(odbcType,keyelem->GetValue());
+          m_primaryKey.push_back(var);
+        }
+      }
     }
   }
 }

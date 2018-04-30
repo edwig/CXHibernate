@@ -31,6 +31,7 @@
 using namespace SQLComponents;
 
 class SOAPMessage;
+class XMLElement;
 class CXTable;
 
 class CXObject
@@ -40,15 +41,12 @@ public:
   CXObject(CXTable* p_table);
   virtual ~CXObject();
 
-  // Factory to create a new object
-  // virtual CXObject* CreateCXObject();
-
   // Bring the contents of the class to a SOAPMessage or a SQLRecord
-  virtual void Serialize(SOAPMessage& p_msg,int p_mutation = 0) = 0;
-  virtual void Serialize(SQLRecord&   p_rec,int p_mutation = 0) = 0;
+  virtual void Serialize(SOAPMessage& p_msg,XMLElement* p_entity,int p_mutation = 0) = 0;
+  virtual void Serialize(SQLRecord&   p_rec,                     int p_mutation = 0) = 0;
 
   // Read the contents of an object from a SOAPMessage or a SQLRecord
-  virtual void DeSerialize(SOAPMessage& p_msg) = 0;
+  virtual void DeSerialize(SOAPMessage& p_msg,XMLElement* p_entity) = 0;
   virtual void DeSerialize(SQLRecord&   p_rec) = 0;
 
   // Getting or setting the Primary key of the object
@@ -71,15 +69,15 @@ public:
 protected:
 
   // Bring the contents of the class to a SOAPMessage or a SQLRecord
-  virtual void PreSerialize (SOAPMessage& p_msg);
+  virtual void PreSerialize (SOAPMessage& p_msg,XMLElement* p_entity);
   virtual void PreSerialize (SQLRecord&   p_rec);
-  virtual void PostSerialize(SOAPMessage& p_msg);
+  virtual void PostSerialize(SOAPMessage& p_msg,XMLElement* p_entity);
   virtual void PostSerialize(SQLRecord&   p_rec);
 
   // Read the contents of an object from a SOAPMessage or a SQLRecord
-  virtual void PreDeSerialize (SOAPMessage& p_msg);
+  virtual void PreDeSerialize (SOAPMessage& p_msg,XMLElement* p_entity);
   virtual void PreDeSerialize (SQLRecord&   p_rec);
-  virtual void PostDeSerialize(SOAPMessage& p_msg);
+  virtual void PostDeSerialize(SOAPMessage& p_msg,XMLElement* p_entity);
   virtual void PostDeSerialize(SQLRecord&   p_rec);
 
   // All derived classes **must** implement this factory
@@ -97,7 +95,8 @@ protected:
 
 private:
   // Fill in the primary key of the object
-  void FillPrimaryKey(SQLRecord& p_record);
+  void FillPrimaryKey(SQLRecord&   p_record);
+  void FillPrimaryKey(SOAPMessage& p_message,XMLElement* p_entity);
 };
 
 //////////////////////////////////////////////////////////////////////////

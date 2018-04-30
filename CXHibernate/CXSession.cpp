@@ -632,13 +632,18 @@ CXSession::FindObjectInFilestore(CString p_table,VariantSet& p_primary,CreateCXO
     SOAPMessage p_message;
     if(p_message.LoadFile(filename))
     {
-      // Create our object by the creation factory
-      CXObject* object = (*p_create)(table);
+      // Find our object (just one entity in the message)
+      XMLElement* entity = p_message.FindElement("Entity");
+      if(entity)
+      {
+        // Create our object by the creation factory
+        CXObject* object = (*p_create)(table);
 
-      // Fill in our object from the message
-      object->DeSerialize(p_message);
+        // Fill in our object from the message 
+        object->DeSerialize(p_message,entity);
 
-      return object;
+        return object;
+      }
     }
   }
   return false;
@@ -827,11 +832,17 @@ CXSession::UpdateObjectInFilestore(CXTable* p_table, CXObject* p_object, int p_m
 
   // Create a SOAP message object
   SOAPMessage msg(DEFAULT_NAMESPACE, "Object");
+
+  // Adding an entity with name attributes
   XMLElement* entity = msg.SetParameter("Entity", "");
-  msg.SetAttribute(entity, "name", p_table->TableName());
+  if(!p_table->SchemaName().IsEmpty())
+  {
+    msg.SetAttribute(entity,"schema",p_table->SchemaName());
+  }
+  msg.SetAttribute(entity,"name",p_table->TableName());
 
   // Serialize our object
-  p_object->Serialize(msg);
+  p_object->Serialize(msg,entity);
 
   // Test if we can access this file
   if(_access(filename, 0) == 0)
@@ -861,7 +872,7 @@ CXSession::InsertObjectInFilestore(CXTable* p_table,CXObject* p_object,int p_mut
   msg.SetAttribute(entity,"name",p_table->TableName());
 
   // Serialize our object
-  p_object->Serialize(msg);
+  p_object->Serialize(msg,entity);
 
   // Save to the file: overwriting the file
   return SaveSOAPMessage(msg,filename);

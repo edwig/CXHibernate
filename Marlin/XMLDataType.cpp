@@ -73,7 +73,7 @@ StringToXmlDataType(CString p_name)
 
   for(int ind = 1;ind < sizeof(xml_datatypes) / sizeof(char*); ++ind)
   {
-    if(p_name.Compare(*datatypes) == 0)
+    if(p_name.Compare(datatypes[ind]) == 0)
     {
       return ind;
     }

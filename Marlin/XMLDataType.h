@@ -77,10 +77,12 @@
 #define XDT_IDREFS              0x00000046
 #define XDT_NMTOKENS            0x00000047
 // End - new in version 4
+#define XDT_Type                0x00002000 // Show type in XML always
 #define XDT_CDATA               0x00004000
 #define XDT_Complex             0x00008000
 
 #define XDT_Mask                0x0000ffff
+#define XDT_MaskTypes           0x00000fff
 
 // WSDL Options (USE ONLY ONE (1) !!)
 #define WSDL_Mandatory          0x00010000
@@ -98,3 +100,12 @@
 
 // The XML Datatype holds datatypes AND wsdl options
 typedef unsigned XmlDataType;
+
+// Conversion between XML datatype and string names
+CString     XmlDataTypeToString(XmlDataType p_type);
+XmlDataType StringToXmlDataType(CString p_name);
+
+// Conversion between XML datatype and ODBC types
+int         XmlDataTypeToODBC(XmlDataType p_type);
+XmlDataType ODBCToXmlDataType(int p_type);
+

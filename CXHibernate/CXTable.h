@@ -70,7 +70,7 @@ public:
   // SET INFO BY API
   void      SetInfoTable (MetaTable&     p_metaTable);
   void      AddInfoColumn(MetaColumn&    p_metaColumn);
-  void      SetPrimaryKey(MetaPrimary&   p_metaPrimary);
+  void      AddPrimaryKey(MetaPrimary&   p_metaPrimary);
   void      AddForeignKey(MetaForeign&   p_metaForeign);
   void      AddIndex     (MetaIndex&     p_metaIndex);
   void      AddPrivilege (MetaPrivilege& p_metaPrivilege);
@@ -80,9 +80,6 @@ public:
                                    ,bool p_getForeigns   = false
                                    ,bool p_getIndices    = false
                                    ,bool p_getPrivileges = false);
-
-
-
 private:
   // Getting table info from the ODBC database
   void GetTableInfo     (SQLInfoDB* p_info);

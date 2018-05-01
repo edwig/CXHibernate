@@ -127,13 +127,24 @@ CXObject::GetDatabaseRecord()
 //
 //////////////////////////////////////////////////////////////////////////
 
+// We can fill in the primary key here
 void 
-CXObject::PreSerialize(SOAPMessage& p_msg,XMLElement* p_entity)
+CXObject::PreSerialize(SOAPMessage& p_message,XMLElement* p_entity)
 {
+  int index = 0;
+  WordList keys = m_table->GetPrimaryKeyAsList();
+  for(auto& key : keys)
+  {
+    key.MakeLower();
+    SQLVariant* val = m_primaryKey[index++];
+    XmlDataType typ = ODBCToXmlDataType(val->GetDataType());
+
+    p_message.AddElement(p_entity,key,typ|XDT_Type,val->GetAsChar());
+  }
 }
 
 void
-CXObject::PreSerialize(SQLRecord& p_rec)
+CXObject::PreSerialize(SQLRecord& p_record)
 {
 }
 
@@ -187,15 +198,17 @@ CXObject::PostDeSerialize(SQLRecord& p_record)
 void 
 CXObject::FillPrimaryKey(SQLRecord& p_record)
 {
-  if(m_primaryKey.empty())
+  if(!m_primaryKey.empty())
   {
-    WordList keys = m_table->GetPrimaryKeyAsList();
+    return;
+  }
 
-    for (auto& key : keys)
-    {
-      SQLVariant* var = new SQLVariant(p_record.GetField(key));
-      m_primaryKey.push_back(var);
-    }
+  // Walk the list of primary key columns
+  WordList keys = m_table->GetPrimaryKeyAsList();
+  for (auto& key : keys)
+  {
+    SQLVariant* var = new SQLVariant(p_record.GetField(key));
+    m_primaryKey.push_back(var);
   }
 }
 
@@ -208,6 +221,7 @@ CXObject::FillPrimaryKey(SOAPMessage& p_message, XMLElement* p_entity)
     return;
   }
 
+  // Walk the list of primary key columns
   WordList keys = m_table->GetPrimaryKeyAsList();
   for(auto& key : keys)
   {

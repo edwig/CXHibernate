@@ -42,8 +42,6 @@ static char THIS_FILE[] = __FILE__;
 // CTOR Default session (slave side of the session)
 CXSession::CXSession()
           :m_role(CXH_Internet_role)
-          ,m_database(nullptr)
-          ,m_mutation(0)
 {
 }
 
@@ -51,25 +49,32 @@ CXSession::CXSession()
 CXSession::CXSession(CString p_directory)
           :m_baseDirectory(p_directory)
           ,m_role(CXH_Filestore_role)
-          ,m_database(nullptr)
-          ,m_mutation(0)
 {
 }
 
 // CTOR Master session
 CXSession::CXSession(CString p_database,CString p_user,CString p_password)
-          :m_mutation(0)
-          ,m_ownDatabase(true)
-          ,m_role(CXH_Database_role)
+          :m_role(CXH_Database_role)
 {
   m_database = new SQLDatabase();
-  m_database->Open(p_database,p_user,p_password);
+  if(m_database->Open(p_database,p_user,p_password))
+  {
+    GetMetaSessionInfo();
+  }
 }
 
 // DTOR: Free all tables and records
 CXSession::~CXSession()
 {
-  // Destroy the cache
+  // Rollback any hanging transaction
+  if(m_transaction)
+  {
+    m_transaction->Rollback();
+    delete m_transaction;
+    m_transaction = nullptr;
+  }
+
+  // Destroy the caches
   ClearCache();
   ClearTables();
 
@@ -108,6 +113,8 @@ CXSession::SetDatabase(SQLDatabase* p_database)
   m_database = p_database;
   m_ownDatabase = false;
   m_role = CXH_Database_role;
+
+  GetMetaSessionInfo();
 }
 
 // Setting an alternate filestore location
@@ -180,9 +187,58 @@ CXSession::FindTable(CString p_name)
 
 // Get a master mutation ID, to put actions into one (1) commit
 int
-CXSession::GetMutationID()
+CXSession::GetMutationID(bool p_transaction /*= false*/)
 {
+  // On re-entry, and still in transaction
+  if(p_transaction && m_transaction)
+  {
+    // Create a sub transaction
+    ++m_subtrans;
+    return m_mutation;
+  }
+
+  // Should now be without a transaction
+  if(m_transaction)
+  {
+    m_transaction->Rollback();
+    delete m_transaction;
+    m_transaction = nullptr;
+  }
+
+  // Create transaction and give new ID
+  if(p_transaction)
+  {
+    m_transaction = new SQLTransaction(m_database,"mutation");
+  }
+  // Reset the sub-transaction
+  m_subtrans = 0;
+  // This is our mutation ID
   return ++m_mutation;
+}
+
+void
+CXSession::CommitMutation(int p_mutationID)
+{
+  // Verify that it's still the same mutation
+  if(p_mutationID != m_mutation)
+  {
+    return;
+  }
+
+  // Commit of sub-transaction
+  if(m_subtrans)
+  {
+    --m_subtrans;
+    return;
+  }
+
+  // Same mutation and in-transaction: so commit
+  if(m_transaction)
+  {
+    m_transaction->Commit();
+    delete m_transaction;
+    m_transaction = nullptr;
+  }
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -415,6 +471,39 @@ CXSession::ClearTables(CString p_table /*= ""*/)
     else
     {
       ++it;
+    }
+  }
+}
+
+// Getting meta-session info from our database
+void
+CXSession::GetMetaSessionInfo()
+{
+  if(m_database)
+  {
+    try
+    {
+      CString sql = m_database->GetSQLInfoDB()->GetSESSIONMyself();
+      SQLQuery query(m_database);
+      SQLTransaction trans(m_database,"session");
+
+      query.DoSQLStatement(sql);
+
+      if(query.GetRecord())
+      {
+        m_metaInfo.m_session     = (CString) query[1];
+        m_metaInfo.m_user        = (CString) query[2];
+        m_metaInfo.m_terminal    = (CString) query[3];
+        m_metaInfo.m_logonMoment = (CString) query[4];
+        m_metaInfo.m_remoteIP    = (CString) query[5];
+        m_metaInfo.m_processName = (CString) query[6];
+        m_metaInfo.m_processID   = (CString) query[7];
+      }
+      trans.Commit();
+    }
+    catch(...)
+    {
+      // Gaat in stilte fout
     }
   }
 }
@@ -739,7 +828,7 @@ CXSession::UpdateObjectInDatabase(CXTable* p_table,CXObject* p_object,int p_muta
   // New mutation ID for this update action
   if(p_mutationID == 0)
   {
-    p_mutationID = GetMutationID();
+    p_mutationID = ++m_mutation;
   }
 
   // Serialize object to database record
@@ -774,7 +863,7 @@ CXSession::InsertObjectInDatabase(CXTable* p_table,CXObject* p_object,int p_muta
   // New mutation ID for this update action
   if(p_mutationID == 0)
   {
-    p_mutationID = GetMutationID();
+    p_mutationID = ++m_mutation;
   }
 
   // Now serialize our object with the 'real' values
@@ -809,7 +898,7 @@ CXSession::DeleteObjectInDatabase(CXTable* p_table,CXObject* p_object,int p_muta
   // New mutation ID for this update action
   if(p_mutationID == 0)
   {
-    p_mutationID = GetMutationID();
+    p_mutationID = ++m_mutation;
   }
 
   // BEWARE: We need not "Serialize" our object

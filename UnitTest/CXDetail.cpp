@@ -46,16 +46,17 @@ CXDetail::CXDetail(CXTable* p_table)
 
 // Bring the contents of the class to a SOAPMessage or a SQLRecord
 void
-CXDetail::Serialize(SOAPMessage& p_message,XMLElement* p_entity,int p_mutation /*= 0*/)
+CXDetail::Serialize(SOAPMessage& p_message,XMLElement* p_entity)
 {
   PreSerialize(p_message,p_entity);
 
-  XMLElement* entity = p_message.FindElement("Entity");
-  p_message.AddElement(entity,"id",         XDT_Integer|XDT_Type,m_id);
-  p_message.AddElement(entity,"mast_id",    XDT_Integer|XDT_Type,m_mast_id);
-  p_message.AddElement(entity,"line",       XDT_Integer|XDT_Type,m_line);
-  p_message.AddElement(entity,"description",XDT_String |XDT_Type, m_description);
-  p_message.AddElement(entity,"amount",     XDT_Decimal|XDT_Type,m_amount.AsDouble());
+//p_message.AddElement(p_entity,"id",         XDT_Integer|XDT_Type,m_id);
+  // Column "id" is done by the PreSerialize, as it is the primary key!
+
+  p_message.AddElement(p_entity,"mast_id",    XDT_Integer|XDT_Type,m_mast_id);
+  p_message.AddElement(p_entity,"line",       XDT_Integer|XDT_Type,m_line);
+  p_message.AddElement(p_entity,"description",XDT_String |XDT_Type,m_description);
+  p_message.AddElement(p_entity,"amount",     XDT_Decimal|XDT_Type,m_amount.AsDouble());
 
   PostSerialize(p_message,p_entity);
 }

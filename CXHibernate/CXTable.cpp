@@ -161,7 +161,6 @@ CXTable::DMLTableName(SQLInfoDB* p_info)
   return name;
 }
 
-
 bool
 CXTable::GetIsTable()
 {
@@ -201,7 +200,7 @@ CXTable::AddInfoColumn(MetaColumn& p_metaColumn)
 }
 
 void
-CXTable::SetPrimaryKey(MetaPrimary& p_metaPrimary)
+CXTable::AddPrimaryKey(MetaPrimary& p_metaPrimary)
 {
   m_primary.push_back(p_metaPrimary);
 }

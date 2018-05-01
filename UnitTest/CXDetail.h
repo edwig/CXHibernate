@@ -37,8 +37,8 @@ public:
   CXDetail(CXTable* p_table);
 
   // Bring the contents of the class to a SOAPMessage or a SQLRecord
-  virtual void Serialize(SOAPMessage& p_message,XMLElement* p_entity,int p_mutation = 0);
-  virtual void Serialize(SQLRecord&   p_record,                      int p_mutation = 0);
+  virtual void Serialize(SOAPMessage& p_message,XMLElement* p_entity);
+  virtual void Serialize(SQLRecord&   p_record, int p_mutation = 0);
 
   // Read the contents of an object from a SOAPMessage or a SQLRecord
   virtual void DeSerialize(SOAPMessage& p_message,XMLElement* p_entity);
@@ -46,8 +46,8 @@ public:
 
   // GETTERS
   int     GetID()            { return m_id;          };
-  int     GetMasterID()      { return m_mast_id;     };
   int     GetLine()          { return m_line;        };
+  int     GetMasterID()      { return m_mast_id;     };
   CString GetDescription()   { return m_description; };
   bcd     GetAmount()        { return m_amount;      };
 
@@ -55,9 +55,9 @@ protected:
 
 private:
   // Database persistent attributes
-  long    m_id      { 0 };
-  long    m_mast_id { 0 };
-  long    m_line    { 0 };
+  long    m_id      { 0 };    // Primary key part 1
+  long    m_line    { 0 };    // Primary key part 2
+  long    m_mast_id { 0 };    // Foreign key to Master
   CString m_description;
   bcd     m_amount;
   // Virtual attributes

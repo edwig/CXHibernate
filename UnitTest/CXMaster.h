@@ -39,8 +39,8 @@ public:
   // DECLARE_CXO_FACTORY(CXMaster);
 
   // Bring the contents of the class to a SOAPMessage or a SQLRecord
-  virtual void Serialize(SOAPMessage& p_message,XMLElement* p_entity,int p_mutation = 0);
-  virtual void Serialize(SQLRecord&   p_record,                      int p_mutation = 0);
+  virtual void Serialize(SOAPMessage& p_message,XMLElement* p_entity);
+  virtual void Serialize(SQLRecord&   p_record,int p_mutation = 0);
 
   // Read the contents of an object from a SOAPMessage or a SQLRecord
   virtual void DeSerialize(SOAPMessage& p_msg,XMLElement* p_entity);

@@ -42,12 +42,12 @@ public:
   virtual ~CXObject();
 
   // Bring the contents of the class to a SOAPMessage or a SQLRecord
-  virtual void Serialize(SOAPMessage& p_msg,XMLElement* p_entity,int p_mutation = 0) = 0;
-  virtual void Serialize(SQLRecord&   p_rec,                     int p_mutation = 0) = 0;
+  virtual void Serialize(SOAPMessage& p_message,XMLElement* p_entity) = 0;
+  virtual void Serialize(SQLRecord&   p_record, int p_mutation = 0) = 0;
 
   // Read the contents of an object from a SOAPMessage or a SQLRecord
-  virtual void DeSerialize(SOAPMessage& p_msg,XMLElement* p_entity) = 0;
-  virtual void DeSerialize(SQLRecord&   p_rec) = 0;
+  virtual void DeSerialize(SOAPMessage& p_message,XMLElement* p_entity) = 0;
+  virtual void DeSerialize(SQLRecord&   p_record) = 0;
 
   // Getting or setting the Primary key of the object
   void        SetPrimaryKey(SQLVariant* p_keyValue,int p_part);
@@ -80,12 +80,8 @@ protected:
   virtual void PostDeSerialize(SOAPMessage& p_msg,XMLElement* p_entity);
   virtual void PostDeSerialize(SQLRecord&   p_rec);
 
-  // All derived classes **must** implement this factory
-//   virtual CXObject* CreateNewObject(const SOAPMessage* p_msg) = 0;
-//   virtual CXObject* CreateNewObject(const SQLRecord*   p_rec) = 0;
-
   // Table where this object belongs to
-  CXTable*   m_table { nullptr };
+  CXTable*   m_table  { nullptr };
 
   // Record of this object in the database
   SQLRecord* m_record { nullptr };
@@ -109,7 +105,7 @@ using CXResultSet = std::vector<CXObject*>;
 
 //////////////////////////////////////////////////////////////////////////
 //
-// Main class for an object factory
+// OBJECT FACTORY
 // Define your own factory for a derived class of CXOBject and 
 // create an object of your own subtype
 //
@@ -123,7 +119,7 @@ typedef CXObject* (CALLBACK *CreateCXO)(CXTable* p_table);
 // Declaring a factory in your derived class
 #define DECLARE_CXO_FACTORY(classname) CXObject* CreateCXObject##classname(CXTable* p_table)
 // Defining the factory in your class implementation
-#define DEFINE_CXO_FACTORY(classname) CXObject* CreateCXObject##classname(CXTable* p_table)\
-                                      {\
-                                        return new classname(p_table);\
-                                      }
+#define DEFINE_CXO_FACTORY(classname)  CXObject* CreateCXObject##classname(CXTable* p_table)\
+                                       {\
+                                         return new classname(p_table);\
+                                       }

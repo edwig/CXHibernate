@@ -46,7 +46,7 @@ CXMaster::CXMaster(CXTable* p_table)
 
 // Bring the contents of the class to a SOAPMessage or a SQLRecord
 void
-CXMaster::Serialize(SOAPMessage& p_msg,XMLElement* p_entity,int p_mutation /*= 0*/)
+CXMaster::Serialize(SOAPMessage& p_msg,XMLElement* p_entity)
 {
 }
 

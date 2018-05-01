@@ -70,7 +70,8 @@ public:
   // Find if the database is correctly opened
   bool          GetDatabaseIsOpen();
   // Get a master mutation ID, to put actions into one (1) commit
-  int           GetMutationID();
+  int           GetMutationID(bool p_transaction = false);
+  void          CommitMutation(int p_mutationID);
  
   // QUERY INTERFACE
   CXObject*     SelectObject(CString p_tableName,SQLVariant*   p_primary,CreateCXO p_create);
@@ -84,8 +85,10 @@ public:
   bool          RemoveObject(CXObject* p_object);
 
 private:
+  // Getting meta-session info from our database
+  void          GetMetaSessionInfo();
   // Clear the table cache
-  void          ClearCache(CString p_table = "");
+  void          ClearCache (CString p_table = "");
   void          ClearTables(CString p_table = "");
   // Add an object to the cache
   bool          AddObjectInCache(CXObject* p_object,VariantSet& p_primary);
@@ -124,11 +127,14 @@ private:
   bool          InsertObjectInInternet (CXTable* p_table,CXObject* p_object,int p_mutationID = 0);
   bool          DeleteObjectInInternet (CXTable* p_table,CXObject* p_object,int p_mutationID = 0);
 
-  CXHRole       m_role;           // Master/Slave role of the session
-  bool          m_ownDatabase;    // We own / destroy this database
-  CString       m_baseDirectory;  // Base directory for filestore role
-  SQLDatabase*  m_database;       // Currently using database connection
-  TableMap      m_tables;         // All table metadata definitions that we know of
-  CXCache       m_cache;          // All cached objects of all known tables
-  int           m_mutation;       // Mutation id
+  CXHRole       m_role { CXH_Database_role};   // Master/Slave role of the session
+  bool          m_ownDatabase   { false   };   // We own / destroy this database
+  CString       m_baseDirectory;               // Base directory for filestore role
+  SQLDatabase*  m_database      { nullptr };   // Currently using database connection
+  TableMap      m_tables;                      // All table metadata definitions that we know of
+  CXCache       m_cache;                       // All cached objects of all known tables
+  int           m_mutation      { 0       };   // Mutation id
+  MetaSession   m_metaInfo;                    // Database meta-session info
+  SQLTransaction* m_transaction { nullptr };   // Enveloping transaction for all updates
+  int             m_subtrans    { 0       };   // Sub-transaction
 };

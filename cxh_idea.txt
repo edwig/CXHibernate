@@ -7,19 +7,15 @@ Marlin-SOAP <= ServiceDataSet <= SQLComponents <= ODBC Database
 </Header>
 <Body>
   <Entity name="master_Entity">
-    <Primary>
-      <Column name="ID"  type="int">45</Column>
+    <Column name="ID" type="int">45</Column>
 	  <Column name="ORG" type="string">A</Column>
-	</Primary>
-  
-    <Column name="Budget"  type="decimal">15000000</Column>
-	<Column name="Address" type="string">J.F. Kennedy Avenue 15</Column>
+    <Column name="Budget" type="decimal">15000000</Column>
+	  <Column name="Address" type="string">J.F. Kennedy Avenue 15</Column>
   </Entity>
 </Body>
 </Envelope>
 
 => Transforms to
-
 
 Update master_Entity
    set budget  = 1500000
@@ -36,10 +32,8 @@ Update master_Entity
 </Header>
 <Body>
   <Entity name="master_Entity">
-    <Primary>
-      <Column name="ID"  type="int">45</Column>
-      <Column name="ORG" type="string">A</Column>
-    </Primary>
+    <Column name="ID"  type="int">45</Column>
+    <Column name="ORG" type="string">A</Column>
     <Column name="Budget"  type="decimal">15000000</Column>
     <Column name="Address" type="string">J.F. Kennedy Avenue 15</Column>
   </Entity>
@@ -57,10 +51,8 @@ values (45,'A',15000000,'J.F. Kennedy Avenue 15');
 </Header>
 <Body>
   <Entity name="master_Entity">
-    <Primary>
-      <Column name="ID"  type="int">45</Column>
-      <Column name="ORG" type="string">A</Column>
-    </Primary>
+    <Column name="ID"  type="int">45</Column>
+    <Column name="ORG" type="string">A</Column>
   </Entity>
 </Body>
 </Envelope>

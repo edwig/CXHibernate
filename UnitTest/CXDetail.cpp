@@ -50,9 +50,7 @@ CXDetail::Serialize(SOAPMessage& p_message,XMLElement* p_entity)
 {
   PreSerialize(p_message,p_entity);
 
-//p_message.AddElement(p_entity,"id",         XDT_Integer|XDT_Type,m_id);
-  // Column "id" is done by the PreSerialize, as it is the primary key!
-
+  p_message.AddElement(p_entity,"id",         XDT_Integer|XDT_Type,m_id);
   p_message.AddElement(p_entity,"mast_id",    XDT_Integer|XDT_Type,m_mast_id);
   p_message.AddElement(p_entity,"line",       XDT_Integer|XDT_Type,m_line);
   p_message.AddElement(p_entity,"description",XDT_String |XDT_Type,m_description);

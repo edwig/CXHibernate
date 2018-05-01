@@ -241,6 +241,21 @@ CXSession::CommitMutation(int p_mutationID)
   }
 }
 
+void
+CXSession::RollbackMutation(int p_mutationID)
+{
+  // See if we have a transaction
+  if(m_transaction == nullptr)
+  {
+    return;
+  }
+
+  m_transaction->Rollback();
+  delete m_transaction;
+  m_transaction = nullptr;
+}
+
+
 //////////////////////////////////////////////////////////////////////////
 //
 // QUERY INTERFACE
@@ -248,16 +263,16 @@ CXSession::CommitMutation(int p_mutationID)
 //////////////////////////////////////////////////////////////////////////
 
 CXObject*
-CXSession::SelectObject(CString p_tableName,SQLVariant* p_primary,CreateCXO p_create)
+CXSession::SelectObject(CString p_tableName,SQLVariant* p_primary)
 {
   VariantSet set;
   set.push_back(p_primary);
 
-  return SelectObject(p_tableName,set,p_create);
+  return SelectObject(p_tableName,set);
 }
 
 CXObject*
-CXSession::SelectObject(CString p_table,VariantSet& p_primary,CreateCXO p_create)
+CXSession::SelectObject(CString p_table,VariantSet& p_primary)
 {
   // Search in cache
   CXObject* object = FindObjectInCache(p_table,p_primary);
@@ -269,17 +284,17 @@ CXSession::SelectObject(CString p_table,VariantSet& p_primary,CreateCXO p_create
   // If not found, search in database / SOAP connection
   if(m_role == CXH_Database_role)
   {
-    object = FindObjectInDatabase(p_table,p_primary,p_create);
+    object = FindObjectInDatabase(p_table,p_primary);
   }
   else if(m_role == CXH_Internet_role)
   {
     // Query for object on SOAP connection
-    object = FindObjectOnInternet(p_table,p_primary,p_create);
+    object = FindObjectOnInternet(p_table,p_primary);
   }
   else
   {
     // Query for object in the filestore
-    object = FindObjectInFilestore(p_table,p_primary,p_create);
+    object = FindObjectInFilestore(p_table,p_primary);
   }
 
   // Place in cache
@@ -295,16 +310,16 @@ CXSession::SelectObject(CString p_table,VariantSet& p_primary,CreateCXO p_create
 }
 
 CXResultSet
-CXSession::SelectObject(CString p_tableName,SQLFilter* p_filter,CreateCXO p_create)
+CXSession::SelectObject(CString p_tableName,SQLFilter* p_filter)
 {
   SQLFilterSet set;
   set.push_back(*p_filter);
 
-  return SelectObject(p_tableName,set,p_create);
+  return SelectObject(p_tableName,set);
 }
 
 CXResultSet
-CXSession::SelectObject(CString p_table,SQLFilterSet& p_filters,CreateCXO p_create)
+CXSession::SelectObject(CString p_table,SQLFilterSet& p_filters)
 {
   CXResultSet set;
 
@@ -317,15 +332,15 @@ CXSession::SelectObject(CString p_table,SQLFilterSet& p_filters,CreateCXO p_crea
 
   if(m_role == CXH_Database_role)
   {
-    SelectObjectsFromDatabase(p_table,p_filters,p_create);
+    SelectObjectsFromDatabase(p_table,p_filters);
   }
   else if(m_role == CXH_Internet_role)
   {
-    SelectObjectsFromInternet(p_table,p_filters,p_create);
+    SelectObjectsFromInternet(p_table,p_filters);
   }
   else // CXH_Filestore_role
   {
-    SelectObjectsFromFilestore(p_table,p_filters,p_create);
+    SelectObjectsFromFilestore(p_table,p_filters);
   }
 
   // Getting the result set
@@ -418,6 +433,41 @@ bool
 CXSession::RemoveObject(CXObject* p_object)
 {
   return RemoveObjectFromCache(p_object,p_object->GetPrimaryKey());
+}
+
+// Complete cache synchronize with the database, saving all results
+bool
+CXSession::Synchronize()
+{
+  // See if we do a database role
+  if(m_role != CXH_Database_role)
+  {
+    return false;
+  }
+
+  // Getting a new mutation
+  int mutationID = GetMutationID(true);
+
+  // Walk our object cache
+  for(auto& tcache : m_cache)
+  {
+    TableCache& objects = *tcache.second;
+    for(auto& obj : objects)
+    {
+      CXObject*  object = obj.second;
+      SQLRecord* record = object->GetDatabaseRecord();
+      object->Serialize(*record,mutationID);
+      if(UpdateObject(object,mutationID) == false)
+      {
+        RollbackMutation(mutationID);
+        return false;
+      }
+    }
+  }
+
+  // Commit in the database
+  CommitMutation(mutationID);
+  return true;
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -650,7 +700,7 @@ CXSession::FindObjectInCache(CString p_tableName,VariantSet& p_primary)
 
 // Try to find an object in the database
 CXObject*
-CXSession::FindObjectInDatabase(CString p_table,VariantSet& p_primary,CreateCXO p_create)
+CXSession::FindObjectInDatabase(CString p_table,VariantSet& p_primary)
 {
   // Find the CXTable object
   p_table.MakeLower();
@@ -693,7 +743,8 @@ CXSession::FindObjectInDatabase(CString p_table,VariantSet& p_primary,CreateCXO 
   }
 
   // Create our object by the creation factory
-  CXObject* object = (*p_create)(table);
+  CreateCXO create = table->GetCreateCXO();
+  CXObject* object = (*create)(table);
 
   // De-serialize the SQL Record to an CXObject derived object
   object->DeSerialize(*record);
@@ -703,7 +754,7 @@ CXSession::FindObjectInDatabase(CString p_table,VariantSet& p_primary,CreateCXO 
 
 // Try to find an object in the filestore
 CXObject*
-CXSession::FindObjectInFilestore(CString p_table,VariantSet& p_primary,CreateCXO p_create)
+CXSession::FindObjectInFilestore(CString p_table,VariantSet& p_primary)
 {
   CXTable* table = FindTable(p_table);
 
@@ -726,7 +777,8 @@ CXSession::FindObjectInFilestore(CString p_table,VariantSet& p_primary,CreateCXO
       if(entity)
       {
         // Create our object by the creation factory
-        CXObject* object = (*p_create)(table);
+        CreateCXO create = table->GetCreateCXO();
+        CXObject* object = (*create)(table);
 
         // Fill in our object from the message 
         object->DeSerialize(p_message,entity);
@@ -741,13 +793,13 @@ CXSession::FindObjectInFilestore(CString p_table,VariantSet& p_primary,CreateCXO
 
 // Try to find an object via the SOAP interface
 CXObject*
-CXSession::FindObjectOnInternet(CString p_table,VariantSet& p_primary,CreateCXO p_create)
+CXSession::FindObjectOnInternet(CString p_table,VariantSet& p_primary)
 {
   return nullptr;
 }
 
 void
-CXSession::SelectObjectsFromDatabase(CString p_table,SQLFilterSet& p_filters,CreateCXO p_create)
+CXSession::SelectObjectsFromDatabase(CString p_table,SQLFilterSet& p_filters)
 {
   // Find the CXTable object
   p_table.MakeLower();
@@ -790,7 +842,8 @@ CXSession::SelectObjectsFromDatabase(CString p_table,SQLFilterSet& p_filters,Cre
       }
 
       // Create our object by the creation factory
-      CXObject* object = (*p_create)(table);
+      CreateCXO create = table->GetCreateCXO();
+      CXObject* object = (*create)(table);
 
       // De-serialize the SQL Record to an CXObject derived object
       object->DeSerialize(*record);
@@ -808,13 +861,13 @@ CXSession::SelectObjectsFromDatabase(CString p_table,SQLFilterSet& p_filters,Cre
 }
 
 void
-CXSession::SelectObjectsFromFilestore(CString p_table,SQLFilterSet& p_filters,CreateCXO p_create)
+CXSession::SelectObjectsFromFilestore(CString p_table,SQLFilterSet& p_filters)
 {
-
+  throw CString("Cannot select multiple objects from the filestore");
 }
 
 void
-CXSession::SelectObjectsFromInternet(CString p_table,SQLFilterSet& p_filters,CreateCXO p_create)
+CXSession::SelectObjectsFromInternet(CString p_table,SQLFilterSet& p_filters)
 {
 
 }

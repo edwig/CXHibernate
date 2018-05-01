@@ -40,8 +40,9 @@ CXTable::CXTable()
 }
 
 // CTOR: Standard creation of a table
-CXTable::CXTable(CString p_schema, CString p_table)
+CXTable::CXTable(CString p_schema, CString p_table,CreateCXO p_create)
         :m_dataSet(nullptr)
+        ,m_create(p_create)
 {
   m_table.m_schema     = p_schema;
   m_table.m_table      = p_table;
@@ -62,6 +63,19 @@ void
 CXTable::SetDataSet(SQLDataSet* p_dataset)
 {
   m_dataSet = p_dataset;
+}
+
+// Set our CXObject factory function
+void
+CXTable::SetCreateCXO(CreateCXO p_create)
+{
+  m_create = p_create;
+}
+
+CreateCXO   
+CXTable::GetCreateCXO()
+{
+  return m_create;
 }
 
 SQLDataSet*

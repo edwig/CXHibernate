@@ -3,14 +3,14 @@ Marlin-SOAP <= ServiceDataSet <= SQLComponents <= ODBC Database
 
 <Envelope>
 <Header>
-   <Action>Update</Action>
+   <Action>CXHUpdate</Action>
 </Header>
 <Body>
   <Entity name="master_Entity">
-    <Column name="ID" type="int">45</Column>
-	  <Column name="ORG" type="string">A</Column>
-    <Column name="Budget" type="decimal">15000000</Column>
-	  <Column name="Address" type="string">J.F. Kennedy Avenue 15</Column>
+    <ID  type="int">45</ID>
+	  <ORG type="string">A</ORG>
+    <Budget type="decimal">15000000</Budget>
+	  <Address type="string">J.F. Kennedy Avenue 15</Address>
   </Entity>
 </Body>
 </Envelope>
@@ -28,14 +28,14 @@ Update master_Entity
 
 <Envelope>
 <Header>
-   <Action>Insert</Action>
+   <Action>CXHInsert</Action>
 </Header>
 <Body>
   <Entity name="master_Entity">
-    <Column name="ID"  type="int">45</Column>
-    <Column name="ORG" type="string">A</Column>
-    <Column name="Budget"  type="decimal">15000000</Column>
-    <Column name="Address" type="string">J.F. Kennedy Avenue 15</Column>
+    <ID  type="int">45</ID>
+    <ORG type="string">A</ORG>
+    <Budget  type="decimal">15000000</Budget>
+    <Address type="string">J.F. Kennedy Avenue 15</Address>
   </Entity>
 </Body>
 </Envelope>
@@ -47,12 +47,26 @@ values (45,'A',15000000,'J.F. Kennedy Avenue 15');
 
 <Envelope>
 <Header>
-   <Action>Delete</Action>
+   <Action>CXHInsert</Action>
+</Header>
+<Body>
+  <CXHInsertResponse>
+    <Result>OK</Result>
+  </CXHInsertResponse>
+</Body>
+
+
+
+
+
+<Envelope>
+<Header>
+   <Action>CXHDelete</Action>
 </Header>
 <Body>
   <Entity name="master_Entity">
-    <Column name="ID"  type="int">45</Column>
-    <Column name="ORG" type="string">A</Column>
+    <ID  type="int">45</ID>
+    <ORG type="string">A</ORG>
   </Entity>
 </Body>
 </Envelope>
@@ -67,16 +81,34 @@ delete from master_Entity
   
 <Envelope>
 <Header>
-  <Action>Select</Action>
+  <Action>CXHSelect</Action>
 </Header>
 <Body>
-  <Entity name="master_table">
-     <Filter>
-	   <Column>ID</Column>
-	   <Operator>=</Operator>
-	   <Value>24</Value>
-     </Filter>
+  <CXHSelect>
+    <Entity>master_table</Entity>
+    <Columns>
+       <ALL />
+    </Columns>
+    <Filters>
+      <Filter>
+	      <Column>ID</Column>
+	      <Operator>Equal</Operator>
+	      <Value>24</Value>
+      </Filter>
+      <Filter>
+	      <Column>line</Column>
+	      <Operator>GreaterThan</Operator>
+	      <Value>2</Value>
+      </Filter>
+    </Filters>
+    <Order>
+      <ID />
+      <Line />
+    </Order>
+    <SQL>
+    </SQL>
   </Entity>
+  </CXHSelect>
 </Body>
 </Envelope>  
 
@@ -84,34 +116,33 @@ delete from master_Entity
 
 SELECT *
   FROM master_table
- WHERE id = 24;
+ WHERE id = 24
+   AND line > 2
+ ORDER BY id,line;
  
 <Envelope>
 <Header>
-  <Action>SET</Action>
+  <Action>CXHSelect</Action>
 </Header>
 <Body>
-  <SET>
+  <CXHSelectResponse>
     <Entity name="master_table">
-      <Column name="ID"      type="int">45</Column>
-      <Column name="ORG"     type="string">A</Column>
-      <Column name="Budget"  type="decimal">15000000</Column>
-	    <Column name="Address" type="string">J.F. Kennedy Avenue 15</Column>
+      <ID      type="int">24</ID>
+      <ORG     type="string">A</ORG>
+      <LINE    type="int">3</LINE>
+      <Budget  type="decimal">15000000</Budget>
+	    <Address type="string">J.F. Kennedy Avenue 15</Address>
     </Entity>
-  </SET>
+  </CXHSelectResponse>
 </Body>
  
- 
- 
- --------------------                            ----------------------
- SET CLIENT                                      SET MASTER
- 
- 1) Status: STABLE             <-                STATUS: STABLE
- 2) Status: UDATE 
- 3) Status: UPDATE + SENT      ->                STATUS: UPDATE
-                                                 STATUS: UPDATE + SYNC
-    OK or ROLLBACK ?           <- OK / ROLLBACK
- 4) Status: STABLE			   <-                Status: STABLE
- 
- 
+--------------------                            ----------------------
+SET CLIENT                                      SET MASTER
+
+1) Status: STABLE             <-                STATUS: STABLE
+2) Status: UDATE 
+3) Status: UPDATE + SENT      ->                STATUS: UPDATE
+                                                STATUS: UPDATE + SYNC
+   OK or ROLLBACK ?           <- OK / ROLLBACK
+4) Status: STABLE			        <-                Status: STABLE
  

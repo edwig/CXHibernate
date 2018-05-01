@@ -72,17 +72,20 @@ public:
   // Get a master mutation ID, to put actions into one (1) commit
   int           GetMutationID(bool p_transaction = false);
   void          CommitMutation(int p_mutationID);
+  void          RollbackMutation(int p_mutationID);
  
   // QUERY INTERFACE
-  CXObject*     SelectObject(CString p_tableName,SQLVariant*   p_primary,CreateCXO p_create);
-  CXObject*     SelectObject(CString p_tableName,VariantSet&   p_primary,CreateCXO p_create);
-  CXResultSet   SelectObject(CString p_tableName,SQLFilter*    p_filter ,CreateCXO p_create);
-  CXResultSet   SelectObject(CString p_tableName,SQLFilterSet& p_filters,CreateCXO p_create);
+  CXObject*     SelectObject(CString p_tableName,SQLVariant*   p_primary);
+  CXObject*     SelectObject(CString p_tableName,VariantSet&   p_primary);
+  CXResultSet   SelectObject(CString p_tableName,SQLFilter*    p_filter);
+  CXResultSet   SelectObject(CString p_tableName,SQLFilterSet& p_filters);
   bool          UpdateObject(CXObject* p_object,int p_mutationID = 0);
   bool          InsertObject(CXObject* p_object,int p_mutationID = 0);
   bool          DeleteObject(CXObject* p_object,int p_mutationID = 0);
   // Remove object from the result cache without any database/internet actions
   bool          RemoveObject(CXObject* p_object);
+  // Complete cache synchronize with the database, saving all results
+  bool          Synchronize();
 
 private:
   // Getting meta-session info from our database
@@ -104,16 +107,16 @@ private:
   // Try to find an object in the cache
   CXObject*     FindObjectInCache   (CString p_tableName,VariantSet& p_primary);
   // Try to find an object in the database
-  CXObject*     FindObjectInDatabase (CString p_table,VariantSet& p_primary,CreateCXO p_create);
+  CXObject*     FindObjectInDatabase (CString p_table,VariantSet& p_primary);
   // Try to find an object in the filestore
-  CXObject*     FindObjectInFilestore(CString p_table,VariantSet& p_primary,CreateCXO p_create);
+  CXObject*     FindObjectInFilestore(CString p_table,VariantSet& p_primary);
   // Try to find an object via the SOAP interface
-  CXObject*     FindObjectOnInternet (CString p_table,VariantSet& p_primary,CreateCXO p_create);
+  CXObject*     FindObjectOnInternet (CString p_table,VariantSet& p_primary);
 
   // SELECT objects
-  void          SelectObjectsFromDatabase (CString p_table,SQLFilterSet& p_filters,CreateCXO p_create);
-  void          SelectObjectsFromFilestore(CString p_table,SQLFilterSet& p_filters,CreateCXO p_create);
-  void          SelectObjectsFromInternet (CString p_table,SQLFilterSet& p_filters,CreateCXO p_create);
+  void          SelectObjectsFromDatabase (CString p_table,SQLFilterSet& p_filters);
+  void          SelectObjectsFromFilestore(CString p_table,SQLFilterSet& p_filters);
+  void          SelectObjectsFromInternet (CString p_table,SQLFilterSet& p_filters);
   // DML operations in the database
   bool          UpdateObjectInDatabase (CXTable* p_table,CXObject* p_object,int p_mutationID = 0);
   bool          InsertObjectInDatabase (CXTable* p_table,CXObject* p_object,int p_mutationID = 0);

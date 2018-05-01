@@ -131,16 +131,16 @@ CXObject::GetDatabaseRecord()
 void 
 CXObject::PreSerialize(SOAPMessage& p_message,XMLElement* p_entity)
 {
-  int index = 0;
-  WordList keys = m_table->GetPrimaryKeyAsList();
-  for(auto& key : keys)
-  {
-    key.MakeLower();
-    SQLVariant* val = m_primaryKey[index++];
-    XmlDataType typ = ODBCToXmlDataType(val->GetDataType());
-
-    p_message.AddElement(p_entity,key,typ|XDT_Type,val->GetAsChar());
-  }
+//   int index = 0;
+//   WordList keys = m_table->GetPrimaryKeyAsList();
+//   for(auto& key : keys)
+//   {
+//     key.MakeLower();
+//     SQLVariant* val = m_primaryKey[index++];
+//     XmlDataType typ = ODBCToXmlDataType(val->GetDataType());
+// 
+//     p_message.AddElement(p_entity,key,typ|XDT_Type,val->GetAsChar());
+//   }
 }
 
 void

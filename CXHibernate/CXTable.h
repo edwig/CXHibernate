@@ -25,6 +25,7 @@
 // Version number:  0.0.1
 //
 #pragma once
+#include "CXObject.h"
 #include <SQLMetaInfo.h>
 #include <SQLInfoDB.h>
 #include <SQLDataSet.h>
@@ -35,11 +36,13 @@ class CXTable
 {
 public:
   CXTable();
-  CXTable(CString p_schema,CString p_table);
+  CXTable(CString p_schema,CString p_table,CreateCXO p_create);
  ~CXTable();
 
   // Master side must apply a SQLDataSet
   void      SetDataSet(SQLDataSet* p_dataset);
+  // Set our CXObject factory function
+  void      SetCreateCXO(CreateCXO p_create);
 
   // Names of this object
   CString   SchemaName();
@@ -57,6 +60,8 @@ public:
   bool        GetIsSynonym();
   // Primary data set
   SQLDataSet* GetDataSet();
+  // Object factory of this table
+  CreateCXO   GetCreateCXO();
 
   // Getting the table info in an immutable way
   MetaTable&      GetTableInfo()   const;
@@ -96,7 +101,8 @@ private:
   MForeignMap   m_foreigns;
   MIndicesMap   m_indices;
   MPrivilegeMap m_privileges;
-
+  // Our CXObject factory function
+  CreateCXO     m_create;
   // Standard data set in a master connection
   SQLDataSet*   m_dataSet;
 };

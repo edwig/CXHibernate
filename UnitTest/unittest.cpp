@@ -52,23 +52,26 @@ namespace UnitTest
 		TEST_METHOD(T01_SelectMaster)
 		{
       Logger::WriteMessage("Getting a record from the MASTER table");
-      if(OpenSession())
+
+      OpenSession();
+      try
       {
         SQLVariant var((long)2);
         VariantSet set;
         set.push_back(&var);
 
-        CXObject* object = m_session.SelectObject("master",set,CXO_FACTORY(CXMaster));
+        CXObject* object = m_session.SelectObject("master",set);
         CXMaster* master = reinterpret_cast<CXMaster*>(object);
 
         Assert::IsNotNull(master);
-        Logger::WriteMessage("Testing 2th master record");
 
+        Logger::WriteMessage("Testing 2th master record");
         PrintMaster(master);
       }
-      else
+      catch(CString& s)
       {
-        Assert::Fail(L"Database was not opened");
+        Logger::WriteMessage("ERROR: " + s);
+        Assert::Fail();
       }
 		}
 
@@ -82,7 +85,7 @@ namespace UnitTest
         SQLFilter filter("line", OP_Greater,&one);
         filters.push_back(filter);
 
-        CXResultSet set = m_session.SelectObject("detail",filters,CXO_FACTORY(CXDetail));
+        CXResultSet set = m_session.SelectObject("detail",filters);
         for(int ind = 0;ind < set.size(); ++ind)
         {
           CXDetail* detail = reinterpret_cast<CXDetail*>(set[ind]);
@@ -104,7 +107,7 @@ namespace UnitTest
         VariantSet set;
         set.push_back(&var);
 
-        CXObject* object = m_session.SelectObject("master", set, CXO_FACTORY(CXMaster));
+        CXObject* object = m_session.SelectObject("master",set);
         CXMaster* master = reinterpret_cast<CXMaster*>(object);
 
         Assert::IsNotNull(master);
@@ -190,7 +193,7 @@ namespace UnitTest
         SQLVariant one((long)1);
         SQLFilter filter("line", OP_GreaterEqual, &one);
 
-        CXResultSet set = m_session.SelectObject("detail",&filter,CXO_FACTORY(CXDetail));
+        CXResultSet set = m_session.SelectObject("detail",&filter);
 
         m_session.SetBaseDirectory("C:\\WWW\\Testing");
         m_session.ChangeRole(CXHRole::CXH_Filestore_role);
@@ -214,7 +217,7 @@ namespace UnitTest
         SQLVariant one((long)7);
         m_session.SetBaseDirectory("C:\\WWW\\Testing");
 
-        CXObject* object = m_session.SelectObject("detail",&one, CXO_FACTORY(CXDetail));
+        CXObject* object = m_session.SelectObject("detail",&one);
         CXDetail* detail = reinterpret_cast<CXDetail*>(object);
         Assert::IsNotNull(detail);
         PrintDetail(detail);
@@ -233,7 +236,7 @@ namespace UnitTest
         SQLVariant one((long)6);
         m_session.SetBaseDirectory("C:\\WWW\\Testing");
 
-        CXObject* object = m_session.SelectObject("detail", &one, CXO_FACTORY(CXDetail));
+        CXObject* object = m_session.SelectObject("detail", &one);
         CXDetail* detail = reinterpret_cast<CXDetail*>(object);
         Assert::IsNotNull(detail);
         PrintDetail(detail);
@@ -265,9 +268,9 @@ namespace UnitTest
         {
           m_session.SetDatabase(&m_database);
 
-          CXTable* master  = new CXTable("sysdba","master");
-          CXTable* detail  = new CXTable("sysdba","detail");
-          CXTable* numbers = new CXTable("sysdba","test_number");
+          CXTable* master  = new CXTable("sysdba","master",     CXO_FACTORY(CXMaster));
+          CXTable* detail  = new CXTable("sysdba","detail",     CXO_FACTORY(CXDetail));
+          CXTable* numbers = new CXTable("sysdba","test_number",CXO_FACTORY(TestNumber));
 
           // Do the 'lazy' stuff by reading the definition from the database
           // assuming that the definition corresponds with ours
@@ -276,12 +279,13 @@ namespace UnitTest
           ReadTableDefinition(numbers);
           return true;
         }
-        return false;
+        Assert::Fail();
       }
       catch(CString& s)
       {
         Assert::AreEqual(s,"");
       }
+      Assert::Fail();
       return false;
     }
 

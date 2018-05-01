@@ -33,6 +33,9 @@
     <ClInclude Include="CXPrimaryHash.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="CXServer.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">
@@ -51,6 +54,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="CXPrimaryHash.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="CXServer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

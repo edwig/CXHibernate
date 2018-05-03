@@ -26,6 +26,7 @@
 //
 #include "stdafx.h"
 #include "CXTable.h"
+#include <SOAPMessage.h>
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -275,6 +276,45 @@ CXTable::GetMetaInfoFromDatabase(SQLDatabase& p_database
   return true;
 }
 
+// Serialize the info of the table
+bool
+CXTable::SaveMetaInfo(CString p_filename)
+{
+  CString namesp(DEFAULT_NAMESPACE);
+  CString action("TableMetaInfo");
+  SOAPMessage msg(namesp,action);
+
+  XMLElement* info = msg.SetParameter(action,"");
+  SaveTableInfo(msg,info);
+
+  XMLElement* columns = msg.SetParameter("Columns","");
+  SaveColumnInfo(msg,columns);
+
+  XMLElement* pkey = msg.SetParameter("PrimaryKey","");
+  SavePrimaryKey(msg,pkey);
+
+  XMLElement* fkey = msg.SetParameter("ForeignKeys","");
+  SaveForeignKey(msg,fkey);
+
+  XMLElement* indi = msg.SetParameter("Indices","");
+  SaveIndices(msg,indi);
+
+  return true;
+}
+
+bool
+CXTable::LoadMetaInfo(CString p_filename)
+{
+  return false;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// PRIVATE
+//
+//////////////////////////////////////////////////////////////////////////
+
 void 
 CXTable::GetTableInfo(SQLInfoDB* p_info)
 {
@@ -413,3 +453,125 @@ CXTable::GetPrimaryKeyAsList()
   }
   return list;
 }
+
+//////////////////////////////////////////////////////////////////////////
+
+void 
+CXTable::SaveTableInfo(SOAPMessage& p_msg,XMLElement* p_elem)
+{
+  p_msg.AddElement(p_elem,"Schema",    XDT_String |XDT_Type,m_table.m_schema);
+  p_msg.AddElement(p_elem,"Table",     XDT_String |XDT_Type,m_table.m_table);
+  p_msg.AddElement(p_elem,"ObjectType",XDT_String |XDT_Type,m_table.m_objectType);
+  p_msg.AddElement(p_elem,"Remarks",   XDT_String |XDT_Type,m_table.m_remarks);
+  p_msg.AddElement(p_elem,"FullName",  XDT_String |XDT_Type,m_table.m_fullName);
+  p_msg.AddElement(p_elem,"Tablespace",XDT_String |XDT_Type,m_table.m_tablespace);
+  p_msg.AddElement(p_elem,"Temporary", XDT_Boolean|XDT_Type,m_table.m_temporary);
+}
+
+void 
+CXTable::SaveColumnInfo(SOAPMessage& p_msg, XMLElement* p_elem)
+{
+  for(auto& col : m_columns)
+  {
+    XMLElement* column = p_msg.AddElement(p_elem,"Column",XDT_String,"");
+
+    p_msg.AddElement(column, "Position",      XDT_Integer|XDT_Type,col.m_position);
+    p_msg.AddElement(column, "ColumnName",    XDT_String |XDT_Type,col.m_column);
+    p_msg.AddElement(column, "ODBC_Type",     XDT_Integer|XDT_Type,col.m_datatype);
+    p_msg.AddElement(column, "RDBMS_Type",    XDT_String |XDT_Type,col.m_typename);
+    p_msg.AddElement(column, "ColumnSize",    XDT_Integer|XDT_Type,col.m_columnSize);
+    p_msg.AddElement(column, "BufferLength",  XDT_Integer|XDT_Type,col.m_bufferLength);
+    p_msg.AddElement(column, "DecimalDigits", XDT_Integer|XDT_Type,col.m_decimalDigits);
+    p_msg.AddElement(column, "Radix",         XDT_Integer|XDT_Type,col.m_numRadix);
+    p_msg.AddElement(column, "Nullable",      XDT_Integer|XDT_Type,col.m_nullable);
+    p_msg.AddElement(column, "Remarks",       XDT_String |XDT_Type,col.m_remarks);
+    p_msg.AddElement(column, "DefaultValue",  XDT_String |XDT_Type,col.m_default);
+    p_msg.AddElement(column, "ODBC_Type3",    XDT_Integer|XDT_Type,col.m_datatype3);
+    p_msg.AddElement(column, "SubType",       XDT_Integer|XDT_Type,col.m_sub_datatype);
+    p_msg.AddElement(column, "OctetLength",   XDT_Integer|XDT_Type,col.m_octet_length);
+  }
+}
+
+void 
+CXTable::SavePrimaryKey(SOAPMessage& p_msg,XMLElement* p_elem)
+{
+  bool first = true;
+  for(auto& pkey : m_primary)
+  {
+    if(first)
+    {
+      p_msg.AddElement(p_elem,"ConstraintName",   XDT_String |XDT_Type,pkey.m_constraintName);
+      p_msg.AddElement(p_elem,"Deferrable",       XDT_Integer|XDT_Type,pkey.m_deferrable);
+      p_msg.AddElement(p_elem,"InitiallyDeferred",XDT_Integer|XDT_Type,pkey.m_initiallyDeferred);
+    }
+    first = false;
+
+    p_msg.AddElement(p_elem,"Column",  XDT_String,"");
+    p_msg.AddElement(p_elem,"Position",XDT_Integer|XDT_Type,pkey.m_columnPosition);
+    p_msg.AddElement(p_elem,"Name",    XDT_String |XDT_Type,pkey.m_columnName);
+  }
+}
+
+void 
+CXTable::SaveForeignKey(SOAPMessage& p_msg,XMLElement* p_elem)
+{
+  XMLElement* foreign = nullptr;
+  XMLElement* columns = nullptr;
+  XMLElement* pkcols  = nullptr;
+
+  for(auto& fkey : m_foreigns)
+  {
+    if(fkey.m_keySequence == 1)
+    {
+      foreign = p_msg.AddElement(p_elem,"ForeignKey",XDT_String,"");
+
+      // Foreign key part
+      p_msg.AddElement(foreign,"Constraint",XDT_String |XDT_Type,fkey.m_foreignConstraint);
+      p_msg.AddElement(foreign,"UpdateRule",XDT_Integer|XDT_Type,fkey.m_updateRule);
+      p_msg.AddElement(foreign,"DeleteRule",XDT_Integer|XDT_Type,fkey.m_deleteRule);
+      p_msg.AddElement(foreign,"Deferrable",XDT_Integer|XDT_Type,fkey.m_deferrable);
+      p_msg.AddElement(foreign,"Match",     XDT_Integer|XDT_Type,fkey.m_match);
+      p_msg.AddElement(foreign,"InitiallyDeferred",XDT_Integer|XDT_Type,fkey.m_initiallyDeferred);
+      p_msg.AddElement(foreign,"Enabled",   XDT_Integer|XDT_Type,fkey.m_enabled);
+
+      // Prepare for foreign-key columns
+      columns = p_msg.AddElement(foreign,"Columns",XDT_String,"");
+
+      // Primary key part
+      XMLElement* prim = p_msg.AddElement(foreign,"Primary",XDT_String,"");
+      p_msg.AddElement(prim,"Schema",    XDT_String|XDT_Type,fkey.m_pkSchemaName);
+      p_msg.AddElement(prim,"Table",     XDT_String|XDT_Type,fkey.m_pkTableName);
+
+      // Prepare for primary-key columns
+      pkcols = p_msg.AddElement(prim,"Columns",XDT_String,"");
+    }
+
+    // For all columns
+    p_msg.AddElement(columns,"Column",XDT_String|XDT_Type,fkey.m_fkColumnName);
+    p_msg.AddElement(pkcols ,"Column",XDT_String|XDT_Type,fkey.m_pkColumnName);
+  }
+}
+
+void 
+CXTable::SaveIndices(SOAPMessage& p_msg,XMLElement* p_elem)
+{
+  XMLElement* index   = nullptr;
+  XMLElement* columns = nullptr;
+
+  for(auto& ind : m_indices)
+  {
+    if(ind.m_position == 1)
+    {
+      index = p_msg.AddElement(p_elem,"Index",XDT_String,"");
+      p_msg.AddElement(index,"Name",     XDT_String |XDT_Type,ind.m_indexName);
+      p_msg.AddElement(index,"Unique",   XDT_Boolean|XDT_Type,ind.m_unique);
+      p_msg.AddElement(index,"Ascending",XDT_Boolean|XDT_Type,ind.m_ascending == "A");
+      p_msg.AddElement(index,"Filter",   XDT_String |XDT_Type,ind.m_filter);
+
+      columns = p_msg.AddElement(index,"Columns",XDT_String,"");
+    }
+    // Add all columns
+    p_msg.AddElement(columns,"Column",XDT_String|XDT_Type,ind.m_columnName);
+  }
+}
+

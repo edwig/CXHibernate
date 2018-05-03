@@ -31,6 +31,7 @@
 #include <SQLDataSet.h>
 
 using namespace SQLComponents;
+class XMLMessage;
 
 class CXTable
 {
@@ -85,6 +86,11 @@ public:
                                    ,bool p_getForeigns   = false
                                    ,bool p_getIndices    = false
                                    ,bool p_getPrivileges = false);
+
+  // Serialize the info of the table
+  bool      SaveMetaInfo(CString p_filename);
+  bool      LoadMetaInfo(CString p_filename);
+
 private:
   // Getting table info from the ODBC database
   void GetTableInfo     (SQLInfoDB* p_info);
@@ -93,6 +99,12 @@ private:
   void GetForeignKeyInfo(SQLInfoDB* p_info);
   void GetIndexInfo     (SQLInfoDB* p_info);
   void GetPrivilegeInfo (SQLInfoDB* p_info);
+
+  void SaveTableInfo (SOAPMessage& p_msg,XMLElement* p_elem);
+  void SaveColumnInfo(SOAPMessage& p_msg,XMLElement* p_elem);
+  void SavePrimaryKey(SOAPMessage& p_msg,XMLElement* p_elem);
+  void SaveForeignKey(SOAPMessage& p_msg,XMLElement* p_elem);
+  void SaveIndices   (SOAPMessage& p_msg,XMLElement* p_elem);
 
   // Meta info of this table
   MetaTable     m_table;

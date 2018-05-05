@@ -234,18 +234,53 @@ namespace UnitTest
       if (OpenSession())
       {
         SQLVariant one((long)6);
-        m_session.SetBaseDirectory("C:\\WWW\\Testing");
 
         CXObject* object = m_session.SelectObject("detail", &one);
         CXDetail* detail = reinterpret_cast<CXDetail*>(object);
+
         Assert::IsNotNull(detail);
         PrintDetail(detail);
 
-        m_session.DeleteObject(detail);
+        bool res = m_session.DeleteObject(detail);
+        Assert::IsTrue(res);
       }
       else
       {
         Assert::Fail(L"Database was not opened");
+      }
+    }
+
+    TEST_METHOD(T08_WriteTableInfo)
+    {
+      Logger::WriteMessage("Write meta info of tables");
+      if(OpenSession())
+      {
+        CXTable* master = m_session.FindTable("master");
+        CXTable* detail = m_session.FindTable("detail");
+        Assert::IsNotNull(master);
+        Assert::IsNotNull(detail);
+
+        bool res1 = master->SaveMetaInfo(&m_session);
+        bool res2 = detail->SaveMetaInfo(&m_session);
+        Assert::IsTrue(res1);
+        Assert::IsTrue(res2);
+      }
+    }
+
+    TEST_METHOD(T09_LoadTableInfo)
+    {
+      Logger::WriteMessage("Write meta info of tables");
+      if (OpenSession())
+      {
+        CXTable* master = m_session.FindTable("master");
+        CXTable* detail = m_session.FindTable("detail");
+        Assert::IsNotNull(master);
+        Assert::IsNotNull(detail);
+
+        bool res1 = master->LoadMetaInfo(&m_session);
+        bool res2 = detail->LoadMetaInfo(&m_session);
+        Assert::IsTrue(res1);
+        Assert::IsTrue(res2);
       }
     }
 
@@ -267,6 +302,7 @@ namespace UnitTest
         if(m_database.IsOpen())
         {
           m_session.SetDatabase(&m_database);
+          m_session.SetBaseDirectory("C:\\WWW\\Testing");
 
           CXTable* master  = new CXTable("sysdba","master",     CXO_FACTORY(CXMaster));
           CXTable* detail  = new CXTable("sysdba","detail",     CXO_FACTORY(CXDetail));
@@ -291,7 +327,7 @@ namespace UnitTest
 
     void ReadTableDefinition(CXTable* p_table)
     {
-      if(p_table->GetMetaInfoFromDatabase(m_database))
+      if(p_table->GetMetaInfoFromDatabase(m_database,true,true,true))
       {
         m_session.AddTable(p_table);
       }

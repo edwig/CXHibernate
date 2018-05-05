@@ -470,6 +470,80 @@ CXSession::Synchronize()
   return true;
 }
 
+// Create a filestore name for a table
+CString
+CXSession::CreateFilestoreName(CXTable* p_table)
+{
+  CString tablename = p_table->FullQualifiedTableName();
+  tablename.Replace(".", "_");
+
+  CString fileName = m_baseDirectory;
+  if (fileName.Right(1) != '\\')
+  {
+    fileName += "\\";
+  }
+
+  EnsureFile ensure(fileName);
+  if (ensure.CheckCreateDirectory())
+  {
+    return "";
+  }
+
+  // Add our table name
+  fileName += tablename;
+  fileName += ".xml";
+
+  return fileName;
+}
+
+// Create a filestore name for an object
+CString
+CXSession::CreateFilestoreName(CXTable* p_table, VariantSet& p_primary)
+{
+  CString tablename = p_table->FullQualifiedTableName();
+  tablename.Replace(".", "_");
+
+  CString fileName = m_baseDirectory;
+  if (fileName.Right(1) != '\\')
+  {
+    fileName += "\\";
+  }
+  fileName += tablename;
+  fileName += "\\";
+
+  EnsureFile ensure(fileName);
+  if (ensure.CheckCreateDirectory())
+  {
+    return "";
+  }
+
+  fileName += "Object_";
+
+  fileName += CXPrimaryHash(p_primary);
+  fileName += ".xml";
+
+  return fileName;
+}
+
+// Saving a SOAP XML message on the file system
+bool
+CXSession::SaveSOAPMessage(SOAPMessage& p_message, CString p_fileName)
+{
+  bool result = false;
+  FILE* file = nullptr;
+  if (fopen_s(&file, p_fileName, "w") == 0 && file)
+  {
+    CString contents = p_message.GetSoapMessage();
+    if (fwrite(contents.GetString(), contents.GetLength(), 1, file) == 1)
+    {
+      result = true;
+    }
+    // Close and flush the file
+    fclose(file);
+  }
+  return result;
+}
+
 //////////////////////////////////////////////////////////////////////////
 //
 // PRIVATE
@@ -629,53 +703,6 @@ CXSession::CreateFilterSet(CXTable* p_table,VariantSet& p_primary,SQLFilterSet& 
   }
 
   return true;
-}
-
-// Create a filestore name for an object
-CString
-CXSession::CreateFilestoreName(CXTable* p_table,VariantSet& p_primary)
-{
-  CString tablename = p_table->FullQualifiedTableName();
-  tablename.Replace(".","_");
-
-  CString fileName = m_baseDirectory;
-  if(fileName.Right(1) != '\\')
-  {
-    fileName += "\\";
-  }
-  fileName += tablename;
-  fileName += "\\";
-
-  EnsureFile ensure(fileName);
-  if(ensure.CheckCreateDirectory())
-  {
-    return "";
-  }
-
-  fileName += "Object_";
-
-  fileName += CXPrimaryHash(p_primary);
-  fileName += ".xml";
-
-  return fileName;
-}
-
-bool
-CXSession::SaveSOAPMessage(SOAPMessage& p_message, CString p_fileName)
-{
-  bool result = false;
-  FILE* file = nullptr;
-  if(fopen_s(&file, p_fileName, "w") == 0 && file)
-  {
-    CString contents = p_message.GetSoapMessage();
-    if(fwrite(contents.GetString(),contents.GetLength(),1,file) == 1)
-    {
-      result = true;
-    }
-    // Close and flush the file
-    fclose(file);
-  }
-  return result;
 }
 
 // Try to find an object in the cache

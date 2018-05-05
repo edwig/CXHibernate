@@ -29,6 +29,7 @@
 #include "CXObject.h"
 #include <SQLDatabase.h>
 #include <SQLDataSet.h>
+#include <SQLMetaInfo.h>
 #include <map>
 
 using namespace SQLComponents;
@@ -73,7 +74,15 @@ public:
   int           GetMutationID(bool p_transaction = false);
   void          CommitMutation(int p_mutationID);
   void          RollbackMutation(int p_mutationID);
- 
+
+  // SOAP INTERFACE
+  // Create a filestore name for a table
+  CString       CreateFilestoreName(CXTable* p_table);
+  // Create a filestore name for an object
+  CString       CreateFilestoreName(CXTable* p_table, VariantSet& p_primary);
+  // Save a SOAPMessage on the filesystem
+  bool          SaveSOAPMessage(SOAPMessage& p_message, CString p_fileName);
+
   // QUERY INTERFACE
   CXObject*     SelectObject(CString p_tableName,SQLVariant*   p_primary);
   CXObject*     SelectObject(CString p_tableName,VariantSet&   p_primary);
@@ -99,10 +108,6 @@ private:
   bool          RemoveObjectFromCache(CXObject* p_object, VariantSet& p_primary);
   // Create a filters set for a DataSet
   bool          CreateFilterSet(CXTable* p_table,VariantSet& p_primary,SQLFilterSet& p_filters);
-  // Create a filestore name for an object
-  CString       CreateFilestoreName(CXTable* p_table,VariantSet& p_primary);
-  // Save a SOAPMessage on the filesystem
-  bool          SaveSOAPMessage(SOAPMessage& p_message,CString p_fileName);
 
   // Try to find an object in the cache
   CXObject*     FindObjectInCache   (CString p_tableName,VariantSet& p_primary);

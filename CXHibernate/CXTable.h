@@ -26,12 +26,14 @@
 //
 #pragma once
 #include "CXObject.h"
+#include "CXSession.h"
 #include <SQLMetaInfo.h>
 #include <SQLInfoDB.h>
 #include <SQLDataSet.h>
 
 using namespace SQLComponents;
 class XMLMessage;
+class CXSession;
 
 class CXTable
 {
@@ -88,8 +90,8 @@ public:
                                    ,bool p_getPrivileges = false);
 
   // Serialize the info of the table
-  bool      SaveMetaInfo(CString p_filename);
-  bool      LoadMetaInfo(CString p_filename);
+  bool      SaveMetaInfo(CXSession* p_session,CString p_filename = "");
+  bool      LoadMetaInfo(CXSession* p_session,CString p_filename = "");
 
 private:
   // Getting table info from the ODBC database
@@ -100,11 +102,19 @@ private:
   void GetIndexInfo     (SQLInfoDB* p_info);
   void GetPrivilegeInfo (SQLInfoDB* p_info);
 
-  void SaveTableInfo (SOAPMessage& p_msg,XMLElement* p_elem);
-  void SaveColumnInfo(SOAPMessage& p_msg,XMLElement* p_elem);
-  void SavePrimaryKey(SOAPMessage& p_msg,XMLElement* p_elem);
-  void SaveForeignKey(SOAPMessage& p_msg,XMLElement* p_elem);
-  void SaveIndices   (SOAPMessage& p_msg,XMLElement* p_elem);
+  void SaveTableInfo (SOAPMessage& p_msg);
+  void SaveColumnInfo(SOAPMessage& p_msg);
+  void SavePrimaryKey(SOAPMessage& p_msg);
+  void SaveForeignKey(SOAPMessage& p_msg);
+  void SaveIndices   (SOAPMessage& p_msg);
+  void SavePrivileges(SOAPMessage& p_msg);
+
+  void LoadTableInfo (SOAPMessage& p_msg);
+  void LoadColumnInfo(SOAPMessage& p_msg);
+  void LoadPrimaryKey(SOAPMessage& p_msg);
+  void LoadForeignKey(SOAPMessage& p_msg);
+  void LoadIndices   (SOAPMessage& p_msg);
+  void LoadPrivileges(SOAPMessage& p_msg);
 
   // Meta info of this table
   MetaTable     m_table;

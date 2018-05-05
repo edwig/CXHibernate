@@ -217,8 +217,9 @@ SQLInfoDB::ReadTablesFromQuery(SQLQuery& p_query,MTableMap& p_tables)
     table.m_table      = (CString) p_query[3];
     table.m_objectType = (CString) p_query[4];
     table.m_remarks    = (CString) p_query[5];
-    table.m_tablespace = (CString) p_query[6];
-    table.m_temporary  = (bool)    p_query[7];
+    table.m_fullName   = (CString) p_query[6];
+    table.m_tablespace = (CString) p_query[7];
+    table.m_temporary  = (bool)    p_query[8];
 
     table.m_catalog.Trim();
     table.m_schema.Trim();

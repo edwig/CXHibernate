@@ -278,36 +278,56 @@ CXTable::GetMetaInfoFromDatabase(SQLDatabase& p_database
 
 // Serialize the info of the table
 bool
-CXTable::SaveMetaInfo(CString p_filename)
+CXTable::SaveMetaInfo(CXSession* p_session,CString p_filename)
 {
+  // Getting a XML SOAPMessage
   CString namesp(DEFAULT_NAMESPACE);
   CString action("TableMetaInfo");
   SOAPMessage msg(namesp,action);
 
-  XMLElement* info = msg.SetParameter(action,"");
-  SaveTableInfo(msg,info);
+  // Saving table info to the XML message
+  SaveTableInfo(msg);
+  SaveColumnInfo(msg);
+  SavePrimaryKey(msg);
+  SaveForeignKey(msg);
+  SaveIndices(msg);
+  SavePrivileges(msg);
 
-  XMLElement* columns = msg.SetParameter("Columns","");
-  SaveColumnInfo(msg,columns);
-
-  XMLElement* pkey = msg.SetParameter("PrimaryKey","");
-  SavePrimaryKey(msg,pkey);
-
-  XMLElement* fkey = msg.SetParameter("ForeignKeys","");
-  SaveForeignKey(msg,fkey);
-
-  XMLElement* indi = msg.SetParameter("Indices","");
-  SaveIndices(msg,indi);
-
-  return true;
+  // Storing the info on the file system
+  CString filename = p_filename.IsEmpty() ? p_session->CreateFilestoreName(this) : p_filename;
+  return p_session->SaveSOAPMessage(msg,filename);
 }
 
 bool
-CXTable::LoadMetaInfo(CString p_filename)
+CXTable::LoadMetaInfo(CXSession* p_session,CString p_filename)
 {
-  return false;
-}
+  SOAPMessage msg;
+  CString filename = p_filename.IsEmpty() ? p_session->CreateFilestoreName(this) : p_filename;
 
+  // Load our table description and see if everything went well
+  if((msg.LoadFile(filename) == false) ||
+     (msg.GetInternalError() != XmlError::XE_NoError))
+  {
+    return false;
+  }
+
+  // Forget previous info
+  m_columns.clear();
+  m_primary.clear();
+  m_foreigns.clear();
+  m_indices.clear();
+  m_privileges.clear();
+
+  // Loading info from the XML message
+  LoadTableInfo(msg);
+  LoadColumnInfo(msg);
+  LoadPrimaryKey(msg);
+  LoadForeignKey(msg);
+  LoadIndices(msg);
+  LoadPrivileges(msg);
+
+  return true;
+}
 
 //////////////////////////////////////////////////////////////////////////
 //
@@ -457,23 +477,27 @@ CXTable::GetPrimaryKeyAsList()
 //////////////////////////////////////////////////////////////////////////
 
 void 
-CXTable::SaveTableInfo(SOAPMessage& p_msg,XMLElement* p_elem)
+CXTable::SaveTableInfo(SOAPMessage& p_msg)
 {
-  p_msg.AddElement(p_elem,"Schema",    XDT_String |XDT_Type,m_table.m_schema);
-  p_msg.AddElement(p_elem,"Table",     XDT_String |XDT_Type,m_table.m_table);
-  p_msg.AddElement(p_elem,"ObjectType",XDT_String |XDT_Type,m_table.m_objectType);
-  p_msg.AddElement(p_elem,"Remarks",   XDT_String |XDT_Type,m_table.m_remarks);
-  p_msg.AddElement(p_elem,"FullName",  XDT_String |XDT_Type,m_table.m_fullName);
-  p_msg.AddElement(p_elem,"Tablespace",XDT_String |XDT_Type,m_table.m_tablespace);
-  p_msg.AddElement(p_elem,"Temporary", XDT_Boolean|XDT_Type,m_table.m_temporary);
+  XMLElement* elem = p_msg.SetParameter("TableInfo","");
+
+  p_msg.AddElement(elem,"Schema",    XDT_String |XDT_Type,m_table.m_schema);
+  p_msg.AddElement(elem,"Table",     XDT_String |XDT_Type,m_table.m_table);
+  p_msg.AddElement(elem,"ObjectType",XDT_String |XDT_Type,m_table.m_objectType);
+  p_msg.AddElement(elem,"Remarks",   XDT_String |XDT_Type,m_table.m_remarks);
+  p_msg.AddElement(elem,"FullName",  XDT_String |XDT_Type,m_table.m_fullName);
+  p_msg.AddElement(elem,"Tablespace",XDT_String |XDT_Type,m_table.m_tablespace);
+  p_msg.AddElement(elem,"Temporary", XDT_Boolean|XDT_Type,m_table.m_temporary);
 }
 
 void 
-CXTable::SaveColumnInfo(SOAPMessage& p_msg, XMLElement* p_elem)
+CXTable::SaveColumnInfo(SOAPMessage& p_msg)
 {
+  XMLElement* columns = p_msg.SetParameter("Columns", "");
+
   for(auto& col : m_columns)
   {
-    XMLElement* column = p_msg.AddElement(p_elem,"Column",XDT_String,"");
+    XMLElement* column = p_msg.AddElement(columns,"Column",XDT_String,"");
 
     p_msg.AddElement(column, "Position",      XDT_Integer|XDT_Type,col.m_position);
     p_msg.AddElement(column, "ColumnName",    XDT_String |XDT_Type,col.m_column);
@@ -493,37 +517,41 @@ CXTable::SaveColumnInfo(SOAPMessage& p_msg, XMLElement* p_elem)
 }
 
 void 
-CXTable::SavePrimaryKey(SOAPMessage& p_msg,XMLElement* p_elem)
+CXTable::SavePrimaryKey(SOAPMessage& p_msg)
 {
+  XMLElement* elem = p_msg.SetParameter("PrimaryKey", "");
+
   bool first = true;
   for(auto& pkey : m_primary)
   {
     if(first)
     {
-      p_msg.AddElement(p_elem,"ConstraintName",   XDT_String |XDT_Type,pkey.m_constraintName);
-      p_msg.AddElement(p_elem,"Deferrable",       XDT_Integer|XDT_Type,pkey.m_deferrable);
-      p_msg.AddElement(p_elem,"InitiallyDeferred",XDT_Integer|XDT_Type,pkey.m_initiallyDeferred);
+      p_msg.AddElement(elem,"ConstraintName",   XDT_String |XDT_Type,pkey.m_constraintName);
+      p_msg.AddElement(elem,"Deferrable",       XDT_Integer|XDT_Type,pkey.m_deferrable);
+      p_msg.AddElement(elem,"InitiallyDeferred",XDT_Integer|XDT_Type,pkey.m_initiallyDeferred);
     }
     first = false;
 
-    p_msg.AddElement(p_elem,"Column",  XDT_String,"");
-    p_msg.AddElement(p_elem,"Position",XDT_Integer|XDT_Type,pkey.m_columnPosition);
-    p_msg.AddElement(p_elem,"Name",    XDT_String |XDT_Type,pkey.m_columnName);
+    XMLElement* col = p_msg.AddElement(elem,"Column",  XDT_String,"");
+    p_msg.AddElement(col,"Position",XDT_Integer|XDT_Type,pkey.m_columnPosition);
+    p_msg.AddElement(col,"Name",    XDT_String |XDT_Type,pkey.m_columnName);
   }
 }
 
 void 
-CXTable::SaveForeignKey(SOAPMessage& p_msg,XMLElement* p_elem)
+CXTable::SaveForeignKey(SOAPMessage& p_msg)
 {
   XMLElement* foreign = nullptr;
   XMLElement* columns = nullptr;
   XMLElement* pkcols  = nullptr;
 
+  XMLElement* elem = p_msg.SetParameter("ForeignKeys","");
+
   for(auto& fkey : m_foreigns)
   {
     if(fkey.m_keySequence == 1)
     {
-      foreign = p_msg.AddElement(p_elem,"ForeignKey",XDT_String,"");
+      foreign = p_msg.AddElement(elem,"ForeignKey",XDT_String,"");
 
       // Foreign key part
       p_msg.AddElement(foreign,"Constraint",XDT_String |XDT_Type,fkey.m_foreignConstraint);
@@ -553,16 +581,17 @@ CXTable::SaveForeignKey(SOAPMessage& p_msg,XMLElement* p_elem)
 }
 
 void 
-CXTable::SaveIndices(SOAPMessage& p_msg,XMLElement* p_elem)
+CXTable::SaveIndices(SOAPMessage& p_msg)
 {
   XMLElement* index   = nullptr;
   XMLElement* columns = nullptr;
+  XMLElement* elem    = p_msg.SetParameter("Indices","");
 
   for(auto& ind : m_indices)
   {
     if(ind.m_position == 1)
     {
-      index = p_msg.AddElement(p_elem,"Index",XDT_String,"");
+      index = p_msg.AddElement(elem,"Index",XDT_String,"");
       p_msg.AddElement(index,"Name",     XDT_String |XDT_Type,ind.m_indexName);
       p_msg.AddElement(index,"Unique",   XDT_Boolean|XDT_Type,ind.m_unique);
       p_msg.AddElement(index,"Ascending",XDT_Boolean|XDT_Type,ind.m_ascending == "A");
@@ -575,3 +604,247 @@ CXTable::SaveIndices(SOAPMessage& p_msg,XMLElement* p_elem)
   }
 }
 
+void 
+CXTable::SavePrivileges(SOAPMessage& p_msg)
+{
+  XMLElement* privs = p_msg.SetParameter("Privileges","");
+
+  for(auto& priv : m_privileges)
+  {
+    XMLElement* pri = p_msg.AddElement(privs,"Privilege",XDT_String,"");
+
+    p_msg.AddElement(pri,"Grantor",  XDT_String |XDT_Type,priv.m_grantor);
+    p_msg.AddElement(pri,"Grantee",  XDT_String |XDT_Type,priv.m_grantee);
+    p_msg.AddElement(pri,"Right",    XDT_String |XDT_Type,priv.m_privilege);
+    p_msg.AddElement(pri,"Grantable",XDT_Boolean|XDT_Type,priv.m_grantable);
+  }
+}
+
+void 
+CXTable::LoadTableInfo(SOAPMessage& p_msg)
+{
+  XMLElement* elem = p_msg.FindElement("TableInfo");
+
+  if(elem)
+  {
+    m_table.m_schema      = p_msg.GetElement(elem,"Schema");
+    m_table.m_table       = p_msg.GetElement(elem, "Table");
+    m_table.m_objectType  = p_msg.GetElement(elem, "ObjectType");
+    m_table.m_remarks     = p_msg.GetElement(elem, "Remarks");
+    m_table.m_fullName    = p_msg.GetElement(elem, "FullName");
+    m_table.m_tablespace  = p_msg.GetElement(elem, "Tablespace");
+    m_table.m_temporary   = p_msg.GetElementBoolean(elem, "Temporary");
+  }
+}
+
+void 
+CXTable::LoadColumnInfo(SOAPMessage& p_msg)
+{
+  XMLElement* columns = p_msg.FindElement("Columns");
+  XMLElement* column  = p_msg.FindElement(columns,"Column",false);
+
+  while(column)
+  {
+    MetaColumn col;
+
+    col.m_position      = p_msg.GetElementInteger(column,"Position");
+    col.m_column        = p_msg.GetElement       (column,"ColumnName");
+    col.m_datatype      = p_msg.GetElementInteger(column,"ODBC_Type");
+    col.m_typename      = p_msg.GetElement       (column,"RDBMS_Type");
+    col.m_columnSize    = p_msg.GetElementInteger(column,"ColumnSize");
+    col.m_bufferLength  = p_msg.GetElementInteger(column,"BufferLength");
+    col.m_decimalDigits = p_msg.GetElementInteger(column,"DecimalDigits");
+    col.m_numRadix      = p_msg.GetElementInteger(column,"Radix");
+    col.m_nullable      = p_msg.GetElementInteger(column,"Nullable");
+    col.m_remarks       = p_msg.GetElement       (column,"Remarks");
+    col.m_default       = p_msg.GetElement       (column, "DefaultValue");
+    col.m_datatype3     = p_msg.GetElementInteger(column,"ODCB_Type3");
+    col.m_sub_datatype  = p_msg.GetElementInteger(column,"SubType");
+    col.m_octet_length  = p_msg.GetElementInteger(column,"OctetLength");
+
+    // Keep the column info
+    m_columns.push_back(col);
+
+    // Find next column
+    column = p_msg.GetElementSibling(column);
+  }
+}
+
+void 
+CXTable::LoadPrimaryKey(SOAPMessage& p_msg)
+{
+  XMLElement*  elem = p_msg.FindElement("PrimaryKey");
+  MetaPrimary* fkey = nullptr;
+
+  bool first = true;
+  if(elem)
+  {
+    MetaPrimary prim;
+
+    if(first)
+    {
+      prim.m_constraintName    = p_msg.GetElement       (elem,"ConstraintName");
+      prim.m_deferrable        = p_msg.GetElementInteger(elem,"Deferrable");
+      prim.m_initiallyDeferred = p_msg.GetElementInteger(elem,"InitiallyDeferred");
+    }
+    else
+    {
+      prim.m_constraintName    = fkey->m_constraintName;
+      prim.m_deferrable        = fkey->m_deferrable;
+      prim.m_initiallyDeferred = fkey->m_initiallyDeferred;
+    }
+
+    XMLElement* column = p_msg.FindElement(elem,"Column",false);
+    while(column)
+    {
+      prim.m_columnPosition = p_msg.GetElementInteger(column, "Position");
+      prim.m_columnName     = p_msg.GetElement(column,"Name");
+
+      // Keep the primary key (column) info
+      m_primary.push_back(prim);
+      if(first)
+      {
+        fkey = &(m_primary.front());
+      }
+      first = false;
+
+      // Find next column
+      column = p_msg.GetElementSibling(column);
+    }
+  }
+}
+
+void 
+CXTable::LoadForeignKey(SOAPMessage& p_msg)
+{
+  XMLElement* keys = p_msg.FindElement("ForeignKeys");
+  if(!keys) return;
+
+  XMLElement* columns = nullptr;
+  XMLElement* pkcols  = nullptr;
+
+  CString lastkey;
+  int sequence = 1;
+
+  XMLElement* foreign = p_msg.FindElement(keys,"ForeignKey",false);
+  while(foreign)
+  {
+    MetaForeign fkey;
+
+    fkey.m_keySequence        = sequence;
+    fkey.m_foreignConstraint  = p_msg.GetElement       (foreign,"Constraint");
+    fkey.m_updateRule         = p_msg.GetElementInteger(foreign,"UpdateRule");
+    fkey.m_deleteRule         = p_msg.GetElementInteger(foreign,"DeleteRule");
+    fkey.m_deferrable         = p_msg.GetElementInteger(foreign,"Deferrable");
+    fkey.m_match              = p_msg.GetElementInteger(foreign,"Match");
+    fkey.m_initiallyDeferred  = p_msg.GetElementInteger(foreign,"InitiallyDeferred");
+
+    columns = p_msg.FindElement(foreign,"Columns",false);
+    columns = p_msg.FindElement(columns,"Column", false);
+
+    pkcols  = p_msg.FindElement(foreign,"Primary",false);
+
+    fkey.m_pkSchemaName = p_msg.GetElement(pkcols,"Schema");
+    fkey.m_pkTableName  = p_msg.GetElement(pkcols,"Table");
+
+    pkcols  = p_msg.FindElement(pkcols,"Columns",false);
+    pkcols  = p_msg.FindElement(pkcols,"Column", false);
+
+    fkey.m_fkColumnName = columns->GetValue();
+    fkey.m_pkColumnName = pkcols ->GetValue();
+
+    // Keep foreign key (column)
+    m_foreigns.push_back(fkey);
+
+    // Second and next columns
+    columns = p_msg.GetElementSibling(columns);
+    pkcols  = p_msg.GetElementSibling(pkcols);
+
+    while(columns && pkcols)
+    {
+      MetaForeign key = fkey;
+
+      fkey.m_keySequence  = ++sequence;
+      fkey.m_fkColumnName = columns->GetValue();
+      fkey.m_pkColumnName = pkcols ->GetValue();
+
+      // Keep foreign key (column)
+      m_foreigns.push_back(key);
+
+      // Next column
+      columns = p_msg.GetElementSibling(columns);
+      pkcols  = p_msg.GetElementSibling(pkcols);
+    }
+
+    // Reset the sequence
+    sequence = 1;
+    // Next column in foreign key
+    foreign = p_msg.GetElementSibling(foreign);
+  }
+}
+
+void 
+CXTable::LoadIndices(SOAPMessage& p_msg)
+{
+  XMLElement* indices = p_msg.FindElement("Indices");
+  XMLElement* index   = p_msg.FindElement(indices,"Index");
+  int position = 1;
+  while(index)
+  {
+    MetaIndex ind;
+
+    ind.m_indexName = p_msg.GetElement       (index,"Name");
+    ind.m_unique    = p_msg.GetElementBoolean(index,"Unique");
+    ind.m_ascending = p_msg.GetElementBoolean(index,"Ascending") ? "A" : "D";
+    ind.m_filter    = p_msg.GetElement       (index,"Filter");
+    ind.m_position  = position;
+
+    XMLElement* columns = p_msg.FindElement(index,"Columns",false);
+    XMLElement* column  = p_msg.FindElement(columns,"Column",false);
+    ind.m_columnName = column->GetValue();
+
+    m_indices.push_back(ind);
+    column = p_msg.GetElementSibling(column);
+
+    while(column)
+    {
+      MetaIndex ind2 = ind;
+
+      ind2.m_position   = ++position;
+      ind2.m_columnName = column->GetValue();
+
+      m_indices.push_back(ind2);
+
+      // Getting the next column
+      column = p_msg.GetElementSibling(column);
+    }
+
+    // Reset the column position
+    position = 1;
+    // Next index
+    index = p_msg.GetElementSibling(index);
+  }
+}
+
+void 
+CXTable::LoadPrivileges(SOAPMessage& p_msg)
+{
+  XMLElement* privs = p_msg.FindElement("Privileges");
+  XMLElement* pri   = p_msg.FindElement(privs,"Privilege");
+
+  while(pri)
+  {
+    MetaPrivilege priv;
+
+    priv.m_grantor   = p_msg.GetElement(pri,"Grantor");
+    priv.m_grantee   = p_msg.GetElement(pri,"Grantee");
+    priv.m_privilege = p_msg.GetElement(pri,"Right");
+    priv.m_grantable = p_msg.GetElementBoolean(pri,"Grantable");
+
+    m_privileges.push_back(priv);
+
+    // Next privilege
+    pri = p_msg.GetElementSibling(pri);
+  }
+
+}

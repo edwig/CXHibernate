@@ -420,9 +420,9 @@ CString
 SQLInfoFirebird::GetCATALOGTableAttributes(CString /*p_schema*/,CString p_tablename) const
 {
   p_tablename.MakeUpper();
-  CString sql = "SELECT CAST('' AS VARCHAR(31))             AS table_catalog\n"
+  CString sql = "SELECT CAST('' AS VARCHAR(31))  AS table_catalog\n"
                 "      ,trim(rdb$owner_name)     AS table_schema\n"
-                "      ,trim(rdb$relation_name)             AS table_name\n"
+                "      ,trim(rdb$relation_name)  AS table_name\n"
                 "      ,CASE rdb$relation_type\n"
                 "            WHEN 0 THEN 'TABLE'\n"
                 "            WHEN 2 THEN 'TABLE'\n"
@@ -433,7 +433,12 @@ SQLInfoFirebird::GetCATALOGTableAttributes(CString /*p_schema*/,CString p_tablen
                 "      ,trim(rdb$description) AS remarks\n"
                 "      ,trim(rdb$owner_name) || '.' || trim(rdb$relation_name) AS full_name\n"
                 "      ,cast('' as varchar(31)) as storage_space\n"
-                  "  FROM rdb$relations\n"
+                "      ,CASE rdb$relation_type\n"
+                "            WHEN 4 THEN 1\n"
+                "            WHEN 5 THEN 1\n"
+                "                   ELSE 0\n"
+                "       END  AS temporary_table\n"
+                "  FROM rdb$relations\n"
                 " WHERE rdb$system_flag = 0\n"
                 "   AND rdb$relation_type IN (0,2,4,5)\n";
   if(!p_tablename.IsEmpty())
@@ -455,7 +460,7 @@ SQLInfoFirebird::GetCATALOGTableSynonyms(CString /*p_schema*/,CString p_tablenam
                 "      ,CAST('SYSTEM TABLE' as varchar(31)) AS table_type\n"
                 "      ,rdb$description                     AS remarks\n"
                 "      ,trim(rdb$owner_name) || '.' || trim(rdb$relation_name) AS full_name\n"
-                "      ,cast('' as varchar(31)) as storage_space\n"
+                "      ,cast('' as varchar(31))             AS storage_space\n"
                 "  FROM rdb$relations";
   if(!p_tablename.IsEmpty())
   {
@@ -901,13 +906,13 @@ CString
 SQLInfoFirebird::GetCATALOGPrimaryAttributes(CString /*p_schema*/,CString p_tablename) const
 {
   p_tablename.MakeUpper();
-  CString sql = "SELECT cast('' as varchar(31))     as catalog_name\n"
-                "      ,cast('' as varchar(31))     as schema_name\n"
-                "      ,trim(con.rdb$relation_name) as table_name\n"
-                "      ,trim(ind.rdb$field_name)    as column_name\n"
-                "      ,ind.rdb$field_position + 1  as col_position\n"
-                "      ,con.rdb$constraint_name     as col_constraint\n"
-                "      ,con.rdb$index_name\n"
+  CString sql = "SELECT cast('' as varchar(31))       as catalog_name\n"
+                "      ,cast('' as varchar(31))       as schema_name\n"
+                "      ,trim(con.rdb$relation_name)   as table_name\n"
+                "      ,trim(ind.rdb$field_name)      as column_name\n"
+                "      ,ind.rdb$field_position + 1    as col_position\n"
+                "      ,trim(con.rdb$constraint_name) as col_constraint\n"
+                "      ,trim(con.rdb$index_name)      as index_name\n"
                 "      ,con.rdb$deferrable\n"
                 "      ,con.rdb$initially_deferred\n"
                 "  FROM rdb$relation_constraints con\n"

@@ -85,6 +85,7 @@ public:
   bool          SaveSOAPMessage(SOAPMessage& p_message, CString p_fileName);
 
   // OBJECT INTERFACE
+  CXObject*     SelectObject(CString p_className,int           p_primary);
   CXObject*     SelectObject(CString p_className,SQLVariant*   p_primary);
   CXObject*     SelectObject(CString p_className,VariantSet&   p_primary);
   CXResultSet   SelectObject(CString p_className,SQLFilter*    p_filter);

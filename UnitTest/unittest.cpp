@@ -57,11 +57,7 @@ namespace UnitTest
       OpenSession();
       try
       {
-        SQLVariant var((long)2);
-        VariantSet set;
-        set.push_back(&var);
-
-        CXObject* object = m_session->SelectObject("master",set);
+        CXObject* object = m_session->SelectObject("master",2);
         CXMaster* master = reinterpret_cast<CXMaster*>(object);
 
         Assert::IsNotNull(master);
@@ -104,11 +100,7 @@ namespace UnitTest
       Logger::WriteMessage("Updating a record from the MASTER table");
       if (OpenSession())
       {
-        SQLVariant var((long)1);
-        VariantSet set;
-        set.push_back(&var);
-
-        CXObject* object = m_session->SelectObject("master",set);
+        CXObject* object = m_session->SelectObject("master",1);
         CXMaster* master = reinterpret_cast<CXMaster*>(object);
 
         Assert::IsNotNull(master);

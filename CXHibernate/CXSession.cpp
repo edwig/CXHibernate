@@ -261,6 +261,16 @@ CXSession::RollbackMutation(int p_mutationID)
 //////////////////////////////////////////////////////////////////////////
 
 CXObject*
+CXSession::SelectObject(CString p_className,int p_primary)
+{
+  SQLVariant prim = (long)p_primary;
+  VariantSet set;
+  set.push_back(&prim);
+
+  return SelectObject(p_className,set);
+}
+
+CXObject*
 CXSession::SelectObject(CString p_tableName,SQLVariant* p_primary)
 {
   VariantSet set;

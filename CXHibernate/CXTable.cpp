@@ -35,16 +35,11 @@
 static char THIS_FILE[] = __FILE__;
 #endif
 
-// CTOR: Empty table object
-CXTable::CXTable()
-{
-}
-
 // CTOR: Standard creation of a table
-CXTable::CXTable(CString p_schema,CString p_table,CreateCXO p_create)
-        :m_create(p_create)
+CXTable::CXTable(CString p_table)
 {
-  m_table.m_schema     = p_schema;
+  m_table.m_catalog    = hibernate.GetDefaultCatalog();
+  m_table.m_schema     = hibernate.GetDefaultSchema();
   m_table.m_table      = p_table;
   m_table.m_objectType = OBJECT_TYPE_TABLE;
 }
@@ -58,6 +53,13 @@ CXTable::~CXTable()
   }
 }
 
+// Setting a different schema only
+void
+CXTable::SetSchema(CString p_schema)
+{
+  m_table.m_schema = p_schema;
+}
+
 // Setting the schema/table/type info
 void
 CXTable::SetSchemaTableType(CString p_schema,CString p_table,CString p_type)
@@ -67,38 +69,11 @@ CXTable::SetSchemaTableType(CString p_schema,CString p_table,CString p_type)
   m_table.m_objectType = p_type;
 }
 
-// Setting our super-class
-void
-CXTable::SetSuperClass(CXTable* p_super)
-{
-  m_super = p_super;
-}
-
-// Adding a sub-class
-void
-CXTable::AddSubClass(CXTable* p_subclass)
-{
-  m_subClasses.push_back(p_subclass);
-}
-
 // Master side must apply a SQLDataSet
 void
 CXTable::SetDataSet(SQLDataSet* p_dataset)
 {
   m_dataSet = p_dataset;
-}
-
-// Set our CXObject factory function
-void
-CXTable::SetCreateCXO(CreateCXO p_create)
-{
-  m_create = p_create;
-}
-
-CreateCXO   
-CXTable::GetCreateCXO()
-{
-  return m_create;
 }
 
 SQLDataSet*
@@ -116,11 +91,6 @@ CXTable::SchemaName()
 CString   
 CXTable::TableName()
 {
-  if(m_super && hibernate.GetStrategy() == Strategy_one_table)
-  {
-    return m_super->TableName();
-  }
-  // All other strategies have our own table name
   return m_table.m_table;
 }
 

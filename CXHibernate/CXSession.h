@@ -32,11 +32,12 @@
 #include <SQLMetaInfo.h>
 #include <map>
 
+class CXClass;
 using namespace SQLComponents;
 
-using TableMap   = std::map<CString,CXTable*>;
-using TableCache = std::map<CString,CXObject*>;
-using CXCache    = std::map<CString,TableCache*>;
+using ClassMap    = std::map<CString,CXClass*>;
+using ObjectCache = std::map<CString,CXObject*>;
+using CXCache     = std::map<CString,ObjectCache*>;
 
 typedef enum _cxh_roles
 {
@@ -64,10 +65,10 @@ public:
   void          SetDatabase(SQLDatabase* p_database);
   // Setting an alternate filestore location
   void          SetBaseDirectory(CString p_directory);
-  // Add a table to the session
-  bool          AddTable(CXTable* p_table,CString p_name = "");
-  // Finding a table
-  CXTable*      FindTable(CString p_name);
+  // Add a class to the session
+  bool          AddClass(CXClass* p_table);
+  // Finding a class
+  CXClass*      FindClass(CString p_name);
   // Find if the database is correctly opened
   bool          GetDatabaseIsOpen();
   // Get a master mutation ID, to put actions into one (1) commit
@@ -84,10 +85,10 @@ public:
   bool          SaveSOAPMessage(SOAPMessage& p_message, CString p_fileName);
 
   // QUERY INTERFACE
-  CXObject*     SelectObject(CString p_tableName,SQLVariant*   p_primary);
-  CXObject*     SelectObject(CString p_tableName,VariantSet&   p_primary);
-  CXResultSet   SelectObject(CString p_tableName,SQLFilter*    p_filter);
-  CXResultSet   SelectObject(CString p_tableName,SQLFilterSet& p_filters);
+  CXObject*     SelectObject(CString p_className,SQLVariant*   p_primary);
+  CXObject*     SelectObject(CString p_className,VariantSet&   p_primary);
+  CXResultSet   SelectObject(CString p_className,SQLFilter*    p_filter);
+  CXResultSet   SelectObject(CString p_className,SQLFilterSet& p_filters);
   bool          UpdateObject(CXObject* p_object,int p_mutationID = 0);
   bool          InsertObject(CXObject* p_object,int p_mutationID = 0);
   bool          DeleteObject(CXObject* p_object,int p_mutationID = 0);
@@ -100,8 +101,8 @@ private:
   // Getting meta-session info from our database
   void          GetMetaSessionInfo();
   // Clear the table cache
-  void          ClearCache (CString p_table = "");
-  void          ClearTables(CString p_table = "");
+  void          ClearCache  (CString p_table = "");
+  void          ClearClasses(CString p_table = "");
   // Add an object to the cache
   bool          AddObjectInCache(CXObject* p_object,VariantSet& p_primary);
   // And remove again from the cache
@@ -139,7 +140,7 @@ private:
   bool          m_ownDatabase   { false   };   // We own / destroy this database
   CString       m_baseDirectory;               // Base directory for filestore role
   SQLDatabase*  m_database      { nullptr };   // Currently using database connection
-  TableMap      m_tables;                      // All table metadata definitions that we know of
+  ClassMap      m_classes;                     // All classes definitions that we know of
   CXCache       m_cache;                       // All cached objects of all known tables
   int           m_mutation      { 0       };   // Mutation id
   MetaSession   m_metaInfo;                    // Database meta-session info

@@ -26,13 +26,14 @@
 //
 #include "stdafx.h"
 #include "CppUnitTest.h"
-#include <CXSession.h>
-#include <SQLComponents.h>
-#include <SQLVariant.h>
-#include <SQLQuery.h>
+#include "CXSession.h"
+#include "CXClass.h"
 #include "CXMaster.h"
 #include "CXDetail.h"
 #include "TestNumber.h"
+#include <SQLComponents.h>
+#include <SQLVariant.h>
+#include <SQLQuery.h>
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -156,7 +157,7 @@ namespace UnitTest
 
       OpenSession();
 
-      CXTable* test_numbers = m_session.FindTable("test_number");
+      CXClass* test_numbers = m_session.FindClass("test_number");
       TestNumber* numbers = new TestNumber(test_numbers);
       numbers->SetID(10);
       numbers->SetField1(42);
@@ -251,8 +252,8 @@ namespace UnitTest
       Logger::WriteMessage("Write meta info of tables");
       if(OpenSession())
       {
-        CXTable* master = m_session.FindTable("master");
-        CXTable* detail = m_session.FindTable("detail");
+        CXTable* master = m_session.FindClass("master")->GetTable();
+        CXTable* detail = m_session.FindClass("detail")->GetTable();
         Assert::IsNotNull(master);
         Assert::IsNotNull(detail);
 
@@ -268,8 +269,8 @@ namespace UnitTest
       Logger::WriteMessage("Write meta info of tables");
       if (OpenSession())
       {
-        CXTable* master = m_session.FindTable("master");
-        CXTable* detail = m_session.FindTable("detail");
+        CXTable* master = m_session.FindClass("master")->GetTable();
+        CXTable* detail = m_session.FindClass("detail")->GetTable();
         Assert::IsNotNull(master);
         Assert::IsNotNull(detail);
 
@@ -297,12 +298,13 @@ namespace UnitTest
         m_database.Open("Testing","sysdba","altijd");
         if(m_database.IsOpen())
         {
+          hibernate.SetDefaultSchema("sysdba");
           m_session.SetBaseDirectory("C:\\WWW\\Testing");
           m_session.SetDatabase(&m_database);
 
-          CXTable* master  = new CXTable("sysdba","master",     CXO_FACTORY(CXMaster));
-          CXTable* detail  = new CXTable("sysdba","detail",     CXO_FACTORY(CXDetail));
-          CXTable* numbers = new CXTable("sysdba","test_number",CXO_FACTORY(TestNumber));
+          CXClass* master  = new CXClass("master",     CXO_FACTORY(CXMaster));
+          CXClass* detail  = new CXClass("detail",     CXO_FACTORY(CXDetail));
+          CXClass* numbers = new CXClass("test_number",CXO_FACTORY(TestNumber));
 
           // Do the 'lazy' stuff by reading the definition from the database
           // assuming that the definition corresponds with ours
@@ -321,11 +323,12 @@ namespace UnitTest
       return false;
     }
 
-    void ReadTableDefinition(CXTable* p_table)
+    void ReadTableDefinition(CXClass* p_class)
     {
-      if(p_table->GetMetaInfoFromDatabase(m_database,true,true,true))
+      CXTable* table = p_class->GetTable();
+      if(table->GetMetaInfoFromDatabase(m_database,true,true,true))
       {
-        m_session.AddTable(p_table);
+        m_session.AddClass(p_class);
       }
       else
       {
@@ -343,15 +346,14 @@ namespace UnitTest
       }
       try
       {
-        CString sql("SELECT COUNT(*) FROM ");
-        sql += p_table;
-        sql += " WHERE ";
-        sql += p_column;
-        sql.AppendFormat(" = %d", p_value);
+        CString sql;
+        sql.Format("SELECT COUNT(*)\n"
+                   "  FROM %s\n"
+                   " WHERE %s = ?",p_table,p_column);
         SQLQuery query(m_database);
         SQLTransaction trans(&m_database,"count");
 
-        query.DoSQLStatement(sql);
+        query.DoSQLStatement(sql,p_value);
         if(query.GetRecord())
         {
           result = query[1];

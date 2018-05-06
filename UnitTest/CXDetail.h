@@ -34,7 +34,7 @@ class CXDetail : public CXObject
 {
 public:
   // CTOR of an CXObject
-  CXDetail(CXTable* p_table);
+  CXDetail(CXClass* p_className);
 
   // Bring the contents of the class to a SOAPMessage or a SQLRecord
   virtual void Serialize(SOAPMessage& p_message,XMLElement* p_entity);

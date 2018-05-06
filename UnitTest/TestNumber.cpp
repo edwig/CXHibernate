@@ -39,8 +39,8 @@ static char THIS_FILE[] = __FILE__;
 DEFINE_CXO_FACTORY(TestNumber);
 
 // CTOR creating a new master record
-TestNumber::TestNumber(CXTable* p_table)
-           :CXObject(p_table)
+TestNumber::TestNumber(CXClass* p_className)
+           :CXObject(p_className)
 {
 }
 

@@ -38,10 +38,9 @@ static char THIS_FILE[] = __FILE__;
 
 DEFINE_CXO_FACTORY(CXDetail);
 
-CXDetail::CXDetail(CXTable* p_table)
-         :CXObject(p_table)
+CXDetail::CXDetail(CXClass* p_className)
+         :CXObject(p_className)
 {
-
 }
 
 // Bring the contents of the class to a SOAPMessage or a SQLRecord

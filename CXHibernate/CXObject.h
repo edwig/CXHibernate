@@ -33,12 +33,12 @@ using namespace SQLComponents;
 class SOAPMessage;
 class XMLElement;
 class CXTable;
+class CXClass;
 
 class CXObject
 {
 public:
-  CXObject();
-  CXObject(CXTable* p_table);
+  CXObject(CXClass* p_class);
   virtual ~CXObject();
 
   // Bring the contents of the class to a SOAPMessage or a SQLRecord
@@ -57,8 +57,8 @@ public:
   bool        IsTransient();
   bool        IsPersistent();
 
-  // Getting the table of this object
-  CXTable*    BelongsToTable();
+  // Getting the class of this object
+  CXClass*    BelongsToClass();
 
   // Defined by the underlying database record
   SQLRecord*  GetDatabaseRecord();
@@ -81,7 +81,7 @@ protected:
   virtual void PostDeSerialize(SQLRecord&   p_rec);
 
   // Table where this object belongs to
-  CXTable*   m_table  { nullptr };
+  CXClass*   m_class  { nullptr };
 
   // Record of this object in the database
   SQLRecord* m_record { nullptr };
@@ -112,14 +112,14 @@ using CXResultSet = std::vector<CXObject*>;
 //////////////////////////////////////////////////////////////////////////
 
 // Prototype for use in method/function declarations
-typedef CXObject* (CALLBACK *CreateCXO)(CXTable* p_table);
+typedef CXObject* (CALLBACK *CreateCXO)(CXClass* p_class);
 
 // Macro for calling a method with this factory as a parameter
 #define CXO_FACTORY(classname) CreateCXObject##classname
 // Declaring a factory in your derived class
-#define DECLARE_CXO_FACTORY(classname) CXObject* CreateCXObject##classname(CXTable* p_table)
+#define DECLARE_CXO_FACTORY(classname) CXObject* CreateCXObject##classname(CXClass* p_class)
 // Defining the factory in your class implementation
-#define DEFINE_CXO_FACTORY(classname)  CXObject* CreateCXObject##classname(CXTable* p_table)\
+#define DEFINE_CXO_FACTORY(classname)  CXObject* CreateCXObject##classname(CXClass* p_class)\
                                        {\
-                                         return new classname(p_table);\
+                                         return new classname(p_class);\
                                        }

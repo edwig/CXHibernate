@@ -37,25 +37,18 @@ using namespace SQLComponents;
 class XMLMessage;
 class CXSession;
 
-using SubClasses = std::vector<CXTable*>;
-
 class CXTable
 {
 public:
-  CXTable();
-  CXTable(CString p_schema,CString p_table,CreateCXO p_create);
+  CXTable(CString p_table);
  ~CXTable();
 
+  // Setting a different schema only
+  void      SetSchema(CString p_schema);
   // Setting the schema/table/type info
   void      SetSchemaTableType(CString p_schema,CString p_table,CString p_type);
   // Master side must apply a SQLDataSet
   void      SetDataSet(SQLDataSet* p_dataset);
-  // Set our CXObject factory function
-  void      SetCreateCXO(CreateCXO p_create);
-  // Setting our super-class
-  void      SetSuperClass(CXTable* p_super);
-  // Adding a sub-class
-  void      AddSubClass(CXTable* p_subclass);
 
   // Names of this object
   CString   SchemaName();
@@ -73,8 +66,6 @@ public:
   bool        GetIsSynonym();
   // Primary data set
   SQLDataSet* GetDataSet();
-  // Object factory of this table
-  CreateCXO   GetCreateCXO();
 
   // Getting the table info in an immutable way
   MetaTable&      GetTableInfo()   const;
@@ -126,10 +117,6 @@ private:
   void LoadIndices   (SOAPMessage& p_msg);
   void LoadPrivileges(SOAPMessage& p_msg);
 
-  // In case of a sub-class, this is our super-class
-  CXTable*      m_super { nullptr };
-  // In case of a super-class, these are our sub-classes
-  SubClasses    m_subClasses;
   // Meta info of this table
   MetaTable     m_table;
   MColumnMap    m_columns;
@@ -137,8 +124,6 @@ private:
   MForeignMap   m_foreigns;
   MIndicesMap   m_indices;
   MPrivilegeMap m_privileges;
-  // Our CXObject factory function
-  CreateCXO     m_create  { nullptr };
   // Standard data set in a master connection
   SQLDataSet*   m_dataSet { nullptr };
 };

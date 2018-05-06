@@ -39,8 +39,8 @@ static char THIS_FILE[] = __FILE__;
 DEFINE_CXO_FACTORY(CXMaster);
 
 // CTOR creating a new master record
-CXMaster::CXMaster(CXTable* p_table)
-         :CXObject(p_table)
+CXMaster::CXMaster(CXClass* p_className)
+         :CXObject(p_className)
 {
 }
 

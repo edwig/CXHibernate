@@ -28,13 +28,13 @@
 #include <CXObject.h>
 #include <bcd.h>
 
-class CXTable;
+class CXClass;
 
 class CXMaster : public CXObject
 {
 public:
   // CTOR of an CXObject
-  CXMaster(CXTable* p_table);
+  CXMaster(CXClass* p_className);
 
   // DECLARE_CXO_FACTORY(CXMaster);
 

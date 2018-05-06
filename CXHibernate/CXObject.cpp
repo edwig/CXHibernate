@@ -27,6 +27,7 @@
 #include "stdafx.h"
 #include "CXObject.h"
 #include "CXTable.h"
+#include "CXClass.h"
 #include <SQLRecord.h>
 #include <SOAPMessage.h>
 
@@ -37,14 +38,9 @@
 static char THIS_FILE[] = __FILE__;
 #endif
 
-// XTOR: Standard empty object
-CXObject::CXObject()
-{
-}
-
 // XTOR: As a object from a table
-CXObject::CXObject(CXTable* p_table)
-         :m_table(p_table)
+CXObject::CXObject(CXClass* p_class)
+         :m_class(p_class)
 {
 }
 
@@ -107,11 +103,11 @@ CXObject::IsPersistent()
   return !m_primaryKey.empty();
 }
 
-// Getting the table of this object
-CXTable*
-CXObject::BelongsToTable()
+// Getting the class of this object
+CXClass*
+CXObject::BelongsToClass()
 {
-  return m_table;
+  return m_class;
 }
 
 // Defined by the underlying database record
@@ -205,7 +201,7 @@ CXObject::FillPrimaryKey(SQLRecord& p_record)
   }
 
   // Walk the list of primary key columns
-  WordList keys = m_table->GetPrimaryKeyAsList();
+  WordList keys = m_class->GetTable()->GetPrimaryKeyAsList();
   for (auto& key : keys)
   {
     SQLVariant* var = new SQLVariant(p_record.GetField(key));
@@ -223,7 +219,7 @@ CXObject::FillPrimaryKey(SOAPMessage& p_message, XMLElement* p_entity)
   }
 
   // Walk the list of primary key columns
-  WordList keys = m_table->GetPrimaryKeyAsList();
+  WordList keys = m_class->GetTable()->GetPrimaryKeyAsList();
   for(auto& key : keys)
   {
     key.MakeLower();

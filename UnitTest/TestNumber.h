@@ -28,13 +28,11 @@
 #include <CXObject.h>
 #include <bcd.h>
 
-class CXTable;
-
 class TestNumber : public CXObject
 {
 public:
   // CTOR of an CXObject
-  TestNumber(CXTable* p_table);
+  TestNumber(CXClass* p_className);
 
   // Bring the contents of the class to a SOAPMessage or a SQLRecord
   virtual void Serialize(SOAPMessage& p_message,XMLElement* p_entity);

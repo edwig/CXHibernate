@@ -26,6 +26,7 @@
 //
 #include "stdafx.h"
 #include "CXServer.h"
+#include "CXClass.h"
 #include "CXSession.h"
 
 // Implementation of the CXServer
@@ -73,7 +74,8 @@ CXServer::OnCXSelect(int p_code,SOAPMessage* p_message)
   if(entity)
   {
     CString tablename = entity->GetValue();
-    CXTable* table = m_session->FindTable(tablename);
+    CXClass* theClass = m_session->FindClass(tablename);
+    CXTable* table = theClass->GetTable();
     if(table)
     {
       filters = FindFilterSet(p_message);
@@ -121,13 +123,14 @@ CXServer::OnCXInsert(int p_code,SOAPMessage* p_message)
     if(nm)
     {
       CString tablename = nm->m_value;
-      CXTable* table = m_session->FindTable(tablename);
+      CXClass* theClass = m_session->FindClass(tablename);
+      CXTable* table = theClass->GetTable();
       if(table)
       {
         try
         {
-          CreateCXO creating = table->GetCreateCXO();
-          CXObject* object = (*creating)(table);
+          CreateCXO creating = theClass->GetCreateCXO();
+          CXObject* object = (*creating)(theClass);
           object->DeSerialize(*p_message,entity);
           if(m_session->InsertObject(object))
           {
@@ -171,14 +174,15 @@ CXServer::OnCXUpdate(int p_code,SOAPMessage* p_message)
     if(nm)
     {
       CString tablename = nm->m_value;
-      CXTable* table = m_session->FindTable(tablename);
+      CXClass* theClass = m_session->FindClass(tablename);
+      CXTable* table = theClass->GetTable();
       if(table)
       {
         try
         {
           // Creating a temporary object to discover our primary key
-          CreateCXO creating = table->GetCreateCXO();
-          CXObject* object = (*creating)(table);
+          CreateCXO creating = theClass->GetCreateCXO();
+          CXObject* object = (*creating)(theClass);
           object->DeSerialize(*p_message,entity);
           // Create copy on the stack of the primary key
           VariantSet primary = object->GetPrimaryKey();
@@ -234,14 +238,15 @@ CXServer::OnCXDelete(int p_code,SOAPMessage* p_message)
     if(nm)
     {
       CString tablename = nm->m_value;
-      CXTable* table = m_session->FindTable(tablename);
+      CXClass* theClass = m_session->FindClass(tablename);
+      CXTable* table = theClass->GetTable();
       if(table)
       {
         try
         {
           // Creating a temporary object to discover our primary key
-          CreateCXO creating = table->GetCreateCXO();
-          CXObject* object = (*creating)(table);
+          CreateCXO creating = theClass->GetCreateCXO();
+          CXObject* object = (*creating)(theClass);
           object->DeSerialize(*p_message,entity);
           // Create copy on the stack of the primary key
           VariantSet primary = object->GetPrimaryKey();
@@ -363,7 +368,7 @@ CXServer::AddObjectToMessage(SOAPMessage* p_message,CXObject* object)
 {
   // Add a new entity node
   XMLElement* entity = p_message->SetParameter("Entity","");
-  p_message->SetAttribute(entity,"name",object->BelongsToTable()->TableName());
+  p_message->SetAttribute(entity,"name",object->BelongsToClass()->GetTable()->TableName());
 
   // Serialize our object to this message on this node
   object->Serialize(*p_message,entity);

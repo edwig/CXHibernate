@@ -26,6 +26,7 @@
 //
 #include "stdafx.h"
 #include "CXSession.h"
+#include "CXClass.h"
 #include "CXPrimaryHash.h"
 #include <SQLQuery.h>
 #include <SQLTransaction.h>
@@ -76,7 +77,7 @@ CXSession::~CXSession()
 
   // Destroy the caches
   ClearCache();
-  ClearTables();
+  ClearClasses();
 
   // Destroy database (if any)
   if(m_database && m_ownDatabase)
@@ -127,58 +128,55 @@ CXSession::SetBaseDirectory(CString p_directory)
 
 // Add a table to the session
 bool
-CXSession::AddTable(CXTable* p_table,CString p_name /*=""*/)
+CXSession::AddClass(CXClass* p_class)
 {
   // Getting the table name
-  CString table(p_name);
-  if(table.IsEmpty())
-  {
-    table = p_table->TableName();
-  }
-  table.MakeLower();
+  CString name = p_class->GetName();
+  name.MakeLower();
 
   // Add to the map of tables, but only if we not had it previously
-  TableMap::iterator it = m_tables.find(table);
-  if(it != m_tables.end())
+  ClassMap::iterator it = m_classes.find(name);
+  if(it != m_classes.end())
   {
     return false;
   }
 
-  // Store the table definition
-  m_tables.insert(std::make_pair(table,p_table));
+  // Store the class definition
+  m_classes.insert(std::make_pair(name,p_class));
 
   // Create a caching object in the cache
-  TableCache* tcache = new TableCache();
-  m_cache.insert(std::make_pair(table, tcache));
+  ObjectCache* objcache = new ObjectCache();
+  m_cache.insert(std::make_pair(name,objcache));
 
   // On the master side, we need a SQLDataSet for the database
   if(m_role == CXH_Database_role)
   {
+    CXTable* table = p_class->GetTable();
     SQLDataSet* dset = new SQLDataSet();
 
     // Fill in the dataset
     dset->SetDatabase(m_database);
-    dset->SetPrimaryTable(p_table->SchemaName(),p_table->TableName());
-    WordList list = p_table->GetPrimaryKeyAsList();
+    dset->SetPrimaryTable(table->SchemaName(),table->TableName());
+    WordList list = table->GetPrimaryKeyAsList();
     dset->SetPrimaryKeyColumn(list);
 
     // Default query
-    CString query = CString("SELECT * FROM ") + p_table->DMLTableName(m_database->GetSQLInfoDB());
+    CString query = CString("SELECT * FROM ") + table->DMLTableName(m_database->GetSQLInfoDB());
     dset->SetQuery(query);
 
     // Transfer to the CXTable object
-    p_table->SetDataSet(dset);
+    table->SetDataSet(dset);
   }
   return true;
 }
 
-// Finding a table
-CXTable*
-CXSession::FindTable(CString p_name)
+// Finding a class
+CXClass*
+CXSession::FindClass(CString p_name)
 {
   p_name.MakeLower();
-  TableMap::iterator it = m_tables.find(p_name);
-  if(it != m_tables.end())
+  ClassMap::iterator it = m_classes.find(p_name);
+  if(it != m_classes.end())
   {
     return it->second;
   }
@@ -319,32 +317,32 @@ CXSession::SelectObject(CString p_tableName,SQLFilter* p_filter)
 }
 
 CXResultSet
-CXSession::SelectObject(CString p_table,SQLFilterSet& p_filters)
+CXSession::SelectObject(CString p_className,SQLFilterSet& p_filters)
 {
   CXResultSet set;
 
-  p_table.MakeLower();
-  ClearCache(p_table);
+  p_className.MakeLower();
+  ClearCache(p_className);
 
   // Create a caching object in the cache
-  TableCache* tcache = new TableCache();
-  m_cache.insert(std::make_pair(p_table, tcache));
+  ObjectCache* objcache = new ObjectCache();
+  m_cache.insert(std::make_pair(p_className,objcache));
 
   if(m_role == CXH_Database_role)
   {
-    SelectObjectsFromDatabase(p_table,p_filters);
+    SelectObjectsFromDatabase(p_className,p_filters);
   }
   else if(m_role == CXH_Internet_role)
   {
-    SelectObjectsFromInternet(p_table,p_filters);
+    SelectObjectsFromInternet(p_className,p_filters);
   }
   else // CXH_Filestore_role
   {
-    SelectObjectsFromFilestore(p_table,p_filters);
+    SelectObjectsFromFilestore(p_className,p_filters);
   }
 
   // Getting the result set
-  CXCache::iterator it = m_cache.find(p_table);
+  CXCache::iterator it = m_cache.find(p_className);
   if(it != m_cache.end())
   {
     for(auto& obj : *it->second)
@@ -360,7 +358,7 @@ CXSession::SelectObject(CString p_table,SQLFilterSet& p_filters)
 bool
 CXSession::UpdateObject(CXObject* p_object,int p_mutationID /*= 0*/)
 {
-  CXTable* table = p_object->BelongsToTable();
+  CXTable* table = p_object->BelongsToClass()->GetTable();
 
   if(m_role == CXH_Database_role)
   {
@@ -382,7 +380,7 @@ CXSession::UpdateObject(CXObject* p_object,int p_mutationID /*= 0*/)
 bool
 CXSession::InsertObject(CXObject* p_object,int p_mutationID /*= 0*/)
 {
-  CXTable* table = p_object->BelongsToTable();
+  CXTable* table = p_object->BelongsToClass()->GetTable();
 
   if(m_role == CXH_Database_role)
   {
@@ -409,7 +407,7 @@ CXSession::InsertObject(CXObject* p_object,int p_mutationID /*= 0*/)
 bool
 CXSession::DeleteObject(CXObject* p_object,int p_mutationID /*= 0*/)
 {
-  CXTable* table = p_object->BelongsToTable();
+  CXTable* table = p_object->BelongsToClass()->GetTable();
 
   if(m_role == CXH_Database_role)
   {
@@ -449,9 +447,9 @@ CXSession::Synchronize()
   int mutationID = GetMutationID(true);
 
   // Walk our object cache
-  for(auto& tcache : m_cache)
+  for(auto& objcache : m_cache)
   {
-    TableCache& objects = *tcache.second;
+    ObjectCache& objects = *objcache.second;
     for(auto& obj : objects)
     {
       CXObject*  object = obj.second;
@@ -580,17 +578,17 @@ CXSession::ClearCache(CString p_table /*= ""*/)
   }
 }
 
-// Clear the table definition cache
+// Clear the class definition cache
 void
-CXSession::ClearTables(CString p_table /*= ""*/)
+CXSession::ClearClasses(CString p_table /*= ""*/)
 {
-  TableMap::iterator it = m_tables.begin();
-  while(it != m_tables.end())
+  ClassMap::iterator it = m_classes.begin();
+  while(it != m_classes.end())
   {
     if(p_table.IsEmpty() || p_table.CompareNoCase(it->first) == 0)
     {
       delete it->second;
-      it = m_tables.erase(it);
+      it = m_classes.erase(it);
     }
     else
     {
@@ -627,7 +625,7 @@ CXSession::GetMetaSessionInfo()
     }
     catch(...)
     {
-      // Gaat in stilte fout
+      // Error in silence ?
     }
   }
 }
@@ -637,13 +635,13 @@ bool
 CXSession::AddObjectInCache(CXObject* p_object, VariantSet& p_primary)
 {
   CString hash = CXPrimaryHash(p_primary);
-  CString tableName = p_object->BelongsToTable()->TableName();
+  CString tableName = p_object->BelongsToClass()->GetTable()->TableName();
   tableName.MakeLower();
 
   CXCache::iterator it = m_cache.find(tableName);
   if (it != m_cache.end())
   {
-    TableCache::iterator tit = it->second->find(hash);
+    ObjectCache::iterator tit = it->second->find(hash);
     if(tit == it->second->end())
     {
       it->second->insert(std::make_pair(hash,p_object));
@@ -658,14 +656,14 @@ bool
 CXSession::RemoveObjectFromCache(CXObject* p_object, VariantSet& p_primary)
 {
   CString hash = CXPrimaryHash(p_primary);
-  CString tableName = p_object->BelongsToTable()->TableName();
+  CString tableName = p_object->BelongsToClass()->GetTable()->TableName();
   tableName.MakeLower();
 
   CXCache::iterator it = m_cache.find(tableName);
   if (it != m_cache.end())
   {
-    TableCache* tcache = it->second;
-    TableCache::iterator tit = tcache->find(hash);
+    ObjectCache* tcache = it->second;
+    ObjectCache::iterator tit = tcache->find(hash);
     if (tit != tcache->end())
     {
       // Destroy the CXObject derived object
@@ -716,7 +714,7 @@ CXSession::FindObjectInCache(CString p_tableName,VariantSet& p_primary)
   CXCache::iterator it = m_cache.find(p_tableName);
   if (it != m_cache.end())
   {
-    TableCache::iterator tit = it->second->find(hash);
+    ObjectCache::iterator tit = it->second->find(hash);
     if (tit != it->second->end())
     {
       return tit->second;
@@ -727,16 +725,17 @@ CXSession::FindObjectInCache(CString p_tableName,VariantSet& p_primary)
 
 // Try to find an object in the database
 CXObject*
-CXSession::FindObjectInDatabase(CString p_table,VariantSet& p_primary)
+CXSession::FindObjectInDatabase(CString p_className,VariantSet& p_primary)
 {
   // Find the CXTable object
-  p_table.MakeLower();
-  TableMap::iterator it = m_tables.find(p_table);
-  if(it == m_tables.end())
+  p_className.MakeLower();
+  ClassMap::iterator it = m_classes.find(p_className);
+  if(it == m_classes.end())
   {
     return nullptr;
   }
-  CXTable* table = it->second;
+  CXClass* theClass = it->second;
+  CXTable* table = theClass->GetTable();
 
   // See if we have a data set
   SQLDataSet* dset = table->GetDataSet();
@@ -770,8 +769,8 @@ CXSession::FindObjectInDatabase(CString p_table,VariantSet& p_primary)
   }
 
   // Create our object by the creation factory
-  CreateCXO create = table->GetCreateCXO();
-  CXObject* object = (*create)(table);
+  CreateCXO create = theClass->GetCreateCXO();
+  CXObject* object = (*create)(theClass);
 
   // De-serialize the SQL Record to an CXObject derived object
   object->DeSerialize(*record);
@@ -781,9 +780,10 @@ CXSession::FindObjectInDatabase(CString p_table,VariantSet& p_primary)
 
 // Try to find an object in the filestore
 CXObject*
-CXSession::FindObjectInFilestore(CString p_table,VariantSet& p_primary)
+CXSession::FindObjectInFilestore(CString p_className,VariantSet& p_primary)
 {
-  CXTable* table = FindTable(p_table);
+  CXClass* theClass = FindClass(p_className);
+  CXTable* table = theClass->GetTable();
 
   // See if we can create a directory and filename
   CString filename = CreateFilestoreName(table,p_primary);
@@ -804,8 +804,8 @@ CXSession::FindObjectInFilestore(CString p_table,VariantSet& p_primary)
       if(entity)
       {
         // Create our object by the creation factory
-        CreateCXO create = table->GetCreateCXO();
-        CXObject* object = (*create)(table);
+        CreateCXO create = theClass->GetCreateCXO();
+        CXObject* object = (*create)(theClass);
 
         // Fill in our object from the message 
         object->DeSerialize(p_message,entity);
@@ -826,16 +826,17 @@ CXSession::FindObjectOnInternet(CString p_table,VariantSet& p_primary)
 }
 
 void
-CXSession::SelectObjectsFromDatabase(CString p_table,SQLFilterSet& p_filters)
+CXSession::SelectObjectsFromDatabase(CString p_className,SQLFilterSet& p_filters)
 {
   // Find the CXTable object
-  p_table.MakeLower();
-  TableMap::iterator it = m_tables.find(p_table);
-  if (it == m_tables.end())
+  p_className.MakeLower();
+  ClassMap::iterator it = m_classes.find(p_className);
+  if (it == m_classes.end())
   {
     return;
   }
-  CXTable* table = it->second;
+  CXClass* theClass = it->second;
+  CXTable* table = theClass->GetTable();
 
   // See if we have a data set
   SQLDataSet* dset = table->GetDataSet();
@@ -869,8 +870,8 @@ CXSession::SelectObjectsFromDatabase(CString p_table,SQLFilterSet& p_filters)
       }
 
       // Create our object by the creation factory
-      CreateCXO create = table->GetCreateCXO();
-      CXObject* object = (*create)(table);
+      CreateCXO create = theClass->GetCreateCXO();
+      CXObject* object = (*create)(theClass);
 
       // De-serialize the SQL Record to an CXObject derived object
       object->DeSerialize(*record);

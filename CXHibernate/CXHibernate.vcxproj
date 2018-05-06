@@ -156,6 +156,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="CXHibernate.h" />
     <ClInclude Include="CXObject.h" />
     <ClInclude Include="CXPrimaryHash.h" />
     <ClInclude Include="CXServer.h" />

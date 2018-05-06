@@ -154,35 +154,30 @@ namespace UnitTest
     {
       Logger::WriteMessage("Insert a record into the TEST_NUMBER table");
 
-      if(OpenSession())
-      {
-        CXTable* test_numbers = m_session.FindTable("test_number");
-        TestNumber* numbers = new TestNumber(test_numbers);
-        numbers->SetID(10);
-        numbers->SetField1(42);
-        numbers->SetField2(89975.123);
-        numbers->SetField3("300.77");
+      OpenSession();
 
-        // Insert this object in the database
-        m_session.InsertObject(numbers);
+      CXTable* test_numbers = m_session.FindTable("test_number");
+      TestNumber* numbers = new TestNumber(test_numbers);
+      numbers->SetID(10);
+      numbers->SetField1(42);
+      numbers->SetField2(89975.123);
+      numbers->SetField3("300.77");
 
-        // Test that it is in the database
-        int num = TestRecordCount("test_number","id",10);
-        Assert::AreEqual(num,1);
-        Logger::WriteMessage("Test_number record 10 Inserted!");
+      // Insert this object in the database
+      m_session.InsertObject(numbers);
 
-        // Delete the object again and destroy the derived object!
-        m_session.DeleteObject(numbers);
+      // Test that it is in the database
+      int num = TestRecordCount("test_number","id",10);
+      Assert::AreEqual(num,1);
+      Logger::WriteMessage("Test_number record 10 Inserted!");
 
-        // Test that it is gone
-        num = TestRecordCount("test_number", "id", 10);
-        Assert::AreEqual(num,0);
-        Logger::WriteMessage("Test_number record 10 Deleted again!");
-      }
-      else
-      {
-        Assert::Fail(L"Database was not opened");
-      }
+      // Delete the object again and destroy the derived object!
+      m_session.DeleteObject(numbers);
+
+      // Test that it is gone
+      num = TestRecordCount("test_number", "id", 10);
+      Assert::AreEqual(num,0);
+      Logger::WriteMessage("Test_number record 10 Deleted again!");
     }
 
     TEST_METHOD(T05_SelectToFilestore)
@@ -233,6 +228,7 @@ namespace UnitTest
       Logger::WriteMessage("Delete a record from the DETAIL table from the FILESTORE");
       if (OpenSession())
       {
+        m_session.ChangeRole(CXHRole::CXH_Filestore_role);
         SQLVariant one((long)6);
 
         CXObject* object = m_session.SelectObject("detail", &one);
@@ -301,8 +297,8 @@ namespace UnitTest
         m_database.Open("Testing","sysdba","altijd");
         if(m_database.IsOpen())
         {
-          m_session.SetDatabase(&m_database);
           m_session.SetBaseDirectory("C:\\WWW\\Testing");
+          m_session.SetDatabase(&m_database);
 
           CXTable* master  = new CXTable("sysdba","master",     CXO_FACTORY(CXMaster));
           CXTable* detail  = new CXTable("sysdba","detail",     CXO_FACTORY(CXDetail));

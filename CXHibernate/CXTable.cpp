@@ -25,6 +25,7 @@
 // Version number:  0.0.1
 //
 #include "stdafx.h"
+#include "CXHibernate.h"
 #include "CXTable.h"
 #include <SOAPMessage.h>
 
@@ -36,14 +37,12 @@ static char THIS_FILE[] = __FILE__;
 
 // CTOR: Empty table object
 CXTable::CXTable()
-        :m_dataSet(nullptr)
 {
 }
 
 // CTOR: Standard creation of a table
-CXTable::CXTable(CString p_schema, CString p_table,CreateCXO p_create)
-        :m_dataSet(nullptr)
-        ,m_create(p_create)
+CXTable::CXTable(CString p_schema,CString p_table,CreateCXO p_create)
+        :m_create(p_create)
 {
   m_table.m_schema     = p_schema;
   m_table.m_table      = p_table;
@@ -57,6 +56,29 @@ CXTable::~CXTable()
   {
     delete m_dataSet;
   }
+}
+
+// Setting the schema/table/type info
+void
+CXTable::SetSchemaTableType(CString p_schema,CString p_table,CString p_type)
+{
+  m_table.m_schema     = p_schema;
+  m_table.m_table      = p_table;
+  m_table.m_objectType = p_type;
+}
+
+// Setting our super-class
+void
+CXTable::SetSuperClass(CXTable* p_super)
+{
+  m_super = p_super;
+}
+
+// Adding a sub-class
+void
+CXTable::AddSubClass(CXTable* p_subclass)
+{
+  m_subClasses.push_back(p_subclass);
 }
 
 // Master side must apply a SQLDataSet
@@ -94,6 +116,11 @@ CXTable::SchemaName()
 CString   
 CXTable::TableName()
 {
+  if(m_super && hibernate.GetStrategy() == Strategy_one_table)
+  {
+    return m_super->TableName();
+  }
+  // All other strategies have our own table name
   return m_table.m_table;
 }
 
@@ -106,7 +133,7 @@ CXTable::SchemaTableName()
   {
     name += m_table.m_schema + ".";
   }
-  name += m_table.m_table;
+  name += TableName();
   return name;
 }
 
@@ -123,7 +150,7 @@ CXTable::FullQualifiedTableName()
   {
     name += m_table.m_schema + ".";
   }
-  name += m_table.m_table;
+  name += TableName();
 
   return name;
 }
@@ -164,7 +191,7 @@ CXTable::DMLTableName(SQLInfoDB* p_info)
   }
 
   // Now comes the table name
-  name += m_table.m_table;
+  name += TableName();
 
   // Catalog at the end of the name
   if((catalogLocation == SQL_CL_END) && !catalog.IsEmpty())

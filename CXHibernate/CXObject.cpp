@@ -146,6 +146,7 @@ CXObject::PreSerialize(SOAPMessage& p_message,XMLElement* p_entity)
 void
 CXObject::PreSerialize(SQLRecord& p_record)
 {
+  FillPrimaryKey(p_record);
 }
 
 void

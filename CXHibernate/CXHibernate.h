@@ -23,17 +23,33 @@ public:
   CXHibernate();
  ~CXHibernate();
 
+  // FUNCTIONS
+
+  // Create a new Hibernate session
+  CXSession*   CreateSession();
+  // Adding a externally created session (but we now own it)
+  void         AddSession(CXSession* p_session);
+
+
+  // SETTERS
+
   // Setting a hibernate mapping strategy
   bool          SetStrategy(MapStrategy p_strategy);
+  // Setting a default catalog for the execution time
   void          SetDefaultCatalog(CString p_catalog);
+  // Setting a default database schema for the execution time
   void          SetDefaultSchema (CString p_schema);
 
   // GETTERS
+
   MapStrategy   GetStrategy();
   CString       GetDefaultCatalog();
   CString       GetDefaultSchema();
 
 private:
+  // Flushing all data to the database and closing all sessions
+  void          CloseAllSessions();
+
   // Relational-Object-Mapping strategy
   MapStrategy   m_strategy { Strategy_standalone };
   // Mapping to all open sessions

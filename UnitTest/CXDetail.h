@@ -60,7 +60,8 @@ private:
   long    m_mast_id { 0 };    // Foreign key to Master
   CString m_description;
   bcd     m_amount;
-  // Virtual attributes
+  // Transient attributes go here
+
 };
 
 DECLARE_CXO_FACTORY(CXDetail);

@@ -28,6 +28,7 @@
 #include "TestNumber.h"
 #include <CXTable.h>
 #include <SQLRecord.h>
+#include <SOAPMessage.h>
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -46,14 +47,31 @@ TestNumber::TestNumber(CXClass* p_className)
 
 // Bring the contents of the class to a SOAPMessage or a SQLRecord
 void
-TestNumber::Serialize(SOAPMessage& p_msg,XMLElement* p_entity)
+TestNumber::Serialize(SOAPMessage& p_message,XMLElement* p_entity)
 {
+  PreSerialize(p_message,p_entity);
+
+  p_message.AddElement(p_entity,"id",    XDT_Integer|XDT_Type,m_id);
+  p_message.AddElement(p_entity,"field1",XDT_Integer|XDT_Type,m_field1);
+  p_message.AddElement(p_entity,"field2",XDT_Double |XDT_Type,m_field2);
+  p_message.AddElement(p_entity,"field3",XDT_Decimal|XDT_Type,m_field3.AsDouble());
+
+  PostSerialize(p_message,p_entity);
+
 }
 
 // Read the contents of an object from a SOAPMessage or a SQLRecord
 void
 TestNumber::DeSerialize(SOAPMessage& p_message,XMLElement* p_entity)
 {
+  PreDeSerialize(p_message,p_entity);
+
+  m_id     = p_message.GetElementInteger(p_entity,"id");
+  m_field1 = p_message.GetElementInteger(p_entity,"field1");
+  m_field2 = p_message.GetElementDouble (p_entity,"field2");
+  m_field3 = p_message.GetElementDouble (p_entity,"field3");
+
+  PostDeSerialize(p_message,p_entity);
 }
 
 void

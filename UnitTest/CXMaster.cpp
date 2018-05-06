@@ -28,6 +28,7 @@
 #include "CXMaster.h"
 #include <CXTable.h>
 #include <SQLRecord.h>
+#include <SOAPMessage.h>
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -46,14 +47,30 @@ CXMaster::CXMaster(CXClass* p_className)
 
 // Bring the contents of the class to a SOAPMessage or a SQLRecord
 void
-CXMaster::Serialize(SOAPMessage& p_msg,XMLElement* p_entity)
+CXMaster::Serialize(SOAPMessage& p_message,XMLElement* p_entity)
 {
+  PreSerialize(p_message, p_entity);
+
+  p_message.AddElement(p_entity, "id",          XDT_Integer | XDT_Type, m_id);
+  p_message.AddElement(p_entity, "invoice",     XDT_Integer | XDT_Type, m_invoice);
+  p_message.AddElement(p_entity, "description", XDT_String  | XDT_Type, m_description);
+  p_message.AddElement(p_entity, "total",       XDT_Decimal | XDT_Type, m_total.AsDouble());
+
+  PostSerialize(p_message, p_entity);
 }
 
 // Read the contents of an object from a SOAPMessage or a SQLRecord
 void
-CXMaster::DeSerialize(SOAPMessage& p_msg,XMLElement* p_entity)
+CXMaster::DeSerialize(SOAPMessage& p_message,XMLElement* p_entity)
 {
+  PreDeSerialize(p_message,p_entity);
+
+  m_id          = p_message.GetElementInteger(p_entity,"id");
+  m_invoice     = p_message.GetElementInteger(p_entity,"invoice");
+  m_description = p_message.GetElement       (p_entity,"description");
+  m_total       = p_message.GetElementDouble (p_entity,"total");
+
+  PostDeSerialize(p_message,p_entity);
 }
 
 void

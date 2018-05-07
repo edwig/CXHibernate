@@ -25,7 +25,7 @@
 // Version number:  0.0.1
 //
 #include "stdafx.h"
-#include "CXMaster.h"
+#include "Master.h"
 #include <CXTable.h>
 #include <SQLRecord.h>
 #include <SOAPMessage.h>
@@ -37,17 +37,17 @@ static char THIS_FILE[] = __FILE__;
 #endif
 
 // Create our new object factory
-DEFINE_CXO_FACTORY(CXMaster);
+DEFINE_CXO_FACTORY(Master);
 
 // CTOR creating a new master record
-CXMaster::CXMaster(CXClass* p_className)
-         :CXObject(p_className)
+Master::Master(CXClass* p_className)
+       :CXObject(p_className)
 {
 }
 
 // Bring the contents of the class to a SOAPMessage or a SQLRecord
 void
-CXMaster::Serialize(SOAPMessage& p_message,XMLElement* p_entity)
+Master::Serialize(SOAPMessage& p_message,XMLElement* p_entity)
 {
   PreSerialize(p_message, p_entity);
 
@@ -61,7 +61,7 @@ CXMaster::Serialize(SOAPMessage& p_message,XMLElement* p_entity)
 
 // Read the contents of an object from a SOAPMessage or a SQLRecord
 void
-CXMaster::DeSerialize(SOAPMessage& p_message,XMLElement* p_entity)
+Master::DeSerialize(SOAPMessage& p_message,XMLElement* p_entity)
 {
   PreDeSerialize(p_message,p_entity);
 
@@ -74,7 +74,7 @@ CXMaster::DeSerialize(SOAPMessage& p_message,XMLElement* p_entity)
 }
 
 void
-CXMaster::Serialize(SQLRecord& p_record,int p_mutation /*= 0*/)
+Master::Serialize(SQLRecord& p_record,int p_mutation /*= 0*/)
 {
   PreSerialize(p_record);
 
@@ -87,7 +87,7 @@ CXMaster::Serialize(SQLRecord& p_record,int p_mutation /*= 0*/)
 }
 
 void
-CXMaster::DeSerialize(SQLRecord& p_record)
+Master::DeSerialize(SQLRecord& p_record)
 {
   PreDeSerialize(p_record);
 
@@ -101,7 +101,7 @@ CXMaster::DeSerialize(SQLRecord& p_record)
 
 // Setters
 void
-CXMaster::SetTotal(bcd p_bcd)
+Master::SetTotal(bcd p_bcd)
 {
   m_total = p_bcd;
 }

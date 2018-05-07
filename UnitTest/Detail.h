@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////
 //
-// File: CXMaster.h
+// File: CXDetail.h
 //
 // Copyright (c) 1998-2018 ir. W.E. Huisman
 // All rights reserved
@@ -28,41 +28,33 @@
 #include <CXObject.h>
 #include <bcd.h>
 
-class CXClass;
-
-class CXMaster : public CXObject
+class Detail : public CXObject
 {
 public:
   // CTOR of an CXObject
-  CXMaster(CXClass* p_className);
+  Detail(CXClass* p_className);
 
-  // Bring the contents of the class to a SOAPMessage or a SQLRecord
-  virtual void Serialize(SOAPMessage& p_message,XMLElement* p_entity);
-  virtual void Serialize(SQLRecord&   p_record,int p_mutation = 0);
-
-  // Read the contents of an object from a SOAPMessage or a SQLRecord
-  virtual void DeSerialize(SOAPMessage& p_msg,XMLElement* p_entity);
-  virtual void DeSerialize(SQLRecord&   p_record);
+  // Serialization of our persistent objects
+  DECLARE_CXO_SERIALIZATION
 
   // GETTERS
-  int     GetID()           { return m_id;          };
-  int     GetInvoice()      { return m_invoice;     };
-  CString GetDescription()  { return m_description; };
-  bcd     GetTotal()        { return m_total;       };
-
-  // Setters
-  void    SetTotal(bcd p_bcd);
+  int     GetID()            { return m_id;          };
+  int     GetLine()          { return m_line;        };
+  int     GetMasterID()      { return m_mast_id;     };
+  CString GetDescription()   { return m_description; };
+  bcd     GetAmount()        { return m_amount;      };
 
 protected:
 
 private:
   // Database persistent attributes
-  long    m_id;
-  long    m_invoice;
+  long    m_id      { 0 };    // Primary key part 1
+  long    m_line    { 0 };    // Primary key part 2
+  long    m_mast_id { 0 };    // Foreign key to Master
   CString m_description;
-  bcd     m_total;
-  // Virtual attributes
+  bcd     m_amount;
+  // Transient attributes go here
+
 };
 
-// Declare our factory
-DECLARE_CXO_FACTORY(CXMaster);
+DECLARE_CXO_FACTORY(Detail);

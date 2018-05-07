@@ -117,6 +117,26 @@ CXObject::GetDatabaseRecord()
   return m_record;
 }
 
+long 
+CXObject::GetElementlong(SOAPMessage& p_message,XMLElement* p_entity,CString p_column)
+{
+  return atoi(p_message.GetElement(p_entity, p_column));
+}
+
+CString     
+CXObject::GetElementCString(SOAPMessage& p_message,XMLElement* p_entity,CString p_column)
+{
+  return p_message.GetElement(p_entity,p_column);
+}
+
+bcd
+CXObject::GetElementbcd(SOAPMessage& p_message,XMLElement* p_entity,CString p_column)
+{
+  bcd num = p_message.GetElement(p_entity,p_column);
+  return num;
+}
+
+
 //////////////////////////////////////////////////////////////////////////
 //
 // PROTECTED INTERFACE

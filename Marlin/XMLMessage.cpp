@@ -920,25 +920,6 @@ XMLMessage::GetElementBoolean(CString p_name)
   return GetElementBoolean(NULL,p_name);
 }
 
-long
-XMLMessage::GetElementlong(XMLElement* p_elem,CString p_name)
-{
-  return atoi(GetElement(p_elem,p_name));
-}
-
-CString
-XMLMessage::GetElementCString(XMLElement* p_elem,CString p_name)
-{
-  return GetElement(p_elem,p_name);
-}
-
-bcd
-XMLMessage::GetElementbcd(XMLElement* p_elem,CString p_name)
-{
-  bcd num = GetElement(p_elem,p_name);
-  return num;
-}
-
 
 //////////////////////////////////////////////////////////////////////////
 

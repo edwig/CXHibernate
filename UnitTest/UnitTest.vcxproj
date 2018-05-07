@@ -160,15 +160,15 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="CXDetail.h" />
-    <ClInclude Include="CXMaster.h" />
+    <ClInclude Include="Detail.h" />
+    <ClInclude Include="Master.h" />
     <ClInclude Include="TestNumber.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="targetver.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="CXDetail.cpp" />
-    <ClCompile Include="CXMaster.cpp" />
+    <ClCompile Include="Detail.cpp" />
+    <ClCompile Include="Master.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>

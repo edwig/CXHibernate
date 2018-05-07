@@ -28,8 +28,8 @@
 #include "CppUnitTest.h"
 #include "CXSession.h"
 #include "CXClass.h"
-#include "CXMaster.h"
-#include "CXDetail.h"
+#include "Master.h"
+#include "Detail.h"
 #include "TestNumber.h"
 #include <SQLComponents.h>
 #include <SQLVariant.h>
@@ -63,7 +63,7 @@ namespace UnitTest
       try
       {
         CXObject* object = m_session->SelectObject("master",2);
-        CXMaster* master = reinterpret_cast<CXMaster*>(object);
+        Master* master = reinterpret_cast<Master*>(object);
 
         Assert::IsNotNull(master);
 
@@ -90,7 +90,7 @@ namespace UnitTest
         CXResultSet set = m_session->SelectObject("detail",filters);
         for(int ind = 0;ind < set.size(); ++ind)
         {
-          CXDetail* detail = reinterpret_cast<CXDetail*>(set[ind]);
+          Detail* detail = reinterpret_cast<Detail*>(set[ind]);
           PrintDetail(detail);
         }
       }
@@ -105,7 +105,7 @@ namespace UnitTest
       Logger::WriteMessage("Updating a record from the MASTER table");
       if (OpenSession())
       {
-        CXMaster* master = (CXMaster*) m_session->SelectObject("master",1);
+        Master* master = (Master*) m_session->SelectObject("master",1);
 
         Assert::IsNotNull(master);
         Logger::WriteMessage("Updating 1th master record");
@@ -136,7 +136,7 @@ namespace UnitTest
       }
     }
 
-    void PrintMaster(CXMaster* p_master)
+    void PrintMaster(Master* p_master)
     {
       CString text;
       text.Format("Record ID      : %d", p_master->GetID());               Logger::WriteMessage(text);
@@ -145,7 +145,7 @@ namespace UnitTest
       text.Format("Total amount   : %s", p_master->GetTotal().AsString()); Logger::WriteMessage(text);
     }
 
-    void PrintDetail(CXDetail* p_detail)
+    void PrintDetail(Detail* p_detail)
     {
       CString text;
       text.Format("Record ID      : %d", p_detail->GetID());                Logger::WriteMessage(text);
@@ -218,7 +218,7 @@ namespace UnitTest
         m_session->SetBaseDirectory("C:\\WWW\\Testing");
 
         CXObject* object = m_session->SelectObject("detail",&one);
-        CXDetail* detail = reinterpret_cast<CXDetail*>(object);
+        Detail* detail = reinterpret_cast<Detail*>(object);
         Assert::IsNotNull(detail);
         PrintDetail(detail);
       }
@@ -236,7 +236,7 @@ namespace UnitTest
         m_session->ChangeRole(CXHRole::CXH_Filestore_role);
 
         CXObject* object = m_session->SelectObject("detail",6);
-        CXDetail* detail = reinterpret_cast<CXDetail*>(object);
+        Detail* detail = reinterpret_cast<Detail*>(object);
 
         Assert::IsNotNull(detail);
         PrintDetail(detail);
@@ -308,8 +308,8 @@ namespace UnitTest
           m_session->SetBaseDirectory("C:\\WWW\\Testing");
           m_session->SetDatabase(&m_database);
 
-          CXClass* master  = new CXClass("master",     CXO_FACTORY(CXMaster));
-          CXClass* detail  = new CXClass("detail",     CXO_FACTORY(CXDetail));
+          CXClass* master  = new CXClass("master",     CXO_FACTORY(Master));
+          CXClass* detail  = new CXClass("detail",     CXO_FACTORY(Detail));
           CXClass* numbers = new CXClass("test_number",CXO_FACTORY(TestNumber));
 
           // Do the 'lazy' stuff by reading the definition from the database

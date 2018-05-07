@@ -66,6 +66,11 @@ public:
   // Getting the complete primary key
   VariantSet& GetPrimaryKey();
 
+  long        GetElementlong   (SOAPMessage& p_message,XMLElement* p_entity,CString p_column);
+  CString     GetElementCString(SOAPMessage& p_message,XMLElement* p_entity,CString p_column);
+  bcd         GetElementbcd    (SOAPMessage& p_message,XMLElement* p_entity,CString p_column);
+
+
 protected:
 
   // Bring the contents of the class to a SOAPMessage or a SQLRecord

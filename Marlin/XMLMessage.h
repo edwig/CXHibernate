@@ -261,10 +261,6 @@ public:
   bool            GetAttributeBoolean(XMLElement* p_elem,CString p_attribName);
   double          GetAttributeDouble(XMLElement* p_elem,CString p_attribName);
 
-  long            GetElementlong(XMLElement* p_elem,CString p_name);
-  CString         GetElementCString(XMLElement* p_elem,CString p_name);
-  bcd             GetElementbcd(XMLElement* p_elem,CString p_name);
-
   // FINDING
   XMLElement*     FindElement(CString p_name, bool p_recurse = true);
   XMLElement*     FindElement(XMLElement* p_base, CString p_name, bool p_recurse = true);

@@ -25,7 +25,7 @@
 // Version number:  0.0.1
 //
 #include "stdafx.h"
-#include "CXDetail.h"
+#include "Detail.h"
 #include <CXTable.h>
 #include <SQLRecord.h>
 #include <SOAPMessage.h>
@@ -58,13 +58,11 @@ END_XML_SERIALIZE
 
 // Read the contents of an object from a SOAPMessage
 BEGIN_XML_DESERIALIZE(Detail)
-
-  m_id          = p_message.GetElementInteger(p_entity,"id");
-  m_mast_id     = p_message.GetElementInteger(p_entity,"mast_id");
-  m_line        = p_message.GetElementInteger(p_entity,"line");
-  m_description = p_message.GetElement       (p_entity,"description");
-  m_amount      = p_message.GetElementDouble (p_entity,"amount");
-
+  CXO_XML_DESERIALIZE(long,   m_id,         "id",         XDT_Integer);
+  CXO_XML_DESERIALIZE(long,   m_mast_id,    "mast_id",    XDT_Integer);
+  CXO_XML_DESERIALIZE(long,   m_line,       "line",       XDT_Integer);
+  CXO_XML_DESERIALIZE(CString,m_description,"description",XDT_String);
+  CXO_XML_DESERIALIZE(bcd,    m_amount,     "amount",     XDT_Decimal);
 END_XML_DESERIALIZE
 
 //////////////////////////////////////////////////////////////////////////

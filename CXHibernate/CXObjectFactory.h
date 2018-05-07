@@ -29,7 +29,7 @@ typedef CXObject* (CALLBACK *CreateCXO)(CXClass* p_class);
 #define   CXO_DBS_SERIALIZE(c_type,property,column,XDT) p_record.ModifyField(column,property,p_mutation)
 #define CXO_DBS_DESERIALIZE(c_type,property,column,XDT) property = (c_type) p_record[ column ]
 #define   CXO_XML_SERIALIZE(c_type,property,column,XDT) p_message.AddElement(p_entity,column,XDT | XDT_Type,property)
-#define CXO_XML_DESERIALIZE(c_type,property,column,XDT) property = p_message.GetElement##c_type(p_entity,column)
+#define CXO_XML_DESERIALIZE(c_type,property,column,XDT) property = GetElement##c_type(p_message,p_entity,column)
 
 #define BEGIN_DBS_SERIALIZE(Classname)   void Classname::Serialize(SQLRecord& p_record,int p_mutation)\
                                          {PreSerialize(p_record);

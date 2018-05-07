@@ -30,19 +30,14 @@
 
 class CXTable;
 
-class CXDetail : public CXObject
+class Detail : public CXObject
 {
 public:
   // CTOR of an CXObject
-  CXDetail(CXClass* p_className);
+  Detail(CXClass* p_className);
 
-  // Bring the contents of the class to a SOAPMessage or a SQLRecord
-  virtual void Serialize(SOAPMessage& p_message,XMLElement* p_entity);
-  virtual void Serialize(SQLRecord&   p_record, int p_mutation = 0);
-
-  // Read the contents of an object from a SOAPMessage or a SQLRecord
-  virtual void DeSerialize(SOAPMessage& p_message,XMLElement* p_entity);
-  virtual void DeSerialize(SQLRecord&   p_record);
+  // Serialization of our persistent objects
+  DECLARE_CXO_SERIALIZATION
 
   // GETTERS
   int     GetID()            { return m_id;          };
@@ -64,4 +59,4 @@ private:
 
 };
 
-DECLARE_CXO_FACTORY(CXDetail);
+DECLARE_CXO_FACTORY(Detail);

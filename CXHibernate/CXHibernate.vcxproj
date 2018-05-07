@@ -159,6 +159,7 @@
     <ClInclude Include="CXClass.h" />
     <ClInclude Include="CXHibernate.h" />
     <ClInclude Include="CXObject.h" />
+    <ClInclude Include="CXObjectFactory.h" />
     <ClInclude Include="CXPrimaryHash.h" />
     <ClInclude Include="CXServer.h" />
     <ClInclude Include="CXSession.h" />

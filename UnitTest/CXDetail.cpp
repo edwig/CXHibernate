@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////
 //
-// File: CXDetail.cpp
+// File: Detail.cpp
 //
 // Copyright (c) 1998-2018 ir. W.E. Huisman
 // All rights reserved
@@ -36,33 +36,28 @@
 static char THIS_FILE[] = __FILE__;
 #endif
 
-DEFINE_CXO_FACTORY(CXDetail);
+DEFINE_CXO_FACTORY(Detail);
 
-CXDetail::CXDetail(CXClass* p_className)
-         :CXObject(p_className)
+// CXO_CONSTRUCTOR(Detail)
+Detail::Detail(CXClass* p_className)
+       :CXObject(p_className)
 {
+  // Things to do in the constructor ...
 }
 
-// Bring the contents of the class to a SOAPMessage or a SQLRecord
-void
-CXDetail::Serialize(SOAPMessage& p_message,XMLElement* p_entity)
-{
-  PreSerialize(p_message,p_entity);
+//////////////////////////////////////////////////////////////////////////
 
-  p_message.AddElement(p_entity,"id",         XDT_Integer|XDT_Type,m_id);
-  p_message.AddElement(p_entity,"mast_id",    XDT_Integer|XDT_Type,m_mast_id);
-  p_message.AddElement(p_entity,"line",       XDT_Integer|XDT_Type,m_line);
-  p_message.AddElement(p_entity,"description",XDT_String |XDT_Type,m_description);
-  p_message.AddElement(p_entity,"amount",     XDT_Decimal|XDT_Type,m_amount.AsDouble());
+// Bring the contents of the class to a SOAPMessage 
+BEGIN_XML_SERIALIZE(Detail)
+    CXO_XML_SERIALIZE(long,   m_id,         "id",         XDT_Integer);
+    CXO_XML_SERIALIZE(long,   m_mast_id,    "mast_id",    XDT_Integer);
+    CXO_XML_SERIALIZE(long,   m_line,       "line",       XDT_Integer);
+    CXO_XML_SERIALIZE(CString,m_description,"description",XDT_String);
+    CXO_XML_SERIALIZE(bcd,    m_amount,     "amount",     XDT_Decimal);
+END_XML_SERIALIZE
 
-  PostSerialize(p_message,p_entity);
-}
-
-// Read the contents of an object from a SOAPMessage or a SQLRecord
-void
-CXDetail::DeSerialize(SOAPMessage& p_message,XMLElement* p_entity)
-{
-  PreDeSerialize(p_message,p_entity);
+// Read the contents of an object from a SOAPMessage
+BEGIN_XML_DESERIALIZE(Detail)
 
   m_id          = p_message.GetElementInteger(p_entity,"id");
   m_mast_id     = p_message.GetElementInteger(p_entity,"mast_id");
@@ -70,35 +65,29 @@ CXDetail::DeSerialize(SOAPMessage& p_message,XMLElement* p_entity)
   m_description = p_message.GetElement       (p_entity,"description");
   m_amount      = p_message.GetElementDouble (p_entity,"amount");
 
-  PostDeSerialize(p_message,p_entity);
-}
+END_XML_DESERIALIZE
 
 //////////////////////////////////////////////////////////////////////////
 
-void
-CXDetail::Serialize(SQLRecord& p_record,int p_mutation /*= 0*/)
-{
-  PreSerialize(p_record);
+BEGIN_DBS_SERIALIZE(Detail)
+    CXO_DBS_SERIALIZE(long,   m_id,         "id",         XDT_Integer);
+    CXO_DBS_SERIALIZE(long,   m_mast_id,    "mast_id",    XDT_Integer);
+    CXO_DBS_SERIALIZE(long,   m_line,       "line",       XDT_Integer);
+    CXO_DBS_SERIALIZE(CString,m_description,"description",XDT_String);
+    CXO_DBS_SERIALIZE(bcd,    m_amount,     "amount",     XDT_Decimal);
+END_DBS_SERIALIZE
 
-  p_record.ModifyField("id",          m_id,         p_mutation);
-  p_record.ModifyField("mast_id",     m_mast_id,    p_mutation);
-  p_record.ModifyField("line",        m_line,       p_mutation);
-  p_record.ModifyField("description", m_description,p_mutation);
-  p_record.ModifyField("amount",      m_amount,     p_mutation);
 
-  PostSerialize(p_record);
-}
+BEGIN_DBS_DESERIALIZE(Detail)
+  CXO_DBS_DESERIALIZE(long,   m_id,         "id",         XDT_Integer);
+  CXO_DBS_DESERIALIZE(long,   m_mast_id,    "mast_id",    XDT_Integer);
+  CXO_DBS_DESERIALIZE(long,   m_line,       "line",       XDT_Integer);
+  CXO_DBS_DESERIALIZE(CString,m_description,"description",XDT_String);
+  CXO_DBS_DESERIALIZE(bcd,    m_amount,     "amount",     XDT_Decimal);
+END_DBS_DESERIALIZE
 
-void
-CXDetail::DeSerialize(SQLRecord& p_record)
-{
-  PreDeSerialize(p_record);
-
-  m_id          = (long)    p_record["id"];
-  m_mast_id     = (long)    p_record["mast_id"];
-  m_line        = (long)    p_record["line"];
-  m_description = (CString) p_record["description"];
-  m_amount      = (bcd)     p_record["amount"];
-
-  PostDeSerialize(p_record);
-}
+//////////////////////////////////////////////////////////////////////////
+//
+// Normal class methods
+//
+//////////////////////////////////////////////////////////////////////////

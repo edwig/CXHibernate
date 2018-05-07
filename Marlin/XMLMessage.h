@@ -26,8 +26,11 @@
 // THE SOFTWARE.
 //
 #pragma once
+#include <bcd.h>
 #include <deque>
 #include "XMLDataType.h"
+
+using SQLComponents::bcd;
 
 // XML coding of the message
 enum class XMLEncoding
@@ -257,6 +260,10 @@ public:
   int             GetAttributeInteger(XMLElement* p_elem,CString p_attribName);
   bool            GetAttributeBoolean(XMLElement* p_elem,CString p_attribName);
   double          GetAttributeDouble(XMLElement* p_elem,CString p_attribName);
+
+  long            GetElementlong(XMLElement* p_elem,CString p_name);
+  CString         GetElementCString(XMLElement* p_elem,CString p_name);
+  bcd             GetElementbcd(XMLElement* p_elem,CString p_name);
 
   // FINDING
   XMLElement*     FindElement(CString p_name, bool p_recurse = true);

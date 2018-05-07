@@ -886,6 +886,13 @@ SOAPMessage::AddElement(XMLElement* p_base,CString p_name,XmlDataType p_type,dou
   return AddElement(p_base,p_name,p_type,value,p_front);
 }
 
+XMLElement*
+SOAPMessage::AddElement(XMLElement* p_base,CString p_name,XmlDataType p_type,bcd p_value,bool p_front /*= false*/)
+{
+  CString value = p_value.AsString();
+  return AddElement(p_base,p_name,p_type,value,p_front);
+}
+
 // Get parameter from the header
 CString
 SOAPMessage::GetHeaderParameter(CString p_paramName)

@@ -103,23 +103,5 @@ private:
 
 using CXResultSet = std::vector<CXObject*>;
 
-//////////////////////////////////////////////////////////////////////////
-//
-// OBJECT FACTORY
-// Define your own factory for a derived class of CXOBject and 
-// create an object of your own subtype
-//
-//////////////////////////////////////////////////////////////////////////
+#include "CXObjectFactory.h"
 
-// Prototype for use in method/function declarations
-typedef CXObject* (CALLBACK *CreateCXO)(CXClass* p_class);
-
-// Macro for calling a method with this factory as a parameter
-#define CXO_FACTORY(classname) CreateCXObject##classname
-// Declaring a factory in your derived class
-#define DECLARE_CXO_FACTORY(classname) CXObject* CreateCXObject##classname(CXClass* p_class)
-// Defining the factory in your class implementation
-#define DEFINE_CXO_FACTORY(classname)  CXObject* CreateCXObject##classname(CXClass* p_class)\
-                                       {\
-                                         return new classname(p_class);\
-                                       }

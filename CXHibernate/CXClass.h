@@ -33,6 +33,6 @@ private:
   SubClasses    m_subClasses;
   // Our CXObject factory function
   CreateCXO     m_create { nullptr };
-  // Underlying database table
+  // Underlying database table (in current mapping strategy)
   CXTable*      m_table;
 };

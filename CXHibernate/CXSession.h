@@ -59,6 +59,8 @@ public:
   // DTOR
  ~CXSession();
 
+  // And closing it again
+  void          CloseSession();
   // Changing our role (database, filestore, internet)
   void          ChangeRole(CXHRole p_role);
   // Alternate database 
@@ -102,8 +104,8 @@ private:
   // Getting meta-session info from our database
   void          GetMetaSessionInfo();
   // Clear the table cache
-  void          ClearCache  (CString p_table = "");
-  void          ClearClasses(CString p_table = "");
+  void          ClearCache  (CString p_className = "");
+  void          ClearClasses(CString p_className = "");
   // Add an object to the cache
   bool          AddObjectInCache(CXObject* p_object,VariantSet& p_primary);
   // And remove again from the cache
@@ -121,21 +123,21 @@ private:
   CXObject*     FindObjectOnInternet (CString p_table,VariantSet& p_primary);
 
   // SELECT objects
-  void          SelectObjectsFromDatabase (CString p_table,SQLFilterSet& p_filters);
-  void          SelectObjectsFromFilestore(CString p_table,SQLFilterSet& p_filters);
-  void          SelectObjectsFromInternet (CString p_table,SQLFilterSet& p_filters);
+  void          SelectObjectsFromDatabase (CString p_className,SQLFilterSet& p_filters);
+  void          SelectObjectsFromFilestore(CString p_className,SQLFilterSet& p_filters);
+  void          SelectObjectsFromInternet (CString p_className,SQLFilterSet& p_filters);
   // DML operations in the database
-  bool          UpdateObjectInDatabase (CXTable* p_table,CXObject* p_object,int p_mutationID = 0);
-  bool          InsertObjectInDatabase (CXTable* p_table,CXObject* p_object,int p_mutationID = 0);
-  bool          DeleteObjectInDatabase (CXTable* p_table,CXObject* p_object,int p_mutationID = 0);
+  bool          UpdateObjectInDatabase (CXObject* p_object,int p_mutationID = 0);
+  bool          InsertObjectInDatabase (CXObject* p_object,int p_mutationID = 0);
+  bool          DeleteObjectInDatabase (CXObject* p_object,int p_mutationID = 0);
   // DML operations in the filestore
-  bool          UpdateObjectInFilestore(CXTable* p_table,CXObject* p_object,int p_mutationID = 0);
-  bool          InsertObjectInFilestore(CXTable* p_table,CXObject* p_object,int p_mutationID = 0);
-  bool          DeleteObjectInFilestore(CXTable* p_table,CXObject* p_object,int p_mutationID = 0);
+  bool          UpdateObjectInFilestore(CXObject* p_object,int p_mutationID = 0);
+  bool          InsertObjectInFilestore(CXObject* p_object,int p_mutationID = 0);
+  bool          DeleteObjectInFilestore(CXObject* p_object,int p_mutationID = 0);
   // DML operations on the internet
-  bool          UpdateObjectInInternet (CXTable* p_table,CXObject* p_object,int p_mutationID = 0);
-  bool          InsertObjectInInternet (CXTable* p_table,CXObject* p_object,int p_mutationID = 0);
-  bool          DeleteObjectInInternet (CXTable* p_table,CXObject* p_object,int p_mutationID = 0);
+  bool          UpdateObjectInInternet (CXObject* p_object,int p_mutationID = 0);
+  bool          InsertObjectInInternet (CXObject* p_object,int p_mutationID = 0);
+  bool          DeleteObjectInInternet (CXObject* p_object,int p_mutationID = 0);
 
   CXHRole       m_role { CXH_Database_role};   // Master/Slave role of the session
   bool          m_ownDatabase   { false   };   // We own / destroy this database

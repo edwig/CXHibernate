@@ -105,7 +105,7 @@ CXObject::IsPersistent()
 
 // Getting the class of this object
 CXClass*
-CXObject::BelongsToClass()
+CXObject::GetClass()
 {
   return m_class;
 }

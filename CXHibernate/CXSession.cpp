@@ -87,6 +87,14 @@ CXSession::~CXSession()
   }
 }
 
+// And closing it again
+void
+CXSession::CloseSession()
+{
+  Synchronize();
+  hibernate.RemoveSession(this);
+}
+
 void
 CXSession::ChangeRole(CXHRole p_role)
 {
@@ -368,11 +376,9 @@ CXSession::SelectObject(CString p_className,SQLFilterSet& p_filters)
 bool
 CXSession::UpdateObject(CXObject* p_object,int p_mutationID /*= 0*/)
 {
-  CXTable* table = p_object->BelongsToClass()->GetTable();
-
   if(m_role == CXH_Database_role)
   {
-    return UpdateObjectInDatabase(table,p_object,p_mutationID);
+    return UpdateObjectInDatabase(p_object,p_mutationID);
   }
   else if(m_role == CXH_Internet_role)
   {
@@ -382,7 +388,7 @@ CXSession::UpdateObject(CXObject* p_object,int p_mutationID /*= 0*/)
   }
   else // CXH_Filestore_role
   {
-    UpdateObjectInFilestore(table,p_object);
+    UpdateObjectInFilestore(p_object);
   }
   return true;
 }
@@ -390,11 +396,9 @@ CXSession::UpdateObject(CXObject* p_object,int p_mutationID /*= 0*/)
 bool
 CXSession::InsertObject(CXObject* p_object,int p_mutationID /*= 0*/)
 {
-  CXTable* table = p_object->BelongsToClass()->GetTable();
-
   if(m_role == CXH_Database_role)
   {
-    InsertObjectInDatabase(table,p_object,p_mutationID);
+    InsertObjectInDatabase(p_object,p_mutationID);
   }
   else if(m_role == CXH_Internet_role)
   {
@@ -404,7 +408,7 @@ CXSession::InsertObject(CXObject* p_object,int p_mutationID /*= 0*/)
   }
   else // CXH_Filestore_role
   {
-    InsertObjectInFilestore(table,p_object,p_mutationID);
+    InsertObjectInFilestore(p_object,p_mutationID);
   }
   // Add object to the cache
   if(p_object->IsPersistent())
@@ -417,11 +421,9 @@ CXSession::InsertObject(CXObject* p_object,int p_mutationID /*= 0*/)
 bool
 CXSession::DeleteObject(CXObject* p_object,int p_mutationID /*= 0*/)
 {
-  CXTable* table = p_object->BelongsToClass()->GetTable();
-
   if(m_role == CXH_Database_role)
   {
-    DeleteObjectInDatabase(table,p_object,p_mutationID);
+    DeleteObjectInDatabase(p_object,p_mutationID);
   }
   else if(m_role == CXH_Internet_role)
   {
@@ -430,7 +432,7 @@ CXSession::DeleteObject(CXObject* p_object,int p_mutationID /*= 0*/)
   }
   else // CXH_Filestore_role
   {
-    DeleteObjectInFilestore(table,p_object,p_mutationID);
+    DeleteObjectInFilestore(p_object,p_mutationID);
   }
 
   return RemoveObjectFromCache(p_object,p_object->GetPrimaryKey());
@@ -561,7 +563,7 @@ CXSession::SaveSOAPMessage(SOAPMessage& p_message, CString p_fileName)
 // Clear the cache of all objects of table <p_table>
 // if no parameter given, clear the complete cache
 void 
-CXSession::ClearCache(CString p_table /*= ""*/)
+CXSession::ClearCache(CString p_className /*= ""*/)
 {
   if(m_cache.empty())
   {
@@ -571,7 +573,7 @@ CXSession::ClearCache(CString p_table /*= ""*/)
   CXCache::iterator it = m_cache.begin();
   while (it != m_cache.end())
   {
-    if (p_table.IsEmpty() || p_table.CompareNoCase(it->first) == 0)
+    if (p_className.IsEmpty() || p_className.CompareNoCase(it->first) == 0)
     {
       for(auto& object : *it->second)
       {
@@ -590,12 +592,12 @@ CXSession::ClearCache(CString p_table /*= ""*/)
 
 // Clear the class definition cache
 void
-CXSession::ClearClasses(CString p_table /*= ""*/)
+CXSession::ClearClasses(CString p_className /*= ""*/)
 {
   ClassMap::iterator it = m_classes.begin();
   while(it != m_classes.end())
   {
-    if(p_table.IsEmpty() || p_table.CompareNoCase(it->first) == 0)
+    if(p_className.IsEmpty() || p_className.CompareNoCase(it->first) == 0)
     {
       delete it->second;
       it = m_classes.erase(it);
@@ -645,7 +647,7 @@ bool
 CXSession::AddObjectInCache(CXObject* p_object, VariantSet& p_primary)
 {
   CString hash = CXPrimaryHash(p_primary);
-  CString tableName = p_object->BelongsToClass()->GetTable()->TableName();
+  CString tableName = p_object->GetClass()->GetTable()->TableName();
   tableName.MakeLower();
 
   CXCache::iterator it = m_cache.find(tableName);
@@ -666,7 +668,7 @@ bool
 CXSession::RemoveObjectFromCache(CXObject* p_object, VariantSet& p_primary)
 {
   CString hash = CXPrimaryHash(p_primary);
-  CString tableName = p_object->BelongsToClass()->GetTable()->TableName();
+  CString tableName = p_object->GetClass()->GetTable()->TableName();
   tableName.MakeLower();
 
   CXCache::iterator it = m_cache.find(tableName);
@@ -899,22 +901,24 @@ CXSession::SelectObjectsFromDatabase(CString p_className,SQLFilterSet& p_filters
 }
 
 void
-CXSession::SelectObjectsFromFilestore(CString p_table,SQLFilterSet& p_filters)
+CXSession::SelectObjectsFromFilestore(CString p_className,SQLFilterSet& p_filters)
 {
   throw CString("Cannot select multiple objects from the filestore");
 }
 
 void
-CXSession::SelectObjectsFromInternet(CString p_table,SQLFilterSet& p_filters)
+CXSession::SelectObjectsFromInternet(CString p_className,SQLFilterSet& p_filters)
 {
 
 }
 
 bool
-CXSession::UpdateObjectInDatabase(CXTable* p_table,CXObject* p_object,int p_mutationID /*= 0*/)
+CXSession::UpdateObjectInDatabase(CXObject* p_object,int p_mutationID /*= 0*/)
 {
+  CXClass* theClass = p_object->GetClass();
+  CXTable*    table = theClass->GetTable();
   SQLRecord* record = p_object->GetDatabaseRecord();
-  SQLDataSet*  dset = p_table->GetDataSet();
+  SQLDataSet*  dset = table->GetDataSet();
 
   // New mutation ID for this update action
   if(p_mutationID == 0)
@@ -929,11 +933,13 @@ CXSession::UpdateObjectInDatabase(CXTable* p_table,CXObject* p_object,int p_muta
 
 // Insert a new object in the database
 bool
-CXSession::InsertObjectInDatabase(CXTable* p_table,CXObject* p_object,int p_mutationID /*= 0*/)
+CXSession::InsertObjectInDatabase(CXObject* p_object,int p_mutationID /*= 0*/)
 {
-  SQLDataSet*    dset = p_table->GetDataSet();
+  CXClass*   theClass = p_object->GetClass();
+  CXTable*      table = theClass->GetTable();
+  SQLDataSet*    dset = table->GetDataSet();
   SQLRecord*   record = dset->InsertRecord();
-  MColumnMap& columns = p_table->GetColumnInfo();
+  MColumnMap& columns = table->GetColumnInfo();
   SQLVariant zero;
 
   // See if dataset is empty
@@ -967,11 +973,14 @@ CXSession::InsertObjectInDatabase(CXTable* p_table,CXObject* p_object,int p_muta
 }
 
 bool
-CXSession::DeleteObjectInDatabase(CXTable* p_table,CXObject* p_object,int p_mutationID /*= 0*/)
+CXSession::DeleteObjectInDatabase(CXObject* p_object,int p_mutationID /*= 0*/)
 {
   // Getting the database record
-  SQLDataSet*  dset = p_table->GetDataSet();
+  CXClass* theClass = p_object->GetClass();
+  CXTable*    table = theClass->GetTable();
+  SQLDataSet*  dset = table->GetDataSet();
   SQLRecord* record = p_object->GetDatabaseRecord();
+
   if(record == nullptr || dset == nullptr)
   {
     return false;
@@ -1001,10 +1010,13 @@ CXSession::DeleteObjectInDatabase(CXTable* p_table,CXObject* p_object,int p_muta
 
 // DML operations in the filestore
 bool
-CXSession::UpdateObjectInFilestore(CXTable* p_table, CXObject* p_object, int p_mutationID /*= 0*/)
+CXSession::UpdateObjectInFilestore(CXObject* p_object,int p_mutationID /*= 0*/)
 {
+  CXClass* theClass = p_object->GetClass();
+  CXTable* table = theClass->GetTable();
+
   // See if we can create a directory and filename
-  CString filename = CreateFilestoreName(p_table,p_object->GetPrimaryKey());
+  CString filename = CreateFilestoreName(table,p_object->GetPrimaryKey());
   if (filename.IsEmpty())
   {
     return false;
@@ -1015,11 +1027,11 @@ CXSession::UpdateObjectInFilestore(CXTable* p_table, CXObject* p_object, int p_m
 
   // Adding an entity with name attributes
   XMLElement* entity = msg.SetParameter("Entity", "");
-  if(!p_table->SchemaName().IsEmpty())
+  if(!table->SchemaName().IsEmpty())
   {
-    msg.SetAttribute(entity,"schema",p_table->SchemaName());
+    msg.SetAttribute(entity,"schema",table->SchemaName());
   }
-  msg.SetAttribute(entity,"name",p_table->TableName());
+  msg.SetAttribute(entity,"name",table->TableName());
 
   // Serialize our object
   p_object->Serialize(msg,entity);
@@ -1035,10 +1047,13 @@ CXSession::UpdateObjectInFilestore(CXTable* p_table, CXObject* p_object, int p_m
 }
 
 bool
-CXSession::InsertObjectInFilestore(CXTable* p_table,CXObject* p_object,int p_mutationID /*= 0*/)
+CXSession::InsertObjectInFilestore(CXObject* p_object,int p_mutationID /*= 0*/)
 {
+  CXClass* theClass = p_object->GetClass();
+  CXTable* table = theClass->GetTable();
+
   // See if we can create a directory and filename
-  CString filename = CreateFilestoreName(p_table,p_object->GetPrimaryKey());
+  CString filename = CreateFilestoreName(table,p_object->GetPrimaryKey());
   if(filename.IsEmpty())
   {
     return false;
@@ -1049,7 +1064,7 @@ CXSession::InsertObjectInFilestore(CXTable* p_table,CXObject* p_object,int p_mut
   CString action("Object");
   SOAPMessage msg(namesp,action,SoapVersion::SOAP_12);
   XMLElement* entity = msg.SetParameter("Entity","");
-  msg.SetAttribute(entity,"name",p_table->TableName());
+  msg.SetAttribute(entity,"name",table->TableName());
 
   // Serialize our object
   p_object->Serialize(msg,entity);
@@ -1059,10 +1074,13 @@ CXSession::InsertObjectInFilestore(CXTable* p_table,CXObject* p_object,int p_mut
 }
 
 bool
-CXSession::DeleteObjectInFilestore(CXTable* p_table, CXObject* p_object, int p_mutationID /*= 0*/)
+CXSession::DeleteObjectInFilestore(CXObject* p_object,int p_mutationID /*= 0*/)
 {
+  CXClass* theClass = p_object->GetClass();
+  CXTable* table = theClass->GetTable();
+
   // See if we can create a directory and filename
-  CString filename = CreateFilestoreName(p_table,p_object->GetPrimaryKey());
+  CString filename = CreateFilestoreName(table,p_object->GetPrimaryKey());
   if(filename.IsEmpty())
   {
     return false;

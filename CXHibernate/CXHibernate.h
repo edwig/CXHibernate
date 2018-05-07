@@ -29,7 +29,8 @@ public:
   CXSession*   CreateSession();
   // Adding a externally created session (but we now own it)
   void         AddSession(CXSession* p_session);
-
+  // Removing a session
+  void         RemoveSession(CXSession* p_session);
 
   // SETTERS
 

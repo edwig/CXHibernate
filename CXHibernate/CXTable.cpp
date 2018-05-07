@@ -50,6 +50,7 @@ CXTable::~CXTable()
   if(m_dataSet)
   {
     delete m_dataSet;
+    m_dataSet = nullptr;
   }
 }
 

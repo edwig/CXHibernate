@@ -49,6 +49,11 @@ namespace UnitTest
 	TEST_CLASS(UnitTest)
 	{
 	public:
+    ~UnitTest()
+    {
+      m_session->CloseSession();
+      delete m_session;
+    }
 		
 		TEST_METHOD(T01_SelectMaster)
 		{
@@ -100,8 +105,7 @@ namespace UnitTest
       Logger::WriteMessage("Updating a record from the MASTER table");
       if (OpenSession())
       {
-        CXObject* object = m_session->SelectObject("master",1);
-        CXMaster* master = reinterpret_cast<CXMaster*>(object);
+        CXMaster* master = (CXMaster*) m_session->SelectObject("master",1);
 
         Assert::IsNotNull(master);
         Logger::WriteMessage("Updating 1th master record");
@@ -112,11 +116,19 @@ namespace UnitTest
         // Setting new value
         bcd total("935.12");
         master->SetTotal(total);
-        m_session->UpdateObject(master);
+        bool res = m_session->UpdateObject(master);
+        Assert::IsTrue(res);
+
+        CString value = TestRecordValue("master","id",1,"total");
+        Assert::AreEqual(value,"935.12");
 
         // Back to the old value
         master->SetTotal(old_total);
-        m_session->UpdateObject(master);
+        res = m_session->UpdateObject(master);
+        Assert::IsTrue(res);
+
+        value = TestRecordValue("master","id",1,"total");
+        Assert::AreEqual(value,"750");
       }
       else
       {
@@ -222,9 +234,8 @@ namespace UnitTest
       if (OpenSession())
       {
         m_session->ChangeRole(CXHRole::CXH_Filestore_role);
-        SQLVariant one((long)6);
 
-        CXObject* object = m_session->SelectObject("detail", &one);
+        CXObject* object = m_session->SelectObject("detail",6);
         CXDetail* detail = reinterpret_cast<CXDetail*>(object);
 
         Assert::IsNotNull(detail);
@@ -363,6 +374,36 @@ namespace UnitTest
       return result;
     }
 
+    CString TestRecordValue(CString p_table,CString p_key,int p_value,CString p_column)
+    {
+      CString result;
+
+      if(m_database.IsOpen() == false)
+      {
+        return "";
+      }
+      try
+      {
+        CString sql;
+        sql.Format("SELECT %s\n"
+                   "  FROM %s\n"
+                   " WHERE %s = ?",p_column,p_table,p_key);
+        SQLQuery query(m_database);
+        SQLTransaction trans(&m_database,"value");
+
+        query.DoSQLStatement(sql,p_value);
+        if(query.GetRecord())
+        {
+          result = query[1].GetAsChar();
+        }
+        trans.Commit();
+      }
+      catch(CString& er)
+      {
+        Logger::WriteMessage(CString("Failed: ") + er);
+      }
+      return result;
+    }
     CXSession*  m_session { nullptr };
     SQLDatabase m_database;
 	};

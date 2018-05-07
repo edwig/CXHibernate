@@ -58,7 +58,7 @@ public:
   bool        IsPersistent();
 
   // Getting the class of this object
-  CXClass*    BelongsToClass();
+  CXClass*    GetClass();
 
   // Defined by the underlying database record
   SQLRecord*  GetDatabaseRecord();

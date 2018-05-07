@@ -26,6 +26,11 @@ CXClass::CXClass(CString p_name,CreateCXO p_create,CXClass* p_super)
 
 CXClass::~CXClass()
 {
+  if(m_table)
+  {
+    delete m_table;
+    m_table = nullptr;
+  }
 }
 
 // The name of the game

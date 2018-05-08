@@ -45,61 +45,40 @@ Master::Master(CXClass* p_className)
 {
 }
 
-// Bring the contents of the class to a SOAPMessage or a SQLRecord
-void
-Master::Serialize(SOAPMessage& p_message,XMLElement* p_entity)
-{
-  PreSerialize(p_message, p_entity);
-
-  p_message.AddElement(p_entity, "id",          XDT_Integer | XDT_Type, m_id);
-  p_message.AddElement(p_entity, "invoice",     XDT_Integer | XDT_Type, m_invoice);
-  p_message.AddElement(p_entity, "description", XDT_String  | XDT_Type, m_description);
-  p_message.AddElement(p_entity, "total",       XDT_Decimal | XDT_Type, m_total.AsDouble());
-
-  PostSerialize(p_message, p_entity);
-}
+// Bring the contents of the class to a SOAPMessage 
+BEGIN_XML_SERIALIZE(Master)
+    CXO_XML_SERIALIZE(long,   m_id,         "id",         XDT_Integer);
+    CXO_XML_SERIALIZE(long,   m_invoice,    "invoice",    XDT_Integer);
+    CXO_XML_SERIALIZE(CString,m_description,"description",XDT_String);
+    CXO_XML_SERIALIZE(bcd,    m_total,      "total",      XDT_Decimal);
+END_XML_SERIALIZE
 
 // Read the contents of an object from a SOAPMessage or a SQLRecord
-void
-Master::DeSerialize(SOAPMessage& p_message,XMLElement* p_entity)
-{
-  PreDeSerialize(p_message,p_entity);
+BEGIN_XML_DESERIALIZE(Master)
+  CXO_XML_DESERIALIZE(long,   m_id,         "id",         XDT_Integer);
+  CXO_XML_DESERIALIZE(long,   m_invoice,    "invoice",    XDT_Integer);
+  CXO_XML_DESERIALIZE(CString,m_description,"description",XDT_String);
+  CXO_XML_DESERIALIZE(bcd,    m_total,      "total",      XDT_Decimal);
+END_XML_DESERIALIZE
 
-  m_id          = p_message.GetElementInteger(p_entity,"id");
-  m_invoice     = p_message.GetElementInteger(p_entity,"invoice");
-  m_description = p_message.GetElement       (p_entity,"description");
-  m_total       = p_message.GetElementDouble (p_entity,"total");
+BEGIN_DBS_SERIALIZE(Master)
+    CXO_DBS_SERIALIZE(long,   m_id,         "id",         XDT_Integer);
+    CXO_DBS_SERIALIZE(long,   m_invoice,    "invoice",    XDT_Integer);
+    CXO_DBS_SERIALIZE(CString,m_description,"description",XDT_String);
+    CXO_DBS_SERIALIZE(bcd,    m_total,      "total",      XDT_Decimal);
+END_DBS_SERIALIZE
 
-  PostDeSerialize(p_message,p_entity);
-}
+BEGIN_DBS_DESERIALIZE(Master)
+  CXO_DBS_DESERIALIZE(long,   m_id,         "id",         XDT_Integer);
+  CXO_DBS_DESERIALIZE(long,   m_invoice,    "invoice",    XDT_Integer);
+  CXO_DBS_DESERIALIZE(CString,m_description,"description",XDT_String);
+  CXO_DBS_DESERIALIZE(bcd,    m_total,      "total",      XDT_Decimal);
+END_DBS_DESERIALIZE
 
-void
-Master::Serialize(SQLRecord& p_record,int p_mutation /*= 0*/)
-{
-  PreSerialize(p_record);
-
-  p_record.ModifyField("id",          m_id,         p_mutation);
-  p_record.ModifyField("invoice",     m_invoice,    p_mutation);
-  p_record.ModifyField("description", m_description,p_mutation);
-  p_record.ModifyField("total",       m_total,      p_mutation);
-
-  PostSerialize(p_record);
-}
-
-void
-Master::DeSerialize(SQLRecord& p_record)
-{
-  PreDeSerialize(p_record);
-
-  m_id          = (long)    p_record["id"];
-  m_invoice     = (long)    p_record["invoice"];
-  m_description = (CString) p_record["description"];
-  m_total       = (bcd)     p_record["total"];
-
-  PostDeSerialize(p_record);
-}
+//////////////////////////////////////////////////////////////////////////
 
 // Setters
+
 void
 Master::SetTotal(bcd p_bcd)
 {

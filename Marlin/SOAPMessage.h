@@ -40,7 +40,6 @@
 #include "XMLMessage.h"
 #include "Cookie.h"
 #include "DefaultNamespace.h"
-#include <bcd.h>
 #include <winhttp.h>
 #include <http.h>
 #include <wincrypt.h>
@@ -69,7 +68,6 @@ constexpr auto NAMESPACE_SECUTILITY = "http://docs.oasis-open.org/wss/2004/01/oa
 #define DEFAULT_TOKEN     ":MarlinServer:"
 #endif
 
-using bcd = SQLComponents::bcd;
 using ushort = unsigned short;
 
 // Reliability range
@@ -305,7 +303,6 @@ public:
   XMLElement*     AddElement(XMLElement* p_base,CString p_name,XmlDataType p_type,int         p_value,bool p_front = false);
   XMLElement*     AddElement(XMLElement* p_base,CString p_name,XmlDataType p_type,bool        p_value,bool p_front = false);
   XMLElement*     AddElement(XMLElement* p_base,CString p_name,XmlDataType p_type,double      p_value,bool p_front = false);
-  XMLElement*     AddElement(XMLElement* p_base,CString p_name,XmlDataType p_type,bcd         p_value,bool p_front = false);
 
   CString         GetParameter       (CString p_name);
   int             GetParameterInteger(CString p_name);

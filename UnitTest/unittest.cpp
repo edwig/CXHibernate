@@ -82,12 +82,9 @@ namespace UnitTest
       Logger::WriteMessage("Getting all records from the DETAIL table with 'line > 1'");
       if(OpenSession())
       {
-        SQLVariant one((long)1);
-        SQLFilterSet filters;
-        SQLFilter filter("line", OP_Greater,&one);
-        filters.push_back(filter);
+        SQLFilter filter("line",OP_Greater,1);
 
-        CXResultSet set = m_session->SelectObject("detail",filters);
+        CXResultSet set = m_session->SelectObject("detail",&filter);
         for(int ind = 0;ind < set.size(); ++ind)
         {
           Detail* detail = reinterpret_cast<Detail*>(set[ind]);

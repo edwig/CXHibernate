@@ -881,7 +881,7 @@ XMLElement*
 SOAPMessage::AddElement(XMLElement* p_base,CString p_name,XmlDataType p_type,double p_value,bool p_front /*=false*/)
 {
   CString value;
-  value.Format("16.16%g",p_value);
+  value.Format("%.16g",p_value);
   value = value.TrimRight('0');
   return AddElement(p_base,p_name,p_type,value,p_front);
 }

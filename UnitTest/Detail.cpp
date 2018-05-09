@@ -26,7 +26,6 @@
 //
 #include "stdafx.h"
 #include "Detail.h"
-#include <CXTable.h>
 #include <SQLRecord.h>
 #include <SOAPMessage.h>
 

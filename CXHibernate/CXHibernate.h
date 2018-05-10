@@ -51,6 +51,9 @@ public:
 
   // FUNCTIONS
 
+  // Loading and saving the general configuration XML
+  CXSession*   LoadConfiguration(CString p_configFile = "");
+  bool         SaveConfiguration(CXSession* p_session,CString p_configFile = "");
   // Create a new Hibernate session
   CXSession*   CreateSession();
   // Adding a externally created session (but we now own it)
@@ -76,6 +79,9 @@ public:
 private:
   // Flushing all data to the database and closing all sessions
   void          CloseAllSessions();
+  // Translate strategy names
+  MapStrategy   StringToMapStrategy(CString p_strategy);
+  CString       MapStrategyToString(MapStrategy p_strategy);
 
   // Relational-Object-Mapping strategy
   MapStrategy   m_strategy { Strategy_standalone };

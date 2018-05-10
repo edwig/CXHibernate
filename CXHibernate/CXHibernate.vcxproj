@@ -156,7 +156,9 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="CXAttribute.h" />
     <ClInclude Include="CXClass.h" />
+    <ClInclude Include="CXDataType.h" />
     <ClInclude Include="CXHibernate.h" />
     <ClInclude Include="CXObject.h" />
     <ClInclude Include="CXObjectFactory.h" />
@@ -168,7 +170,9 @@
     <ClInclude Include="targetver.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="CXAttribute.cpp" />
     <ClCompile Include="CXClass.cpp" />
+    <ClCompile Include="CXDataType.cpp" />
     <ClCompile Include="CXHibernate.cpp" />
     <ClCompile Include="CXObject.cpp" />
     <ClCompile Include="CXPrimaryHash.cpp" />

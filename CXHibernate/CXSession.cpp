@@ -191,6 +191,40 @@ CXSession::FindClass(CString p_name)
   return nullptr;
 }
 
+// Loading the general configuration XML
+void
+CXSession::LoadConfiguration(XMLMessage& p_config)
+{
+  XMLElement* theclass = p_config.FindElement("class");
+
+  while(theclass)
+  {
+    CString  name = p_config.GetElement(theclass,"name");
+    CXClass* newclass = new CXClass(name,nullptr);
+    AddClass(newclass);
+
+    newclass->LoadMetaInfo(this, p_config, theclass);
+
+    // Find next class
+    theclass = p_config.GetElementSibling(theclass);
+  }
+
+}
+
+
+// Saving the general configuration XML.
+void
+CXSession::SaveConfiguration(XMLMessage& p_config)
+{
+
+}
+
+//////////////////////////////////////////////////////////////////////////
+//
+// MUTATIONS
+//
+//////////////////////////////////////////////////////////////////////////
+
 // Get a master mutation ID, to put actions into one (1) commit
 int
 CXSession::GetMutationID(bool p_transaction /*= false*/)

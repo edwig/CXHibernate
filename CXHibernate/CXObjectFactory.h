@@ -88,16 +88,11 @@ typedef CXObject* (CALLBACK *CreateCXO)(CXClass* p_class);
 //
 //////////////////////////////////////////////////////////////////////////
 
+#include "CXDataType.h"
 #include <SOAPMessage.h>
 #include <SQLVariant.h>
 #include <SQLDate.h>
 #include <SQLGuid.h>
-
-using ushort  = unsigned short;
-using ulong   = unsigned long;
-using uchar   = unsigned char;
-using bigint  = __int64;
-using ubigint = unsigned __int64;
 
 inline SQLVariant GetElementSQLVariant(SOAPMessage& p_message,XMLElement* p_entity,CString p_column)
 {

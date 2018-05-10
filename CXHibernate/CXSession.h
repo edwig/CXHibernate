@@ -73,6 +73,11 @@ public:
   CXClass*      FindClass(CString p_name);
   // Find if the database is correctly opened
   bool          GetDatabaseIsOpen();
+  // Loading the general configuration XML.
+  void          LoadConfiguration(XMLMessage& p_config);
+  // Saving the general configuration XML.
+  void          SaveConfiguration(XMLMessage& p_config);
+
   // Get a master mutation ID, to put actions into one (1) commit
   int           GetMutationID(bool p_transaction = false);
   void          CommitMutation(int p_mutationID);

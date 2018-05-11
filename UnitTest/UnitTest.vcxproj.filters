@@ -47,5 +47,8 @@
     <ClCompile Include="Master.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Detail_cxh.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>

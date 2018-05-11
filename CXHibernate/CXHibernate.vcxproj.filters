@@ -51,6 +51,9 @@
     <ClInclude Include="CXDataType.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="CXStaticInitialization.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">
@@ -81,6 +84,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="CXDataType.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="CXStaticInitialization.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

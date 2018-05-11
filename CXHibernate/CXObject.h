@@ -25,6 +25,7 @@
 // Version number:  0.0.1
 //
 #pragma once
+#include "CXHibernate.h"
 #include <vector>
 #include <SQLDataSet.h>
 

@@ -26,16 +26,12 @@
 //
 #include "stdafx.h"
 #include "Detail.h"
-#include <SQLRecord.h>
-#include <SOAPMessage.h>
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
 #undef THIS_FILE
 static char THIS_FILE[] = __FILE__;
 #endif
-
-DEFINE_CXO_FACTORY(Detail);
 
 // CXO_CONSTRUCTOR(Detail)
 Detail::Detail(CXClass* p_className)
@@ -44,44 +40,6 @@ Detail::Detail(CXClass* p_className)
   // Things to do in the constructor ...
 }
 
-//////////////////////////////////////////////////////////////////////////
-
-// Bring the contents of the class to a SOAPMessage 
-BEGIN_XML_SERIALIZE(Detail)
-    CXO_XML_SERIALIZE(long,   m_id,         "id",         XDT_Integer);
-    CXO_XML_SERIALIZE(long,   m_mast_id,    "mast_id",    XDT_Integer);
-    CXO_XML_SERIALIZE(long,   m_line,       "line",       XDT_Integer);
-    CXO_XML_SERIALIZE(CString,m_description,"description",XDT_String);
-    CXO_XML_SERIALIZE(bcd,    m_amount,     "amount",     XDT_Decimal);
-END_XML_SERIALIZE
-
-// Read the contents of an object from a SOAPMessage
-BEGIN_XML_DESERIALIZE(Detail)
-  CXO_XML_DESERIALIZE(long,   m_id,         "id",         XDT_Integer);
-  CXO_XML_DESERIALIZE(long,   m_mast_id,    "mast_id",    XDT_Integer);
-  CXO_XML_DESERIALIZE(long,   m_line,       "line",       XDT_Integer);
-  CXO_XML_DESERIALIZE(CString,m_description,"description",XDT_String);
-  CXO_XML_DESERIALIZE(bcd,    m_amount,     "amount",     XDT_Decimal);
-END_XML_DESERIALIZE
-
-//////////////////////////////////////////////////////////////////////////
-
-BEGIN_DBS_SERIALIZE(Detail)
-    CXO_DBS_SERIALIZE(long,   m_id,         "id",         XDT_Integer);
-    CXO_DBS_SERIALIZE(long,   m_mast_id,    "mast_id",    XDT_Integer);
-    CXO_DBS_SERIALIZE(long,   m_line,       "line",       XDT_Integer);
-    CXO_DBS_SERIALIZE(CString,m_description,"description",XDT_String);
-    CXO_DBS_SERIALIZE(bcd,    m_amount,     "amount",     XDT_Decimal);
-END_DBS_SERIALIZE
-
-
-BEGIN_DBS_DESERIALIZE(Detail)
-  CXO_DBS_DESERIALIZE(long,   m_id,         "id",         XDT_Integer);
-  CXO_DBS_DESERIALIZE(long,   m_mast_id,    "mast_id",    XDT_Integer);
-  CXO_DBS_DESERIALIZE(long,   m_line,       "line",       XDT_Integer);
-  CXO_DBS_DESERIALIZE(CString,m_description,"description",XDT_String);
-  CXO_DBS_DESERIALIZE(bcd,    m_amount,     "amount",     XDT_Decimal);
-END_DBS_DESERIALIZE
 
 //////////////////////////////////////////////////////////////////////////
 //

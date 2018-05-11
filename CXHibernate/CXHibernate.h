@@ -25,11 +25,12 @@
 // Version number:  0.0.1
 //
 #pragma once
+#include "CXObjectFactory.h"
+#include "CXStaticInitialization.h"
 #include <vector>
-
+#include <map>
 
 // ORM Mapping strategy classes -> tables
-
 typedef enum _map_strategy
 {
    Strategy_standalone   // No sub/super classes. 1 table = 1 class
@@ -39,9 +40,12 @@ typedef enum _map_strategy
 }
 MapStrategy;
 
+// Maximum number of classes that can be initialized
+const int MAX_CLASSES = 1000;
+
 class CXSession;
 using MapSessions = std::vector<CXSession*>;
-
+using MapCreate   = std::map<CString,CreateCXO>;
 
 class CXHibernate
 {
@@ -62,6 +66,8 @@ public:
   void         RemoveSession(CXSession* p_session);
   // Flushing all data to the database and closing all sessions
   void         CloseAllSessions();
+  // Register a create function for a class name
+  void         RegisterCreateCXO(CString p_name,CreateCXO p_create);
 
   // SETTERS
 
@@ -87,6 +93,8 @@ private:
   MapStrategy   m_strategy { Strategy_standalone };
   // Mapping to all open sessions
   MapSessions   m_sessions;
+  // Mapping met alle create object functions
+  MapCreate     m_createCXO;
 
   // DEFAULTS
   CString       m_default_catalog;      // Default catalog

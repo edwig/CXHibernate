@@ -168,6 +168,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Detail.cpp" />
+    <ClCompile Include="Detail_cxh.cpp" />
     <ClCompile Include="Master.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>

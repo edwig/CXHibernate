@@ -158,7 +158,7 @@ public:
   void         SetParameter(SQLParameter p_parameter);
   void         SetParameter(CString p_naam,SQLVariant p_waarde);
   // Set filters for a query
-  void         SetFilters(SQLFilterSet& p_filters);
+  void         SetFilters(SQLFilterSet* p_filters);
   // Set the status to modified/saved
   void         SetStatus(int m_add,int m_delete = 0);
   // Set a field value in the current record
@@ -249,8 +249,8 @@ private:
   CString      m_primarySchema;
   CString      m_primaryTableName;
   ParameterSet m_parameters;
-  SQLFilterSet m_filters;
   NamenMap     m_primaryKey;
+  SQLFilterSet* m_filters;
 protected:
   int          m_status;
   int          m_current;

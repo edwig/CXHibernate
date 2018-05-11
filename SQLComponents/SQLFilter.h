@@ -35,18 +35,18 @@ namespace SQLComponents
 // Operator for a condition filter
 typedef enum _sqlOperator
 {
-  OP_NOP     = 0
- ,OP_Equal   = 1
- ,OP_NotEqual
- ,OP_Greater
- ,OP_GreaterEqual
- ,OP_Smaller
- ,OP_SmallerEqual
- ,OP_IsNULL
- ,OP_LikeBegin
- ,OP_LikeMiddle
- ,OP_IN
- ,OP_Between
+  OP_NOP = 0
+  ,OP_Equal = 1
+  ,OP_NotEqual
+  ,OP_Greater
+  ,OP_GreaterEqual
+  ,OP_Smaller
+  ,OP_SmallerEqual
+  ,OP_IsNULL
+  ,OP_LikeBegin
+  ,OP_LikeMiddle
+  ,OP_IN
+  ,OP_Between
 }
 SQLOperator;
 
@@ -65,7 +65,7 @@ public:
   SQLFilter(CString p_field,SQLOperator p_operator,SQLVariant* p_value);
   SQLFilter(CString p_field,SQLOperator p_operator,int         p_value);
   SQLFilter(CString p_field,SQLOperator p_operator,CString     p_value);
- ~SQLFilter();
+  ~SQLFilter();
 
   // Adding extra values for the IN or BETWEEN operators
   void        AddValue(SQLVariant* p_value);
@@ -104,24 +104,24 @@ private:
   void        ConstructBetween(CString& p_sql);
 
   // Internal matching
-  bool        MatchEqual       (SQLVariant* p_field);
-  bool        MatchNotEqual    (SQLVariant* p_field);
-  bool        MatchGreater     (SQLVariant* p_field);
+  bool        MatchEqual(SQLVariant* p_field);
+  bool        MatchNotEqual(SQLVariant* p_field);
+  bool        MatchGreater(SQLVariant* p_field);
   bool        MatchGreaterEqual(SQLVariant* p_field);
-  bool        MatchSmaller     (SQLVariant* p_field);
+  bool        MatchSmaller(SQLVariant* p_field);
   bool        MatchSmallerEqual(SQLVariant* p_field);
-  bool        MatchLikeBegin   (SQLVariant* p_field);
-  bool        MatchLikeMiddle  (SQLVariant* p_field);
-  bool        MatchIsNULL      (SQLVariant* p_field);
-  bool        MatchIN          (SQLVariant* p_field);
-  bool        MatchBetween     (SQLVariant* p_field);
+  bool        MatchLikeBegin(SQLVariant* p_field);
+  bool        MatchLikeMiddle(SQLVariant* p_field);
+  bool        MatchIsNULL(SQLVariant* p_field);
+  bool        MatchIN(SQLVariant* p_field);
+  bool        MatchBetween(SQLVariant* p_field);
 
   // Data for the filter
   CString     m_field;              // Name of the field to act upon
   SQLOperator m_operator;           // Operator of the condition
   VariantSet  m_values;             // Multiple values for IN and BETWEEN
   CString     m_expression;         // Free expression (no values!)
-  bool        m_negate { false };   // Negate the whole condition
+  bool        m_negate{false};   // Negate the whole condition
 };
 
 inline CString
@@ -175,6 +175,40 @@ SQLFilter::GetNegate()
 //////////////////////////////////////////////////////////////////////////
 // And finaly: a filter set is a vector of SQLFilters
 
-using SQLFilterSet = std::vector<SQLFilter>;
+// using SQLFilterSet = std::vector<SQLFilter>;
+class SQLFilterSet
+{
+public:
+  ~SQLFilterSet()
+  {
+    for(auto& filter : m_filters)
+    {
+      delete filter;
+    }
+  }
+
+  void AddFilter(SQLFilter* p_filter)
+  {
+    m_filters.push_back(p_filter);
+  }
+
+  bool Empty()
+  {
+    return m_filters.empty();
+  }
+
+  std::vector<SQLFilter*>& GetFilters()
+  {
+    return m_filters;
+  }
+
+  int Size()
+  {
+    return (int)m_filters.size();
+  }
+
+private:
+  std::vector<SQLFilter*> m_filters;
+};
 
 }

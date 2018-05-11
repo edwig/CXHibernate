@@ -93,6 +93,7 @@ SQLDataSet::SQLDataSet()
            ,m_status(SQL_Empty)
            ,m_current(-1)
            ,m_open(false)
+           ,m_filters(nullptr)
 {
 }
 
@@ -102,6 +103,7 @@ SQLDataSet::SQLDataSet(CString p_name,SQLDatabase* p_database /*=NULL*/)
            ,m_status(SQL_Empty)
            ,m_current(-1)
            ,m_open(false)
+           ,m_filters(nullptr)
 {
 }
 
@@ -294,9 +296,9 @@ SQLDataSet::SetParameter(CString p_naam,SQLVariant p_waarde)
 }
 
 // Set filters for a query
-// Releasing the previous set of filters
+// Forgetting the previous set of filters
 void
-SQLDataSet::SetFilters(SQLFilterSet& p_filters)
+SQLDataSet::SetFilters(SQLFilterSet* p_filters)
 {
   m_filters = p_filters;
 }
@@ -414,7 +416,7 @@ SQLDataSet::ParseSelection(SQLQuery& p_query)
   return sql;
 }
 
-// Parse the fitlers
+// Parse the fitlers (m_filters must be non-null)
 CString
 SQLDataSet::ParseFilters()
 {
@@ -428,7 +430,7 @@ SQLDataSet::ParseFilters()
   query = m_query;
 
   // Add all filters
-  for(auto& filt : m_filters)
+  for(auto& filt : m_filters->GetFilters())
   {
     if(first == true)
     {
@@ -441,7 +443,7 @@ SQLDataSet::ParseFilters()
     {
       query += "\n   AND ";
     }
-    query += filt.GetSQLFilter();
+    query += filt->GetSQLFilter();
   }
   return query;
 }
@@ -479,7 +481,7 @@ SQLDataSet::Open(bool p_stopIfNoColumns /*=false*/)
       {
         query = ParseQuery();
       }
-      else if(m_filters.size())
+      else if(m_filters && !m_filters->Empty())
       {
         query = ParseFilters();
       }
@@ -562,7 +564,7 @@ SQLDataSet::Append()
       {
         query = ParseQuery();
       }
-      else if(m_filters.size())
+      else if(m_filters && !m_filters->Empty())
       {
         query = ParseFilters();
       }
@@ -836,10 +838,11 @@ SQLDataSet::FindObjectFilter(SQLFilterSet& p_filters,bool p_primary /*=false*/)
   SQLRecord* record = nullptr;
 
   // Optimize for network databases
-  if(p_primary && p_filters.size() == 1)
+  if(p_primary && p_filters.Size() == 1)
   {
-    SQLVariant* prim = p_filters[0].GetValue();
-    if(p_filters[0].GetOperator() == OP_Equal && prim->GetDataType() == SQL_C_SLONG )
+    SQLFilter* filter = p_filters.GetFilters().front();
+    SQLVariant* prim  = filter->GetValue();
+    if(filter->GetOperator() == OP_Equal && prim->GetDataType() == SQL_C_SLONG )
     {
       return FindObjectRecord(prim->GetAsSLong());
     }
@@ -850,9 +853,9 @@ SQLDataSet::FindObjectFilter(SQLFilterSet& p_filters,bool p_primary /*=false*/)
   {
     record = rec;
     // Walk the chain of filters
-    for(auto& filt : p_filters)
+    for(auto& filt : p_filters.GetFilters())
     {
-      if(! filt.MatchRecord(record))
+      if(! filt->MatchRecord(record))
       {
         record = nullptr;
         break;
@@ -880,9 +883,9 @@ SQLDataSet::FindRecordSet(SQLFilterSet& p_filters)
   {
     SQLRecord* record = rec;
     // Walk the chain of filters
-    for(auto& filt : p_filters)
+    for(auto& filt : p_filters.GetFilters())
     {
-      if(! filt.MatchRecord(record))
+      if(! filt->MatchRecord(record))
       {
         record = nullptr;
         break;

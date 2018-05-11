@@ -38,8 +38,15 @@ class CXAttribute
 public:
   CXAttribute(CString p_name);
   CXAttribute(int     p_datatype,CString p_name);
-  CXAttribute(CString p_datatype,CString p_name);
-
+  CXAttribute(CString p_datatype
+             ,CString p_name
+             ,int     p_maxlength  = 0
+             ,bool    p_generator  = false
+             ,bool    p_primary    = false
+             ,bool    p_foreign    = false
+             ,bool    p_notnull    = false
+             ,CString p_dbs_column = ""
+             ,CString p_default    = "");
   ~CXAttribute();
 
   // GETTERS
@@ -66,7 +73,7 @@ public:
   void      SetHasNotNull(bool p_notNull);
 
   // Serialize to a configuration XML file
-  bool      SaveMetaInfo(XMLMessage* p_message, XMLElement* p_elem);
+  bool      SaveMetaInfo(XMLMessage& p_message, XMLElement* p_elem);
   // DeSerialize from a XML configuration file
   bool      LoadMetaInfo(XMLMessage& p_message, XMLElement* p_elem);
 
@@ -78,7 +85,7 @@ private:
   bool      m_generator { false };    // Primary key generator
   bool      m_isPrimary { false };    // Is part of the primary key
   bool      m_isForeign { false };    // Is part of a foreign key
+  bool      m_notNull   { false };    // NOT NULL constraint in the database
   CString   m_dbs_column;             // If database column differs from name
-  bool      m_notNull;                // NOT NULL constraint in the database
   CString   m_default;                // Default value for the column
 };

@@ -175,9 +175,8 @@ SQLAssociation::FollowToMaster()
   for(unsigned ind = 0;ind < m_assocs.size();++ind)
   {
     SQLFilter filter(m_assocs[ind]->m_primary,OP_Equal,m_assocs[ind]->m_value);
-    filters.push_back(filter);
+    filters.AddFilter(&filter);
   }
-  m_master->SetFilters(filters);
 
   bool result = m_master->IsOpen() ? m_master->Append() : m_master->Open();
   if(result)
@@ -204,9 +203,8 @@ SQLAssociation::FollowToDetails()
   for(unsigned ind = 0;ind < m_assocs.size();++ind)
   {
     SQLFilter filter(m_assocs[ind]->m_foreign,OP_Equal,m_assocs[ind]->m_value);
-    filters.push_back(filter);
+    filters.AddFilter(&filter);
   }
-  m_detail->SetFilters(filters);
 
   bool result = m_detail->IsOpen() ? m_detail->Append() : m_detail->Open();
   if(result)

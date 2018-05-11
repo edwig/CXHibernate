@@ -52,7 +52,7 @@ public:
   CXAttribute* FindAttribute(CString p_name);
 
   // Serialize to a configuration XML file
-  bool        SaveMetaInfo(XMLMessage* p_message,XMLElement* p_elem);
+  bool        SaveMetaInfo(XMLMessage& p_message,XMLElement* p_elem);
   // DeSerialize from a XML configuration file
   bool        LoadMetaInfo(CXSession* p_session,XMLMessage& p_message,XMLElement* p_elem);
 

@@ -90,7 +90,7 @@ CXStringToDatatType(CString p_datatype)
 
 // Convert ODBC datatype to first matching CXDataType name
 // Default is the 'var' typedef for SQLVariant
-CString 
+CString
 CXDataTypeToString(int p_datatype)
 {
   CXType* types = cxtypes;
@@ -101,7 +101,79 @@ CXDataTypeToString(int p_datatype)
     {
       return types->m_name;
     }
+    ++types;
   }
   return "var";
 }
 
+CXType configtypes[] =
+{
+  { "string",       SQL_C_CHAR      }
+ ,{ "int",          SQL_C_LONG      }
+ ,{ "int",          SQL_C_SLONG     }
+ ,{ "bool",         SQL_C_BIT       }
+ ,{ "bcd",          SQL_C_NUMERIC   }
+ ,{ "uint",         SQL_C_ULONG     }
+ ,{ "short",        SQL_C_SHORT     }
+ ,{ "short",        SQL_C_SSHORT    }
+ ,{ "ushort",       SQL_C_USHORT    }
+ ,{ "long",         SQL_C_LONG      }
+ ,{ "ulong",        SQL_C_ULONG     }
+ ,{ "tinyint",      SQL_C_TINYINT   }
+ ,{ "tinyint",      SQL_C_STINYINT  }
+ ,{ "utinyint",     SQL_C_UTINYINT  }
+ ,{ "bigint",       SQL_C_SBIGINT   }
+ ,{ "ubigint",      SQL_C_UBIGINT   }
+ ,{ "float",        SQL_C_FLOAT     }
+ ,{ "double",       SQL_C_DOUBLE    }
+ ,{ "date",         SQL_C_DATE      }
+ ,{ "time",         SQL_C_TIME      }
+ ,{ "timestamp",    SQL_C_TIMESTAMP }
+ ,{ "guid",         SQL_C_GUID      }
+ ,{ "var",          0               }
+ ,{ "interval_day_to_second",     SQL_C_INTERVAL_DAY_TO_SECOND    }
+ ,{ "interval_year_to_month",     SQL_C_INTERVAL_YEAR_TO_MONTH    }
+ ,{ "interval_hour_to_second",    SQL_C_INTERVAL_HOUR_TO_SECOND   }
+ ,{ "interval_hour_to_minute",    SQL_C_INTERVAL_HOUR_TO_MINUTE   }
+ ,{ "interval_day_to_minute",     SQL_C_INTERVAL_DAY_TO_MINUTE    }
+ ,{ "interval_day_to_hour",       SQL_C_INTERVAL_DAY_TO_HOUR      }
+ ,{ "interval_minute_to_second",  SQL_C_INTERVAL_MINUTE_TO_SECOND }
+ ,{ "interval_year",              SQL_C_INTERVAL_YEAR             }
+ ,{ "interval_month",             SQL_C_INTERVAL_MONTH            }
+ ,{ "interval_day",               SQL_C_INTERVAL_DAY              }
+ ,{ "interval_hour",              SQL_C_INTERVAL_HOUR             }
+ ,{ "interval_minute",            SQL_C_INTERVAL_MINUTE           }
+ ,{ "interval_second",            SQL_C_INTERVAL_SECOND           }
+};
+
+int 
+CXConfigToDataType(CString p_datatype)
+{
+  CXType* types = configtypes;
+
+  for(int ind = 0;ind < sizeof(cxtypes) / sizeof(CXType); ++ind)
+  {
+    if(p_datatype.Compare(types->m_name) == 0)
+    {
+      return types->m_type;
+    }
+    ++types;
+  }
+  return 0;
+}
+
+CString
+CXDataTypeToConfig(int p_datatype)
+{
+  CXType* types = configtypes;
+
+  for(int ind = 0;ind < sizeof(cxtypes) / sizeof(CXType); ++ind)
+  {
+    if(p_datatype == types->m_type)
+    {
+      return types->m_name;
+    }
+    ++types;
+  }
+  return "var";
+}

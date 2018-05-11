@@ -115,30 +115,30 @@ CXClass::FindAttribute(CString p_name)
 
 // Serialize to a configuration XML file
 bool
-CXClass::SaveMetaInfo(XMLMessage* p_message,XMLElement* p_elem)
+CXClass::SaveMetaInfo(XMLMessage& p_message,XMLElement* p_elem)
 {
-  XMLElement* theclass = p_message->AddElement(p_elem,"class",XDT_String,"");
+  XMLElement* theclass = p_message.AddElement(p_elem,"class",XDT_String,"");
 
   // Class attributes
-  p_message->AddElement(theclass,"name",XDT_String,m_name);
+  p_message.AddElement(theclass,"name",XDT_String,m_name);
   if(m_super)
   {
-    p_message->AddElement(theclass,"super",XDT_String,m_super->GetName());
+    p_message.AddElement(theclass,"super",XDT_String,m_super->GetName());
   }
-  p_message->AddElement(theclass,"table",XDT_String,m_table->TableName());
+  p_message.AddElement(theclass,"table",XDT_String,m_table->TableName());
 
   // Add subclass references
   if(!m_subClasses.empty())
   {
-    XMLElement* subs = p_message->AddElement(theclass,"subclasses",XDT_String,"");
+    XMLElement* subs = p_message.AddElement(theclass,"subclasses",XDT_String,"");
     for(auto& sub : m_subClasses)
     {
-      p_message->AddElement(subs,"subclass",XDT_String,sub->GetName());
+      p_message.AddElement(subs,"subclass",XDT_String,sub->GetName());
     }
   }
 
   // All attributes of the class
-  XMLElement* attribs = p_message->AddElement(theclass,"attributes",XDT_String,"");
+  XMLElement* attribs = p_message.AddElement(theclass,"attributes",XDT_String,"");
   for(auto& attr : m_attributes)
   {
     attr.second.SaveMetaInfo(p_message,attribs);

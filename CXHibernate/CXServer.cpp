@@ -79,7 +79,7 @@ CXServer::OnCXSelect(int p_code,SOAPMessage* p_message)
     if(table)
     {
       filters = FindFilterSet(p_message);
-      if(!filters.empty())
+      if(!filters.Empty())
       {
         p_message->Reset();
         try
@@ -323,18 +323,18 @@ CXServer::FindFilterSet(SOAPMessage* p_message)
       }
 
       // Create extra filter
-      SQLFilter filt(column->GetValue(),oper);
+      SQLFilter* filt = new SQLFilter(column->GetValue(),oper);
 
       XMLElement* value = p_message->FindElement(filter,"Value",false);
       while(value)
       {
         SQLVariant* var = new SQLVariant(value->GetValue());
-        filt.AddValue(var);
+        filt->AddValue(var);
         // Next value in the filter
         value = p_message->GetElementSibling(value);
       }
       // Keep the filter
-      filters.push_back(filt);
+      filters.AddFilter(filt);
     }
     // Next filter
     filter = p_message->GetElementSibling(filter);

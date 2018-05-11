@@ -51,8 +51,7 @@ namespace UnitTest
 	public:
     ~UnitTest()
     {
-      m_session->CloseSession();
-      delete m_session;
+      hibernate.CloseAllSessions();
     }
 		
 		TEST_METHOD(T01_SelectMaster)
@@ -82,9 +81,9 @@ namespace UnitTest
       Logger::WriteMessage("Getting all records from the DETAIL table with 'line > 1'");
       if(OpenSession())
       {
-        SQLFilter filter("line",OP_Greater,1);
+        SQLFilter* filter = new SQLFilter("line",OP_Greater,1);
 
-        CXResultSet set = m_session->SelectObject("detail",&filter);
+        CXResultSet set = m_session->SelectObject("detail",filter);
         for(int ind = 0;ind < set.size(); ++ind)
         {
           Detail* detail = reinterpret_cast<Detail*>(set[ind]);
@@ -188,11 +187,11 @@ namespace UnitTest
       if (OpenSession())
       {
         SQLVariant one((long)1);
-        SQLFilter filter("line", OP_GreaterEqual, &one);
+        SQLFilter* filter = new SQLFilter("line", OP_GreaterEqual, &one);
 
-        CXResultSet set = m_session->SelectObject("detail",&filter);
+        CXResultSet set = m_session->SelectObject("detail",filter);
 
-        m_session->SetBaseDirectory("C:\\WWW\\Testing");
+        m_session->SetFilestore("C:\\WWW\\Testing");
         m_session->ChangeRole(CXHRole::CXH_Filestore_role);
 
         for(auto& object : set)
@@ -212,7 +211,7 @@ namespace UnitTest
       if(OpenSession())
       {
         SQLVariant one((long)7);
-        m_session->SetBaseDirectory("C:\\WWW\\Testing");
+        m_session->SetFilestore("C:\\WWW\\Testing");
 
         CXObject* object = m_session->SelectObject("detail",&one);
         Detail* detail = reinterpret_cast<Detail*>(object);
@@ -302,18 +301,25 @@ namespace UnitTest
           hibernate.SetStrategy(MapStrategy::Strategy_standalone);
           m_session = hibernate.CreateSession();
 
-          m_session->SetBaseDirectory("C:\\WWW\\Testing");
+          m_session->SetFilestore("C:\\WWW\\Testing");
           m_session->SetDatabase(&m_database);
 
           CXClass* master  = new CXClass("master",     CXO_FACTORY(Master));
           CXClass* detail  = new CXClass("detail",     CXO_FACTORY(Detail));
           CXClass* numbers = new CXClass("test_number",CXO_FACTORY(TestNumber));
 
+          // Program the class structure (instead of configuration.cxh)
+          DefineMaster(master);
+          DefineDetail(detail);
+          DefineNumbers(numbers);
+
           // Do the 'lazy' stuff by reading the definition from the database
           // assuming that the definition corresponds with ours
           ReadTableDefinition(master);
           ReadTableDefinition(detail);
           ReadTableDefinition(numbers);
+
+          hibernate.SaveConfiguration(m_session);
 
           return true;
         }
@@ -327,17 +333,39 @@ namespace UnitTest
       return false;
     }
 
+    void DefineMaster(CXClass* p_class)
+    {
+      p_class->AddAttribute(CXAttribute("int",   "id",0,false,true));
+      p_class->AddAttribute(CXAttribute("int",   "invoice"));
+      p_class->AddAttribute(CXAttribute("string","description",250));
+      p_class->AddAttribute(CXAttribute("bcd",   "total"));
+    }
+
+    void DefineDetail(CXClass* p_class)
+    {
+      p_class->AddAttribute(CXAttribute("int",   "id",     0,false,true));
+      p_class->AddAttribute(CXAttribute("int",   "mast_id",0,false,false,true));
+      p_class->AddAttribute(CXAttribute("int",   "line"));
+      p_class->AddAttribute(CXAttribute("string","description",250));
+      p_class->AddAttribute(CXAttribute("bcd",   "amount"));
+    }
+
+    void DefineNumbers(CXClass* p_class)
+    {
+      p_class->AddAttribute(CXAttribute("int",   "id",0,false,true));
+      p_class->AddAttribute(CXAttribute("int",   "field1"));
+      p_class->AddAttribute(CXAttribute("double","field2"));
+      p_class->AddAttribute(CXAttribute("bcd",   "field3"));
+    }
+
     void ReadTableDefinition(CXClass* p_class)
     {
       CXTable* table = p_class->GetTable();
-      if(table->GetMetaInfoFromDatabase(m_database,true,true,true))
+      if(table->GetMetaInfoFromDatabase(m_database,true,true,true) == false)
       {
-        m_session->AddClass(p_class);
+        Assert::Fail(L"Table structure of table not found and loaded!");
       }
-      else
-      {
-        Assert::Fail(L"Table structure of table not found");
-      }
+      m_session->AddClass(p_class);
     }
 
     int TestRecordCount(CString p_table, CString p_column, int p_value)

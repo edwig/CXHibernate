@@ -46,3 +46,7 @@ CXType;
 int CXStringToDatatType(CString p_datatype);
 
 CString CXDataTypeToString(int p_datatype);
+
+int CXConfigToDataType(CString p_datatype);
+
+CString CXDataTypeToConfig(int p_datatype);

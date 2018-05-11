@@ -128,7 +128,7 @@ CXSession::SetDatabase(SQLDatabase* p_database)
 
 // Setting an alternate filestore location
 void 
-CXSession::SetBaseDirectory(CString p_directory)
+CXSession::SetFilestore(CString p_directory)
 {
   m_role = CXH_Filestore_role;
   m_baseDirectory = p_directory;
@@ -208,7 +208,6 @@ CXSession::LoadConfiguration(XMLMessage& p_config)
     // Find next class
     theclass = p_config.GetElementSibling(theclass);
   }
-
 }
 
 
@@ -216,7 +215,10 @@ CXSession::LoadConfiguration(XMLMessage& p_config)
 void
 CXSession::SaveConfiguration(XMLMessage& p_config)
 {
-
+  for(auto& cl : m_classes)
+  {
+    cl.second->SaveMetaInfo(p_config,nullptr);
+  }
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -363,7 +365,7 @@ CXResultSet
 CXSession::SelectObject(CString p_tableName,SQLFilter* p_filter)
 {
   SQLFilterSet set;
-  set.push_back(*p_filter);
+  set.AddFilter(p_filter);
 
   return SelectObject(p_tableName,set);
 }
@@ -742,8 +744,8 @@ CXSession::CreateFilterSet(CXTable* p_table,VariantSet& p_primary,SQLFilterSet& 
   int ind = 0;
   for(auto& column : list)
   {
-    SQLFilter filter(column,SQLOperator::OP_Equal,p_primary[ind++]);
-    p_filters.push_back(filter);
+    SQLFilter* filter = new SQLFilter(column,SQLOperator::OP_Equal,p_primary[ind++]);
+    p_filters.AddFilter(filter);
   }
 
   return true;
@@ -793,7 +795,7 @@ CXSession::FindObjectInDatabase(CString p_className,VariantSet& p_primary)
   SQLFilterSet fset;
   if(CreateFilterSet(table,p_primary,fset))
   {
-    dset->SetFilters(fset);
+    dset->SetFilters(&fset);
 
     // Open our dataset (and search)
     if(dset->IsOpen() == false)
@@ -804,6 +806,7 @@ CXSession::FindObjectInDatabase(CString p_className,VariantSet& p_primary)
     {
       dset->Append();
     }
+    dset->SetFilters(nullptr);
   }
   else return nullptr;
 
@@ -898,7 +901,7 @@ CXSession::SelectObjectsFromDatabase(CString p_className,SQLFilterSet& p_filters
   }
 
   // Propagate our filters
-  dset->SetFilters(p_filters);
+  dset->SetFilters(&p_filters);
   // Set our query
   CString query = CString("SELECT * FROM ") + table->DMLTableName(m_database->GetSQLInfoDB());
   dset->SetQuery(query);
@@ -932,6 +935,7 @@ CXSession::SelectObjectsFromDatabase(CString p_className,SQLFilterSet& p_filters
       ++recnum;
     }
   }
+  dset->SetFilters(nullptr);
 }
 
 void

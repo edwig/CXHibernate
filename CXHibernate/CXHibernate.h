@@ -60,6 +60,8 @@ public:
   void         AddSession(CXSession* p_session);
   // Removing a session
   void         RemoveSession(CXSession* p_session);
+  // Flushing all data to the database and closing all sessions
+  void         CloseAllSessions();
 
   // SETTERS
 
@@ -77,8 +79,6 @@ public:
   CString       GetDefaultSchema();
 
 private:
-  // Flushing all data to the database and closing all sessions
-  void          CloseAllSessions();
   // Translate strategy names
   MapStrategy   StringToMapStrategy(CString p_strategy);
   CString       MapStrategyToString(MapStrategy p_strategy);

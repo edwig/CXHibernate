@@ -39,6 +39,27 @@ CXAttribute::CXAttribute(int p_datatype,CString p_name)
 {
 }
 
+CXAttribute::CXAttribute(CString p_datatype
+                        ,CString p_name
+                        ,int     p_maxlength  /*= 0*/
+                        ,bool    p_generator  /*= false*/
+                        ,bool    p_primary    /*= false*/
+                        ,bool    p_foreign    /*= false*/
+                        ,bool    p_notnull    /*= false*/
+                        ,CString p_dbs_column /*= ""*/
+                        ,CString p_default    /*= ""*/)
+            :m_name(p_name)
+            ,m_maxlength(p_maxlength)
+            ,m_generator(p_generator)
+            ,m_isPrimary(p_primary)
+            ,m_isForeign(p_foreign)
+            ,m_notNull(p_notnull)
+            ,m_dbs_column(p_dbs_column)
+            ,m_default(p_default)
+{
+  m_datatype = CXConfigToDataType(p_datatype);
+}
+
 CXAttribute::~CXAttribute()
 {
 }
@@ -162,26 +183,26 @@ CXAttribute::SetHasNotNull(bool p_notNull)
 
 // Serialize to a configuration XML file
 bool
-CXAttribute::SaveMetaInfo(XMLMessage* p_message,XMLElement* p_elem)
+CXAttribute::SaveMetaInfo(XMLMessage& p_message,XMLElement* p_elem)
 {
-  XMLElement* attrib = p_message->AddElement(p_elem,"attribute",XDT_String,"");
-  CString datatype = CXDataTypeToString(m_datatype);
+  XMLElement* attrib = p_message.AddElement(p_elem,"attribute",XDT_String,"");
+  CString datatype = CXDataTypeToConfig(m_datatype);
 
-  p_message->SetAttribute(attrib,"name",    m_name);
-  p_message->SetAttribute(attrib,"datatype",datatype);
+  p_message.SetAttribute(attrib,"name",    m_name);
+  p_message.SetAttribute(attrib,"datatype",datatype);
 
-  if(m_maxlength) p_message->SetAttribute(attrib,"maxlength",m_maxlength);
-  if(m_generator) p_message->SetAttribute(attrib,"generator",m_generator);
-  if(m_isPrimary) p_message->SetAttribute(attrib,"primary",  m_isPrimary);
-  if(m_isForeign) p_message->SetAttribute(attrib,"foreign",  m_isForeign);
-  if(m_notNull)   p_message->SetAttribute(attrib,"not-null", m_notNull);
+  if(m_maxlength) p_message.SetAttribute(attrib,"maxlength",m_maxlength);
+  if(m_generator) p_message.SetAttribute(attrib,"generator",m_generator);
+  if(m_isPrimary) p_message.SetAttribute(attrib,"primary",  m_isPrimary);
+  if(m_isForeign) p_message.SetAttribute(attrib,"foreign",  m_isForeign);
+  if(m_notNull)   p_message.SetAttribute(attrib,"not-null", m_notNull);
   if(!m_dbs_column.IsEmpty())
   {
-    p_message->SetAttribute(attrib,"dbs_column",m_dbs_column);
+    p_message.SetAttribute(attrib,"dbs_column",m_dbs_column);
   }
   if(!m_default.IsEmpty())
   {
-    p_message->SetAttribute(attrib,"default",m_default);
+    p_message.SetAttribute(attrib,"default",m_default);
   }
   return true;
 }
@@ -191,7 +212,7 @@ bool
 CXAttribute::LoadMetaInfo(XMLMessage& p_message,XMLElement* p_elem)
 {
   CString type = p_message.GetAttribute(p_elem,"datatype");
-  m_datatype = CXStringToDatatType(type);
+  m_datatype = CXConfigToDataType(type);
 
   m_maxlength  = p_message.GetAttributeInteger(p_elem,"maxlength");
   m_generator  = p_message.GetAttributeBoolean(p_elem,"generator");

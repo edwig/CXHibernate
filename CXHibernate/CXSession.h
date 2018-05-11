@@ -66,7 +66,7 @@ public:
   // Alternate database 
   void          SetDatabase(SQLDatabase* p_database);
   // Setting an alternate filestore location
-  void          SetBaseDirectory(CString p_directory);
+  void          SetFilestore(CString p_directory);
   // Add a class to the session
   bool          AddClass(CXClass* p_table);
   // Finding a class

@@ -57,4 +57,4 @@ private:
 
 };
 
-DECLARE_CXO_FACTORY(Detail);
+// DECLARE_CXO_FACTORY(Detail);

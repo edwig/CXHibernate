@@ -41,7 +41,7 @@ typedef enum _map_strategy
 MapStrategy;
 
 // Maximum number of classes that can be initialized
-const int MAX_CLASSES = 1000;
+const unsigned int MAX_CLASSES = 1000;
 
 class CXSession;
 using MapSessions = std::vector<CXSession*>;
@@ -68,6 +68,8 @@ public:
   void         CloseAllSessions();
   // Register a create function for a class name
   void         RegisterCreateCXO(CString p_name,CreateCXO p_create);
+  // Find a create function for a class name
+  CreateCXO    FindCreateCXO(CString p_name);
 
   // SETTERS
 

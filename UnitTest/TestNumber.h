@@ -60,5 +60,5 @@ private:
   // Virtual attributes
 };
 
-DECLARE_CXO_FACTORY(TestNumber);
+// DECLARE_CXO_FACTORY(TestNumber);
 

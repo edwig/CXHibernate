@@ -36,7 +36,7 @@ using SubClasses = std::vector<CXClass*>;
 class CXClass
 {
 public:
-  CXClass(CString p_name,CreateCXO p_create,CXClass* p_super = nullptr);
+  CXClass(CString p_name,CreateCXO p_create = nullptr,CXClass* p_super = nullptr);
  ~CXClass();
 
   // The name of the game

@@ -170,6 +170,7 @@
     <ClCompile Include="Detail.cpp" />
     <ClCompile Include="Detail_cxh.cpp" />
     <ClCompile Include="Master.cpp" />
+    <ClCompile Include="Master_cxh.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
@@ -177,6 +178,7 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="TestNumber.cpp" />
+    <ClCompile Include="TestNumber_cxh.cpp" />
     <ClCompile Include="unittest.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

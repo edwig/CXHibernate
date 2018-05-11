@@ -157,7 +157,7 @@ namespace UnitTest
 
       OpenSession();
 
-      CXClass* test_numbers = m_session->FindClass("test_number");
+      CXClass* test_numbers = m_session->FindClass("TestNumber");
       TestNumber* numbers = new TestNumber(test_numbers);
       numbers->SetID(10);
       numbers->SetField1(42);
@@ -304,9 +304,11 @@ namespace UnitTest
           m_session->SetFilestore("C:\\WWW\\Testing");
           m_session->SetDatabase(&m_database);
 
-          CXClass* master  = new CXClass("master",     CXO_FACTORY(Master));
-          CXClass* detail  = new CXClass("detail",     CXO_FACTORY(Detail));
-          CXClass* numbers = new CXClass("test_number",CXO_FACTORY(TestNumber));
+          CXClass* master  = new CXClass("Master");
+          CXClass* detail  = new CXClass("Detail");
+          CXClass* numbers = new CXClass("TestNumber");
+
+          numbers->GetTable()->SetSchemaTableType("","test_number","TABLE");
 
           // Program the class structure (instead of configuration.cxh)
           DefineMaster(master);

@@ -36,67 +36,9 @@
 static char THIS_FILE[] = __FILE__;
 #endif
 
-// Create our new object factory
-DEFINE_CXO_FACTORY(TestNumber);
-
 // CTOR creating a new master record
 TestNumber::TestNumber(CXClass* p_className)
            :CXObject(p_className)
 {
-}
-
-// Bring the contents of the class to a SOAPMessage or a SQLRecord
-void
-TestNumber::Serialize(SOAPMessage& p_message,XMLElement* p_entity)
-{
-  PreSerialize(p_message,p_entity);
-
-  p_message.AddElement(p_entity,"id",    XDT_Integer|XDT_Type,m_id);
-  p_message.AddElement(p_entity,"field1",XDT_Integer|XDT_Type,m_field1);
-  p_message.AddElement(p_entity,"field2",XDT_Double |XDT_Type,m_field2);
-  p_message.AddElement(p_entity,"field3",XDT_Decimal|XDT_Type,m_field3.AsDouble());
-
-  PostSerialize(p_message,p_entity);
-
-}
-
-// Read the contents of an object from a SOAPMessage or a SQLRecord
-void
-TestNumber::DeSerialize(SOAPMessage& p_message,XMLElement* p_entity)
-{
-  PreDeSerialize(p_message,p_entity);
-
-  m_id     = p_message.GetElementInteger(p_entity,"id");
-  m_field1 = p_message.GetElementInteger(p_entity,"field1");
-  m_field2 = p_message.GetElementDouble (p_entity,"field2");
-  m_field3 = p_message.GetElementDouble (p_entity,"field3");
-
-  PostDeSerialize(p_message,p_entity);
-}
-
-void
-TestNumber::Serialize(SQLRecord& p_record,int p_mutation /*= 0*/)
-{
-  PreSerialize(p_record);
-
-  p_record.ModifyField("id",     m_id,     p_mutation);
-  p_record.ModifyField("field1", m_field1, p_mutation);
-  p_record.ModifyField("field2", m_field2, p_mutation);
-  p_record.ModifyField("field3", m_field3, p_mutation);
-
-  PostSerialize(p_record);
-}
-
-void
-TestNumber::DeSerialize(SQLRecord& p_record)
-{
-  PreDeSerialize(p_record);
-
-  m_id     = (long)   p_record["id"];
-  m_field1 = (int)    p_record["field1"];
-  m_field2 = (double) p_record["field2"];
-  m_field3 = (bcd)    p_record["field3"];
-
-  PostDeSerialize(p_record);
 }
 

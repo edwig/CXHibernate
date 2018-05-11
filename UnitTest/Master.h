@@ -58,4 +58,4 @@ private:
 };
 
 // Declare our factory
-DECLARE_CXO_FACTORY(Master);
+// DECLARE_CXO_FACTORY(Master);

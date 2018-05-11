@@ -25,6 +25,7 @@
 // Version number:  0.0.1
 //
 #pragma once
+#include "CXStaticInitialization.h"
 
 //////////////////////////////////////////////////////////////////////////
 //
@@ -48,13 +49,26 @@ typedef CXObject* (CALLBACK *CreateCXO)(CXClass* p_class);
 #define DEFINE_CXO_FACTORY(classname)  CXObject* CreateCXObject##classname(CXClass* p_class)\
                                        {\
                                          return new classname(p_class);\
-                                       }
+                                       }\
+__pragma(section(".ccxo$m",read))\
+__pragma(init_seg(".ccxo$m",cxoexit))\
+class CXOReg##classname\
+{\
+public:\
+  CXOReg##classname()\
+  {\
+    hibernate.RegisterCreateCXO(#classname, CreateCXObject##classname);\
+  }\
+  ~CXOReg##classname() {};\
+};\
+CXOReg##classname _register##classname;
 
+// A macro for the standard class constructor
 #define CXO_CONSTRUCTOR(classname)     classname::classname(CXClass* p_className)\
                                        :CXObject(p_className)\
                                        {}
 
-
+// Serialization and de-serialization of your class object
 #define   CXO_DBS_SERIALIZE(c_type,property,column,XDT) p_record.ModifyField(column,property,p_mutation)
 #define CXO_DBS_DESERIALIZE(c_type,property,column,XDT) property = (c_type) p_record[ column ]
 #define   CXO_XML_SERIALIZE(c_type,property,column,XDT) AddElement(p_message,p_entity,column,XDT | XDT_Type,property)
@@ -77,8 +91,8 @@ typedef CXObject* (CALLBACK *CreateCXO)(CXClass* p_class);
 
 
 // Bring the contents of the class to a SOAPMessage or a SQLRecord and vice versa
-#define DECLARE_CXO_SERIALIZATION virtual void Serialize(SOAPMessage& p_message,XMLElement* p_entity);  \
-                                  virtual void Serialize(SQLRecord&   p_record,int p_mutation = 0);     \
+#define DECLARE_CXO_SERIALIZATION virtual void   Serialize(SOAPMessage& p_message,XMLElement* p_entity);  \
+                                  virtual void   Serialize(SQLRecord&   p_record,int p_mutation = 0);     \
                                   virtual void DeSerialize(SOAPMessage& p_message,XMLElement* p_entity);\
                                   virtual void DeSerialize(SQLRecord&   p_record);
 

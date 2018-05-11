@@ -39,6 +39,12 @@ CXClass::CXClass(CString p_name,CreateCXO p_create,CXClass* p_super)
     m_super->AddSubClass(this);
   }
 
+  if(p_create == nullptr)
+  {
+    m_create = hibernate.FindCreateCXO(p_name);
+  }
+
+
   // Getting a database table
   if(m_super && hibernate.GetStrategy() == Strategy_one_table)
   {

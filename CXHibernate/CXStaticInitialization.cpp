@@ -2,21 +2,25 @@
 #include "CXStaticInitialization.h"
 #include "CXHibernate.h"
 
-static int cxpf = 0;    // number of destructors we need to call  
+static unsigned cxpf = 0;    // number of destructors we need to call  
 PF pfx[MAX_CLASSES];    // pointers to destructors.  
 
 // Register the destructor of an object
+// Used by the #pragma init_seg construction
 int cxoexit(PF pf)
 {
-  pfx[cxpf++] = pf;
+  if(cxpf < MAX_CLASSES)
+  {
+    pfx[cxpf++] = pf;
+  }
   return 0;
 }
 
-#pragma section(".mine$a", read)  
-__declspec(allocate(".mine$a")) const PF InitSegStart = (PF)1;
+#pragma     section(".ccxo$a", read)  
+__declspec(allocate(".ccxo$a")) const PF InitSegStart = (PF)1;
 
-#pragma section(".mine$z",read)  
-__declspec(allocate(".mine$z")) const PF InitSegEnd = (PF)1;
+#pragma     section(".ccxo$z",read)  
+__declspec(allocate(".ccxo$z")) const PF InitSegEnd = (PF)1;
 
 // The comparison for 0 is important.  
 // For now, each section is 256 bytes. When they  
@@ -24,6 +28,8 @@ __declspec(allocate(".mine$z")) const PF InitSegEnd = (PF)1;
 // can't depend on the section being 256 bytes, but  
 // you can depend on it being padded with zeros.  
 
+// Call all constructors of the static classes
+// in the .ccxo segment
 void CXOInitializeClasses()
 {
   const PF *func = &InitSegStart;
@@ -36,6 +42,8 @@ void CXOInitializeClasses()
   }
 }
 
+// Call all the destructors in the static classes
+// in the .ccxo segment
 void CXODestroyClasses()
 {
   while(cxpf > 0)

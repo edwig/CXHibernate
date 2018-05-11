@@ -50,5 +50,11 @@
     <ClCompile Include="Detail_cxh.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Master_cxh.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="TestNumber_cxh.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>

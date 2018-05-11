@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////
 //
-// File: Detail_cxh.cpp
+// File: CXMaster.cpp
 //
 // Copyright (c) 1998-2018 ir. W.E. Huisman
 // All rights reserved
@@ -25,7 +25,8 @@
 // Version number:  0.0.1
 //
 #include "stdafx.h"
-#include "Detail.h"
+#include "Master.h"
+#include <CXTable.h>
 #include <SQLRecord.h>
 #include <SOAPMessage.h>
 
@@ -35,44 +36,37 @@
 static char THIS_FILE[] = __FILE__;
 #endif
 
-//////////////////////////////////////////////////////////////////////////
-
 // Bring the contents of the class to a SOAPMessage 
-BEGIN_XML_SERIALIZE(Detail)
+BEGIN_XML_SERIALIZE(Master)
     CXO_XML_SERIALIZE(long,   m_id,         "id",         XDT_Integer);
-    CXO_XML_SERIALIZE(long,   m_mast_id,    "mast_id",    XDT_Integer);
-    CXO_XML_SERIALIZE(long,   m_line,       "line",       XDT_Integer);
+    CXO_XML_SERIALIZE(long,   m_invoice,    "invoice",    XDT_Integer);
     CXO_XML_SERIALIZE(CString,m_description,"description",XDT_String);
-    CXO_XML_SERIALIZE(bcd,    m_amount,     "amount",     XDT_Decimal);
+    CXO_XML_SERIALIZE(bcd,    m_total,      "total",      XDT_Decimal);
 END_XML_SERIALIZE
 
-// Read the contents of an object from a SOAPMessage
-BEGIN_XML_DESERIALIZE(Detail)
+// Read the contents of an object from a SOAPMessage or a SQLRecord
+BEGIN_XML_DESERIALIZE(Master)
   CXO_XML_DESERIALIZE(long,   m_id,         "id",         XDT_Integer);
-  CXO_XML_DESERIALIZE(long,   m_mast_id,    "mast_id",    XDT_Integer);
-  CXO_XML_DESERIALIZE(long,   m_line,       "line",       XDT_Integer);
+  CXO_XML_DESERIALIZE(long,   m_invoice,    "invoice",    XDT_Integer);
   CXO_XML_DESERIALIZE(CString,m_description,"description",XDT_String);
-  CXO_XML_DESERIALIZE(bcd,    m_amount,     "amount",     XDT_Decimal);
+  CXO_XML_DESERIALIZE(bcd,    m_total,      "total",      XDT_Decimal);
 END_XML_DESERIALIZE
+
+BEGIN_DBS_SERIALIZE(Master)
+    CXO_DBS_SERIALIZE(long,   m_id,         "id",         XDT_Integer);
+    CXO_DBS_SERIALIZE(long,   m_invoice,    "invoice",    XDT_Integer);
+    CXO_DBS_SERIALIZE(CString,m_description,"description",XDT_String);
+    CXO_DBS_SERIALIZE(bcd,    m_total,      "total",      XDT_Decimal);
+END_DBS_SERIALIZE
+
+BEGIN_DBS_DESERIALIZE(Master)
+  CXO_DBS_DESERIALIZE(long,   m_id,         "id",         XDT_Integer);
+  CXO_DBS_DESERIALIZE(long,   m_invoice,    "invoice",    XDT_Integer);
+  CXO_DBS_DESERIALIZE(CString,m_description,"description",XDT_String);
+  CXO_DBS_DESERIALIZE(bcd,    m_total,      "total",      XDT_Decimal);
+END_DBS_DESERIALIZE
 
 //////////////////////////////////////////////////////////////////////////
 
-BEGIN_DBS_SERIALIZE(Detail)
-    CXO_DBS_SERIALIZE(long,   m_id,         "id",         XDT_Integer);
-    CXO_DBS_SERIALIZE(long,   m_mast_id,    "mast_id",    XDT_Integer);
-    CXO_DBS_SERIALIZE(long,   m_line,       "line",       XDT_Integer);
-    CXO_DBS_SERIALIZE(CString,m_description,"description",XDT_String);
-    CXO_DBS_SERIALIZE(bcd,    m_amount,     "amount",     XDT_Decimal);
-END_DBS_SERIALIZE
-
-
-BEGIN_DBS_DESERIALIZE(Detail)
-  CXO_DBS_DESERIALIZE(long,   m_id,         "id",         XDT_Integer);
-  CXO_DBS_DESERIALIZE(long,   m_mast_id,    "mast_id",    XDT_Integer);
-  CXO_DBS_DESERIALIZE(long,   m_line,       "line",       XDT_Integer);
-  CXO_DBS_DESERIALIZE(CString,m_description,"description",XDT_String);
-  CXO_DBS_DESERIALIZE(bcd,    m_amount,     "amount",     XDT_Decimal);
-END_DBS_DESERIALIZE
-
-// Static factory to create a new object if this class
-DEFINE_CXO_FACTORY(Detail);
+// Create our new object factory
+DEFINE_CXO_FACTORY(Master);

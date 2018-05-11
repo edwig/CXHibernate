@@ -26,9 +26,6 @@
 //
 #include "stdafx.h"
 #include "Master.h"
-#include <CXTable.h>
-#include <SQLRecord.h>
-#include <SOAPMessage.h>
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -36,46 +33,11 @@
 static char THIS_FILE[] = __FILE__;
 #endif
 
-// Create our new object factory
-DEFINE_CXO_FACTORY(Master);
-
 // CTOR creating a new master record
 Master::Master(CXClass* p_className)
        :CXObject(p_className)
 {
 }
-
-// Bring the contents of the class to a SOAPMessage 
-BEGIN_XML_SERIALIZE(Master)
-    CXO_XML_SERIALIZE(long,   m_id,         "id",         XDT_Integer);
-    CXO_XML_SERIALIZE(long,   m_invoice,    "invoice",    XDT_Integer);
-    CXO_XML_SERIALIZE(CString,m_description,"description",XDT_String);
-    CXO_XML_SERIALIZE(bcd,    m_total,      "total",      XDT_Decimal);
-END_XML_SERIALIZE
-
-// Read the contents of an object from a SOAPMessage or a SQLRecord
-BEGIN_XML_DESERIALIZE(Master)
-  CXO_XML_DESERIALIZE(long,   m_id,         "id",         XDT_Integer);
-  CXO_XML_DESERIALIZE(long,   m_invoice,    "invoice",    XDT_Integer);
-  CXO_XML_DESERIALIZE(CString,m_description,"description",XDT_String);
-  CXO_XML_DESERIALIZE(bcd,    m_total,      "total",      XDT_Decimal);
-END_XML_DESERIALIZE
-
-BEGIN_DBS_SERIALIZE(Master)
-    CXO_DBS_SERIALIZE(long,   m_id,         "id",         XDT_Integer);
-    CXO_DBS_SERIALIZE(long,   m_invoice,    "invoice",    XDT_Integer);
-    CXO_DBS_SERIALIZE(CString,m_description,"description",XDT_String);
-    CXO_DBS_SERIALIZE(bcd,    m_total,      "total",      XDT_Decimal);
-END_DBS_SERIALIZE
-
-BEGIN_DBS_DESERIALIZE(Master)
-  CXO_DBS_DESERIALIZE(long,   m_id,         "id",         XDT_Integer);
-  CXO_DBS_DESERIALIZE(long,   m_invoice,    "invoice",    XDT_Integer);
-  CXO_DBS_DESERIALIZE(CString,m_description,"description",XDT_String);
-  CXO_DBS_DESERIALIZE(bcd,    m_total,      "total",      XDT_Decimal);
-END_DBS_DESERIALIZE
-
-//////////////////////////////////////////////////////////////////////////
 
 // Setters
 

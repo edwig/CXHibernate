@@ -297,6 +297,27 @@ CXSession::RollbackMutation(int p_mutationID)
   m_transaction = nullptr;
 }
 
+//////////////////////////////////////////////////////////////////////////
+//
+// OBJECT INTERFACE
+//
+//////////////////////////////////////////////////////////////////////////
+
+// OBJECT INTERFACE
+CXObject*
+CXSession::CreateObject(CString p_className)
+{
+  CXClass* theClass = FindClass(p_className);
+  if(theClass)
+  {
+    CreateCXO create = theClass->GetCreateCXO();
+    CXObject* object = (*create)();
+    object->SetClass(theClass);
+    return object;
+  }
+  return nullptr;
+}
+
 
 //////////////////////////////////////////////////////////////////////////
 //
@@ -502,11 +523,14 @@ CXSession::Synchronize()
     {
       CXObject*  object = obj.second;
       SQLRecord* record = object->GetDatabaseRecord();
-      object->Serialize(*record,mutationID);
-      if(UpdateObject(object,mutationID) == false)
+      if(record && (record->GetStatus() & SQL_Record_Updated))
       {
-        RollbackMutation(mutationID);
-        return false;
+        object->Serialize(*record,mutationID);
+        if(UpdateObject(object,mutationID) == false)
+        {
+          RollbackMutation(mutationID);
+          return false;
+        }
       }
     }
   }
@@ -683,10 +707,10 @@ bool
 CXSession::AddObjectInCache(CXObject* p_object, VariantSet& p_primary)
 {
   CString hash = CXPrimaryHash(p_primary);
-  CString tableName = p_object->GetClass()->GetTable()->TableName();
-  tableName.MakeLower();
+  CString className = p_object->GetClass()->GetName();
+  className.MakeLower();
 
-  CXCache::iterator it = m_cache.find(tableName);
+  CXCache::iterator it = m_cache.find(className);
   if (it != m_cache.end())
   {
     ObjectCache::iterator tit = it->second->find(hash);
@@ -1062,7 +1086,12 @@ CXSession::DeleteObjectInDatabase(CXObject* p_object,int p_mutationID /*= 0*/)
   // We take the assumption that the primary key is "immutable"
 
   // Go delete the record
-  return dset->Synchronize(p_mutationID);
+  bool deleted = dset->Synchronize(p_mutationID);
+  if (deleted)
+  {
+    p_object->MakeTransient();
+  }
+  return deleted;
 }
 
 // DML operations in the filestore

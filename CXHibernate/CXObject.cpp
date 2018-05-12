@@ -164,6 +164,15 @@ CXObject::GetDatabaseRecord()
   return m_record;
 }
 
+void
+CXObject::MakeTransient()
+{
+  // Forget the database record
+  m_record = nullptr;
+  // Forget the primary key
+  ResetPrimaryKey();
+}
+
 //////////////////////////////////////////////////////////////////////////
 //
 // PROTECTED INTERFACE

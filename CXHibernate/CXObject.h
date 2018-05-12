@@ -61,6 +61,7 @@ public:
   // Object status
   bool        IsTransient();
   bool        IsPersistent();
+  void        MakeTransient();
 
   // Getting the class of this object
   CXClass*    GetClass();

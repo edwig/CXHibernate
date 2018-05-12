@@ -157,9 +157,7 @@ namespace UnitTest
 
       OpenSession();
 
-      CXClass* test_numbers = m_session->FindClass("TestNumber");
-      TestNumber* numbers = new TestNumber();
-      numbers->SetClass(test_numbers);
+      TestNumber* numbers = (TestNumber*) m_session->CreateObject("TestNumber");
       // Do Not set the ID field: this will be done by the generator
       numbers->SetField1(42);
       numbers->SetField2(89975.123);
@@ -173,13 +171,13 @@ namespace UnitTest
       Assert::AreEqual(num,1);
       Logger::WriteMessage("Test_number record inserted!");
 
-//       // Delete the object again and destroy the derived object!
-//       m_session->DeleteObject(numbers);
-// 
-//       // Test that it is gone
-//       num = TestRecordCount("test_number", "id", numbers->GetID());
-//       Assert::AreEqual(num,0);
-//       Logger::WriteMessage("Test_number record deleted again!");
+      // Delete the object again and destroy the derived object!
+      m_session->DeleteObject(numbers);
+
+      // Test that it is gone
+      num = TestRecordCount("test_number", "id", numbers->GetID());
+      Assert::AreEqual(num,0);
+      Logger::WriteMessage("Test_number record deleted again!");
     }
 
     TEST_METHOD(T05_SelectToFilestore)

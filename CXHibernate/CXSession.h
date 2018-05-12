@@ -83,6 +83,9 @@ public:
   void          CommitMutation(int p_mutationID);
   void          RollbackMutation(int p_mutationID);
 
+  // OBJECT INTERFACE
+  CXObject*     CreateObject(CString p_className);
+
   // SOAP INTERFACE
   // Create a filestore name for a table
   CString       CreateFilestoreName(CXTable* p_table);

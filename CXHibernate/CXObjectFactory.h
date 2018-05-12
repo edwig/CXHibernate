@@ -39,16 +39,16 @@ class CXClass;
 class CXObject;
 
 // Prototype for use in method/function declarations
-typedef CXObject* (CALLBACK *CreateCXO)(CXClass* p_class);
+typedef CXObject* (CALLBACK *CreateCXO)();
 
 // Macro for calling a method with this factory as a parameter
 #define CXO_FACTORY(classname) CreateCXObject##classname
 // Declaring a factory in your derived class
-#define DECLARE_CXO_FACTORY(classname) CXObject* CreateCXObject##classname(CXClass* p_class)
+#define DECLARE_CXO_FACTORY(classname) CXObject* CreateCXObject##classname()
 // Defining the factory in your class implementation
-#define DEFINE_CXO_FACTORY(classname)  CXObject* CreateCXObject##classname(CXClass* p_class)\
+#define DEFINE_CXO_FACTORY(classname)  CXObject* CreateCXObject##classname()\
                                        {\
-                                         return new classname(p_class);\
+                                         return new classname();\
                                        }\
 __pragma(section(".ccxo$m",read))\
 __pragma(init_seg(".ccxo$m",cxoexit))\
@@ -94,7 +94,7 @@ CXOReg##classname _register##classname;
 #define DECLARE_CXO_SERIALIZATION virtual void   Serialize(SOAPMessage& p_message,XMLElement* p_entity);  \
                                   virtual void   Serialize(SQLRecord&   p_record,int p_mutation = 0);     \
                                   virtual void DeSerialize(SOAPMessage& p_message,XMLElement* p_entity);\
-                                  virtual void DeSerialize(SQLRecord&   p_record);
+                                  virtual void DeSerialize(SQLRecord&   p_record)
 
 //////////////////////////////////////////////////////////////////////////
 //

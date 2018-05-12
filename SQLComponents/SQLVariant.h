@@ -76,8 +76,8 @@ public:
    SQLVariant(CString& p_data);               // SQL_C_CHAR
    SQLVariant(short p_short);                 // SQL_C_SHORT / SQL_C_SSHORT
    SQLVariant(unsigned short p_short);        // SQL_C_USHORT
-   SQLVariant(long p_long);                   // SQL_C_LONG / SQL_C_SLONG
-   SQLVariant(unsigned long p_long);          // SQL_C_ULONG
+   SQLVariant(int p_long);                   // SQL_C_LONG / SQL_C_SLONG
+   SQLVariant(unsigned int p_long);          // SQL_C_ULONG
    SQLVariant(float p_float);                 // SQL_C_FLOAT
    SQLVariant(double p_double);               // SQL_C_DOUBLE
    SQLVariant(bool p_bit);                    // SQL_C_BIT
@@ -161,8 +161,8 @@ public:
    bool                 GetAsBoolean();
    short                GetAsSShort();
    unsigned short       GetAsUShort();
-   long                 GetAsSLong();
-   unsigned long        GetAsULong();
+   int                  GetAsSLong();
+   unsigned int         GetAsULong();
    float                GetAsFloat();
    double               GetAsDouble();
    char                 GetAsBit();
@@ -193,8 +193,8 @@ public:
    SQLVariant& operator  =(CString& p_data);                 // SQL_C_CHAR
    SQLVariant& operator  =(short p_data);                    // SQL_C_SHORT / SQL_C_SSHORT
    SQLVariant& operator  =(unsigned short p_data);           // SQL_C_USHORT
-   SQLVariant& operator  =(long p_data);                     // SQL_C_LONG  / SQL_C_SLONG
-   SQLVariant& operator  =(unsigned long p_data);            // SQL_C_ULONG
+   SQLVariant& operator  =(int p_data);                     // SQL_C_LONG  / SQL_C_SLONG
+   SQLVariant& operator  =(unsigned int p_data);            // SQL_C_ULONG
    SQLVariant& operator  =(float p_data);                    // SQL_C_FLOAT
    SQLVariant& operator  =(double p_data);                   // SQL_C_DOUBLE
    SQLVariant& operator  =(bool p_data);                     // SQL_C_BIT

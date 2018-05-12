@@ -130,7 +130,8 @@ CXServer::OnCXInsert(int p_code,SOAPMessage* p_message)
         try
         {
           CreateCXO creating = theClass->GetCreateCXO();
-          CXObject* object = (*creating)(theClass);
+          CXObject* object = (*creating)();
+          object->SetClass(theClass);
           object->DeSerialize(*p_message,entity);
           if(m_session->InsertObject(object))
           {
@@ -182,7 +183,8 @@ CXServer::OnCXUpdate(int p_code,SOAPMessage* p_message)
         {
           // Creating a temporary object to discover our primary key
           CreateCXO creating = theClass->GetCreateCXO();
-          CXObject* object = (*creating)(theClass);
+          CXObject* object = (*creating)();
+          object->SetClass(theClass);
           object->DeSerialize(*p_message,entity);
           // Create copy on the stack of the primary key
           VariantSet primary = object->GetPrimaryKey();
@@ -246,7 +248,8 @@ CXServer::OnCXDelete(int p_code,SOAPMessage* p_message)
         {
           // Creating a temporary object to discover our primary key
           CreateCXO creating = theClass->GetCreateCXO();
-          CXObject* object = (*creating)(theClass);
+          CXObject* object = (*creating)();
+          object->SetClass(theClass);
           object->DeSerialize(*p_message,entity);
           // Create copy on the stack of the primary key
           VariantSet primary = object->GetPrimaryKey();

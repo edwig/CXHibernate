@@ -37,8 +37,7 @@ static char THIS_FILE[] = __FILE__;
 #endif
 
 // CTOR creating a new master record
-TestNumber::TestNumber(CXClass* p_className)
-           :CXObject(p_className)
+TestNumber::TestNumber()
 {
 }
 

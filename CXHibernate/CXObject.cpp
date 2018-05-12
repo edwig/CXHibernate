@@ -39,8 +39,7 @@ static char THIS_FILE[] = __FILE__;
 #endif
 
 // XTOR: As a object from a table
-CXObject::CXObject(CXClass* p_class)
-         :m_class(p_class)
+CXObject::CXObject()
 {
 }
 
@@ -53,6 +52,18 @@ CXObject::~CXObject()
     delete key;
   }
   m_primaryKey.clear();
+}
+
+// First mandatory action for an object
+void
+CXObject::SetClass(CXClass* p_class)
+{
+  // Can only be called once!
+  // So an object cannot be changed from class.
+  if(m_class == nullptr)
+  {
+    m_class = p_class;
+  }
 }
 
 // Getting or setting the Primary key of the object

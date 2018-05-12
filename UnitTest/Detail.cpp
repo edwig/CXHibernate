@@ -34,8 +34,7 @@ static char THIS_FILE[] = __FILE__;
 #endif
 
 // CXO_CONSTRUCTOR(Detail)
-Detail::Detail(CXClass* p_className)
-       :CXObject(p_className)
+Detail::Detail()
 {
   // Things to do in the constructor ...
 }

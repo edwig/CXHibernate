@@ -186,7 +186,7 @@ SQLVariant::SQLVariant(unsigned short p_short)
 }
 
 // XTOR SQL_C_LONG / SQL_C_SLONG
-SQLVariant::SQLVariant(long p_long)
+SQLVariant::SQLVariant(int p_long)
 {
   Init();
   m_datatype    = SQL_C_SLONG;
@@ -196,7 +196,7 @@ SQLVariant::SQLVariant(long p_long)
 }
 
 // XTOR SQL_C_ULONG
-SQLVariant::SQLVariant(unsigned long p_long)
+SQLVariant::SQLVariant(unsigned int p_long)
 {
   Init();
   m_datatype    = SQL_C_ULONG;
@@ -1263,7 +1263,7 @@ SQLVariant::GetAsUShort()
   return 0;
 }
 
-long
+int
 SQLVariant::GetAsSLong()
 {
   if(m_indicator == SQL_NULL_DATA)
@@ -1320,7 +1320,7 @@ SQLVariant::GetAsSLong()
 }
 
 
-unsigned long
+unsigned int
 SQLVariant::GetAsULong()
 {
   if(m_indicator == SQL_NULL_DATA)

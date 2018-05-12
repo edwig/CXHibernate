@@ -158,7 +158,8 @@ namespace UnitTest
       OpenSession();
 
       CXClass* test_numbers = m_session->FindClass("TestNumber");
-      TestNumber* numbers = new TestNumber(test_numbers);
+      TestNumber* numbers = new TestNumber();
+      numbers->SetClass(test_numbers);
       numbers->SetID(10);
       numbers->SetField1(42);
       numbers->SetField2(89975.123);
@@ -253,13 +254,17 @@ namespace UnitTest
       {
         CXTable* master = m_session->FindClass("master")->GetTable();
         CXTable* detail = m_session->FindClass("detail")->GetTable();
+        CXTable* number = m_session->FindClass("testnumber")->GetTable();
         Assert::IsNotNull(master);
         Assert::IsNotNull(detail);
+        Assert::IsNotNull(number);
 
         bool res1 = master->SaveMetaInfo(m_session);
         bool res2 = detail->SaveMetaInfo(m_session);
+        bool res3 = number->SaveMetaInfo(m_session);
         Assert::IsTrue(res1);
         Assert::IsTrue(res2);
+        Assert::IsTrue(res3);
       }
     }
 

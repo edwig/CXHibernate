@@ -32,10 +32,10 @@ class Detail : public CXObject
 {
 public:
   // CTOR of an CXObject
-  Detail(CXClass* p_className);
+  Detail();
 
   // Serialization of our persistent objects
-  DECLARE_CXO_SERIALIZATION
+  DECLARE_CXO_SERIALIZATION;
 
   // GETTERS
   int     GetID()            { return m_id;          };
@@ -48,13 +48,11 @@ protected:
 
 private:
   // Database persistent attributes
-  long    m_id      { 0 };    // Primary key part 1
-  long    m_line    { 0 };    // Primary key part 2
-  long    m_mast_id { 0 };    // Foreign key to Master
+  int     m_id      { 0 };    // Primary key part 1
+  int     m_line    { 0 };    // Primary key part 2
+  int     m_mast_id { 0 };    // Foreign key to Master
   CString m_description;
   bcd     m_amount;
   // Transient attributes go here
 
 };
-
-// DECLARE_CXO_FACTORY(Detail);

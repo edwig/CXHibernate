@@ -163,7 +163,7 @@ SQLVariant::operator=(unsigned short p_data)
 }
 
 SQLVariant& 
-SQLVariant::operator=(long p_data)
+SQLVariant::operator=(int p_data)
 {
   Init();
   m_datatype    = SQL_C_SLONG;
@@ -175,7 +175,7 @@ SQLVariant::operator=(long p_data)
 }
 
 SQLVariant& 
-SQLVariant::operator=(unsigned long p_data)
+SQLVariant::operator=(unsigned int p_data)
 {
   Init();
   m_datatype    = SQL_C_ULONG;

@@ -32,10 +32,10 @@ class Master : public CXObject
 {
 public:
   // CTOR of an CXObject
-  Master(CXClass* p_className);
+  Master();
 
   // Serialization of our persistent objects
-  DECLARE_CXO_SERIALIZATION
+  DECLARE_CXO_SERIALIZATION;
 
   // GETTERS
   int     GetID()           { return m_id;          };
@@ -50,12 +50,10 @@ protected:
 
 private:
   // Database persistent attributes
-  long    m_id;
-  long    m_invoice;
+  int     m_id;
+  int     m_invoice;
   CString m_description;
   bcd     m_total;
   // Virtual attributes
 };
 
-// Declare our factory
-// DECLARE_CXO_FACTORY(Master);

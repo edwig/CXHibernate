@@ -819,7 +819,8 @@ CXSession::FindObjectInDatabase(CString p_className,VariantSet& p_primary)
 
   // Create our object by the creation factory
   CreateCXO create = theClass->GetCreateCXO();
-  CXObject* object = (*create)(theClass);
+  CXObject* object = (*create)();
+  object->SetClass(theClass);
 
   // De-serialize the SQL Record to an CXObject derived object
   object->DeSerialize(*record);
@@ -854,7 +855,8 @@ CXSession::FindObjectInFilestore(CString p_className,VariantSet& p_primary)
       {
         // Create our object by the creation factory
         CreateCXO create = theClass->GetCreateCXO();
-        CXObject* object = (*create)(theClass);
+        CXObject* object = (*create)();
+        object->SetClass(theClass);
 
         // Fill in our object from the message 
         object->DeSerialize(p_message,entity);
@@ -920,7 +922,8 @@ CXSession::SelectObjectsFromDatabase(CString p_className,SQLFilterSet& p_filters
 
       // Create our object by the creation factory
       CreateCXO create = theClass->GetCreateCXO();
-      CXObject* object = (*create)(theClass);
+      CXObject* object = (*create)();
+      object->SetClass(theClass);
 
       // De-serialize the SQL Record to an CXObject derived object
       object->DeSerialize(*record);

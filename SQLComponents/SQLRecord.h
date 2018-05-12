@@ -76,8 +76,6 @@ public:
   void        ModifyField(const char* p_name,unsigned short&    p_field,int p_mutationID = 0);
   void        ModifyField(const char* p_name,int&               p_field,int p_mutationID = 0);
   void        ModifyField(const char* p_name,unsigned int&      p_field,int p_mutationID = 0);
-  void        ModifyField(const char* p_name,long&              p_field,int p_mutationID = 0);
-  void        ModifyField(const char* p_name,unsigned long&     p_field,int p_mutationID = 0);
   void        ModifyField(const char* p_name,float&             p_field,int p_mutationID = 0);
   void        ModifyField(const char* p_name,double&            p_field,int p_mutationID = 0);
   void        ModifyField(const char* p_name,__int64&           p_field,int p_mutationID = 0);

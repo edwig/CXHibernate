@@ -39,8 +39,11 @@ class CXClass;
 class CXObject
 {
 public:
-  CXObject(CXClass* p_class);
+  CXObject();
   virtual ~CXObject();
+
+  // Setting the class is a mandatory action
+  void SetClass(CXClass* p_class);
 
   // Bring the contents of the class to a SOAPMessage or a SQLRecord
   virtual void Serialize(SOAPMessage& p_message,XMLElement* p_entity) = 0;

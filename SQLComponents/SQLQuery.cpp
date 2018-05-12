@@ -397,14 +397,14 @@ SQLQuery::SetParameter(int p_num,SQLVariant* p_param,SQLParamType p_type /*=SQL_
 }
 
 void 
-SQLQuery::SetParameter(int p_num,long p_param,SQLParamType p_type /*=SQL_PARAM_INPUT*/)
+SQLQuery::SetParameter(int p_num,int p_param,SQLParamType p_type /*=SQL_PARAM_INPUT*/)
 {
   SQLVariant* var = new SQLVariant(p_param);
   InternalSetParameter(p_num,var,p_type);
 }
 
 void 
-SQLQuery::SetParameterUL(int p_num,unsigned long p_param,SQLParamType p_type /*=SQL_PARAM_INPUT*/)
+SQLQuery::SetParameterUL(int p_num,unsigned int p_param,SQLParamType p_type /*=SQL_PARAM_INPUT*/)
 {
   SQLVariant *var = new SQLVariant(p_param);
   InternalSetParameter(p_num,var,p_type);
@@ -466,7 +466,7 @@ SQLQuery::SetParameter(SQLVariant* p_param,SQLParamType p_type /*=SQL_PARAM_INPU
 }
 
 void
-SQLQuery::SetParameter(long p_param,SQLParamType p_type /*=SQL_PARAM_INPUT*/)
+SQLQuery::SetParameter(int p_param,SQLParamType p_type /*=SQL_PARAM_INPUT*/)
 {
   int size = (int)m_parameters.size() + 1;
   SQLVariant* var = new SQLVariant(p_param);
@@ -474,7 +474,7 @@ SQLQuery::SetParameter(long p_param,SQLParamType p_type /*=SQL_PARAM_INPUT*/)
 }
 
 void
-SQLQuery::SetParameterUL(unsigned long p_param,SQLParamType p_type /*=SQL_PARAM_INPUT*/)
+SQLQuery::SetParameterUL(unsigned int p_param,SQLParamType p_type /*=SQL_PARAM_INPUT*/)
 {
   int size = (int)m_parameters.size() + 1;
   SQLVariant *var = new SQLVariant(p_param);

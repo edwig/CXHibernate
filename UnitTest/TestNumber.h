@@ -32,13 +32,13 @@ class TestNumber : public CXObject
 {
 public:
   // CTOR of an CXObject
-  TestNumber(CXClass* p_className);
+  TestNumber();
 
   // Serialization of our persistent objects
-  DECLARE_CXO_SERIALIZATION
+  DECLARE_CXO_SERIALIZATION;
 
   // GETTERS
-  long    GetID()     { return m_id;     };
+  int     GetID()     { return m_id;     };
   int     GetField1() { return m_field1; };
   double  GetField2() { return m_field2; };
   bcd     GetField3() { return m_field3; };
@@ -53,12 +53,10 @@ protected:
 
 private:
   // Database persistent attributes
-  long    m_id;
+  int     m_id;
   int     m_field1;
   double  m_field2;
   bcd     m_field3;
   // Virtual attributes
 };
-
-// DECLARE_CXO_FACTORY(TestNumber);
 

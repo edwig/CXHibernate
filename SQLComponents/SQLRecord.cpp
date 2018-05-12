@@ -300,21 +300,7 @@ SQLRecord::ModifyField(const char* p_name,int& p_field,int p_mutationID /*= 0*/)
 void
 SQLRecord::ModifyField(const char* p_name,unsigned int& p_field,int p_mutationID /*= 0*/)
 {
-  SQLVariant value((unsigned long)p_field);
-  ModifyField(m_dataSet->GetFieldNumber(p_name), &value, p_mutationID);
-}
-
-void
-SQLRecord::ModifyField(const char* p_name,long& p_field,int p_mutationID /*= 0*/)
-{
-  SQLVariant value(p_field);
-  ModifyField(m_dataSet->GetFieldNumber(p_name), &value, p_mutationID);
-}
-
-void
-SQLRecord::ModifyField(const char* p_name,unsigned long& p_field,int p_mutationID /*= 0*/)
-{
-  SQLVariant value(p_field);
+  SQLVariant value((unsigned int)p_field);
   ModifyField(m_dataSet->GetFieldNumber(p_name), &value, p_mutationID);
 }
 

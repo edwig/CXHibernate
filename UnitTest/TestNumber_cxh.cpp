@@ -93,9 +93,9 @@ TestNumber::DeSerialize(SQLRecord& p_record)
 // Create our new object factory
 // DEFINE_CXO_FACTORY(TestNumber);
 
-CXObject* CreateCXObjectTestNumber(CXClass* p_class)
+CXObject* CreateCXObjectTestNumber()
 {
-  return new TestNumber(p_class);
+  return new TestNumber();
 }
 
 #pragma  section(".ccxo$m",read)

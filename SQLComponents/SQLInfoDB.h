@@ -183,6 +183,9 @@ public:
   //////////////////////////////////////////////////////////////////////////
   // SQL FOR SUB-PROCESSING
 
+  // Gets the construction for inline generating a key within an INSERT statement
+  virtual CString GetSQLNewSerial(CString p_table,CString p_sequence) const = 0;
+
   // Gets the construction / select for generating a new serial identity
   virtual CString GetSQLGenerateSerial(CString p_table) const = 0;
 

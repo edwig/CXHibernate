@@ -258,11 +258,25 @@ SQLInfoFirebird::GetKEYWORDStatementNVL(CString& p_test,CString& p_isnull) const
   return "{fn IFNULL(" + p_test + "," + p_isnull + ")}";
 }
 
+// Gets the construction for inline generating a key within an INSERT statement
+CString
+SQLInfoFirebird::GetSQLNewSerial(CString p_table, CString p_sequence) const
+{
+  CString sequence(p_sequence);
+  if (sequence.IsEmpty() && !p_table.IsEmpty())
+  {
+    sequence = p_table + "_seq";
+  }
+
+  // Select next value from a generator sequence
+  return "(next value for " + sequence + ")";
+}
+
 // Gets the construction / select for generating a new serial identity
 CString
 SQLInfoFirebird::GetSQLGenerateSerial(CString p_table) const
 {
-  return "SELECT " + p_table + "_seq.nextval FROM DUAL";
+  return "SELECT (next value for " + p_table + "_seq) FROM RDB$DATABASE";
 }
 
 // Gets the construction / select for the resulting effective generated serial

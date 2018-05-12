@@ -265,6 +265,20 @@ SQLInfoPostgreSQL::GetKEYWORDStatementNVL(CString& p_test,CString& p_isnull) con
   return "{fn IFNULL(" + p_test + "," + p_isnull + ")}";
 }
 
+// Gets the construction for inline generating a key within an INSERT statement
+CString
+SQLInfoPostgreSQL::GetSQLNewSerial(CString p_table, CString p_sequence) const
+{
+  CString sequence(p_sequence);
+  if (sequence.IsEmpty() && !p_table.IsEmpty())
+  {
+    sequence = p_table + "_seq";
+  }
+
+  // Select next value from a generator sequence
+  return sequence + ".NEXTVAL";
+}
+
 // Gets the construction / select for generating a new serial identity
 CString
 SQLInfoPostgreSQL::GetSQLGenerateSerial(CString p_table) const

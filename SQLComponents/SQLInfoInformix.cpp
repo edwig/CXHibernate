@@ -271,6 +271,14 @@ SQLInfoInformix::GetKEYWORDStatementNVL(CString& p_test,CString& p_isnull) const
   return CString("NVL(") + p_test + "," + p_isnull + ")";
 }
 
+// Gets the construction for inline generating a key within an INSERT statement
+CString
+SQLInfoInformix::GetSQLNewSerial(CString /*p_table*/, CString /*p_sequence*/) const
+{
+  // Insert a zero in an SERIAL column
+  return "0";
+}
+
 // Gets the construction / select for generating a new serial identity
 CString 
 SQLInfoInformix::GetSQLGenerateSerial(CString p_table) const

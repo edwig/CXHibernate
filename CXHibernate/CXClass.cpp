@@ -28,7 +28,13 @@
 #include "CXClass.h"
 #include <algorithm>
 
-CXClass::CXClass(CString p_name,CreateCXO p_create,CXClass* p_super)
+#ifdef _DEBUG
+#define new DEBUG_NEW
+#undef THIS_FILE
+static char THIS_FILE[] = __FILE__;
+#endif
+
+CXClass::CXClass(CString p_name,CXClass* p_super,CreateCXO p_create)
         :m_name(p_name)
         ,m_create(p_create)
         ,m_super(p_super)
@@ -39,11 +45,11 @@ CXClass::CXClass(CString p_name,CreateCXO p_create,CXClass* p_super)
     m_super->AddSubClass(this);
   }
 
+  // Find our object factory
   if(p_create == nullptr)
   {
     m_create = hibernate.FindCreateCXO(p_name);
   }
-
 
   // Getting a database table
   if(m_super && hibernate.GetStrategy() == Strategy_one_table)
@@ -112,9 +118,30 @@ CXClass::FindAttribute(CString p_name)
   {
     return &it->second;
   }
+  // Recursively ask our super classes
   if(m_super)
   {
     return m_super->FindAttribute(p_name);
+  }
+  return nullptr;
+}
+
+// Find the generator (if any)
+CXAttribute* 
+CXClass::FindGenerator()
+{
+  // Walk the list of attributes
+  for(auto& attrib : m_attributes)
+  {
+    if(attrib.second.GetIsGenerator())
+    {
+      return &attrib.second;
+    }
+  }
+  // Recursively ask our super classes
+  if(m_super)
+  {
+    return m_super->FindGenerator();
   }
   return nullptr;
 }

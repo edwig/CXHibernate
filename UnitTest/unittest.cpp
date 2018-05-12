@@ -160,7 +160,7 @@ namespace UnitTest
       CXClass* test_numbers = m_session->FindClass("TestNumber");
       TestNumber* numbers = new TestNumber();
       numbers->SetClass(test_numbers);
-      numbers->SetID(10);
+      // Do Not set the ID field: this will be done by the generator
       numbers->SetField1(42);
       numbers->SetField2(89975.123);
       numbers->SetField3("300.77");
@@ -169,17 +169,17 @@ namespace UnitTest
       m_session->InsertObject(numbers);
 
       // Test that it is in the database
-      int num = TestRecordCount("test_number","id",10);
+      int num = TestRecordCount("test_number","id",numbers->GetID());
       Assert::AreEqual(num,1);
-      Logger::WriteMessage("Test_number record 10 Inserted!");
+      Logger::WriteMessage("Test_number record inserted!");
 
-      // Delete the object again and destroy the derived object!
-      m_session->DeleteObject(numbers);
-
-      // Test that it is gone
-      num = TestRecordCount("test_number", "id", 10);
-      Assert::AreEqual(num,0);
-      Logger::WriteMessage("Test_number record 10 Deleted again!");
+//       // Delete the object again and destroy the derived object!
+//       m_session->DeleteObject(numbers);
+// 
+//       // Test that it is gone
+//       num = TestRecordCount("test_number", "id", numbers->GetID());
+//       Assert::AreEqual(num,0);
+//       Logger::WriteMessage("Test_number record deleted again!");
     }
 
     TEST_METHOD(T05_SelectToFilestore)
@@ -359,7 +359,7 @@ namespace UnitTest
 
     void DefineNumbers(CXClass* p_class)
     {
-      p_class->AddAttribute(CXAttribute("int",   "id",0,false,true));
+      p_class->AddAttribute(CXAttribute("int",   "id",0,true,true));
       p_class->AddAttribute(CXAttribute("int",   "field1"));
       p_class->AddAttribute(CXAttribute("double","field2"));
       p_class->AddAttribute(CXAttribute("bcd",   "field3"));

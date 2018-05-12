@@ -1379,6 +1379,17 @@ SQLDatabase::GetCurrentTimestampQualifier()
   return "";
 }
 
+CString
+SQLDatabase::GetSQL_NewSerial(CString p_table,CString p_sequence)
+{
+  CString sql;
+  if(GetSQLInfoDB())
+  {
+    sql = m_info->GetSQLNewSerial(p_table,p_sequence);
+  }
+  return sql;
+}
+
 CString 
 SQLDatabase::GetSQL_GenerateSerial(CString p_table)
 {

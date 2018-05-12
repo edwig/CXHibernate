@@ -326,6 +326,24 @@ SQLDataSet::GetParameter(CString& p_name)
   return NULL;
 }
 
+// Getting the sequence name
+CString
+SQLDataSet::GetSequenceName()
+{
+  // Special sequence name set
+  if(!m_sequenceName.IsEmpty())
+  {
+    return m_sequenceName;
+  }
+  // Mostly enough
+  if(!m_primaryTableName.IsEmpty())
+  {
+    return m_primaryTableName + "_seq";
+  }
+  // Give up :-(
+  return "";
+}
+
 // Replace $name for the value of a parameter
 // $ signs within 'string$chain' or "String$chain" can NOT be replaced
 // This makes it possible to write queries like
@@ -1286,16 +1304,23 @@ SQLDataSet::Inserts(int p_mutationID)
     {
       ++total;
       CString sql;
+      CString serial;
       MutType type = record->MixedMutations(p_mutationID);
       switch(type)
       {
         case MUT_NoMutation: // Fall through: Do nothing
         case MUT_OnlyOthers: break;
         case MUT_Mixed:      throw CString("Mixed mutations");
-        case MUT_MyMutation: sql = GetSQLInsert(&query,record);
+        case MUT_MyMutation: sql = GetSQLInsert(&query,record,serial);
                              query.DoSQLStatement(sql);
                              ++insert;
                              break;
+      }
+      if(record->GetGenerator() >= 0)
+      {
+        int value = m_database->GetSQL_EffectiveSerial(serial);
+        SQLVariant val(value);
+        record->SetField(record->GetGenerator(),&val,0);
       }
     }
   }
@@ -1395,7 +1420,7 @@ SQLDataSet::GetSQLUpdate(SQLQuery* p_query,SQLRecord* p_record)
 }
 
 CString
-SQLDataSet::GetSQLInsert(SQLQuery* p_query,SQLRecord* p_record)
+SQLDataSet::GetSQLInsert(SQLQuery* p_query,SQLRecord* p_record,CString& p_serial)
 {
   int parameter = 1;
   CString sql("INSERT INTO " + m_primaryTableName);
@@ -1409,12 +1434,22 @@ SQLDataSet::GetSQLInsert(SQLQuery* p_query,SQLRecord* p_record)
   // Do for all fields in the record
   for(unsigned ind = 0;ind < m_names.size(); ++ind)
   {
-    SQLVariant* value = p_record->GetField(ind);
-    if(value->IsNULL() == false)
+    if((int)ind == p_record->GetGenerator())
     {
-      fields += m_names[ind] + ",";
-      params += "?,";
-      p_query->SetParameter(parameter++,value);
+      fields  += m_names[ind] + ",";
+      p_serial = m_database->GetSQL_GenerateSerial(m_primaryTableName);
+      params  += p_serial;
+      params  += ",";
+    }
+    else
+    {
+      SQLVariant* value = p_record->GetField(ind);
+      if(value->IsNULL() == false)
+      {
+        fields += m_names[ind] + ",";
+        params += "?,";
+        p_query->SetParameter(parameter++,value);
+      }
     }
   }
   // Closing

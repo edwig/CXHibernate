@@ -36,7 +36,7 @@ using SubClasses = std::vector<CXClass*>;
 class CXClass
 {
 public:
-  CXClass(CString p_name,CreateCXO p_create = nullptr,CXClass* p_super = nullptr);
+  CXClass(CString p_name,CXClass* p_super = nullptr,CreateCXO p_create = nullptr);
  ~CXClass();
 
   // The name of the game
@@ -50,6 +50,8 @@ public:
   void        AddAttribute(CXAttribute p_attribute);
   // Find an attribute
   CXAttribute* FindAttribute(CString p_name);
+  // Find the generator (if any)
+  CXAttribute* FindGenerator();
 
   // Serialize to a configuration XML file
   bool        SaveMetaInfo(XMLMessage& p_message,XMLElement* p_elem);

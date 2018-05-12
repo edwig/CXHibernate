@@ -128,6 +128,9 @@ public:
 
   // SQL
 
+  // Gets the construction for inline generating a key within an INSERT statement
+  CString GetSQLNewSerial(CString p_table, CString p_sequence) const;
+
   // Gets the construction / select for generating a new serial identity
   CString GetSQLGenerateSerial(CString p_table) const;
 

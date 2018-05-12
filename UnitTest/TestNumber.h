@@ -44,7 +44,7 @@ public:
   bcd     GetField3() { return m_field3; };
 
   // SETTERS
-  void    SetID(long p_id)          { m_id     = p_id;    };
+  void    SetID(int p_id)           { m_id     = p_id;    };
   void    SetField1(int p_field)    { m_field1 = p_field; };
   void    SetField2(double p_field) { m_field2 = p_field; };
   void    SetField3(bcd p_field)    { m_field3 = p_field; };
@@ -53,9 +53,9 @@ protected:
 
 private:
   // Database persistent attributes
-  int     m_id;
-  int     m_field1;
-  double  m_field2;
+  int     m_id      { 0   };
+  int     m_field1  { 0   };
+  double  m_field2  { 0.0 };
   bcd     m_field3;
   // Virtual attributes
 };

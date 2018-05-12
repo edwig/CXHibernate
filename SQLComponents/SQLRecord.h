@@ -56,6 +56,9 @@ public:
   int         GetStatus();
   SQLVariant* GetField(int p_num);
   SQLVariant* GetField(CString p_name);
+  int         GetGenerator();
+  // Setting a generator column
+  void        SetGenerator(int p_generator);
   // Adding a field to the record
   void        AddField(SQLVariant* p_field,bool p_insert = false);
   // Setting different value without changing status
@@ -126,12 +129,25 @@ private:
   int         m_status;
   ulong       m_reference;
   SQLFields   m_fields;
+  int         m_generator;
 };
 
 inline int
 SQLRecord::GetStatus()
 {
   return m_status;
+}
+
+inline void
+SQLRecord::SetGenerator(int p_generator)
+{
+  m_generator = p_generator;
+}
+
+inline int
+SQLRecord::GetGenerator()
+{
+  return m_generator;
 }
 
 // End of namespace

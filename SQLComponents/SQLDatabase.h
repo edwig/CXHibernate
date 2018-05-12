@@ -218,6 +218,7 @@ public:
   CString        GetStrippedSQLTimeString(int p_hour,int p_minute,int p_second);
   CString        GetSQLDateString        (int p_day, int p_month, int p_year);
   CString        GetCurrentTimestampQualifier();
+  CString        GetSQL_NewSerial(CString p_table,CString p_sequence);
   CString        GetSQL_GenerateSerial(CString p_table);
   int            GetSQL_EffectiveSerial(CString p_oid_string);
   CString        GetTimestampAsString(const SQLTimestamp& p_timestamp);

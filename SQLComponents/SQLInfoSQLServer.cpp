@@ -262,6 +262,14 @@ SQLInfoSQLServer::GetKEYWORDStatementNVL(CString& p_test,CString& p_isnull) cons
   return CString("NVL(") + p_test + "," + p_isnull + ")";
 }
 
+// Gets the construction for inline generating a key within an INSERT statement
+CString
+SQLInfoSQLServer::GetSQLNewSerial(CString /*p_table*/, CString /*p_sequence*/) const
+{
+  // Insert a zero in an IDENTITY column
+  return "0";
+}
+
 // Gets the construction / select for generating a new serial identity
 CString
 SQLInfoSQLServer::GetSQLGenerateSerial(CString p_table) const

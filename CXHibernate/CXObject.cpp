@@ -31,7 +31,6 @@
 #include <SQLRecord.h>
 #include <SOAPMessage.h>
 
-
 #ifdef _DEBUG
 #define new DEBUG_NEW
 #undef THIS_FILE
@@ -46,12 +45,7 @@ CXObject::CXObject()
 // DTOR: Destruct the object
 CXObject::~CXObject()
 {
-  // Destroy the primary key value (if any)
-  for(auto& key : m_primaryKey)
-  {
-    delete key;
-  }
-  m_primaryKey.clear();
+  ResetPrimaryKey();
 }
 
 // First mandatory action for an object
@@ -64,6 +58,13 @@ CXObject::SetClass(CXClass* p_class)
   {
     m_class = p_class;
   }
+}
+
+// Getting the class of this object
+CXClass*
+CXObject::GetClass()
+{
+  return m_class;
 }
 
 // Getting or setting the Primary key of the object
@@ -102,23 +103,58 @@ CXObject::GetPrimaryKey()
   return m_primaryKey;
 }
 
+// Destroy the primary key value (if any)
+void
+CXObject::ResetPrimaryKey()
+{
+  for (auto& key : m_primaryKey)
+  {
+    delete key;
+  }
+  m_primaryKey.clear();
+}
+
 bool
 CXObject::IsTransient()
 {
-  return m_primaryKey.empty();
+  // See if no primary key yet
+  if(m_primaryKey.empty())
+  {
+    return true;
+  }
+
+  // Walk the chain of primary keys
+  // To see if the primary is (even partially) filled
+  for(auto& key : m_primaryKey)
+  {
+    if(!key->IsEmpty())
+    {
+      return false;
+    }
+  }
+  // All keys are NULL or ZERO
+  return true;
 }
 
 bool
 CXObject::IsPersistent()
 {
-  return !m_primaryKey.empty();
-}
+  // See if no primary key yet
+  if(m_primaryKey.empty())
+  {
+    return false;
+  }
 
-// Getting the class of this object
-CXClass*
-CXObject::GetClass()
-{
-  return m_class;
+  // Walk the chain of primary keys
+  for(auto& key : m_primaryKey)
+  {
+    if(key->IsEmpty())
+    {
+      return false;
+    }
+  }
+  // All keys filled (not NULL and not ZERO)
+  return true;
 }
 
 // Defined by the underlying database record
@@ -127,8 +163,6 @@ CXObject::GetDatabaseRecord()
 {
   return m_record;
 }
-
-
 
 //////////////////////////////////////////////////////////////////////////
 //
@@ -140,16 +174,6 @@ CXObject::GetDatabaseRecord()
 void 
 CXObject::PreSerialize(SOAPMessage& p_message,XMLElement* p_entity)
 {
-//   int index = 0;
-//   WordList keys = m_table->GetPrimaryKeyAsList();
-//   for(auto& key : keys)
-//   {
-//     key.MakeLower();
-//     SQLVariant* val = m_primaryKey[index++];
-//     XmlDataType typ = ODBCToXmlDataType(val->GetDataType());
-// 
-//     p_message.AddElement(p_entity,key,typ|XDT_Type,val->GetAsChar());
-//   }
 }
 
 void
@@ -181,8 +205,6 @@ void
 CXObject::PostDeSerialize(SOAPMessage& p_msg,XMLElement* p_entity)
 {
 }
-
-// Todo when we create an object from a SQLRecord
 
 // Remember the record where we where created from
 void

@@ -259,6 +259,14 @@ SQLInfoGenericODBC::GetKEYWORDStatementNVL(CString& p_test,CString& p_isnull) co
   return "{fn IFNULL(" + p_test + "," + p_isnull + ")}";
 }
 
+// Gets the construction for inline generating a key within an INSERT statement
+CString
+SQLInfoGenericODBC::GetSQLNewSerial(CString /*p_table*/, CString /*p_sequence*/) const
+{
+  // Insert a zero in an IDENTITY column
+  return "0";
+}
+
 // Gets the construction / select for generating a new serial identity
 CString
 SQLInfoGenericODBC::GetSQLGenerateSerial(CString p_table) const

@@ -56,6 +56,7 @@ public:
   // Getting or setting the Primary key of the object
   void        SetPrimaryKey(SQLVariant* p_keyValue,int p_part);
   SQLVariant* GetPrimaryKey(int p_part);
+  void        ResetPrimaryKey();
 
   // Object status
   bool        IsTransient();
@@ -95,8 +96,8 @@ protected:
 
 private:
   // Fill in the primary key of the object
+  void FillPrimaryKey(SOAPMessage& p_message, XMLElement* p_entity);
   void FillPrimaryKey(SQLRecord&   p_record);
-  void FillPrimaryKey(SOAPMessage& p_message,XMLElement* p_entity);
 };
 
 //////////////////////////////////////////////////////////////////////////

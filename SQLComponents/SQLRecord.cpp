@@ -44,6 +44,7 @@ SQLRecord::SQLRecord(SQLDataSet* p_set,bool p_modifiable)
           ,m_modifiable(p_modifiable)
           ,m_status(SQL_Record_NULL)
           ,m_reference(0)
+          ,m_generator(-1)
 {
   Acquire();
 }

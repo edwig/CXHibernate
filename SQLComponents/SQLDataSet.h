@@ -152,6 +152,8 @@ public:
   // Set primary key column name (for updates)
   void         SetPrimaryKeyColumn(CString p_name);
   void         SetPrimaryKeyColumn(WordList& p_list);
+  // Setting the sequence/generator name to something different than "<tablename>_seq"
+  void         SetSequenceName(CString p_sequence);
   // Set searchable column
   // void         SetSearchableColumn(CString p_name);
   // Set parameter for a query
@@ -191,6 +193,8 @@ public:
   // Getting info about the primary key
   CString      GetPrimarySchema();
   CString      GetPrimaryTableName();
+  // Getting the sequence name
+  CString      GetSequenceName();
 
   // XML Saving and loading
   bool         XMLSave(CString p_filename,CString p_name,XMLEncoding p_encoding = XMLEncoding::ENC_UTF8);
@@ -236,7 +240,7 @@ private:
 
   CString      GetSQLDelete  (SQLQuery* p_query,SQLRecord* p_record);
   CString      GetSQLUpdate  (SQLQuery* p_query,SQLRecord* p_record);
-  CString      GetSQLInsert  (SQLQuery* p_query,SQLRecord* p_record);
+  CString      GetSQLInsert  (SQLQuery* p_query,SQLRecord* p_record,CString& p_serial);
   CString      GetWhereClause(SQLQuery* p_query,SQLRecord* p_record,int& p_parameter);
 
   // Private data of the dataset
@@ -248,6 +252,7 @@ private:
   CString      m_selection;
   CString      m_primarySchema;
   CString      m_primaryTableName;
+  CString      m_sequenceName;
   ParameterSet m_parameters;
   NamenMap     m_primaryKey;
   SQLFilterSet* m_filters;
@@ -291,6 +296,12 @@ SQLDataSet::SetPrimaryTable(CString p_schema,CString p_tableName)
 {
   m_primarySchema    = p_schema;
   m_primaryTableName = p_tableName;
+}
+
+inline void
+SQLDataSet::SetSequenceName(CString p_sequence)
+{
+  m_sequenceName = p_sequence;
 }
 
 inline int

@@ -260,6 +260,14 @@ SQLInfoMySQL::GetKEYWORDStatementNVL(CString& p_test,CString& p_isnull) const
   return "{fn IFNULL(" + p_test + "," + p_isnull + ")}";
 }
 
+// Gets the construction for inline generating a key within an INSERT statement
+CString
+SQLInfoMySQL::GetSQLNewSerial(CString /*p_table*/, CString /*p_sequence*/) const
+{
+  // Insert a zero in an IDENTITY column
+  return "0";
+}
+
 // Gets the construction / select for generating a new serial identity
 CString
 SQLInfoMySQL::GetSQLGenerateSerial(CString p_table) const

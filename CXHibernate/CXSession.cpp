@@ -1005,12 +1005,28 @@ CXSession::InsertObjectInDatabase(CXObject* p_object,int p_mutationID /*= 0*/)
   }
 
   // Now serialize our object with the 'real' values
-  p_object->Serialize(*record,p_mutationID);
+  p_object->Serialize(*record, p_mutationID);
   // Set the record to 'insert-only'
   record->Inserted();
 
+  // Check if we must generate our primary key
+  CXAttribute* gen = theClass->FindGenerator();
+  if(gen && p_object->IsTransient())
+  {
+    // -1: not found, 0 -> (n-1) is the field number of the generator
+    int generator = dset->GetFieldNumber(gen->GetName());
+    record->SetGenerator(generator);
+  }
+
   // Go save the record
-  return dset->Synchronize(p_mutationID);
+  bool saved = dset->Synchronize(p_mutationID);
+  if(saved)
+  {
+    // Re-sync the primary key
+    p_object->ResetPrimaryKey();
+    p_object->DeSerialize(*record);
+  }
+  return saved;
 }
 
 bool

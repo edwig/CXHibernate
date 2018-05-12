@@ -29,6 +29,12 @@
 #include "CXClass.h"
 #include "CXSession.h"
 
+#ifdef _DEBUG
+#define new DEBUG_NEW
+#undef THIS_FILE
+static char THIS_FILE[] = __FILE__;
+#endif
+
 // Implementation of the CXServer
 
 CXServer::CXServer(CString    p_name

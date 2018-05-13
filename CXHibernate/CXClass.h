@@ -58,6 +58,9 @@ public:
   // DeSerialize from a XML configuration file
   bool        LoadMetaInfo(CXSession* p_session,XMLMessage& p_message,XMLElement* p_elem);
 
+  // Build default SELECT query
+  bool        BuildDefaultSelectQuery(SQLInfoDB* p_info);
+
 protected:
   // Adding a sub-class
   void        AddSubClass(CXClass* p_subclass);

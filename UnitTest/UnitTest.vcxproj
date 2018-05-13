@@ -179,7 +179,7 @@
     </ClCompile>
     <ClCompile Include="TestNumber.cpp" />
     <ClCompile Include="TestNumber_cxh.cpp" />
-    <ClCompile Include="unittest.cpp" />
+    <ClCompile Include="Standalone.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

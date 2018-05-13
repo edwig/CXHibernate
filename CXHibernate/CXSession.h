@@ -27,6 +27,7 @@
 #pragma once
 #include "CXTable.h"
 #include "CXObject.h"
+#include "CXRole.h"
 #include <SQLDatabase.h>
 #include <SQLDataSet.h>
 #include <SQLMetaInfo.h>
@@ -38,14 +39,6 @@ using namespace SQLComponents;
 using ClassMap    = std::map<CString,CXClass*>;
 using ObjectCache = std::map<CString,CXObject*>;
 using CXCache     = std::map<CString,ObjectCache*>;
-
-typedef enum _cxh_roles
-{
-  CXH_Database_role
- ,CXH_Filestore_role
- ,CXH_Internet_role
-}
-CXHRole;
 
 class CXSession
 {
@@ -83,9 +76,6 @@ public:
   void          CommitMutation(int p_mutationID);
   void          RollbackMutation(int p_mutationID);
 
-  // OBJECT INTERFACE
-  CXObject*     CreateObject(CString p_className);
-
   // SOAP INTERFACE
   // Create a filestore name for a table
   CString       CreateFilestoreName(CXTable* p_table);
@@ -95,14 +85,19 @@ public:
   bool          SaveSOAPMessage(SOAPMessage& p_message, CString p_fileName);
 
   // OBJECT INTERFACE
-  CXObject*     SelectObject(CString p_className,int           p_primary);
-  CXObject*     SelectObject(CString p_className,SQLVariant*   p_primary);
-  CXObject*     SelectObject(CString p_className,VariantSet&   p_primary);
-  CXResultSet   SelectObject(CString p_className,SQLFilter*    p_filter);
-  CXResultSet   SelectObject(CString p_className,SQLFilterSet& p_filters);
-  bool          UpdateObject(CXObject* p_object,int p_mutationID = 0);
-  bool          InsertObject(CXObject* p_object,int p_mutationID = 0);
-  bool          DeleteObject(CXObject* p_object,int p_mutationID = 0);
+
+  // Create an object prior to inserting it
+  CXObject*     CreateObject(CString p_className);
+  // Primary operations
+  CXObject*     Load  (CString p_className,int           p_primary);
+  CXObject*     Load  (CString p_className,SQLVariant*   p_primary);
+  CXObject*     Load  (CString p_className,VariantSet&   p_primary);
+  CXResultSet   Load  (CString p_className,SQLFilter*    p_filter);
+  CXResultSet   Load  (CString p_className,SQLFilterSet& p_filters);
+  bool          Save  (CXObject* p_object,int p_mutationID = 0);
+  bool          Update(CXObject* p_object,int p_mutationID = 0);
+  bool          Insert(CXObject* p_object,int p_mutationID = 0);
+  bool          Delete(CXObject* p_object,int p_mutationID = 0);
   // Remove object from the result cache without any database/internet actions
   bool          RemoveObject(CXObject* p_object);
   // Complete cache synchronize with the database, saving all results

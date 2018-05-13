@@ -44,12 +44,12 @@ static char THIS_FILE[] = __FILE__;
 using namespace Microsoft::VisualStudio::CppUnitTestFramework;
 using namespace SQLComponents;
 
-namespace UnitTest
+namespace HibernateTest
 {		
-	TEST_CLASS(UnitTest)
+	TEST_CLASS(StandAlone)
 	{
 	public:
-    ~UnitTest()
+    ~StandAlone()
     {
       hibernate.CloseAllSessions();
     }
@@ -61,7 +61,7 @@ namespace UnitTest
       OpenSession();
       try
       {
-        CXObject* object = m_session->SelectObject("master",2);
+        CXObject* object = m_session->Load(Master::ClassName(),2);
         Master* master = reinterpret_cast<Master*>(object);
 
         Assert::IsNotNull(master);
@@ -83,7 +83,7 @@ namespace UnitTest
       {
         SQLFilter* filter = new SQLFilter("line",OP_Greater,1);
 
-        CXResultSet set = m_session->SelectObject("detail",filter);
+        CXResultSet set = m_session->Load(Detail::ClassName(),filter);
         for(int ind = 0;ind < set.size(); ++ind)
         {
           Detail* detail = reinterpret_cast<Detail*>(set[ind]);
@@ -101,7 +101,7 @@ namespace UnitTest
       Logger::WriteMessage("Updating a record from the MASTER table");
       if (OpenSession())
       {
-        Master* master = (Master*) m_session->SelectObject("master",1);
+        Master* master = (Master*) m_session->Load(Master::ClassName(),1);
 
         Assert::IsNotNull(master);
         Logger::WriteMessage("Updating 1th master record");
@@ -112,7 +112,7 @@ namespace UnitTest
         // Setting new value
         bcd total("935.12");
         master->SetTotal(total);
-        bool res = m_session->UpdateObject(master);
+        bool res = m_session->Update(master);
         Assert::IsTrue(res);
 
         CString value = TestRecordValue("master","id",1,"total");
@@ -120,7 +120,7 @@ namespace UnitTest
 
         // Back to the old value
         master->SetTotal(old_total);
-        res = m_session->UpdateObject(master);
+        res = m_session->Update(master);
         Assert::IsTrue(res);
 
         value = TestRecordValue("master","id",1,"total");
@@ -157,14 +157,14 @@ namespace UnitTest
 
       OpenSession();
 
-      TestNumber* numbers = (TestNumber*) m_session->CreateObject("TestNumber");
+      TestNumber* numbers = (TestNumber*) m_session->CreateObject(TestNumber::ClassName());
       // Do Not set the ID field: this will be done by the generator
       numbers->SetField1(42);
       numbers->SetField2(89975.123);
       numbers->SetField3("300.77");
 
       // Insert this object in the database
-      m_session->InsertObject(numbers);
+      m_session->Insert(numbers);
 
       // Test that it is in the database
       int num = TestRecordCount("test_number","id",numbers->GetID());
@@ -172,7 +172,7 @@ namespace UnitTest
       Logger::WriteMessage("Test_number record inserted!");
 
       // Delete the object again and destroy the derived object!
-      m_session->DeleteObject(numbers);
+      m_session->Delete(numbers);
 
       // Test that it is gone
       num = TestRecordCount("test_number", "id", numbers->GetID());
@@ -188,14 +188,14 @@ namespace UnitTest
         SQLVariant one((long)1);
         SQLFilter* filter = new SQLFilter("line", OP_GreaterEqual, &one);
 
-        CXResultSet set = m_session->SelectObject("detail",filter);
+        CXResultSet set = m_session->Load("detail",filter);
 
         m_session->SetFilestore("C:\\WWW\\Testing");
         m_session->ChangeRole(CXHRole::CXH_Filestore_role);
 
         for(auto& object : set)
         {
-          m_session->InsertObject(object);
+          m_session->Insert(object);
         }
       }
       else
@@ -212,7 +212,7 @@ namespace UnitTest
         SQLVariant one((long)7);
         m_session->SetFilestore("C:\\WWW\\Testing");
 
-        CXObject* object = m_session->SelectObject("detail",&one);
+        CXObject* object = m_session->Load(Detail::ClassName(),&one);
         Detail* detail = reinterpret_cast<Detail*>(object);
         Assert::IsNotNull(detail);
         PrintDetail(detail);
@@ -230,13 +230,13 @@ namespace UnitTest
       {
         m_session->ChangeRole(CXHRole::CXH_Filestore_role);
 
-        CXObject* object = m_session->SelectObject("detail",6);
+        CXObject* object = m_session->Load(Detail::ClassName(),6);
         Detail* detail = reinterpret_cast<Detail*>(object);
 
         Assert::IsNotNull(detail);
         PrintDetail(detail);
 
-        bool res = m_session->DeleteObject(detail);
+        bool res = m_session->Delete(detail);
         Assert::IsTrue(res);
       }
       else
@@ -250,9 +250,9 @@ namespace UnitTest
       Logger::WriteMessage("Write meta info of tables");
       if(OpenSession())
       {
-        CXTable* master = m_session->FindClass("master")->GetTable();
-        CXTable* detail = m_session->FindClass("detail")->GetTable();
-        CXTable* number = m_session->FindClass("testnumber")->GetTable();
+        CXTable* master = m_session->FindClass(Master::ClassName())->GetTable();
+        CXTable* detail = m_session->FindClass(Detail::ClassName())->GetTable();
+        CXTable* number = m_session->FindClass(TestNumber::ClassName())->GetTable();
         Assert::IsNotNull(master);
         Assert::IsNotNull(detail);
         Assert::IsNotNull(number);
@@ -271,8 +271,8 @@ namespace UnitTest
       Logger::WriteMessage("Write meta info of tables");
       if (OpenSession())
       {
-        CXTable* master = m_session->FindClass("master")->GetTable();
-        CXTable* detail = m_session->FindClass("detail")->GetTable();
+        CXTable* master = m_session->FindClass(Master::ClassName())->GetTable();
+        CXTable* detail = m_session->FindClass(Detail::ClassName())->GetTable();
         Assert::IsNotNull(master);
         Assert::IsNotNull(detail);
 
@@ -307,25 +307,29 @@ namespace UnitTest
           m_session->SetFilestore("C:\\WWW\\Testing");
           m_session->SetDatabase(&m_database);
 
-          CXClass* master  = new CXClass("Master");
-          CXClass* detail  = new CXClass("Detail");
-          CXClass* numbers = new CXClass("TestNumber");
+          if(m_session->FindClass(Master::ClassName()) == nullptr)
+          {
+            // If no configuration loaded, define it
+            CXClass* master  = new CXClass(Master::ClassName());
+            CXClass* detail  = new CXClass(Detail::ClassName());
+            CXClass* numbers = new CXClass(TestNumber::ClassName());
 
-          numbers->GetTable()->SetSchemaTableType("","test_number","TABLE");
+            // Test with different table name
+            numbers->GetTable()->SetSchemaTableType("","test_number","TABLE");
 
-          // Program the class structure (instead of configuration.cxh)
-          DefineMaster(master);
-          DefineDetail(detail);
-          DefineNumbers(numbers);
+            // Program the class structure (instead of configuration.cxh)
+            DefineMaster(master);
+            DefineDetail(detail);
+            DefineNumbers(numbers);
 
-          // Do the 'lazy' stuff by reading the definition from the database
-          // assuming that the definition corresponds with ours
-          ReadTableDefinition(master);
-          ReadTableDefinition(detail);
-          ReadTableDefinition(numbers);
+            // Do the 'lazy' stuff by reading the definition from the database
+            // assuming that the definition corresponds with ours
+            ReadTableDefinition(master);
+            ReadTableDefinition(detail);
+            ReadTableDefinition(numbers);
 
-          hibernate.SaveConfiguration(m_session);
-
+            hibernate.SaveConfiguration(m_session);
+}
           return true;
         }
         Assert::Fail();

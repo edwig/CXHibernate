@@ -222,6 +222,16 @@ CXClass::LoadMetaInfo(CXSession* p_session,XMLMessage& p_message,XMLElement* p_e
   return false;
 }
 
+// Build default SELECT query
+bool
+CXClass::BuildDefaultSelectQuery(SQLInfoDB* p_info)
+{
+  // Default query
+  CString query = CString("SELECT * FROM ") + m_table->DMLTableName(p_info);
+  m_table->GetDataSet()->SetQuery(query);
+
+  return true;
+}
 
 //////////////////////////////////////////////////////////////////////////
 //

@@ -1316,7 +1316,8 @@ SQLDataSet::Inserts(int p_mutationID)
                              ++insert;
                              break;
       }
-      if(record->GetGenerator() >= 0)
+      // For an active generator, fill in the retrieved value
+      if(record->GetGenerator() >= 0 && !serial.IsEmpty())
       {
         int value = m_database->GetSQL_EffectiveSerial(serial);
         SQLVariant val(value);
@@ -1434,7 +1435,8 @@ SQLDataSet::GetSQLInsert(SQLQuery* p_query,SQLRecord* p_record,CString& p_serial
   // Do for all fields in the record
   for(unsigned ind = 0;ind < m_names.size(); ++ind)
   {
-    if((int)ind == p_record->GetGenerator())
+    SQLVariant* value = p_record->GetField(ind);
+    if((int)ind == p_record->GetGenerator() && value->IsEmpty())
     {
       fields  += m_names[ind] + ",";
       p_serial = m_database->GetSQL_GenerateSerial(m_primaryTableName);
@@ -1443,7 +1445,6 @@ SQLDataSet::GetSQLInsert(SQLQuery* p_query,SQLRecord* p_record,CString& p_serial
     }
     else
     {
-      SQLVariant* value = p_record->GetField(ind);
       if(value->IsNULL() == false)
       {
         fields += m_names[ind] + ",";

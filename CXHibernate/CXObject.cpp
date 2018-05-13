@@ -235,6 +235,13 @@ CXObject::PostDeSerialize(SQLRecord& p_record)
 //
 //////////////////////////////////////////////////////////////////////////
 
+// Super class of object does NOT have a specific class name
+CString
+CXObject::ClassName()
+{
+  return "<UNKNOWN>";
+}
+
 // Fill in the primary key of the object
 void 
 CXObject::FillPrimaryKey(SQLRecord& p_record)

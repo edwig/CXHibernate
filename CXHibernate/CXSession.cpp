@@ -28,6 +28,7 @@
 #include "CXSession.h"
 #include "CXClass.h"
 #include "CXPrimaryHash.h"
+#include "CXRole.h"
 #include <SQLQuery.h>
 #include <SQLTransaction.h>
 #include <EnsureFile.h>
@@ -156,25 +157,6 @@ CXSession::AddClass(CXClass* p_class)
   ObjectCache* objcache = new ObjectCache();
   m_cache.insert(std::make_pair(name,objcache));
 
-  // On the master side, we need a SQLDataSet for the database
-  if(m_role == CXH_Database_role)
-  {
-    CXTable* table = p_class->GetTable();
-    SQLDataSet* dset = new SQLDataSet();
-
-    // Fill in the dataset
-    dset->SetDatabase(m_database);
-    dset->SetPrimaryTable(table->SchemaName(),table->TableName());
-    WordList list = table->GetPrimaryKeyAsList();
-    dset->SetPrimaryKeyColumn(list);
-
-    // Default query
-    CString query = CString("SELECT * FROM ") + table->DMLTableName(m_database->GetSQLInfoDB());
-    dset->SetQuery(query);
-
-    // Transfer to the CXTable object
-    table->SetDataSet(dset);
-  }
   return true;
 }
 
@@ -195,26 +177,34 @@ CXSession::FindClass(CString p_name)
 void
 CXSession::LoadConfiguration(XMLMessage& p_config)
 {
-  XMLElement* theclass = p_config.FindElement("class");
+  // Load session parameters
+  CString role = p_config.GetElement("session_role");
+  m_role = CXStringToRole(role);
 
+  // Load all classes
+  XMLElement* theclass = p_config.FindElement("class");
   while(theclass)
   {
     CString  name = p_config.GetElement(theclass,"name");
     CXClass* newclass = new CXClass(name,nullptr);
-    AddClass(newclass);
 
-    newclass->LoadMetaInfo(this, p_config, theclass);
-
+    if(newclass->LoadMetaInfo(this,p_config,theclass))
+    {
+      AddClass(newclass);
+    }
     // Find next class
     theclass = p_config.GetElementSibling(theclass);
   }
 }
 
-
 // Saving the general configuration XML.
 void
 CXSession::SaveConfiguration(XMLMessage& p_config)
 {
+  // Save session parameters
+  p_config.AddElement(nullptr,"session_role",XDT_String,CXRoleToString(m_role));
+
+  // Save all class info
   for(auto& cl : m_classes)
   {
     cl.second->SaveMetaInfo(p_config,nullptr);
@@ -318,34 +308,33 @@ CXSession::CreateObject(CString p_className)
   return nullptr;
 }
 
-
 //////////////////////////////////////////////////////////////////////////
 //
-// QUERY INTERFACE
+// OBJECT INTERFACE
 //
 //////////////////////////////////////////////////////////////////////////
 
 CXObject*
-CXSession::SelectObject(CString p_className,int p_primary)
+CXSession::Load(CString p_className,int p_primary)
 {
   SQLVariant prim = (long)p_primary;
   VariantSet set;
   set.push_back(&prim);
 
-  return SelectObject(p_className,set);
+  return Load(p_className,set);
 }
 
 CXObject*
-CXSession::SelectObject(CString p_tableName,SQLVariant* p_primary)
+CXSession::Load(CString p_tableName,SQLVariant* p_primary)
 {
   VariantSet set;
   set.push_back(p_primary);
 
-  return SelectObject(p_tableName,set);
+  return Load(p_tableName,set);
 }
 
 CXObject*
-CXSession::SelectObject(CString p_table,VariantSet& p_primary)
+CXSession::Load(CString p_table,VariantSet& p_primary)
 {
   // Search in cache
   CXObject* object = FindObjectInCache(p_table,p_primary);
@@ -383,16 +372,16 @@ CXSession::SelectObject(CString p_table,VariantSet& p_primary)
 }
 
 CXResultSet
-CXSession::SelectObject(CString p_tableName,SQLFilter* p_filter)
+CXSession::Load(CString p_tableName,SQLFilter* p_filter)
 {
   SQLFilterSet set;
   set.AddFilter(p_filter);
 
-  return SelectObject(p_tableName,set);
+  return Load(p_tableName,set);
 }
 
 CXResultSet
-CXSession::SelectObject(CString p_className,SQLFilterSet& p_filters)
+CXSession::Load(CString p_className,SQLFilterSet& p_filters)
 {
   CXResultSet set;
 
@@ -429,9 +418,22 @@ CXSession::SelectObject(CString p_className,SQLFilterSet& p_filters)
   return set;
 }
 
+bool
+CXSession::Save(CXObject* p_object,int p_mutationID /*= 0*/)
+{
+  if(p_object->IsTransient())
+  {
+    return Insert(p_object,p_mutationID);
+  }
+  else
+  {
+    return Update(p_object,p_mutationID);
+  }
+}
+
 // Update an object
 bool
-CXSession::UpdateObject(CXObject* p_object,int p_mutationID /*= 0*/)
+CXSession::Update(CXObject* p_object,int p_mutationID /*= 0*/)
 {
   if(m_role == CXH_Database_role)
   {
@@ -451,7 +453,7 @@ CXSession::UpdateObject(CXObject* p_object,int p_mutationID /*= 0*/)
 }
 
 bool
-CXSession::InsertObject(CXObject* p_object,int p_mutationID /*= 0*/)
+CXSession::Insert(CXObject* p_object,int p_mutationID /*= 0*/)
 {
   if(m_role == CXH_Database_role)
   {
@@ -476,7 +478,7 @@ CXSession::InsertObject(CXObject* p_object,int p_mutationID /*= 0*/)
 }
 
 bool
-CXSession::DeleteObject(CXObject* p_object,int p_mutationID /*= 0*/)
+CXSession::Delete(CXObject* p_object,int p_mutationID /*= 0*/)
 {
   if(m_role == CXH_Database_role)
   {
@@ -526,7 +528,7 @@ CXSession::Synchronize()
       if(record && (record->GetStatus() & SQL_Record_Updated))
       {
         object->Serialize(*record,mutationID);
-        if(UpdateObject(object,mutationID) == false)
+        if(Update(object,mutationID) == false)
         {
           RollbackMutation(mutationID);
           return false;
@@ -815,6 +817,12 @@ CXSession::FindObjectInDatabase(CString p_className,VariantSet& p_primary)
   {
     return nullptr;
   }
+
+  // Connect our database
+  dset->SetDatabase(m_database);
+
+  // Create correct query
+  theClass->BuildDefaultSelectQuery(m_database->GetSQLInfoDB());
 
   SQLFilterSet fset;
   if(CreateFilterSet(table,p_primary,fset))

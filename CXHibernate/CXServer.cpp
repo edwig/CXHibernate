@@ -90,7 +90,7 @@ CXServer::OnCXSelect(int p_code,SOAPMessage* p_message)
         p_message->Reset();
         try
         {
-          CXResultSet set = m_session->SelectObject(tablename,filters);
+          CXResultSet set = m_session->Load(tablename,filters);
           for(auto& object : set)
           {
             AddObjectToMessage(p_message,object);
@@ -139,7 +139,7 @@ CXServer::OnCXInsert(int p_code,SOAPMessage* p_message)
           CXObject* object = (*creating)();
           object->SetClass(theClass);
           object->DeSerialize(*p_message,entity);
-          if(m_session->InsertObject(object))
+          if(m_session->Insert(object))
           {
             p_message->Reset();
             p_message->SetParameter("Result","OK");
@@ -196,13 +196,13 @@ CXServer::OnCXUpdate(int p_code,SOAPMessage* p_message)
           VariantSet primary = object->GetPrimaryKey();
           delete object;
 
-          CXObject* realObject = m_session->SelectObject(tablename,primary);
+          CXObject* realObject = m_session->Load(tablename,primary);
           if(realObject)
           {
             // Now de-serialize AGAIN, but now in the correct object
             realObject->DeSerialize(*p_message,entity);
             // Go update in the database
-            if(m_session->UpdateObject(realObject))
+            if(m_session->Update(realObject))
             {
               p_message->Reset();
               p_message->SetParameter("Result","OK");
@@ -261,10 +261,10 @@ CXServer::OnCXDelete(int p_code,SOAPMessage* p_message)
           VariantSet primary = object->GetPrimaryKey();
           delete object;
 
-          CXObject* realObject = m_session->SelectObject(tablename,primary);
+          CXObject* realObject = m_session->Load(tablename,primary);
           if(realObject)
           {
-            if(m_session->DeleteObject(realObject))
+            if(m_session->Delete(realObject))
             {
               p_message->Reset();
               p_message->SetParameter("Result","OK");

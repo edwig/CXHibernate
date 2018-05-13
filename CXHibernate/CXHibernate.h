@@ -40,6 +40,8 @@ typedef enum _map_strategy
 }
 MapStrategy;
 
+#define HIBERNATE_CONFIG_FILE "hibernate.cfg.xml"
+
 // Maximum number of classes that can be initialized
 const unsigned int MAX_CLASSES = 1000;
 
@@ -95,7 +97,7 @@ private:
   MapStrategy   m_strategy { Strategy_standalone };
   // Mapping to all open sessions
   MapSessions   m_sessions;
-  // Mapping met alle create object functions
+  // Mapping with all create object functions
   MapCreate     m_createCXO;
 
   // DEFAULTS

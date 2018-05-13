@@ -98,6 +98,12 @@ CXObject* CreateCXObjectTestNumber()
   return new TestNumber();
 }
 
+CString
+TestNumber::ClassName()
+{
+  return "TestNumber";
+}
+
 #pragma  section(".ccxo$m",read)
 #pragma init_seg(".ccxo$m",cxoexit)
 class CXORegTestNumber
@@ -111,3 +117,5 @@ public:
 };
 
 CXORegTestNumber _registerDetail;
+
+

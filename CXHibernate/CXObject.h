@@ -96,6 +96,7 @@ protected:
   VariantSet m_primaryKey;
 
 private:
+  CString ClassName();
   // Fill in the primary key of the object
   void FillPrimaryKey(SOAPMessage& p_message, XMLElement* p_entity);
   void FillPrimaryKey(SQLRecord&   p_record);

@@ -50,7 +50,11 @@ typedef CXObject* (CALLBACK *CreateCXO)();
                                        {\
                                          return new classname();\
                                        }\
-__pragma(section(".ccxo$m",read))\
+CString classname::ClassName()\
+{\
+  return #classname;\
+}\
+__pragma(section (".ccxo$m",read))\
 __pragma(init_seg(".ccxo$m",cxoexit))\
 class CXOReg##classname\
 {\
@@ -63,10 +67,18 @@ public:\
 };\
 CXOReg##classname _register##classname;
 
-// A macro for the standard class constructor
-#define CXO_CONSTRUCTOR(classname)     classname::classname(CXClass* p_className)\
-                                       :CXObject(p_className)\
-                                       {}
+//////////////////////////////////////////////////////////////////////////
+//
+// OBJECT SERIALIZATION AND DE-SERIALIZATION
+//
+//////////////////////////////////////////////////////////////////////////
+
+// Bring the contents of the class to a SOAPMessage or a SQLRecord and vice versa
+#define DECLARE_CXO_SERIALIZATION virtual void   Serialize(SOAPMessage& p_message,XMLElement* p_entity);  \
+                                  virtual void   Serialize(SQLRecord&   p_record,int p_mutation = 0);     \
+                                  virtual void DeSerialize(SOAPMessage& p_message,XMLElement* p_entity);\
+                                  virtual void DeSerialize(SQLRecord&   p_record);\
+                                  static CString ClassName()
 
 // Serialization and de-serialization of your class object
 #define   CXO_DBS_SERIALIZE(c_type,property,column,XDT) p_record.ModifyField(column,property,p_mutation)
@@ -88,13 +100,6 @@ CXOReg##classname _register##classname;
 #define BEGIN_XML_DESERIALIZE(Classname) void Classname::DeSerialize(SOAPMessage& p_message,XMLElement* p_entity)\
                                          {PreDeSerialize(p_message,p_entity);
 #define END_XML_DESERIALIZE              PostDeSerialize(p_message,p_entity);}
-
-
-// Bring the contents of the class to a SOAPMessage or a SQLRecord and vice versa
-#define DECLARE_CXO_SERIALIZATION virtual void   Serialize(SOAPMessage& p_message,XMLElement* p_entity);  \
-                                  virtual void   Serialize(SQLRecord&   p_record,int p_mutation = 0);     \
-                                  virtual void DeSerialize(SOAPMessage& p_message,XMLElement* p_entity);\
-                                  virtual void DeSerialize(SQLRecord&   p_record)
 
 //////////////////////////////////////////////////////////////////////////
 //

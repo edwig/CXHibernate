@@ -80,6 +80,15 @@ CXTable::SetDataSet(SQLDataSet* p_dataset)
 SQLDataSet*
 CXTable::GetDataSet()
 {
+  if(m_dataSet == nullptr)
+  {
+    m_dataSet = new SQLDataSet();
+
+    // Fill in the dataset
+    m_dataSet->SetPrimaryTable(SchemaName(),TableName());
+    WordList list = GetPrimaryKeyAsList();
+    m_dataSet->SetPrimaryKeyColumn(list);
+  }
   return m_dataSet;
 }
 

@@ -25,13 +25,40 @@
 // Version number:  0.0.1
 //
 #pragma once
-#include <map>
+#include <sqlext.h>
+#include <vector>
 
 class CXClass;
 class CXAttribute;
 class XMLMessage;
 class XMLElement;
-using CXAttribMap = std::map<CString,CXAttribute>;
+using CXAttribMap = std::vector<CXAttribute*>;
+
+typedef struct _primaryKey
+{
+  CString     m_constraintName;
+  CXAttribMap m_attributes;
+
+  int         m_deferrable        { SQL_NOT_DEFERRABLE };
+  int         m_initiallyDeferred { 0 };
+}
+CXPrimaryKey;
+
+typedef struct _foreignKey
+{
+  CString     m_constraintName;
+  CXAttribMap m_attributes;
+  CString     m_primaryTable;
+  CXAttribMap m_primaryKey;
+
+  int       m_updateRule{ 1 };          // SQL_CASCADE(0) / SQL_NO_ACTION(3) / SQL_SET_NULL(2) / SQL_SET_DEFAULT(4) / SQL_RESTRICT(1)
+  int       m_deleteRule{ 1 };          // SQL_CASCADE(0) / SQL_NO_ACTION(3) / SQL_SET_NULL(2) / SQL_SET_DEFAULT(4) / SQL_RESTRICT(1)
+  int       m_deferrable{ 7 };          // SQL_INITIALLY_DEFERRED(5) / SQL_INITIALLY_IMMEDIATE(6) / SQL_NOT_DEFERRABLE(7)
+  int       m_match     { 0 };          // SQL_MATCH_FULL(0) / SQL_MATCH_PARTIAL(1) / SQL_MATCH_SIMPLE(2)
+  int       m_initiallyDeferred{ 0 };   // 0=Immediate, 1=initially deferred
+  int       m_enabled   { 0 };          // 1=Disabled,  0=enabled
+}
+CXForeignKey;
 
 class CXAttribute
 {

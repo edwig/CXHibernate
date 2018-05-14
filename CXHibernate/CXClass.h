@@ -47,7 +47,7 @@ public:
   CXTable*    GetTable();
 
   // Add an attribute to the class
-  void        AddAttribute(CXAttribute p_attribute);
+  void        AddAttribute(CXAttribute* p_attribute);
   // Find an attribute
   CXAttribute* FindAttribute(CString p_name);
   // Find the generator (if any)
@@ -64,6 +64,8 @@ public:
 protected:
   // Adding a sub-class
   void        AddSubClass(CXClass* p_subclass);
+  // Fill in our underlying table
+  void        FillTableInfoFromClassInfo();
 
 private:
   // The name of our class
@@ -78,4 +80,5 @@ private:
   CXTable*      m_table;
   // All attributes of this class
   CXAttribMap   m_attributes;
+  CXPrimaryKey  m_primary;
 };

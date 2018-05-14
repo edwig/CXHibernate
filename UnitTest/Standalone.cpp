@@ -344,27 +344,27 @@ namespace HibernateTest
 
     void DefineMaster(CXClass* p_class)
     {
-      p_class->AddAttribute(CXAttribute("int",   "id",0,false,true));
-      p_class->AddAttribute(CXAttribute("int",   "invoice"));
-      p_class->AddAttribute(CXAttribute("string","description",250));
-      p_class->AddAttribute(CXAttribute("bcd",   "total"));
+      p_class->AddAttribute(new CXAttribute("int",   "id",0,false,true));
+      p_class->AddAttribute(new CXAttribute("int",   "invoice"));
+      p_class->AddAttribute(new CXAttribute("string","description",250));
+      p_class->AddAttribute(new CXAttribute("bcd",   "total"));
     }
 
     void DefineDetail(CXClass* p_class)
     {
-      p_class->AddAttribute(CXAttribute("int",   "id",     0,false,true));
-      p_class->AddAttribute(CXAttribute("int",   "mast_id",0,false,false,true));
-      p_class->AddAttribute(CXAttribute("int",   "line"));
-      p_class->AddAttribute(CXAttribute("string","description",250));
-      p_class->AddAttribute(CXAttribute("bcd",   "amount"));
+      p_class->AddAttribute(new CXAttribute("int",   "id",     0,false,true));
+      p_class->AddAttribute(new CXAttribute("int",   "mast_id",0,false,false,true));
+      p_class->AddAttribute(new CXAttribute("int",   "line"));
+      p_class->AddAttribute(new CXAttribute("string","description",250));
+      p_class->AddAttribute(new CXAttribute("bcd",   "amount"));
     }
 
     void DefineNumbers(CXClass* p_class)
     {
-      p_class->AddAttribute(CXAttribute("int",   "id",0,true,true));
-      p_class->AddAttribute(CXAttribute("int",   "field1"));
-      p_class->AddAttribute(CXAttribute("double","field2"));
-      p_class->AddAttribute(CXAttribute("bcd",   "field3"));
+      p_class->AddAttribute(new CXAttribute("int",   "id",0,true,true));
+      p_class->AddAttribute(new CXAttribute("int",   "field1"));
+      p_class->AddAttribute(new CXAttribute("double","field2"));
+      p_class->AddAttribute(new CXAttribute("bcd",   "field3"));
     }
 
     void ReadTableDefinition(CXClass* p_class)

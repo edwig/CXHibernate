@@ -69,6 +69,11 @@ CXClass::~CXClass()
     delete m_table;
     m_table = nullptr;
   }
+
+  for(auto& attrib : m_attributes)
+  {
+    delete attrib;
+  }
 }
 
 // The name of the game
@@ -94,29 +99,29 @@ CXClass::GetTable()
 
 // Add an attribute to the class
 void
-CXClass::AddAttribute(CXAttribute p_attribute)
+CXClass::AddAttribute(CXAttribute* p_attribute)
 {
-  CString name = p_attribute.GetName();
-  name.MakeLower();
+  CString name = p_attribute->GetName();
   if(FindAttribute(name))
   {
     throw CString("Duplicate attribute cannot be added to class: ") + name;
   }
   // Just to be sure
-  p_attribute.SetClass(this);
+  p_attribute->SetClass(this);
   // Keep this attribute
-  m_attributes.insert(std::make_pair(name,p_attribute));
+  m_attributes.push_back(p_attribute);
 }
 
 // Find an attribute
 CXAttribute* 
 CXClass::FindAttribute(CString p_name)
 {
-  p_name.MakeLower();
-  CXAttribMap::iterator it = m_attributes.find(p_name);
-  if (it != m_attributes.end())
+  for (auto& attrib : m_attributes)
   {
-    return &it->second;
+    if(p_name.CompareNoCase(attrib->GetName()) == 0)
+    {
+      return attrib;
+    }
   }
   // Recursively ask our super classes
   if(m_super)
@@ -133,9 +138,9 @@ CXClass::FindGenerator()
   // Walk the list of attributes
   for(auto& attrib : m_attributes)
   {
-    if(attrib.second.GetIsGenerator())
+    if(attrib->GetIsGenerator())
     {
-      return &attrib.second;
+      return attrib;
     }
   }
   // Recursively ask our super classes
@@ -174,7 +179,7 @@ CXClass::SaveMetaInfo(XMLMessage& p_message,XMLElement* p_elem)
   XMLElement* attribs = p_message.AddElement(theclass,"attributes",XDT_String,"");
   for(auto& attr : m_attributes)
   {
-    attr.second.SaveMetaInfo(p_message,attribs);
+    attr->SaveMetaInfo(p_message,attribs);
   }
   return true;
 }
@@ -183,43 +188,45 @@ CXClass::SaveMetaInfo(XMLMessage& p_message,XMLElement* p_elem)
 bool
 CXClass::LoadMetaInfo(CXSession* p_session,XMLMessage& p_message,XMLElement* p_elem)
 {
-  XMLElement* name = p_message.FindElement(p_elem,"name");
-  if(name)
+  // Load underlying table name
+  CString schemaName = p_message.GetElement(p_elem,"schema");
+  CString tableName  = p_message.GetElement(p_elem,"table");
+  m_table->SetSchemaTableType(schemaName,tableName,"TABLE");
+
+  // Load superclass
+  CString super = p_message.GetElement(p_elem,"super");
+  if(!super.IsEmpty())
   {
-    // Load name
-    m_name = name->GetValue();
-    // Load superclass
-    XMLElement* super = p_message.FindElement(p_elem,"super");
-    if(super)
+    m_super = p_session->FindClass(super);
+  }
+  // Load subclasses
+  // ??
+
+  // Load attributes
+  XMLElement* attribs = p_message.FindElement(p_elem,"attributes");
+  if(attribs)
+  {
+    XMLElement* attrib = p_message.FindElement(attribs,"attribute");
+    while(attrib)
     {
-      m_super = p_session->FindClass(super->GetValue());
-    }
-    // Load subclasses
-    // ??
+      // Create the attribute
+      CString name = p_message.GetAttribute(attrib,"name");
+      CXAttribute* attribute = new CXAttribute(name);
 
-    // Load attributes
-    XMLElement* attribs = p_message.FindElement(p_elem,"attributes");
-    if(attribs)
-    {
-      XMLElement* attrib = p_message.FindElement(attribs,"attribute");
-      while(attrib)
-      {
-        // Create the attribute
-        CString name = p_message.GetAttribute(attrib,"name");
-        CXAttribute attribute(name);
+      // Load the attribute
+      attribute->LoadMetaInfo(p_message,attrib);
 
-        // Load the attribute
-        attribute.LoadMetaInfo(p_message,attrib);
-
-        // Keep the attribute
-        m_attributes.insert(std::make_pair(name,attribute));
-        // Next attributes
-        attrib = p_message.GetElementSibling(attrib);
-      }
-      return true;
+      // Keep the attribute
+      m_attributes.push_back(attribute);
+      // Next attributes
+      attrib = p_message.GetElementSibling(attrib);
     }
   }
-  return false;
+
+  // Fill in the table info
+  FillTableInfoFromClassInfo();
+
+  return !m_attributes.empty();
 }
 
 // Build default SELECT query
@@ -248,4 +255,38 @@ CXClass::AddSubClass(CXClass* p_subclass)
   {
     m_subClasses.push_back(p_subclass);
   }
+}
+
+// Fill in our underlying table
+void
+CXClass::FillTableInfoFromClassInfo()
+{
+  int position = 1;
+
+  for(auto& attrib : m_attributes)
+  {
+    MetaColumn column;
+    column.m_table      = m_table->TableName();
+    column.m_column     = attrib->GetDatabaseColumn();
+    column.m_datatype   = attrib->GetDataType();
+    column.m_columnSize = attrib->GetMaxLength();
+    column.m_position   = position++;
+
+    m_table->AddInfoColumn(column);
+  }
+
+  for(auto& attrib : m_attributes)
+  {
+    if(attrib->GetIsPrimary())
+    {
+      MetaPrimary prim;
+      prim.m_table          = m_table->TableName();
+      prim.m_columnName     = attrib->GetDatabaseColumn();
+      prim.m_columnPosition = 1;
+      prim.m_constraintName = "PK_" + prim.m_table;
+
+      m_table->AddPrimaryKey(prim);
+    }
+  }
+
 }

@@ -928,6 +928,9 @@ CXSession::SelectObjectsFromDatabase(CString p_className,SQLFilterSet& p_filters
     return;
   }
 
+  // Connect our database
+  dset->SetDatabase(m_database);
+
   // Close dataset if it was opened
   if(dset->IsOpen())
   {
@@ -993,6 +996,9 @@ CXSession::UpdateObjectInDatabase(CXObject* p_object,int p_mutationID /*= 0*/)
   SQLRecord* record = p_object->GetDatabaseRecord();
   SQLDataSet*  dset = table->GetDataSet();
 
+  // Connect our database
+  dset->SetDatabase(m_database);
+
   // New mutation ID for this update action
   if(p_mutationID == 0)
   {
@@ -1014,6 +1020,9 @@ CXSession::InsertObjectInDatabase(CXObject* p_object,int p_mutationID /*= 0*/)
   SQLRecord*   record = dset->InsertRecord();
   MColumnMap& columns = table->GetColumnInfo();
   SQLVariant zero;
+
+  // Connect our database
+  dset->SetDatabase(m_database);
 
   // See if dataset is empty
   if(dset->GetNumberOfRecords() == 1 && dset->GetNumberOfFields() == 0)
@@ -1069,6 +1078,9 @@ CXSession::DeleteObjectInDatabase(CXObject* p_object,int p_mutationID /*= 0*/)
   CXTable*    table = theClass->GetTable();
   SQLDataSet*  dset = table->GetDataSet();
   SQLRecord* record = p_object->GetDatabaseRecord();
+
+  // Connect our database
+  dset->SetDatabase(m_database);
 
   if(record == nullptr || dset == nullptr)
   {

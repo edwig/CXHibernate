@@ -64,15 +64,23 @@ CXClass::CXClass(CString p_name,CXClass* p_super,CreateCXO p_create)
 
 CXClass::~CXClass()
 {
+  // Remove underlying table
   if(m_table)
   {
     delete m_table;
     m_table = nullptr;
   }
 
+  // Clear our attributes
   for(auto& attrib : m_attributes)
   {
     delete attrib;
+  }
+
+  // Clear our foreign keys
+  for(auto& fkey : m_foreigns)
+  {
+    delete fkey;
   }
 }
 
@@ -181,8 +189,47 @@ CXClass::SaveMetaInfo(XMLMessage& p_message,XMLElement* p_elem)
   {
     attr->SaveMetaInfo(p_message,attribs);
   }
+
+  // Save primary key info
+  if(!m_primary.m_attributes.empty())
+  {
+    XMLElement* primary = p_message.AddElement(theclass,"primarykey",XDT_String,"");
+    p_message.SetAttribute(primary,"name",m_primary.m_constraintName);
+    CString deferrable;
+    switch(m_primary.m_deferrable)
+    {
+      case SQL_INITIALLY_DEFERRED:    deferrable = "initially_deferred";  break;
+      case SQL_INITIALLY_IMMEDIATE:   deferrable = "initially_immediate"; break;
+      case SQL_NOT_DEFERRABLE:        deferrable = "not_deferrable";      break;
+    }
+    p_message.SetAttribute(primary,"deferrable",deferrable);
+    p_message.SetAttribute(primary,"initially_deferred",m_primary.m_initiallyDeferred ? "deferred" : "immediate");
+
+    // Add the columns of the primary key
+    XMLElement* columns = p_message.AddElement(primary,"columns",XDT_String,"");
+    for(auto& col : m_primary.m_attributes)
+    {
+      p_message.AddElement(columns,"column",XDT_String,col->GetDatabaseColumn());
+    }
+  }
+
+  // Save Foreign key info
+  XMLElement* foreigns = p_message.AddElement(theclass,"foreignkeys",XDT_String,"");
+  for(auto& fkey : m_foreigns)
+  {
+    XMLElement* foreign = p_message.AddElement(foreigns,"foreignkey",XDT_String,"");
+    p_message.SetAttribute(foreign,"name",fkey->m_constraintName);
+    // update / delete / deferrable / match / initially-deferred / enabled
+    p_message.AddElement(foreign,"to-class",XDT_String,fkey->m_primaryTable);
+    XMLElement* columns = p_message.AddElement(foreign,"columns",XDT_String,"");
+    for(auto& col : fkey->m_attributes)
+    {
+      p_message.AddElement(columns,"column",XDT_String,col->GetDatabaseColumn());
+    }
+  }
   return true;
 }
+
 
 //DeSerialize from a XML configuration file
 bool
@@ -220,6 +267,66 @@ CXClass::LoadMetaInfo(CXSession* p_session,XMLMessage& p_message,XMLElement* p_e
       m_attributes.push_back(attribute);
       // Next attributes
       attrib = p_message.GetElementSibling(attrib);
+    }
+  }
+
+  // Load primary
+  XMLElement* primary = p_message.FindElement(p_elem,"primarykey");
+  if(primary)
+  {
+    m_primary.m_constraintName = p_message.GetAttribute(primary,"name");
+    CString deferr  = p_message.GetAttribute(primary,"deferrable");
+    CString initdef = p_message.GetAttribute(primary,"initially_deferred");
+    if(deferr.CompareNoCase("initailly_deferred") == 0) m_primary.m_deferrable = SQL_INITIALLY_DEFERRED;
+    if(deferr.CompareNoCase("initially_immediate")== 0) m_primary.m_deferrable = SQL_INITIALLY_IMMEDIATE;
+    if(deferr.CompareNoCase("not_deferrable") == 0)     m_primary.m_deferrable = SQL_NOT_DEFERRABLE;
+    m_primary.m_initiallyDeferred = initdef.CompareNoCase("deferred") == 0;
+
+    XMLElement* columns = p_message.FindElement(primary,"columns");
+    if(columns)
+    {
+      XMLElement* column = p_message.FindElement(columns,"column");
+      while(column)
+      {
+        CXAttribute* attrib = FindAttribute(column->GetValue());
+        if(attrib)
+        {
+          m_primary.m_attributes.push_back(attrib);
+        }
+        column = p_message.GetElementSibling(column);
+      }
+    }
+  }
+
+  // Load foreign key info
+  XMLElement* foreigns = p_message.FindElement(p_elem,"foreignkeys");
+  if(foreigns)
+  {
+    XMLElement* foreign = p_message.FindElement(foreigns,"foreignkey");
+    while(foreign)
+    {
+      CXForeignKey* fkey = new CXForeignKey();
+      fkey->m_constraintName = p_message.GetAttribute(foreign,"name");
+      fkey->m_primaryTable   = p_message.GetAttribute(foreign,"to-class");
+
+      XMLElement* columns = p_message.FindElement(foreign,"columns");
+      if(columns)
+      {
+        XMLElement* column = p_message.FindElement(columns,"column");
+        while(column)
+        {
+          CXAttribute* attrib = FindAttribute(column->GetValue());
+          if(attrib)
+          {
+            fkey->m_attributes.push_back(attrib);
+          }
+          column = p_message.GetElementSibling(column);
+        }
+      }
+      // Keep this foreign key
+      m_foreigns.push_back(fkey);
+      // Next foreign key
+      foreign = p_message.GetElementSibling(foreign);
     }
   }
 
@@ -263,6 +370,7 @@ CXClass::FillTableInfoFromClassInfo()
 {
   int position = 1;
 
+  // Add column info
   for(auto& attrib : m_attributes)
   {
     MetaColumn column;
@@ -275,18 +383,39 @@ CXClass::FillTableInfoFromClassInfo()
     m_table->AddInfoColumn(column);
   }
 
-  for(auto& attrib : m_attributes)
+  // Add primary key info
+  position = 1;
+  for(auto& attrib : m_primary.m_attributes)
   {
-    if(attrib->GetIsPrimary())
-    {
-      MetaPrimary prim;
-      prim.m_table          = m_table->TableName();
-      prim.m_columnName     = attrib->GetDatabaseColumn();
-      prim.m_columnPosition = 1;
-      prim.m_constraintName = "PK_" + prim.m_table;
+    MetaPrimary prim;
+    prim.m_table             = m_table->TableName();
+    prim.m_columnName        = attrib->GetDatabaseColumn();
+    prim.m_columnPosition    = position++;
+    prim.m_constraintName    = m_primary.m_constraintName;
+    prim.m_deferrable        = m_primary.m_deferrable;
+    prim.m_initiallyDeferred = m_primary.m_initiallyDeferred;
 
-      m_table->AddPrimaryKey(prim);
-    }
+    m_table->AddPrimaryKey(prim);
   }
 
+  // Add foreign keys
+  for(auto& foreign : m_foreigns)
+  {
+    position = 1;
+    for(auto& col : foreign->m_attributes)
+    {
+      MetaForeign fkey;
+
+      fkey.m_fkSchemaName      = m_table->SchemaName();
+      fkey.m_fkTableName       = m_table->TableName();
+      fkey.m_pkTableName       = foreign->m_primaryTable;
+      fkey.m_foreignConstraint = foreign->m_constraintName;
+      fkey.m_keySequence       = position++;
+      fkey.m_fkColumnName      = col->GetDatabaseColumn();
+
+      m_table->AddForeignKey(fkey);
+    }
+  }
 }
+
+

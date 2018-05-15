@@ -328,8 +328,8 @@ namespace HibernateTest
             ReadTableDefinition(detail);
             ReadTableDefinition(numbers);
 
-            hibernate.SaveConfiguration(m_session);
-}
+            // hibernate.SaveConfiguration(m_session);
+          }
           return true;
         }
         Assert::Fail();

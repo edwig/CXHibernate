@@ -79,6 +79,7 @@ private:
   // Underlying database table (in current mapping strategy)
   CXTable*      m_table;
   // All attributes of this class
-  CXAttribMap   m_attributes;
-  CXPrimaryKey  m_primary;
+  CXAttribMap   m_attributes;   // Column attributes
+  CXPrimaryKey  m_primary;      // Our primary key
+  CXForeigns    m_foreigns;     // Foreign key associations
 };

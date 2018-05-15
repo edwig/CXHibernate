@@ -38,8 +38,9 @@ typedef struct _primaryKey
 {
   CString     m_constraintName;
   CXAttribMap m_attributes;
-
+  // SQL_INITIALLY_DEFERRED(5) / SQL_INITIALLY_IMMEDIATE(6) / SQL_NOT_DEFERRABLE(7)
   int         m_deferrable        { SQL_NOT_DEFERRABLE };
+  // 0=Immediate, 1=initially deferred
   int         m_initiallyDeferred { 0 };
 }
 CXPrimaryKey;
@@ -49,7 +50,6 @@ typedef struct _foreignKey
   CString     m_constraintName;
   CXAttribMap m_attributes;
   CString     m_primaryTable;
-  CXAttribMap m_primaryKey;
 
   int       m_updateRule{ 1 };          // SQL_CASCADE(0) / SQL_NO_ACTION(3) / SQL_SET_NULL(2) / SQL_SET_DEFAULT(4) / SQL_RESTRICT(1)
   int       m_deleteRule{ 1 };          // SQL_CASCADE(0) / SQL_NO_ACTION(3) / SQL_SET_NULL(2) / SQL_SET_DEFAULT(4) / SQL_RESTRICT(1)
@@ -59,6 +59,8 @@ typedef struct _foreignKey
   int       m_enabled   { 0 };          // 1=Disabled,  0=enabled
 }
 CXForeignKey;
+
+using CXForeigns = std::vector<CXForeignKey*>;
 
 class CXAttribute
 {

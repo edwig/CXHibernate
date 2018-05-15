@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8"?>
+<hibernate>
+  <default_catalog />
+  <default_schema>sysdba</default_schema>
+  <strategy>standalone</strategy>
+  <session_role>database_role</session_role>
+  <class>
+    <name>Detail</name>
+	<schema>sysdba</schema>
+    <table>detail</table>
+    <attributes>
+      <attribute name="id" datatype="int" primary="true"/>
+      <attribute name="mast_id" datatype="int" foreign="true"/>
+      <attribute name="line" datatype="int"/>
+      <attribute name="description" datatype="string" maxlength="250"/>
+      <attribute name="amount" datatype="bcd"/>
+    </attributes>
+	<primarykey name="pk_detail">
+	  <column name="id" />
+	</primarykey>
+    <foreignkeys>
+	  <foreign name="fk_detail_master">
+	    <association_class>MASTER</association_class>
+	    <column name="mast_id" />
+	  </foreign>
+    </foreignkeys>
+  </class>
+  <class>
+    <name>Master</name>
+    <table>MASTER</table>
+    <attributes>
+      <attribute name="id" datatype="int" generator="true" primary="true"/>
+      <attribute name="invoice" datatype="int"/>
+      <attribute name="description" datatype="string" maxlength="250"/>
+      <attribute name="total" datatype="bcd"/>
+    </attributes>
+	<primarykey name="pk_master">
+	  <column name="id" />
+	</primarykey>
+    <foreignkeys />
+  </class>
+  <class>
+    <name>TestNumber</name>
+    <table>TEST_NUMBER</table>
+    <attributes>
+      <attribute name="id" datatype="int" generator="true" primary="true"/>
+      <attribute name="field1" datatype="int"/>
+      <attribute name="field2" datatype="double"/>
+      <attribute name="field3" datatype="bcd"/>
+    </attributes>
+	<primarykey name="pk_master">
+	  <column name="id" />
+	</primarykey>
+    <foreignkeys />
+  </class>
+</hibernate>

@@ -206,10 +206,10 @@ CXClass::SaveMetaInfo(XMLMessage& p_message,XMLElement* p_elem)
     p_message.SetAttribute(primary,"initially_deferred",m_primary.m_initiallyDeferred ? "deferred" : "immediate");
 
     // Add the columns of the primary key
-    XMLElement* columns = p_message.AddElement(primary,"columns",XDT_String,"");
     for(auto& col : m_primary.m_attributes)
     {
-      p_message.AddElement(columns,"column",XDT_String,col->GetDatabaseColumn());
+      XMLElement* column = p_message.AddElement(primary,"attribute",XDT_String,"");
+      p_message.SetAttribute(column,"name",col->GetDatabaseColumn());
     }
   }
 
@@ -217,14 +217,14 @@ CXClass::SaveMetaInfo(XMLMessage& p_message,XMLElement* p_elem)
   XMLElement* foreigns = p_message.AddElement(theclass,"foreignkeys",XDT_String,"");
   for(auto& fkey : m_foreigns)
   {
-    XMLElement* foreign = p_message.AddElement(foreigns,"foreignkey",XDT_String,"");
+    XMLElement* foreign = p_message.AddElement(foreigns,"foreign",XDT_String,"");
     p_message.SetAttribute(foreign,"name",fkey->m_constraintName);
     // update / delete / deferrable / match / initially-deferred / enabled
-    p_message.AddElement(foreign,"to-class",XDT_String,fkey->m_primaryTable);
-    XMLElement* columns = p_message.AddElement(foreign,"columns",XDT_String,"");
+    p_message.AddElement(foreign,"association_class",XDT_String,fkey->m_primaryTable);
     for(auto& col : fkey->m_attributes)
     {
-      p_message.AddElement(columns,"column",XDT_String,col->GetDatabaseColumn());
+      XMLElement* column = p_message.AddElement(foreign,"attribute",XDT_String,"");
+      p_message.SetAttribute(column,"name",col->GetDatabaseColumn());
     }
   }
   return true;
@@ -282,19 +282,16 @@ CXClass::LoadMetaInfo(CXSession* p_session,XMLMessage& p_message,XMLElement* p_e
     if(deferr.CompareNoCase("not_deferrable") == 0)     m_primary.m_deferrable = SQL_NOT_DEFERRABLE;
     m_primary.m_initiallyDeferred = initdef.CompareNoCase("deferred") == 0;
 
-    XMLElement* columns = p_message.FindElement(primary,"columns");
-    if(columns)
+    XMLElement* column = p_message.FindElement(primary,"column");
+    while(column)
     {
-      XMLElement* column = p_message.FindElement(columns,"column");
-      while(column)
+      CString name = p_message.GetAttribute(column,"name");
+      CXAttribute* attrib = FindAttribute(name);
+      if(attrib)
       {
-        CXAttribute* attrib = FindAttribute(column->GetValue());
-        if(attrib)
-        {
-          m_primary.m_attributes.push_back(attrib);
-        }
-        column = p_message.GetElementSibling(column);
+        m_primary.m_attributes.push_back(attrib);
       }
+      column = p_message.GetElementSibling(column);
     }
   }
 
@@ -302,26 +299,23 @@ CXClass::LoadMetaInfo(CXSession* p_session,XMLMessage& p_message,XMLElement* p_e
   XMLElement* foreigns = p_message.FindElement(p_elem,"foreignkeys");
   if(foreigns)
   {
-    XMLElement* foreign = p_message.FindElement(foreigns,"foreignkey");
+    XMLElement* foreign = p_message.FindElement(foreigns,"foreign");
     while(foreign)
     {
       CXForeignKey* fkey = new CXForeignKey();
       fkey->m_constraintName = p_message.GetAttribute(foreign,"name");
-      fkey->m_primaryTable   = p_message.GetAttribute(foreign,"to-class");
+      fkey->m_primaryTable   = p_message.GetElement(foreign,"association_class");
 
-      XMLElement* columns = p_message.FindElement(foreign,"columns");
-      if(columns)
+      XMLElement* column = p_message.FindElement(foreign,"column");
+      while(column)
       {
-        XMLElement* column = p_message.FindElement(columns,"column");
-        while(column)
+        CString name = p_message.GetAttribute(column,"name");
+        CXAttribute* attrib = FindAttribute(name);
+        if(attrib)
         {
-          CXAttribute* attrib = FindAttribute(column->GetValue());
-          if(attrib)
-          {
-            fkey->m_attributes.push_back(attrib);
-          }
-          column = p_message.GetElementSibling(column);
+          fkey->m_attributes.push_back(attrib);
         }
+        column = p_message.GetElementSibling(column);
       }
       // Keep this foreign key
       m_foreigns.push_back(fkey);

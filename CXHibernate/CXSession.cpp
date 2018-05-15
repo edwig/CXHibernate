@@ -589,9 +589,11 @@ CXSession::CreateFilestoreName(CXTable* p_table, VariantSet& p_primary)
     return "";
   }
 
-  fileName += "Object_";
+  CString hash = CXPrimaryHash(p_primary);
+  hash.Replace("\002", "_");
 
-  fileName += CXPrimaryHash(p_primary);
+  fileName += "Object_";
+  fileName += hash;
   fileName += ".xml";
 
   return fileName;

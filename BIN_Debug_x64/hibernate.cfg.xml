@@ -4,9 +4,14 @@
   <default_schema>sysdba</default_schema>
   <strategy>standalone</strategy>
   <session_role>database_role</session_role>
+  <resources>
+    <resource>detail_config.xml</resource>
+    <resource>master_config.xml</resource>
+    <resource>testnumber_config.xml</resource>
+  </resources>
   <class>
     <name>Detail</name>
-	<schema>sysdba</schema>
+	  <schema>sysdba</schema>
     <table>detail</table>
     <attributes>
       <attribute name="id" datatype="int" primary="true"/>
@@ -15,15 +20,26 @@
       <attribute name="description" datatype="string" maxlength="250"/>
       <attribute name="amount" datatype="bcd"/>
     </attributes>
-	<primarykey name="pk_detail">
-	  <column name="id" />
-	</primarykey>
+  	<primarykey name="pk_detail">
+	    <column name="id" />
+	  </primarykey>
     <foreignkeys>
-	  <foreign name="fk_detail_master">
-	    <association_class>MASTER</association_class>
-	    <column name="mast_id" />
-	  </foreign>
+	    <foreign name="fk_detail_master">
+	      <association_class>MASTER</association_class>
+	        <column name="mast_id" />
+	    </foreign>
     </foreignkeys>
+    <indices>
+      <index name="detail_line" unique="true" ascending="true">
+        <attribute name="mast_id" />
+        <attribute name="line" />"
+      </index>
+    </indices>
+    <generator name="detail_seq" start="1" />
+    <access>
+      <user name="public" rights="all" />
+      <user name="pronto" rights="select" />
+    </access>
   </class>
   <class>
     <name>Master</name>
@@ -34,9 +50,9 @@
       <attribute name="description" datatype="string" maxlength="250"/>
       <attribute name="total" datatype="bcd"/>
     </attributes>
-	<primarykey name="pk_master">
-	  <column name="id" />
-	</primarykey>
+	  <primarykey name="pk_master">
+	    <column name="id" />
+	  </primarykey>
     <foreignkeys />
   </class>
   <class>
@@ -48,9 +64,9 @@
       <attribute name="field2" datatype="double"/>
       <attribute name="field3" datatype="bcd"/>
     </attributes>
-	<primarykey name="pk_master">
-	  <column name="id" />
-	</primarykey>
+	  <primarykey name="pk_test_number">
+	    <column name="id" />
+	  </primarykey>
     <foreignkeys />
   </class>
 </hibernate>

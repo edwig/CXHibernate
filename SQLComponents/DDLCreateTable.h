@@ -27,9 +27,12 @@
 #pragma once
 #include "SQLComponents.h"
 #include "SQLInfoDB.h"
+#include <vector>
 
 namespace SQLComponents
 {
+
+using DDLS = std::vector<CString>;
 
 class DDLCreateTable
 {
@@ -39,7 +42,18 @@ public:
   // Request DDL for "table" or "schema.table" or "catalog.schema.table"
   // Where "table" can be of type: "TABLE" / "VIEW"
   CString GetTableDDL(CString p_tableName);
+  DDLS    GetTableStatements(CString p_tablename);
   bool    SaveDDL(CString p_filename);
+
+  // Internal delivery of all table information
+  void    SetTableInfoTable    (MTableMap&     p_info);
+  void    SetTableInfoColumns  (MColumnMap&    p_info);
+  void    SetTableInfoIndices  (MIndicesMap&   p_info);
+  void    SetTableInfoPrimary  (MPrimaryMap&   p_info);
+  void    SetTableInfoForeign  (MForeignMap&   p_info);
+  void    SetTableInfoTrigger  (MTriggerMap&   p_info);
+  void    SetTableInfoSequence (MSequenceMap&  p_info);
+  void    SetTableInfoPrivilege(MPrivilegeMap& p_info);
 
 private:
   // Primary formatting of 'create table' DDL
@@ -54,7 +68,7 @@ private:
 
   // Service routines
 
-  void    StashTheLine(CString p_line,CString p_extraEnd = "",int p_newlines = 1);
+  void    StashTheLine(CString p_line);
   CString ReplaceLengthPrecScale(CString p_template,int p_length,int p_precision,int p_scale);
   CString FormatColumnName(CString p_column,int p_length);
   int     CalculateColumnLength(MColumnMap& p_columns);
@@ -65,6 +79,7 @@ private:
   CString    m_schema;
   CString    m_tableName;
   CString    m_ddl;
+  DDLS       m_statements;
 
   // Mappings
   MTableMap       m_tables;
@@ -75,6 +90,16 @@ private:
   MTriggerMap     m_triggers;
   MSequenceMap    m_sequences;
   MPrivilegeMap   m_access;
+
+  // Info gotten
+  bool m_hasTable      { false };
+  bool m_hasColumns    { false };
+  bool m_hasIndices    { false };
+  bool m_hasPrimary    { false };
+  bool m_hasForeigns   { false };
+  bool m_hasTriggers   { false };
+  bool m_hasSequence   { false };
+  bool m_hasPrivileges { false };
 };
 
 };

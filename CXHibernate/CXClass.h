@@ -82,4 +82,7 @@ private:
   CXAttribMap   m_attributes;   // Column attributes
   CXPrimaryKey  m_primary;      // Our primary key
   CXForeigns    m_foreigns;     // Foreign key associations
+  CXIndices     m_indices;      // Constraints and performance speed-ups
+  CString       m_generator;    // Generator name
+  int           m_gen_value;    // Initial generator value
 };

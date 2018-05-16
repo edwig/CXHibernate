@@ -240,6 +240,12 @@ CXTable::AddIndex(MetaIndex& p_metaIndex)
 }
 
 void
+CXTable::AddSequence(MetaSequence& p_metaSequence)
+{
+  m_sequence = p_metaSequence;
+}
+
+void
 CXTable::AddPrivilege(MetaPrivilege& p_metaPrivilege)
 {
   m_privileges.push_back(p_metaPrivilege);

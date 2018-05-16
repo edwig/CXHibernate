@@ -33,6 +33,7 @@
       <index name="detail_line" unique="true" ascending="true">
         <attribute name="mast_id" />
         <attribute name="line" />"
+        <filter />
       </index>
     </indices>
     <generator name="detail_seq" start="1" />

@@ -62,6 +62,18 @@ CXForeignKey;
 
 using CXForeigns = std::vector<CXForeignKey*>;
 
+typedef struct _index
+{
+  CString     m_name;
+  bool        m_unique    { false };
+  bool        m_ascending { true };
+  CString     m_filter;
+  CXAttribMap m_attributes;
+}
+CXIndex;
+
+using CXIndices = std::vector<CXIndex*>;
+
 class CXAttribute
 {
 public:

@@ -82,6 +82,7 @@ public:
   void      AddPrimaryKey(MetaPrimary&   p_metaPrimary);
   void      AddForeignKey(MetaForeign&   p_metaForeign);
   void      AddIndex     (MetaIndex&     p_metaIndex);
+  void      AddSequence  (MetaSequence&  p_metaSequence);
   void      AddPrivilege (MetaPrivilege& p_metaPrivilege);
 
   // Get info from ODBC out of the database.
@@ -123,6 +124,7 @@ private:
   MPrimaryMap   m_primary;
   MForeignMap   m_foreigns;
   MIndicesMap   m_indices;
+  MetaSequence  m_sequence;
   MPrivilegeMap m_privileges;
   // Standard data set in a master connection
   SQLDataSet*   m_dataSet { nullptr };

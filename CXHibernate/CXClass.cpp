@@ -227,6 +227,34 @@ CXClass::SaveMetaInfo(XMLMessage& p_message,XMLElement* p_elem)
       p_message.SetAttribute(column,"name",col->GetDatabaseColumn());
     }
   }
+
+  // Save index info
+  XMLElement* indices = p_message.AddElement(theclass,"indices",XDT_String,"");
+  for(auto& ind : m_indices)
+  {
+    XMLElement* index = p_message.AddElement(indices,"index",XDT_String,"");
+    p_message.SetAttribute(index,"name",      ind->m_name);
+    p_message.SetAttribute(index,"unique",    ind->m_unique);
+    p_message.SetAttribute(index,"ascending", ind->m_ascending);
+    for(auto& attrib : ind->m_attributes)
+    {
+      XMLElement* attr = p_message.AddElement(index,"attribute",XDT_String,"");
+      p_message.SetAttribute(attr,"name",attrib->GetName());
+    }
+    if(!ind->m_filter.IsEmpty())
+    {
+      p_message.AddElement(index,"filter",XDT_String|XDT_CDATA,ind->m_filter);
+    }
+  }
+
+  // Save generator info
+  if(!m_generator.IsEmpty())
+  {
+    XMLElement* generator = p_message.AddElement(theclass, "generator", XDT_String, "");
+    p_message.SetAttribute(generator,"name", m_generator);
+    p_message.SetAttribute(generator,"start",m_gen_value);
+  }
+
   return true;
 }
 
@@ -324,6 +352,46 @@ CXClass::LoadMetaInfo(CXSession* p_session,XMLMessage& p_message,XMLElement* p_e
     }
   }
 
+  // Load indices
+  XMLElement* indices = p_message.FindElement(p_elem,"indices");
+  if(indices)
+  {
+    XMLElement* index = p_message.FindElement(indices,"index");
+    while (index)
+    {
+      CXIndex* ind = new CXIndex();
+      ind->m_name      = p_message.GetAttribute(index,"name");
+      ind->m_unique    = p_message.GetAttributeBoolean(index,"unique");
+      ind->m_ascending = p_message.GetAttributeBoolean(index,"ascending");
+      ind->m_filter    = p_message.GetElement(index,"filter");
+
+      XMLElement* attr = p_message.FindElement(index,"attribute");
+      while(attr)
+      {
+        CString name = p_message.GetAttribute(attr,"name");
+        CXAttribute* attribute = FindAttribute(name);
+        if (attribute)
+        {
+          ind->m_attributes.push_back(attribute);
+        }
+        attr = p_message.GetElementSibling(attr);
+      }
+
+      // Keep the index
+      m_indices.push_back(ind);
+      // next index
+      index = p_message.GetElementSibling(index);
+    }
+  }
+
+  // Load Generator
+  XMLElement* generator = p_message.FindElement(p_elem,"generator");
+  if(generator)
+  {
+    m_generator = p_message.GetAttribute(generator,"name");
+    m_gen_value = p_message.GetAttributeInteger(generator,"start");
+  }
+
   // Fill in the table info
   FillTableInfoFromClassInfo();
 
@@ -409,6 +477,37 @@ CXClass::FillTableInfoFromClassInfo()
 
       m_table->AddForeignKey(fkey);
     }
+  }
+
+  // Add indices
+  for(auto& index : m_indices)
+  {
+    position = 1;
+    for(auto& col : index->m_attributes)
+    {
+      MetaIndex ind;
+      ind.m_schemaName = m_table->SchemaName();
+      ind.m_tableName  = m_table->TableName();
+      ind.m_indexName  = index->m_name;
+      ind.m_columnName = col->GetDatabaseColumn();
+      ind.m_unique     = index->m_unique;
+      ind.m_ascending  = index->m_ascending ? 'A' : 'D';
+      ind.m_position   = position++;
+      ind.m_filter     = index->m_filter;
+
+      m_table->AddIndex(ind);
+    }
+  }
+
+  // Add generator / sequence
+  if(!m_generator.IsEmpty())
+  {
+    MetaSequence seq;
+    seq.m_schemaName   = m_table->SchemaName();
+    seq.m_sequenceName = m_generator;
+    seq.m_currentValue = m_gen_value;
+
+    m_table->AddSequence(seq);
   }
 }
 

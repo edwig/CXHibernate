@@ -82,6 +82,12 @@ CXClass::~CXClass()
   {
     delete fkey;
   }
+
+  // Clear the indices
+  for(auto& index : m_indices)
+  {
+    delete index;
+  }
 }
 
 // The name of the game
@@ -255,6 +261,19 @@ CXClass::SaveMetaInfo(XMLMessage& p_message,XMLElement* p_elem)
     p_message.SetAttribute(generator,"start",m_gen_value);
   }
 
+  // Save Access info
+  XMLElement* access = p_message.AddElement(theclass,"access",XDT_String,"");
+  for(auto& priv : m_privileges)
+  {
+    XMLElement* user = p_message.AddElement(access,"user",XDT_String,"");
+    p_message.SetAttribute(user,"name",  priv.m_grantee);
+    p_message.SetAttribute(user,"rights",priv.m_privilege);
+    if(priv.m_grantable)
+    {
+      p_message.SetAttribute(user,"grantable",true);
+    }
+  }
+
   return true;
 }
 
@@ -392,6 +411,24 @@ CXClass::LoadMetaInfo(CXSession* p_session,XMLMessage& p_message,XMLElement* p_e
     m_gen_value = p_message.GetAttributeInteger(generator,"start");
   }
 
+  // Load access privileges
+  XMLElement* access = p_message.FindElement(p_elem,"access");
+  if(access)
+  {
+    XMLElement* user = p_message.FindElement(access,"user");
+    while(user)
+    {
+      CXAccess acc;
+      acc.m_grantee   = p_message.GetAttribute(user,"name");
+      acc.m_privilege = p_message.GetAttribute(user,"rights");
+      acc.m_grantable = p_message.GetAttributeBoolean(user,"grantable");
+
+      m_privileges.push_back(acc);
+      // Next privilege
+      user = p_message.GetElementSibling(user);
+    }
+  }
+
   // Fill in the table info
   FillTableInfoFromClassInfo();
 
@@ -508,6 +545,19 @@ CXClass::FillTableInfoFromClassInfo()
     seq.m_currentValue = m_gen_value;
 
     m_table->AddSequence(seq);
+  }
+
+  // Add privileges
+  for(auto& access : m_privileges)
+  {
+    MetaPrivilege priv;
+    priv.m_schemaName = m_table->SchemaName();
+    priv.m_tableName  = m_table->TableName();
+    priv.m_grantee    = access.m_grantee;
+    priv.m_privilege  = access.m_privilege;
+    priv.m_grantable  = access.m_grantable;
+
+    m_table->AddPrivilege(priv);
   }
 }
 

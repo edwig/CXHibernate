@@ -39,7 +39,7 @@
     <generator name="detail_seq" start="1" />
     <access>
       <user name="public" rights="all" />
-      <user name="pronto" rights="select" />
+      <user name="pronto" rights="select" grantable="true" />
     </access>
   </class>
   <class>

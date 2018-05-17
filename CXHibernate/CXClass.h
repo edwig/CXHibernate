@@ -85,4 +85,5 @@ private:
   CXIndices     m_indices;      // Constraints and performance speed-ups
   CString       m_generator;    // Generator name
   int           m_gen_value;    // Initial generator value
+  CXPrivileges  m_privileges;   // All access rights
 };

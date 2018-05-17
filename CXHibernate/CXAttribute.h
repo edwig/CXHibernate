@@ -74,6 +74,18 @@ CXIndex;
 
 using CXIndices = std::vector<CXIndex*>;
 
+typedef struct _access
+{
+  CString m_grantee;
+  CString m_privilege;
+  bool    m_grantable { false };
+}
+CXAccess;
+
+using CXPrivileges = std::vector<CXAccess>;
+
+//////////////////////////////////////////////////////////////////////////
+
 class CXAttribute
 {
 public:

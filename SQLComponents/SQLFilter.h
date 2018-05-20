@@ -65,6 +65,7 @@ public:
   SQLFilter(CString p_field,SQLOperator p_operator,SQLVariant* p_value);
   SQLFilter(CString p_field,SQLOperator p_operator,int         p_value);
   SQLFilter(CString p_field,SQLOperator p_operator,CString     p_value);
+  SQLFilter(SQLFilter* p_other);
   ~SQLFilter();
 
   // Adding extra values for the IN or BETWEEN operators
@@ -145,7 +146,8 @@ SQLFilter::GetValue()
 inline void
 SQLFilter::AddValue(SQLVariant* p_value)
 {
-  m_values.push_back(p_value);
+  SQLVariant* value = new SQLVariant(p_value);
+  m_values.push_back(value);
 }
 
 inline void
@@ -189,7 +191,8 @@ public:
 
   void AddFilter(SQLFilter* p_filter)
   {
-    m_filters.push_back(p_filter);
+    SQLFilter* filter = new SQLFilter(p_filter);
+    m_filters.push_back(filter);
   }
 
   bool Empty()

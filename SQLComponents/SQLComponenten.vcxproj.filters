@@ -139,6 +139,12 @@
     <ClCompile Include="stdafx.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="XMLMessage.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="XMLParser.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="SQLVariantOperatorDiv.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -286,6 +292,15 @@
       <Filter>Headers Files</Filter>
     </ClInclude>
     <ClInclude Include="stdafx.h">
+      <Filter>Headers Files</Filter>
+    </ClInclude>
+    <ClInclude Include="XMLDataType.h">
+      <Filter>Headers Files</Filter>
+    </ClInclude>
+    <ClInclude Include="XMLMessage.h">
+      <Filter>Headers Files</Filter>
+    </ClInclude>
+    <ClInclude Include="XMLParser.h">
       <Filter>Headers Files</Filter>
     </ClInclude>
     <ClInclude Include="unzip.h">

@@ -28,6 +28,7 @@
 #include "CXObject.h"
 #include "CXTable.h"
 #include "CXClass.h"
+#include "CXPrimaryHash.h"
 #include <SQLRecord.h>
 #include <SOAPMessage.h>
 
@@ -65,6 +66,36 @@ CXClass*
 CXObject::GetClass()
 {
   return m_class;
+}
+
+// See if the object has the same business key as the other
+// Can also be used to sort the objects on
+int
+CXObject::Compare(CXObject* p_other)
+{
+  // See if it is the same object
+  if(this == p_other)
+  {
+    return 0;
+  }
+  VariantSet::iterator pkey = m_primaryKey.begin();
+  VariantSet::iterator okey = p_other->m_primaryKey.begin();
+  while(pkey != m_primaryKey.end() && okey != p_other->m_primaryKey.end())
+  {
+    if(*pkey < *okey) return -1;
+    if(*pkey > *okey) return  1;
+    // Next key
+    ++pkey;
+    ++okey;
+  }
+  return 0;
+}
+
+// The standard hash-code for object caches
+CString 
+CXObject::Hashcode()
+{
+  return CXPrimaryHash(m_primaryKey);
 }
 
 // Getting or setting the Primary key of the object

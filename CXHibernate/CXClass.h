@@ -46,17 +46,24 @@ public:
   // Getting our underlying database table
   CXTable*    GetTable();
 
-  // Add an attribute to the class
-  void        AddAttribute(CXAttribute* p_attribute);
+  // Add attributes to the class
+  void        AddAttribute  (CXAttribute*  p_attribute);
+  void        AddIdentity   (CXPrimaryKey& p_primary);
+  void        AddAssociation(CXForeignKey* p_key);
+  void        AddIndex      (CXIndex*      p_index);
+  void        AddGenerator  (CString       p_generator,int p_start);
+  void        AddPrivilege  (CXAccess&     p_access);
   // Find an attribute
   CXAttribute* FindAttribute(CString p_name);
-  // Find the generator (if any)
+  // Find the generator attribute (if any)
   CXAttribute* FindGenerator();
 
   // Serialize to a configuration XML file
   bool        SaveMetaInfo(XMLMessage& p_message,XMLElement* p_elem);
   // DeSerialize from a XML configuration file
   bool        LoadMetaInfo(CXSession* p_session,XMLMessage& p_message,XMLElement* p_elem);
+  // After loading we do the linking
+  void        LinkClasses(CXSession* p_session);
 
   // Build default SELECT query
   bool        BuildDefaultSelectQuery(SQLInfoDB* p_info);
@@ -67,6 +74,24 @@ protected:
   // Fill in our underlying table
   void        FillTableInfoFromClassInfo();
 
+  // SAVING CONFIGURATION INFO
+  void SaveMetaInfoSubClasses  (XMLMessage& p_message,XMLElement* p_theClass);
+  void SaveMetaInfoAttributes  (XMLMessage& p_message,XMLElement* p_theClass);
+  void SaveMetaInfoIdentity    (XMLMessage& p_message,XMLElement* p_theClass);
+  void SaveMetaInfoAssociations(XMLMessage& p_message,XMLElement* p_theClass);
+  void SaveMetaInfoIndices     (XMLMessage& p_message,XMLElement* p_theClass);
+  void SaveMetaInfoGenerator   (XMLMessage& p_message,XMLElement* p_theClass);
+  void SaveMetaInfoPrivileges  (XMLMessage& p_message,XMLElement* p_theClass);
+
+  // LOAD THE CONFIGURATION INFO
+  void LoadMetaInfoSubClasses  (XMLMessage& p_message,XMLElement* p_theClass);
+  void LoadMetaInfoAttributes  (XMLMessage& p_message,XMLElement* p_theClass);
+  void LoadMetaInfoIdentity    (XMLMessage& p_message,XMLElement* p_theClass);
+  void LoadMetaInfoAssociations(XMLMessage& p_message,XMLElement* p_theClass);
+  void LoadMetaInfoIndices     (XMLMessage& p_message,XMLElement* p_theClass);
+  void LoadMetaInfoGenerator   (XMLMessage& p_message,XMLElement* p_theClass);
+  void LoadMetaInfoPrivileges  (XMLMessage& p_message,XMLElement* p_theClass);
+
 private:
   // The name of our class
   CString       m_name;
@@ -74,6 +99,7 @@ private:
   CXClass*      m_super { nullptr };
   // In case of a super-class, these are our sub-classes
   SubClasses    m_subClasses;
+  WordList      m_subNames;
   // Our CXObject factory function
   CreateCXO     m_create { nullptr };
   // Underlying database table (in current mapping strategy)

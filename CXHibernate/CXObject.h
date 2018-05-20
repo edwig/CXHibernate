@@ -53,24 +53,28 @@ public:
   virtual void DeSerialize(SOAPMessage& p_message,XMLElement* p_entity) = 0;
   virtual void DeSerialize(SQLRecord&   p_record) = 0;
 
+  // Overridable functionality in the framework
+  virtual int  Compare(CXObject* p_other);
+  virtual CString Hashcode();
+
   // Getting or setting the Primary key of the object
-  void        SetPrimaryKey(SQLVariant* p_keyValue,int p_part);
-  SQLVariant* GetPrimaryKey(int p_part);
-  void        ResetPrimaryKey();
+  void         SetPrimaryKey(SQLVariant* p_keyValue,int p_part);
+  SQLVariant*  GetPrimaryKey(int p_part);
+  void         ResetPrimaryKey();
 
   // Object status
-  bool        IsTransient();
-  bool        IsPersistent();
-  void        MakeTransient();
+  bool         IsTransient();
+  bool         IsPersistent();
+  void         MakeTransient();
 
   // Getting the class of this object
-  CXClass*    GetClass();
+  CXClass*     GetClass();
 
   // Defined by the underlying database record
-  SQLRecord*  GetDatabaseRecord();
+  SQLRecord*   GetDatabaseRecord();
 
   // Getting the complete primary key
-  VariantSet& GetPrimaryKey();
+  VariantSet&  GetPrimaryKey();
 
 protected:
 

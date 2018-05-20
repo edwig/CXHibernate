@@ -54,5 +54,4 @@ private:
   CString m_description;
   bcd     m_amount;
   // Transient attributes go here
-
 };

@@ -34,8 +34,8 @@
 typedef enum _map_strategy
 {
    Strategy_standalone   // No sub/super classes. 1 table = 1 class
-  ,Strategy_one_table    // 1 table for super + all sub-classes
-  ,Strategy_sub_tables   // 1 table for super + 1 table per sub-class
+  ,Strategy_one_table    // 1 table for super    + all sub-classes
+  ,Strategy_sub_tables   // 1 table for super    + 1 table per sub-class
 //,Strategy_unions       // 1 table for subclass + all its supers
 }
 MapStrategy;
@@ -46,7 +46,7 @@ MapStrategy;
 const unsigned int MAX_CLASSES = 1000;
 
 class CXSession;
-using MapSessions = std::vector<CXSession*>;
+using MapSessions = std::map<CString,CXSession*>;
 using MapCreate   = std::map<CString,CreateCXO>;
 
 class CXHibernate
@@ -58,12 +58,15 @@ public:
   // FUNCTIONS
 
   // Loading and saving the general configuration XML
-  CXSession*   LoadConfiguration(CString p_configFile = "");
+  CXSession*   LoadConfiguration(CString p_sessionKey,CString p_configFile = "");
   bool         SaveConfiguration(CXSession* p_session,CString p_configFile = "");
+
+  // Getting a (possibly existing) session
+  CXSession*   GetSession(CString p_sessionKey = "");
   // Create a new Hibernate session
-  CXSession*   CreateSession();
-  // Adding a externally created session (but we now own it)
-  void         AddSession(CXSession* p_session);
+  CXSession*   CreateSession(CString p_sessionKey = "");
+  // Adding a externally created session (but we now own it). You **MUST** supply a session key
+  void         AddSession(CXSession* p_session,CString p_sessionKey);
   // Removing a session
   void         RemoveSession(CXSession* p_session);
   // Flushing all data to the database and closing all sessions
@@ -92,6 +95,8 @@ private:
   // Translate strategy names
   MapStrategy   StringToMapStrategy(CString p_strategy);
   CString       MapStrategyToString(MapStrategy p_strategy);
+  // Create an opaque session key
+  CString       CreateSessionKey();
 
   // Relational-Object-Mapping strategy
   MapStrategy   m_strategy { Strategy_standalone };
@@ -99,6 +104,8 @@ private:
   MapSessions   m_sessions;
   // Mapping with all create object functions
   MapCreate     m_createCXO;
+  // Current session key
+  int           m_key { 1 };
 
   // DEFAULTS
   CString       m_default_catalog;      // Default catalog

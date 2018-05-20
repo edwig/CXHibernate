@@ -126,6 +126,37 @@ CXClass::AddAttribute(CXAttribute* p_attribute)
   m_attributes.push_back(p_attribute);
 }
 
+void
+CXClass::AddIdentity(CXPrimaryKey& p_primary)
+{
+  m_primary = p_primary;
+}
+
+void
+CXClass::AddAssociation(CXForeignKey* p_key)
+{
+  m_foreigns.push_back(p_key);
+}
+
+void
+CXClass::AddIndex(CXIndex* p_index)
+{
+  m_indices.push_back(p_index);
+}
+
+void
+CXClass::AddGenerator(CString p_generator, int p_start)
+{
+  m_generator = p_generator;
+  m_gen_value = p_start;
+}
+
+void
+CXClass::AddPrivilege(CXAccess& p_access)
+{
+  m_privileges.push_back(p_access);
+}
+
 // Find an attribute
 CXAttribute* 
 CXClass::FindAttribute(CString p_name)
@@ -180,105 +211,21 @@ CXClass::SaveMetaInfo(XMLMessage& p_message,XMLElement* p_elem)
   p_message.AddElement(theclass,"table",XDT_String,m_table->TableName());
 
   // Add subclass references
-  if(!m_subClasses.empty())
-  {
-    XMLElement* subs = p_message.AddElement(theclass,"subclasses",XDT_String,"");
-    for(auto& sub : m_subClasses)
-    {
-      p_message.AddElement(subs,"subclass",XDT_String,sub->GetName());
-    }
-  }
+  SaveMetaInfoSubClasses(p_message,theclass);
 
-  // All attributes of the class
-  XMLElement* attribs = p_message.AddElement(theclass,"attributes",XDT_String,"");
-  for(auto& attr : m_attributes)
-  {
-    attr->SaveMetaInfo(p_message,attribs);
-  }
-
-  // Save primary key info
-  if(!m_primary.m_attributes.empty())
-  {
-    XMLElement* primary = p_message.AddElement(theclass,"primarykey",XDT_String,"");
-    p_message.SetAttribute(primary,"name",m_primary.m_constraintName);
-    CString deferrable;
-    switch(m_primary.m_deferrable)
-    {
-      case SQL_INITIALLY_DEFERRED:    deferrable = "initially_deferred";  break;
-      case SQL_INITIALLY_IMMEDIATE:   deferrable = "initially_immediate"; break;
-      case SQL_NOT_DEFERRABLE:        deferrable = "not_deferrable";      break;
-    }
-    p_message.SetAttribute(primary,"deferrable",deferrable);
-    p_message.SetAttribute(primary,"initially_deferred",m_primary.m_initiallyDeferred ? "deferred" : "immediate");
-
-    // Add the columns of the primary key
-    for(auto& col : m_primary.m_attributes)
-    {
-      XMLElement* column = p_message.AddElement(primary,"attribute",XDT_String,"");
-      p_message.SetAttribute(column,"name",col->GetDatabaseColumn());
-    }
-  }
-
-  // Save Foreign key info
-  XMLElement* foreigns = p_message.AddElement(theclass,"foreignkeys",XDT_String,"");
-  for(auto& fkey : m_foreigns)
-  {
-    XMLElement* foreign = p_message.AddElement(foreigns,"foreign",XDT_String,"");
-    p_message.SetAttribute(foreign,"name",fkey->m_constraintName);
-    // update / delete / deferrable / match / initially-deferred / enabled
-    p_message.AddElement(foreign,"association_class",XDT_String,fkey->m_primaryTable);
-    for(auto& col : fkey->m_attributes)
-    {
-      XMLElement* column = p_message.AddElement(foreign,"attribute",XDT_String,"");
-      p_message.SetAttribute(column,"name",col->GetDatabaseColumn());
-    }
-  }
-
-  // Save index info
-  XMLElement* indices = p_message.AddElement(theclass,"indices",XDT_String,"");
-  for(auto& ind : m_indices)
-  {
-    XMLElement* index = p_message.AddElement(indices,"index",XDT_String,"");
-    p_message.SetAttribute(index,"name",      ind->m_name);
-    p_message.SetAttribute(index,"unique",    ind->m_unique);
-    p_message.SetAttribute(index,"ascending", ind->m_ascending);
-    for(auto& attrib : ind->m_attributes)
-    {
-      XMLElement* attr = p_message.AddElement(index,"attribute",XDT_String,"");
-      p_message.SetAttribute(attr,"name",attrib->GetName());
-    }
-    if(!ind->m_filter.IsEmpty())
-    {
-      p_message.AddElement(index,"filter",XDT_String|XDT_CDATA,ind->m_filter);
-    }
-  }
-
-  // Save generator info
-  if(!m_generator.IsEmpty())
-  {
-    XMLElement* generator = p_message.AddElement(theclass, "generator", XDT_String, "");
-    p_message.SetAttribute(generator,"name", m_generator);
-    p_message.SetAttribute(generator,"start",m_gen_value);
-  }
-
-  // Save Access info
-  XMLElement* access = p_message.AddElement(theclass,"access",XDT_String,"");
-  for(auto& priv : m_privileges)
-  {
-    XMLElement* user = p_message.AddElement(access,"user",XDT_String,"");
-    p_message.SetAttribute(user,"name",  priv.m_grantee);
-    p_message.SetAttribute(user,"rights",priv.m_privilege);
-    if(priv.m_grantable)
-    {
-      p_message.SetAttribute(user,"grantable",true);
-    }
-  }
+  // All other class info
+  SaveMetaInfoAttributes  (p_message,theclass);
+  SaveMetaInfoIdentity    (p_message,theclass);
+  SaveMetaInfoAssociations(p_message,theclass);
+  SaveMetaInfoIndices     (p_message,theclass);
+  SaveMetaInfoGenerator   (p_message,theclass);
+  SaveMetaInfoPrivileges  (p_message,theclass);
 
   return true;
 }
 
 
-//DeSerialize from a XML configuration file
+// DeSerialize from a XML configuration file
 bool
 CXClass::LoadMetaInfo(CXSession* p_session,XMLMessage& p_message,XMLElement* p_elem)
 {
@@ -294,140 +241,15 @@ CXClass::LoadMetaInfo(CXSession* p_session,XMLMessage& p_message,XMLElement* p_e
     m_super = p_session->FindClass(super);
   }
   // Load subclasses
-  // ??
+  LoadMetaInfoSubClasses(p_message,p_elem);
 
-  // Load attributes
-  XMLElement* attribs = p_message.FindElement(p_elem,"attributes");
-  if(attribs)
-  {
-    XMLElement* attrib = p_message.FindElement(attribs,"attribute");
-    while(attrib)
-    {
-      // Create the attribute
-      CString name = p_message.GetAttribute(attrib,"name");
-      CXAttribute* attribute = new CXAttribute(name);
-
-      // Load the attribute
-      attribute->LoadMetaInfo(p_message,attrib);
-
-      // Keep the attribute
-      m_attributes.push_back(attribute);
-      // Next attributes
-      attrib = p_message.GetElementSibling(attrib);
-    }
-  }
-
-  // Load primary
-  XMLElement* primary = p_message.FindElement(p_elem,"primarykey");
-  if(primary)
-  {
-    m_primary.m_constraintName = p_message.GetAttribute(primary,"name");
-    CString deferr  = p_message.GetAttribute(primary,"deferrable");
-    CString initdef = p_message.GetAttribute(primary,"initially_deferred");
-    if(deferr.CompareNoCase("initailly_deferred") == 0) m_primary.m_deferrable = SQL_INITIALLY_DEFERRED;
-    if(deferr.CompareNoCase("initially_immediate")== 0) m_primary.m_deferrable = SQL_INITIALLY_IMMEDIATE;
-    if(deferr.CompareNoCase("not_deferrable") == 0)     m_primary.m_deferrable = SQL_NOT_DEFERRABLE;
-    m_primary.m_initiallyDeferred = initdef.CompareNoCase("deferred") == 0;
-
-    XMLElement* column = p_message.FindElement(primary,"column");
-    while(column)
-    {
-      CString name = p_message.GetAttribute(column,"name");
-      CXAttribute* attrib = FindAttribute(name);
-      if(attrib)
-      {
-        m_primary.m_attributes.push_back(attrib);
-      }
-      column = p_message.GetElementSibling(column);
-    }
-  }
-
-  // Load foreign key info
-  XMLElement* foreigns = p_message.FindElement(p_elem,"foreignkeys");
-  if(foreigns)
-  {
-    XMLElement* foreign = p_message.FindElement(foreigns,"foreign");
-    while(foreign)
-    {
-      CXForeignKey* fkey = new CXForeignKey();
-      fkey->m_constraintName = p_message.GetAttribute(foreign,"name");
-      fkey->m_primaryTable   = p_message.GetElement(foreign,"association_class");
-
-      XMLElement* column = p_message.FindElement(foreign,"column");
-      while(column)
-      {
-        CString name = p_message.GetAttribute(column,"name");
-        CXAttribute* attrib = FindAttribute(name);
-        if(attrib)
-        {
-          fkey->m_attributes.push_back(attrib);
-        }
-        column = p_message.GetElementSibling(column);
-      }
-      // Keep this foreign key
-      m_foreigns.push_back(fkey);
-      // Next foreign key
-      foreign = p_message.GetElementSibling(foreign);
-    }
-  }
-
-  // Load indices
-  XMLElement* indices = p_message.FindElement(p_elem,"indices");
-  if(indices)
-  {
-    XMLElement* index = p_message.FindElement(indices,"index");
-    while (index)
-    {
-      CXIndex* ind = new CXIndex();
-      ind->m_name      = p_message.GetAttribute(index,"name");
-      ind->m_unique    = p_message.GetAttributeBoolean(index,"unique");
-      ind->m_ascending = p_message.GetAttributeBoolean(index,"ascending");
-      ind->m_filter    = p_message.GetElement(index,"filter");
-
-      XMLElement* attr = p_message.FindElement(index,"attribute");
-      while(attr)
-      {
-        CString name = p_message.GetAttribute(attr,"name");
-        CXAttribute* attribute = FindAttribute(name);
-        if (attribute)
-        {
-          ind->m_attributes.push_back(attribute);
-        }
-        attr = p_message.GetElementSibling(attr);
-      }
-
-      // Keep the index
-      m_indices.push_back(ind);
-      // next index
-      index = p_message.GetElementSibling(index);
-    }
-  }
-
-  // Load Generator
-  XMLElement* generator = p_message.FindElement(p_elem,"generator");
-  if(generator)
-  {
-    m_generator = p_message.GetAttribute(generator,"name");
-    m_gen_value = p_message.GetAttributeInteger(generator,"start");
-  }
-
-  // Load access privileges
-  XMLElement* access = p_message.FindElement(p_elem,"access");
-  if(access)
-  {
-    XMLElement* user = p_message.FindElement(access,"user");
-    while(user)
-    {
-      CXAccess acc;
-      acc.m_grantee   = p_message.GetAttribute(user,"name");
-      acc.m_privilege = p_message.GetAttribute(user,"rights");
-      acc.m_grantable = p_message.GetAttributeBoolean(user,"grantable");
-
-      m_privileges.push_back(acc);
-      // Next privilege
-      user = p_message.GetElementSibling(user);
-    }
-  }
+  // Load all other meta info
+  LoadMetaInfoAttributes  (p_message,p_elem);
+  LoadMetaInfoIdentity    (p_message,p_elem);
+  LoadMetaInfoAssociations(p_message,p_elem);
+  LoadMetaInfoIndices     (p_message,p_elem);
+  LoadMetaInfoGenerator   (p_message,p_elem);
+  LoadMetaInfoPrivileges  (p_message,p_elem);
 
   // Fill in the table info
   FillTableInfoFromClassInfo();
@@ -462,6 +284,322 @@ CXClass::AddSubClass(CXClass* p_subclass)
     m_subClasses.push_back(p_subclass);
   }
 }
+
+// SAVING THE CONFIGURATION
+
+// Saving all references to all subclasses of the class
+void 
+CXClass::SaveMetaInfoSubClasses(XMLMessage& p_message,XMLElement* p_theClass)
+{
+  if(!m_subClasses.empty())
+  {
+    XMLElement* subs = p_message.AddElement(p_theClass,"subclasses",XDT_String,"");
+    for(auto& sub : m_subClasses)
+    {
+      p_message.AddElement(subs,"subclass",XDT_String,sub->GetName());
+    }
+  }
+}
+
+// Saving all the attributes of the class
+void 
+CXClass::SaveMetaInfoAttributes(XMLMessage& p_message,XMLElement* p_theClass)
+{
+  XMLElement* attribs = p_message.AddElement(p_theClass,"attributes",XDT_String,"");
+  for(auto& attr : m_attributes)
+  {
+    attr->SaveMetaInfo(p_message,attribs);
+  }
+}
+
+// Saving the identity of an object in the class
+void 
+CXClass::SaveMetaInfoIdentity(XMLMessage& p_message,XMLElement* p_theClass)
+{
+  if(!m_primary.m_attributes.empty())
+  {
+    XMLElement* primary = p_message.AddElement(p_theClass,"primarykey",XDT_String,"");
+    p_message.SetAttribute(primary,"name",m_primary.m_constraintName);
+    CString deferrable;
+    switch(m_primary.m_deferrable)
+    {
+      case SQL_INITIALLY_DEFERRED:    deferrable = "initially_deferred";  break;
+      case SQL_INITIALLY_IMMEDIATE:   deferrable = "initially_immediate"; break;
+      case SQL_NOT_DEFERRABLE:        deferrable = "not_deferrable";      break;
+    }
+    p_message.SetAttribute(primary,"deferrable",deferrable);
+    p_message.SetAttribute(primary,"initially_deferred",m_primary.m_initiallyDeferred ? "deferred" : "immediate");
+
+    // Add the columns of the primary key
+    for(auto& col : m_primary.m_attributes)
+    {
+      XMLElement* column = p_message.AddElement(primary,"attribute",XDT_String,"");
+      p_message.SetAttribute(column,"name",col->GetDatabaseColumn());
+    }
+  }
+}
+
+// Saving the associations to other classes
+void 
+CXClass::SaveMetaInfoAssociations(XMLMessage& p_message,XMLElement* p_theClass)
+{
+  XMLElement* foreigns = p_message.AddElement(p_theClass,"foreignkeys",XDT_String,"");
+  for(auto& fkey : m_foreigns)
+  {
+    XMLElement* foreign = p_message.AddElement(foreigns,"foreign",XDT_String,"");
+    p_message.SetAttribute(foreign,"name",fkey->m_constraintName);
+    // update / delete / deferrable / match / initially-deferred / enabled
+    p_message.AddElement(foreign,"association_class",XDT_String,fkey->m_primaryTable);
+    for(auto& col : fkey->m_attributes)
+    {
+      XMLElement* column = p_message.AddElement(foreign,"attribute",XDT_String,"");
+      p_message.SetAttribute(column,"name",col->GetDatabaseColumn());
+    }
+  }
+}
+
+// Saving the unique constraints and lookup indices
+void 
+CXClass::SaveMetaInfoIndices(XMLMessage& p_message,XMLElement* p_theClass)
+{
+  XMLElement* indices = p_message.AddElement(p_theClass,"indices",XDT_String,"");
+  for(auto& ind : m_indices)
+  {
+    XMLElement* index = p_message.AddElement(indices,"index",XDT_String,"");
+    p_message.SetAttribute(index,"name",      ind->m_name);
+    p_message.SetAttribute(index,"unique",    ind->m_unique);
+    p_message.SetAttribute(index,"ascending", ind->m_ascending);
+    for(auto& attrib : ind->m_attributes)
+    {
+      XMLElement* attr = p_message.AddElement(index,"attribute",XDT_String,"");
+      p_message.SetAttribute(attr,"name",attrib->GetName());
+    }
+    if(!ind->m_filter.IsEmpty())
+    {
+      p_message.AddElement(index,"filter",XDT_String|XDT_CDATA,ind->m_filter);
+    }
+  }
+}
+
+// Saving the identity generator information
+void 
+CXClass::SaveMetaInfoGenerator(XMLMessage& p_message,XMLElement* p_theClass)
+{
+  if(!m_generator.IsEmpty())
+  {
+    XMLElement* generator = p_message.AddElement(p_theClass, "generator", XDT_String, "");
+    p_message.SetAttribute(generator,"name", m_generator);
+    p_message.SetAttribute(generator,"start",m_gen_value);
+  }
+}
+
+// Saving the access privileges of the class
+void 
+CXClass::SaveMetaInfoPrivileges(XMLMessage& p_message,XMLElement* p_theClass)
+{
+  XMLElement* access = p_message.AddElement(p_theClass,"access",XDT_String,"");
+  for(auto& priv : m_privileges)
+  {
+    XMLElement* user = p_message.AddElement(access,"user",XDT_String,"");
+    p_message.SetAttribute(user,"name",  priv.m_grantee);
+    p_message.SetAttribute(user,"rights",priv.m_privilege);
+    if(priv.m_grantable)
+    {
+      p_message.SetAttribute(user,"grantable",true);
+    }
+  }
+}
+
+// LOADING THE CONFIGURATION
+
+// Loading the names to the subclass references only
+// The real linking will be done after the configuration is fully loaded!
+void 
+CXClass::LoadMetaInfoSubClasses(XMLMessage& p_message,XMLElement* p_theClass)
+{
+  XMLElement* subs = p_message.FindElement(p_theClass,"subclasses");
+  if(subs)
+  {
+    XMLElement* sub = p_message.FindElement(subs,"subclass");
+    while(sub)
+    {
+      m_subNames.push_back(sub->GetValue());
+      sub = p_message.GetElementSibling(subs);
+    }
+  }
+}
+
+// Loading the class attributes
+void 
+CXClass::LoadMetaInfoAttributes(XMLMessage& p_message,XMLElement* p_theClass)
+{
+  XMLElement* attribs = p_message.FindElement(p_theClass,"attributes");
+  if(attribs)
+  {
+    XMLElement* attrib = p_message.FindElement(attribs,"attribute");
+    while(attrib)
+    {
+      // Create the attribute
+      CString name = p_message.GetAttribute(attrib,"name");
+      CXAttribute* attribute = new CXAttribute(name);
+
+      // Load the attribute
+      attribute->LoadMetaInfo(p_message,attrib);
+
+      // Keep the attribute
+      m_attributes.push_back(attribute);
+      // Next attributes
+      attrib = p_message.GetElementSibling(attrib);
+    }
+  }
+}
+
+// Loading the primary key identity info
+void 
+CXClass::LoadMetaInfoIdentity(XMLMessage& p_message,XMLElement* p_theClass)
+{
+  XMLElement* primary = p_message.FindElement(p_theClass,"primarykey");
+  if(primary)
+  {
+    m_primary.m_constraintName = p_message.GetAttribute(primary,"name");
+    CString deferr  = p_message.GetAttribute(primary,"deferrable");
+    CString initdef = p_message.GetAttribute(primary,"initially_deferred");
+    if(deferr.CompareNoCase("initailly_deferred") == 0) m_primary.m_deferrable = SQL_INITIALLY_DEFERRED;
+    if(deferr.CompareNoCase("initially_immediate")== 0) m_primary.m_deferrable = SQL_INITIALLY_IMMEDIATE;
+    if(deferr.CompareNoCase("not_deferrable") == 0)     m_primary.m_deferrable = SQL_NOT_DEFERRABLE;
+    m_primary.m_initiallyDeferred = initdef.CompareNoCase("deferred") == 0;
+
+    XMLElement* column = p_message.FindElement(primary,"column");
+    while(column)
+    {
+      CString name = p_message.GetAttribute(column,"name");
+      CXAttribute* attrib = FindAttribute(name);
+      if(attrib)
+      {
+        m_primary.m_attributes.push_back(attrib);
+      }
+      column = p_message.GetElementSibling(column);
+    }
+  }
+}
+
+// Loading the associations to other classes
+void 
+CXClass::LoadMetaInfoAssociations(XMLMessage& p_message,XMLElement* p_theClass)
+{
+  XMLElement* foreigns = p_message.FindElement(p_theClass,"foreignkeys");
+  if(foreigns)
+  {
+    XMLElement* foreign = p_message.FindElement(foreigns,"foreign");
+    while(foreign)
+    {
+      CXForeignKey* fkey = new CXForeignKey();
+      fkey->m_constraintName = p_message.GetAttribute(foreign,"name");
+      fkey->m_primaryTable   = p_message.GetElement(foreign,"association_class");
+
+      XMLElement* column = p_message.FindElement(foreign,"column");
+      while(column)
+      {
+        CString name = p_message.GetAttribute(column,"name");
+        CXAttribute* attrib = FindAttribute(name);
+        if(attrib)
+        {
+          fkey->m_attributes.push_back(attrib);
+        }
+        column = p_message.GetElementSibling(column);
+      }
+      // Keep this foreign key
+      m_foreigns.push_back(fkey);
+      // Next foreign key
+      foreign = p_message.GetElementSibling(foreign);
+    }
+  }
+}
+
+// Loading unique constraints and lookup indices
+void 
+CXClass::LoadMetaInfoIndices(XMLMessage& p_message,XMLElement* p_theClass)
+{
+  XMLElement* indices = p_message.FindElement(p_theClass,"indices");
+  if(indices)
+  {
+    XMLElement* index = p_message.FindElement(indices,"index");
+    while (index)
+    {
+      CXIndex* ind = new CXIndex();
+      ind->m_name      = p_message.GetAttribute(index,"name");
+      ind->m_unique    = p_message.GetAttributeBoolean(index,"unique");
+      ind->m_ascending = p_message.GetAttributeBoolean(index,"ascending");
+      ind->m_filter    = p_message.GetElement(index,"filter");
+
+      XMLElement* attr = p_message.FindElement(index,"attribute");
+      while(attr)
+      {
+        CString name = p_message.GetAttribute(attr,"name");
+        CXAttribute* attribute = FindAttribute(name);
+        if (attribute)
+        {
+          ind->m_attributes.push_back(attribute);
+        }
+        attr = p_message.GetElementSibling(attr);
+      }
+
+      // Keep the index
+      m_indices.push_back(ind);
+      // next index
+      index = p_message.GetElementSibling(index);
+    }
+  }
+}
+
+// Loading the generator for the identity
+void 
+CXClass::LoadMetaInfoGenerator(XMLMessage& p_message,XMLElement* p_theClass)
+{
+  XMLElement* generator = p_message.FindElement(p_theClass,"generator");
+  if(generator)
+  {
+    m_generator = p_message.GetAttribute(generator,"name");
+    m_gen_value = p_message.GetAttributeInteger(generator,"start");
+  }
+}
+
+// Loading access privileges of the class
+void 
+CXClass::LoadMetaInfoPrivileges(XMLMessage& p_message,XMLElement* p_theClass)
+{
+  XMLElement* access = p_message.FindElement(p_theClass,"access");
+  if(access)
+  {
+    XMLElement* user = p_message.FindElement(access,"user");
+    while(user)
+    {
+      CXAccess acc;
+      acc.m_grantee   = p_message.GetAttribute(user,"name");
+      acc.m_privilege = p_message.GetAttribute(user,"rights");
+      acc.m_grantable = p_message.GetAttributeBoolean(user,"grantable");
+
+      m_privileges.push_back(acc);
+      // Next privilege
+      user = p_message.GetElementSibling(user);
+    }
+  }
+}
+
+// After loading we do the linking
+void 
+CXClass::LinkClasses(CXSession* p_session)
+{
+  for(auto& sub : m_subNames)
+  {
+    CXClass* subclass = p_session->FindClass(sub);
+    if(subclass)
+    {
+      m_subClasses.push_back(subclass);
+    }
+  }
+}
+
 
 // Fill in our underlying table
 void

@@ -42,21 +42,24 @@ static char THIS_FILE[] = __FILE__;
 #endif
 
 // CTOR Default session (slave side of the session)
-CXSession::CXSession()
-          :m_role(CXH_Internet_role)
+CXSession::CXSession(CString p_sessionKey)
+          :m_sessionKey(p_sessionKey)
+          ,m_role(CXH_Internet_role)
 {
 }
 
 // CTOR Filestore session
-CXSession::CXSession(CString p_directory)
-          :m_baseDirectory(p_directory)
+CXSession::CXSession(CString p_sessionKey,CString p_directory)
+          :m_sessionKey(p_sessionKey)
+          ,m_baseDirectory(p_directory)
           ,m_role(CXH_Filestore_role)
 {
 }
 
 // CTOR Master session
-CXSession::CXSession(CString p_database,CString p_user,CString p_password)
-          :m_role(CXH_Database_role)
+CXSession::CXSession(CString p_sessionKey,CString p_database,CString p_user,CString p_password)
+          :m_sessionKey(p_sessionKey)
+          ,m_role(CXH_Database_role)
 {
   m_database = new SQLDatabase();
   if(m_database->Open(p_database,p_user,p_password))
@@ -194,6 +197,12 @@ CXSession::LoadConfiguration(XMLMessage& p_config)
     }
     // Find next class
     theclass = p_config.GetElementSibling(theclass);
+  }
+
+  // Late linking of subclasses
+  for(auto& cl : m_classes)
+  {
+    cl.second->LinkClasses(this);
   }
 }
 

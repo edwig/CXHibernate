@@ -396,7 +396,7 @@ SQLVariant::GetSQLDataType()
 //
 //////////////////////////////////////////////////////////////////////////
 
-using var = SQLComponents::SQLVariant;
+using var = SQLVariant;
 
 // End of namespace
 }

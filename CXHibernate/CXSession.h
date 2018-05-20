@@ -44,11 +44,11 @@ class CXSession
 {
 public:
   // Construct as a internet slave
-  CXSession();
+  CXSession(CString p_sessionKey);
   // Construct as a filestore handler
-  CXSession(CString p_directory);
+  CXSession(CString p_sessionKey,CString p_directory);
   // Construct as a database master handler
-  CXSession(CString p_database,CString p_user,CString p_password);
+  CXSession(CString p_sessionKey,CString p_database,CString p_user,CString p_password);
   // DTOR
  ~CXSession();
 
@@ -142,6 +142,7 @@ private:
   bool          InsertObjectInInternet (CXObject* p_object,int p_mutationID = 0);
   bool          DeleteObjectInInternet (CXObject* p_object,int p_mutationID = 0);
 
+  CString       m_sessionKey;                  // As known by CXHibernate
   CXHRole       m_role { CXH_Database_role};   // Master/Slave role of the session
   bool          m_ownDatabase   { false   };   // We own / destroy this database
   CString       m_baseDirectory;               // Base directory for filestore role

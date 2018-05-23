@@ -531,8 +531,9 @@ SQLVariantFormat::GetDateFromStringVariant(SQLVariant* p_variant,CString p_forma
       lang.AsDateStruct(p_date);
       return true;
     }
-    catch (...)
+    catch(CException* e)
     {
+      e->Delete();
     }
     return false;
   }
@@ -852,9 +853,10 @@ SQLVariantFormat::DateCalculate(char p_operator,CString p_argument)
       SQLInterval intval = other - date;
       m_format.Format("%d",intval.GetDays());
     }
-    catch(...)
+    catch(CException* e)
     {
       // Does nothing. Underlying date is unchanged
+      e->Delete();
     }
   }
   return OK;
@@ -961,7 +963,7 @@ SQLVariantFormat::FormatVariantForSQL(SQLDatabase* p_database)
   else
   {
     CString datatypeString = m_variant->FindDatatype(datatype);
-    throw CString("Cannot prepare datatype for query: " + datatypeString);
+    throw new StdException("Cannot prepare datatype for query: " + datatypeString);
   }
   return text;
 }

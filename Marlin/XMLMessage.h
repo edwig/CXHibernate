@@ -26,11 +26,8 @@
 // THE SOFTWARE.
 //
 #pragma once
-#include <bcd.h>
 #include <deque>
 #include "XMLDataType.h"
-
-using SQLComponents::bcd;
 
 // XML coding of the message
 enum class XMLEncoding

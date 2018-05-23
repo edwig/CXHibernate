@@ -219,6 +219,12 @@ XMLParser::ParseMessage(CString& p_message,WhiteSpace p_whiteSpace /*=PRESERVE_W
     // Error message text already set
     m_message->m_internalError = error;
   }
+  catch(StdException* ex)
+  {
+    m_message->m_internalError = XmlError::XE_NotAnXMLMessage;
+    m_message->m_internalErrorString = ex->GetErrorMessage();
+    ex->Delete();
+  }
 
   // Conclusion of condensed level
   m_message->SetCondensed(m_spaces < m_elements);
@@ -297,7 +303,7 @@ XMLParser::SetError(XmlError p_error,const uchar* p_text,bool p_throw /*=true*/)
   // Passing it on
   if(p_throw)
   {
-    throw p_error;
+    throw new StdException((int)p_error);
   }
 }
 

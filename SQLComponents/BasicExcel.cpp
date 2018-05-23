@@ -3672,7 +3672,8 @@ ULONG Worksheet::Read(const char* data)
 {
   ULONG bytesRead = 0;
 
-  try {
+  try 
+  {
     short code;
     LittleEndian::Read(data, code, 0, 2);
 
@@ -3724,10 +3725,11 @@ ULONG Worksheet::Read(const char* data)
     }
 
     bytesRead += eof_.RecordSize();
-  } catch(EXCEPTION_YEOF& e) {
+  } 
+  catch(EXCEPTION_YEOF& e) 
+  {
     bytesRead += e._bytesRead;
   }
-
   return bytesRead;
 }
 

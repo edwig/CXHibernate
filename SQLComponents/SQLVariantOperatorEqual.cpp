@@ -1241,7 +1241,7 @@ SQLVariant::operator==(SQLVariant& p_right)
   CString rightType = FindDatatype(p_right.m_datatype);
   CString error;
   error.Format("Cannot do the equality operator on (%s == %s)",leftType.GetString(),rightType.GetString());
-  throw error;
+  throw new StdException(error);
 }
 
 // Inequality operator for SQLVariant
@@ -1278,7 +1278,7 @@ SQLVariant::operator!=(SQLVariant& p_right)
   CString rightType = FindDatatype(p_right.m_datatype);
   CString error;
   error.Format("Cannot do the inequality operator on (%s != %s)",leftType.GetString(),rightType.GetString());
-  throw error;
+  throw new StdException(error);
 }
 
 // End of namespace

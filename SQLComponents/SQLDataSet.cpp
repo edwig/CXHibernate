@@ -531,10 +531,10 @@ SQLDataSet::Open(bool p_stopIfNoColumns /*=false*/)
 
     trans.Commit();
   }
-  catch(CString s)
+  catch(StdException* er)
   {
     Close();
-    throw s;
+    throw er;
   }
   if(m_records.size())
   {
@@ -607,10 +607,10 @@ SQLDataSet::Append()
     result = true;
     trans.Commit();
   }
-  catch(CString s)
+  catch(StdException* er)
   {
     Close();
-    throw s;
+    throw er;
   }
   // Goto the first freshly read record
   if(m_records.size() > sizeBefore)
@@ -739,7 +739,7 @@ SQLDataSet::CheckNames(SQLQuery& p_query)
     p_query.GetColumnName(ind,name);
     if(m_names[ind-1].CompareNoCase(name))
     {
-      throw CString("Append needs exactly the same query column names");
+      throw new StdException("Append needs exactly the same query column names");
     }
   }
 }
@@ -754,7 +754,7 @@ SQLDataSet::CheckTypes(SQLQuery& p_query)
     int type = p_query.GetColumnType(ind);
     if(m_types[ind-1] != type)
     {
-      throw CString("Append needs exactly the same datatypes for the query columns.");
+      throw new StdException("Append needs exactly the same datatypes for the query columns.");
     }
   }
 }
@@ -1135,12 +1135,13 @@ SQLDataSet::Synchronize(int p_mutationID /*=0*/)
     // After the commit we throw away our changes
     Reduce(p_mutationID);
   }
-  catch(CString& error)
+  catch(StdException* er)
   {
     // Automatic rollback will be done now
-    m_database->LogPrint(1,"Database synchronization stopped: " + error);
+    m_database->LogPrint(1,"Database synchronization stopped: " + er->GetErrorMessage());
     // Restore original status of the dataset, reduce never done
     m_status = oldStatus;
+    er->Delete();
     return false;
   }
   // Ready
@@ -1217,7 +1218,7 @@ SQLDataSet::Deletes(int p_mutationID)
       {
         case MUT_OnlyOthers: ++it;  // do nothing with record
                              break;
-        case MUT_Mixed:      throw CString("Mixed mutations");
+        case MUT_Mixed:      throw new StdException("Mixed mutations");
         case MUT_NoMutation: // Fall through: Remove record
         case MUT_MyMutation: sql = GetSQLDelete(&query,record);
                              query.DoSQLStatement(sql);
@@ -1273,7 +1274,7 @@ SQLDataSet::Updates(int p_mutationID)
       {
         case MUT_NoMutation: // Fall through: do nothing
         case MUT_OnlyOthers: break;
-        case MUT_Mixed:      throw CString("Mixed mutations");
+        case MUT_Mixed:      throw new StdException("Mixed mutations");
         case MUT_MyMutation: sql = GetSQLUpdate(&query,record);
                              query.DoSQLStatement(sql);
                              ++update;
@@ -1310,7 +1311,7 @@ SQLDataSet::Inserts(int p_mutationID)
       {
         case MUT_NoMutation: // Fall through: Do nothing
         case MUT_OnlyOthers: break;
-        case MUT_Mixed:      throw CString("Mixed mutations");
+        case MUT_Mixed:      throw new StdException("Mixed mutations");
         case MUT_MyMutation: sql = GetSQLInsert(&query,record,serial);
                              query.DoSQLStatement(sql);
                              ++insert;
@@ -1564,8 +1565,8 @@ SQLDataSet::XMLLoad(XMLMessage* p_msg,XMLElement* p_dataset)
 {
   XMLElement* structur = p_msg->FindElement(p_dataset,dataset_names[g_defaultLanguage][DATASET_STRUCTURE],false);
   XMLElement* records  = p_msg->FindElement(p_dataset,dataset_names[g_defaultLanguage][DATASET_RECORDS],  false);
-  if(structur == NULL) throw CString("Structure part missing in the XML dataset.") + m_name;
-  if(records  == NULL) throw CString("Records part missing in the XML dataset") + m_name;
+  if(structur == NULL) throw new StdException("Structure part missing in the XML dataset." + m_name);
+  if(records  == NULL) throw new StdException("Records part missing in the XML dataset" + m_name);
 
   // Read the structure
   XMLElement* field = p_msg->GetElementFirstChild(structur);

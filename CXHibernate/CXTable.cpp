@@ -252,7 +252,6 @@ CXTable::AddPrivilege(MetaPrivilege& p_metaPrivilege)
 }
 
 // Get info from ODBC out of the database.
-// Can throw a CString error!
 bool
 CXTable::GetMetaInfoFromDatabase(SQLDatabase& p_database
                                 ,bool p_getForeigns   /*= false*/
@@ -357,7 +356,7 @@ CXTable::GetTableInfo(SQLInfoDB* p_info)
   // Find table info
   if(!p_info->MakeInfoTableTable(tables,errors,m_table.m_schema,m_table.m_table))
   {
-    throw CString("Cannot find table: ") + FullQualifiedTableName() + " : " + errors;
+    throw new StdException("Cannot find table: " + FullQualifiedTableName() + " : " + errors);
   }
 
   // Some engines get a synonym AND a table/view record
@@ -377,7 +376,7 @@ CXTable::GetColumnInfo(SQLInfoDB* p_info)
   m_columns.clear();
   if(!p_info->MakeInfoTableColumns(m_columns,errors,m_table.m_schema,m_table.m_table))
   {
-    throw CString("Cannot find columns for table: ") + FullQualifiedTableName() + " : " + errors;
+    throw new StdException("Cannot find columns for table: " + FullQualifiedTableName() + " : " + errors);
   }
 }
 
@@ -391,7 +390,7 @@ CXTable::GetPrimaryKeyInfo(SQLInfoDB* p_info)
   p_info->MakeInfoTablePrimary(m_primary,errors,m_table.m_schema,m_table.m_table);
   if(!errors.IsEmpty())
   {
-    throw CString("Cannot find the primary key for table: ") + FullQualifiedTableName() + " : " + errors;
+    throw new StdException("Cannot find the primary key for table: " + FullQualifiedTableName() + " : " + errors);
   }
 }
 
@@ -405,7 +404,7 @@ CXTable::GetForeignKeyInfo(SQLInfoDB* p_info)
   p_info->MakeInfoTableForeign(m_foreigns,errors,m_table.m_schema,m_table.m_table);
   if (!errors.IsEmpty())
   {
-    throw CString("Cannot find the foreign keys for table: ") + FullQualifiedTableName() + " : " + errors;
+    throw new StdException("Cannot find the foreign keys for table: " + FullQualifiedTableName() + " : " + errors);
   }
 }
 
@@ -419,7 +418,7 @@ CXTable::GetIndexInfo(SQLInfoDB* p_info)
   p_info->MakeInfoTableStatistics(m_indices,errors,m_table.m_schema,m_table.m_table,nullptr);
   if (!errors.IsEmpty())
   {
-    throw CString("Cannot find indices for table: ") + FullQualifiedTableName() + " : " + errors;
+    throw new StdException("Cannot find indices for table: " + FullQualifiedTableName() + " : " + errors);
   }
 }
 
@@ -433,7 +432,7 @@ CXTable::GetPrivilegeInfo(SQLInfoDB* p_info)
   p_info->MakeInfoTablePrivileges(m_privileges,errors,m_table.m_schema,m_table.m_table);
   if(!errors.IsEmpty())
   {
-    throw CString("Cannot find the privileges for table: ") + FullQualifiedTableName() + " : " + errors;
+    throw new StdException("Cannot find the privileges for table: " + FullQualifiedTableName() + " : " + errors);
   }
 }
 

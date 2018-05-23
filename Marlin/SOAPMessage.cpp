@@ -598,7 +598,7 @@ SOAPMessage::SetReliability(bool p_reliable,bool p_throw /* = true*/)
     else if(p_throw)
     {
       CString error("Basic conditions for Reliable-Messaging are not met. Cannot send RM message");
-      throw error;
+      throw new StdException(error);
     }
   }
   else
@@ -808,7 +808,7 @@ SOAPMessage::GetParameterMandatory(CString p_paramName)
   }
   CString msg;
   msg.Format("Missing parameter [%s.%s]",m_soapAction.GetString(),p_paramName.GetString());
-  throw msg;
+  throw new StdException(msg);
 }
 
 // Set/Add parameter to the header section (level 1.1 and 1.2 only!)
@@ -832,7 +832,7 @@ SOAPMessage::SetHeaderParameter(CString p_name,const char* p_value,bool p_first 
   }
   CString error;
   error.Format("Tried to set a header parameter [%s:%s], but no header present (SOAP 1.0)!",p_name.GetString(),p_value);
-  throw error;
+  throw new StdException(error);
 }
 
 // General add a parameter (always adds, so multiple parameters of same name can be added)
@@ -881,7 +881,7 @@ XMLElement*
 SOAPMessage::AddElement(XMLElement* p_base,CString p_name,XmlDataType p_type,double p_value,bool p_front /*=false*/)
 {
   CString value;
-  value.Format("%.16g",p_value);
+  value.Format("16.16%g",p_value);
   value = value.TrimRight('0');
   return AddElement(p_base,p_name,p_type,value,p_front);
 }
@@ -901,7 +901,7 @@ SOAPMessage::GetHeaderParameter(CString p_paramName)
   }
   CString error;
   error.Format("Tried to get a header parameter [%s], but no header present (yet)!",p_paramName.GetString());
-  throw error;
+  throw new StdException(error);
 }
 
 // Get sub parameter from the header

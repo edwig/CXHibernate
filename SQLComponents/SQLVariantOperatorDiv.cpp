@@ -1650,7 +1650,7 @@ SQLVariant::operator/(SQLVariant& p_right)
   // Check whether there is something to divide by!
   if(p_right.IsEmpty())
   {
-    throw CString("Cannot do a division by zero/empty");
+    throw new StdException("Cannot do a division by zero/empty");
   }
 
   // Find our comparison function
@@ -1665,7 +1665,7 @@ SQLVariant::operator/(SQLVariant& p_right)
   CString rightType = FindDatatype(p_right.m_datatype);
   CString error;
   error.Format("Cannot do the division operator on (%s / %s)",leftType.GetString(),rightType.GetString());
-  throw error;
+  throw new StdException(error);
 }
 
 // End of namespace

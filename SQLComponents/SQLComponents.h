@@ -26,6 +26,7 @@
 //
 #pragma once
 #include "SQLLanguage.h"
+#include "StdException.h"
 
 // Everything in this library is part of this namespace
 namespace SQLComponents

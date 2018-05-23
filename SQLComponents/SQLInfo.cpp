@@ -51,7 +51,9 @@ namespace SQLComponents
   { \
   m_retCode = SQL_ERROR; \
   m_retCode = (SQLFunc); \
-  } catch(...) {}
+  } catch(StdException* ex)\
+  { ex->Delete();\
+  }
 
 SQLInfo::SQLInfo(SQLDatabase* p_database)
         :m_database(p_database)
@@ -1186,7 +1188,7 @@ SQLInfo::GetStatement(bool p_metadataID /*= true*/)
   {
     CString errorText = "Error in ODBC statement: ";
     errorText += m_database->GetErrorString(m_hstmt);
-    throw errorText;
+    throw new StdException(errorText);
   }
   SQLUINTEGER meta = p_metadataID ? SQL_TRUE : SQL_FALSE;
   // On Various ODBC databases metadata is or is not case-sensitive. To work around
@@ -2590,7 +2592,7 @@ SQLInfo::NativeSQL(HDBC hdbc,CString& sqlCommand)
   }
   if(!hdbc)
   {
-    throw CString("NativeSQL called without an opened database!");
+    throw new StdException("NativeSQL called without an opened database!");
   }
 
   // Perform the conversion call

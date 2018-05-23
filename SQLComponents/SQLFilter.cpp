@@ -133,7 +133,7 @@ SQLFilter::GetSQLFilter()
     case OP_IN:           sql += " IN (";    break;
     case OP_Between:      sql += " BETWEEN ";break;
     case OP_NOP:          // Fall through
-    default:              throw CString("SQLFilter without an operator!");
+    default:              throw new StdException("SQLFilter without an operator!");
   }
 
   // In case of a LIKE search of a character field
@@ -174,7 +174,7 @@ SQLFilter::MatchRecord(SQLRecord* p_record)
   // Check that we do NOT have a free expression
   if(!m_expression.IsEmpty())
   {
-    throw CString("Cannot match a filter internally on an expression!");
+    throw new StdException("Cannot match a filter internally on an expression!");
   }
 
   // Getting the left hand operand
@@ -198,7 +198,7 @@ SQLFilter::MatchRecord(SQLRecord* p_record)
     case OP_IsNULL:       result = MatchIsNULL      (field); break;
     case OP_IN:           result = MatchIN          (field); break;
     case OP_Between:      result = MatchBetween     (field); break;
-    default:              throw CString("SQLFilter with unknown operator!");
+    default:              throw new StdException("SQLFilter with unknown operator!");
   }
   // Return the correct result
   return m_negate ? !result : result;
@@ -216,7 +216,7 @@ SQLFilter::CheckValue()
 {
   if(m_values.empty())
   {
-    throw CString("No operand value for SQLFilter provided!");
+    throw new StdException("No operand value for SQLFilter provided!");
   }
 }
 
@@ -226,7 +226,7 @@ SQLFilter::CheckTwoValues()
 {
   if(m_values.size() != 2)
   {
-    throw CString("SQLFilter with BETWEEN operator and number of arguments is not two (2) values");
+    throw new StdException("SQLFilter with BETWEEN operator and number of arguments is not two (2) values");
   }
 }
 
@@ -257,7 +257,7 @@ SQLFilter::ConstructLike(CString& p_sql)
   // Check that we do the operation on a character string
   if(m_values[0]->GetDataType() != SQL_C_CHAR)
   {
-    throw CString("Cannot use LIKE on a non-string data type!");
+    throw new StdException("Cannot use LIKE on a non-string data type!");
   }
   // Get string without leading/trailing quote
   CString value;

@@ -471,7 +471,7 @@ XMLMessage::AddElement(XMLElement* p_base,CString p_name,XmlDataType p_type,CStr
   // Check for stupid programmers
   if(p_name.Find(' ') > 0)
   {
-    throw CString("XML Messages with spaces in elementnames are invalid!");
+    throw new StdException("XML Messages with spaces in elementnames are invalid!");
   }
 
   XmlElementMap& elements = p_base ? p_base->m_elements : m_root.m_elements;

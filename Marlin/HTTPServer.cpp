@@ -1204,6 +1204,16 @@ HTTPServer::SendEvent(EventStream* p_stream
     return false;
   }
 
+  // But we must now make sure the event stream still does exist
+  // and has not been closed by the event monitor
+  {
+    AutoCritSec lock(&m_eventLock);
+    if(!HasEventStream(p_stream))
+    {
+      return false;
+    }
+  }
+
   // Set next stream id
   ++p_stream->m_lastID;
 
@@ -1278,9 +1288,9 @@ HTTPServer::SendEvent(EventStream* p_stream
   // Delivered our event, but out of more datachunks for next requests
   if(p_stream->m_chunks > MAX_DATACHUNKS)
   {
-    // Call recursive (!) with p_continue to false
-    ServerEvent* event = new ServerEvent("close");
-    return SendEvent(p_stream,event,false);
+    // Abort stream, so client will reopen a new stream
+    AbortEventStream(p_stream);
+    return false;
   }
 
   // Delivered the event at least to one stream

@@ -42,8 +42,9 @@ inline SQLRETURN SqlDriverConnect(SQLHDBC hdbc, SQLHWND hwnd, SQLCHAR *szConnStr
   {
     return ::SQLDriverConnect(hdbc, hwnd, szConnStrIn, cbConnStrIn, szConnStrOut, cbConnStrOutMax, pcbConnStrOut, fDriverCompletion);
   }
-  catch(...)
+  catch(StdException* er)
   {
+    er->Delete();
     return SQL_ERROR;
   }
 }
@@ -54,8 +55,9 @@ inline SQLRETURN SqlDisconnect(SQLHDBC ConnectionHandle)
   {
     return ::SQLDisconnect(ConnectionHandle);
   }
-  catch(...)
+  catch (StdException* er)
   {
+    er->Delete();
     return SQL_ERROR;
   }
 }
@@ -66,8 +68,9 @@ inline SQLRETURN SqlFreeHandle(SQLSMALLINT HandleType, SQLHANDLE Handle)
   {
     return SQLFreeHandle(HandleType, Handle);
   }
-  catch(...)
+  catch (StdException* er)
   {
+    er->Delete();
     return SQL_ERROR;
   }
 }
@@ -78,8 +81,9 @@ inline SQLRETURN SqlFreeStmt(HSTMT stmt,SQLUSMALLINT option)
   {
     return SQLFreeStmt(stmt,option);
   }
-  catch(...)
+  catch (StdException* er)
   {
+    er->Delete();
     return SQL_ERROR;
   }
 }
@@ -90,8 +94,9 @@ inline SQLRETURN SqlGetInfo(SQLHDBC hdbc, SQLUSMALLINT fInfoType, SQLPOINTER rgb
   {
     return SQLGetInfo(hdbc, fInfoType, rgbInfoValue, cbInfoValueMax, pcbInfoValue);
   }
-  catch(...)
+  catch (StdException* er)
   {
+    er->Delete();
     return SQL_ERROR;
   }
 }
@@ -102,8 +107,9 @@ inline SQLRETURN SqlAllocHandle(SQLSMALLINT HandleType, SQLHANDLE InputHandle, S
   {
     return SQLAllocHandle(HandleType, InputHandle, OutputHandle);
   }
-  catch(...)
+  catch (StdException* er)
   {
+    er->Delete();
     return SQL_ERROR;
   }
 }
@@ -114,8 +120,9 @@ inline SQLRETURN SqlAllocEnv(SQLHENV *EnvironmentHandle)
   {
     return SQLAllocEnv(EnvironmentHandle);
   }
-  catch(...)
+  catch (StdException* er)
   {
+    er->Delete();
     return SQL_ERROR;
   }
 }
@@ -126,8 +133,9 @@ inline SQLRETURN SqlAllocConnect(SQLHENV EnvironmentHandle, SQLHDBC *ConnectionH
   {
     return SQLAllocConnect(EnvironmentHandle, ConnectionHandle);
   }
-  catch(...)
+  catch (StdException* er)
   {
+    er->Delete();
     return SQL_ERROR;
   }
 }
@@ -138,8 +146,9 @@ inline SQLRETURN SqlAllocStmt(SQLHDBC ConnectionHandle, SQLHSTMT *StatementHandl
   {
     return SQLAllocStmt(ConnectionHandle, StatementHandle);
   }
-  catch(...)
+  catch (StdException* er)
   {
+    er->Delete();
     return SQL_ERROR;
   }
 }
@@ -150,8 +159,9 @@ inline SQLRETURN SqlGetDiagRec(SQLSMALLINT fHandleType, SQLHANDLE handle, SQLSMA
   {
     return SQLGetDiagRec(fHandleType, handle, iRecord, szSqlState, pfNativeError, szErrorMsg, cbErrorMsgMax, pcbErrorMsg);
   }
-  catch(...)
+  catch(StdException* er)
   {
+    er->Delete();
     return SQL_ERROR;
   }
 }
@@ -162,8 +172,9 @@ inline SQLRETURN SqlEndTran(SQLSMALLINT HandleType, SQLHANDLE Handle, SQLSMALLIN
   {
     return SQLEndTran(HandleType, Handle, CompletionType);
   }
-  catch(...)
+  catch(StdException* er)
   {
+    er->Delete();
     return SQL_ERROR;
   }
 }
@@ -174,8 +185,9 @@ inline SQLRETURN SqlSetConnectAttr(SQLHDBC hdbc, SQLINTEGER fAttribute, SQLPOINT
   {
     return SQLSetConnectAttr(hdbc, fAttribute, rgbValue, cbValue);
   }
-  catch(...)
+  catch(StdException* er)
   {
+    er->Delete();
     return SQL_ERROR;
   }
 }
@@ -186,8 +198,9 @@ inline SQLRETURN SqlCloseCursor(SQLHSTMT StatementHandle)
   {
     return SQLCloseCursor(StatementHandle);
   }
-  catch(...)
+  catch(StdException* er)
   {
+    er->Delete();
     return SQL_ERROR;
   }
 }
@@ -198,8 +211,9 @@ inline SQLRETURN SqlPrepare(SQLHSTMT hstmt, SQLCHAR *szSqlStr, SQLINTEGER cbSqlS
   {
     return SQLPrepare(hstmt, szSqlStr, cbSqlStr);
   }
-  catch(...)
+  catch(StdException* er)
   {
+    er->Delete();
     return SQL_ERROR;
   }
 }
@@ -210,8 +224,9 @@ inline SQLRETURN SqlNumParams(SQLHSTMT hstmt, SQLSMALLINT *pcpar)
   {
     return SQLNumParams(hstmt, pcpar);
   }
-  catch(...)
+  catch(StdException* er)
   {
+    er->Delete();
     return SQL_ERROR;
   }
 }
@@ -222,8 +237,9 @@ inline SQLRETURN SqlExecute(SQLHSTMT StatementHandle)
   {
     return SQLExecute(StatementHandle);
   }
-  catch(...)
+  catch(StdException* er)
   {
+    er->Delete();
     return SQL_ERROR;
   }
 }
@@ -234,8 +250,9 @@ inline SQLRETURN SqlExecDirect(SQLHSTMT hstmt, SQLCHAR *szSqlStr, SQLINTEGER cbS
   {
     return SQLExecDirect(hstmt, szSqlStr, cbSqlStr);
   }
-  catch(...)
+  catch(StdException* er)
   {
+    er->Delete();
     return SQL_ERROR;
   }
 }
@@ -246,8 +263,9 @@ inline SQLRETURN SqlRowCount(SQLHSTMT StatementHandle, SQLLEN* RowCount)
   {
     return SQLRowCount(StatementHandle, RowCount);
   }
-  catch(...)
+  catch(StdException* er)
   {
+    er->Delete();
     return SQL_ERROR;
   }
 }
@@ -258,8 +276,9 @@ inline SQLRETURN SqlFetch(SQLHSTMT StatementHandle)
   {
     return SQLFetch(StatementHandle);
   }
-  catch(...)
+  catch(StdException* er)
   {
+    er->Delete();
     return SQL_ERROR;
   }
 }
@@ -270,8 +289,9 @@ inline SQLRETURN SqlNumResultCols(SQLHSTMT StatementHandle, SQLSMALLINT *ColumnC
   {
     return SQLNumResultCols(StatementHandle, ColumnCount);
   }
-  catch(...)
+  catch(StdException* er)
   {
+    er->Delete();
     return SQL_ERROR;
   }
 }
@@ -282,8 +302,9 @@ inline SQLRETURN SqlDescribeCol(SQLHSTMT hstmt, SQLUSMALLINT icol, SQLCHAR *szCo
   {
     return SQLDescribeCol(hstmt, icol, szColName, cbColNameMax, pcbColName, pfSqlType, pcbColDef, pibScale, pfNullable);
   }
-  catch(...)
+  catch(StdException* er)
   {
+    er->Delete();
     return SQL_ERROR;
   }
 }
@@ -294,8 +315,9 @@ inline SQLRETURN SqlBindCol(SQLHSTMT StatementHandle, SQLUSMALLINT ColumnNumber,
   {
     return ::SQLBindCol(StatementHandle, ColumnNumber, TargetType, TargetValue, BufferLength, StrLen_or_Ind);
   }
-  catch(...)
+  catch(StdException* er)
   {
+    er->Delete();
     return SQL_ERROR;
   }
 }
@@ -306,8 +328,9 @@ inline SQLRETURN SqlBindParameter(SQLHSTMT hstmt, SQLUSMALLINT ipar, SQLSMALLINT
   {
     return ::SQLBindParameter(hstmt, ipar, fParamType, fCType, fSqlType, cbColDef, ibScale, rgbValue, cbValueMax, pcbValue);
   }
-  catch(...)
+  catch(StdException* er)
   {
+    er->Delete();
     return SQL_ERROR;
   }
 }
@@ -318,8 +341,9 @@ inline SQLRETURN SqlCancel(SQLHSTMT hstmt)
   {
     return ::SQLCancel(hstmt);
   }
-  catch(...)
+  catch(StdException* er)
   {
+    er->Delete();
     return SQL_ERROR;
   }
 }
@@ -330,8 +354,9 @@ inline SQLRETURN SqlNativeSql(HDBC hdbc,SQLCHAR* stmt,SQLINTEGER len,SQLCHAR* sq
   {
     return ::SQLNativeSql(hdbc,stmt,len,sql,max,reslen);
   }
-  catch(...)
+  catch(StdException* er)
   {
+    er->Delete();
     return SQL_ERROR;
   }
 }
@@ -349,8 +374,9 @@ inline SQLRETURN SqlDataSources(SQLHENV       EnvironmentHandle
   {
     return SQLDataSources(EnvironmentHandle,Direction,ServerName,BufferLength1,NameLength1Ptr,Description,BufferLength2,NameLength2Ptr);
   }
-  catch (...)
+  catch(StdException* er)
   {
+    er->Delete();
     return SQL_ERROR;
   }
 }
@@ -367,8 +393,9 @@ inline SQLRETURN SqlColAttribute(SQLHSTMT     p_hstmt
   {
     return SQLColAttribute(p_hstmt,p_column,p_field,p_attribute,p_buflen,p_strlen,p_numattrib);
   }
-  catch (...)
+  catch(StdException* er)
   {
+    er->Delete();
     return SQL_ERROR;
   }
 }
@@ -384,8 +411,9 @@ inline SQLRETURN SqlGetData(SQLHSTMT     p_hstmt
   {
     return SQLGetData(p_hstmt,p_column,p_type,p_value,p_bufferlen,p_strlen_or_ind);
   }
-  catch (...)
+  catch (StdException* er)
   {
+    er->Delete();
     return SQL_ERROR;
   }
 }
@@ -410,8 +438,9 @@ inline SQLRETURN SqlDrivers(SQLHENV      EnvironmentHandle
                        ,BufferLength2
                        ,AttributesLengthPtr);
   }
-  catch(...)
+  catch(StdException* er)
   {
+    er->Delete();
     return SQL_ERROR;
   }
 }
@@ -424,9 +453,10 @@ inline SQLRETURN SqlPutData(SQLHSTMT   p_hstmt
   {
     return SQLPutData(p_hstmt,p_data,p_strlen_or_ind);
   }
-  catch (...)
+  catch(StdException* er)
   {
-  	return SQL_ERROR;
+    er->Delete();
+    return SQL_ERROR;
   }
 }
 
@@ -440,8 +470,9 @@ inline SQLRETURN SqlGetStmtAttr(SQLHSTMT    p_hstmt
   {
     return SQLGetStmtAttr(p_hstmt,p_attribute,p_value,p_buflen,p_strlen);
   }
-  catch (...)
+  catch(StdException* er)
   {
+    er->Delete();
     return SQL_ERROR;
   }
 }
@@ -456,8 +487,9 @@ inline SQLRETURN SqlSetDescField(SQLHDESC    p_handle
   {
     return ::SQLSetDescField(p_handle,p_record,p_field,p_value,p_bufLength);
   }
-  catch(...)
+  catch(StdException* er)
   {
+    er->Delete();
     return SQL_ERROR;
   }
 }
@@ -475,8 +507,9 @@ inline SQLRETURN SqlError(SQLHENV      p_henv
   {
     return SQLError(p_henv,p_hdbc,p_hstmt,p_state,p_native,p_text,p_buflen,p_txtlen);
   }
-  catch (...)
+  catch(StdException* er)
   {
+    er->Delete();
     return SQL_ERROR;
   }
 }
@@ -489,8 +522,9 @@ inline SQLRETURN SqlGetFunctions(SQLHDBC       p_hdbc
   {
     return SQLGetFunctions(p_hdbc,p_id,p_supported);
   }
-  catch (...)
+  catch(StdException* er)
   {
+    er->Delete();
     return SQL_ERROR;
   }
 }
@@ -501,8 +535,9 @@ inline SQLRETURN SqlGetTypeInfo(SQLHSTMT p_hstmt,SQLSMALLINT p_type)
   {
     return SQLGetTypeInfo(p_hstmt,p_type);
   }
-  catch (...)
+  catch(StdException* er)
   {
+    er->Delete();
     return SQL_ERROR;
   }
 }
@@ -516,8 +551,9 @@ inline SQLRETURN SqlSetStmtAttr(SQLHSTMT   p_hstmt
   {
     return SQLSetStmtAttr(p_hstmt,p_attribute,p_value,p_strlen);
   }
-  catch (...)
+  catch(StdException* er)
   {
+    er->Delete();
     return SQL_ERROR;
   }
 }
@@ -528,8 +564,9 @@ inline SQLRETURN SqlParamData(SQLHSTMT p_hstmt,SQLPOINTER* p_value)
   {
     return ::SQLParamData(p_hstmt,p_value);
   }
-  catch(...)
+  catch(StdException* er)
   {
+    er->Delete();
     return SQL_ERROR;
   }
 }
@@ -540,8 +577,9 @@ inline SQLRETURN SqlMoreResults(SQLHSTMT p_hstmt)
   {
     return ::SQLMoreResults(p_hstmt);
   }
-  catch(...)
+  catch(StdException* er)
   {
+    er->Delete();
     return SQL_ERROR;
   }
 }
@@ -552,8 +590,9 @@ inline SQLRETURN SqlGetCursorName(SQLHSTMT p_hstmt,SQLCHAR* p_buffer,SQLSMALLINT
   {
     return ::SQLGetCursorName(p_hstmt,p_buffer,p_buflen,p_resultLength);
   }
-  catch(...)
+  catch(StdException* er)
   {
+    er->Delete();
     return SQL_ERROR;
   }
 }
@@ -571,8 +610,9 @@ inline SQLRETURN SqlColAttributes(SQLHSTMT     p_hstmt
   {
     return SQLColAttributes(p_hstmt,p_icol,p_descType,p_rgbDesc,p_cbDescMax,p_pcbDesc,p_pfDesc);
   }
-  catch (...)
+  catch(StdException* er)
   {
+    er->Delete();
     return SQL_ERROR;
   }
 }

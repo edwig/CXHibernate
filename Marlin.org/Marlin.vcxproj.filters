@@ -1,0 +1,628 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="MarlinServer">
+      <UniqueIdentifier>{132ea978-0243-47a2-b74d-95bf82939a4a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="MarlinClient">
+      <UniqueIdentifier>{687b50e9-682d-4311-bbab-444675e14c53}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="MarlinGeneral">
+      <UniqueIdentifier>{f10f91d4-2433-4cd1-8e4c-2d45e617e6ab}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Zip">
+      <UniqueIdentifier>{9760d0db-1913-4e67-b522-9a3a5dfbf346}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Zip\Headers">
+      <UniqueIdentifier>{b816656f-1841-4ebc-b854-614c0c02c288}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="MarlinClient\Headers">
+      <UniqueIdentifier>{9ca759bf-4e74-4ac9-a662-5e28d7f5c09e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="MarlinGeneral\Headers">
+      <UniqueIdentifier>{b48ef874-4a27-4319-a312-a97bcd6bb3c2}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="MarlinServer\Headers">
+      <UniqueIdentifier>{06fced64-729c-47e5-a1d3-41e7c11c670e}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="Analysis.cpp">
+      <Filter>MarlinGeneral</Filter>
+    </ClCompile>
+    <ClCompile Include="Base64.cpp">
+      <Filter>MarlinGeneral</Filter>
+    </ClCompile>
+    <ClCompile Include="ConvertWideString.cpp">
+      <Filter>MarlinGeneral</Filter>
+    </ClCompile>
+    <ClCompile Include="Cookie.cpp">
+      <Filter>MarlinGeneral</Filter>
+    </ClCompile>
+    <ClCompile Include="CrackURL.cpp">
+      <Filter>MarlinGeneral</Filter>
+    </ClCompile>
+    <ClCompile Include="CreateURLPrefix.cpp">
+      <Filter>MarlinGeneral</Filter>
+    </ClCompile>
+    <ClCompile Include="Crypto.cpp">
+      <Filter>MarlinGeneral</Filter>
+    </ClCompile>
+    <ClCompile Include="DefuseBOM.cpp">
+      <Filter>MarlinGeneral</Filter>
+    </ClCompile>
+    <ClCompile Include="EnsureFile.cpp">
+      <Filter>MarlinGeneral</Filter>
+    </ClCompile>
+    <ClCompile Include="ErrorReport.cpp">
+      <Filter>MarlinGeneral</Filter>
+    </ClCompile>
+    <ClCompile Include="EventSource.cpp">
+      <Filter>MarlinClient</Filter>
+    </ClCompile>
+    <ClCompile Include="FileBuffer.cpp">
+      <Filter>MarlinGeneral</Filter>
+    </ClCompile>
+    <ClCompile Include="FindProxy.cpp">
+      <Filter>MarlinClient</Filter>
+    </ClCompile>
+    <ClCompile Include="GenerateGUID.cpp">
+      <Filter>MarlinGeneral</Filter>
+    </ClCompile>
+    <ClCompile Include="GetLastErrorAsString.cpp">
+      <Filter>MarlinGeneral</Filter>
+    </ClCompile>
+    <ClCompile Include="GetUserAccount.cpp">
+      <Filter>MarlinGeneral</Filter>
+    </ClCompile>
+    <ClCompile Include="HPFCounter.cpp">
+      <Filter>MarlinGeneral</Filter>
+    </ClCompile>
+    <ClCompile Include="HTTPCertificate.cpp">
+      <Filter>MarlinGeneral</Filter>
+    </ClCompile>
+    <ClCompile Include="HTTPClient.cpp">
+      <Filter>MarlinClient</Filter>
+    </ClCompile>
+    <ClCompile Include="HTTPClientTracing.cpp">
+      <Filter>MarlinClient</Filter>
+    </ClCompile>
+    <ClCompile Include="HTTPError.cpp">
+      <Filter>MarlinGeneral</Filter>
+    </ClCompile>
+    <ClCompile Include="HTTPMessage.cpp">
+      <Filter>MarlinGeneral</Filter>
+    </ClCompile>
+    <ClCompile Include="HTTPServer.cpp">
+      <Filter>MarlinServer</Filter>
+    </ClCompile>
+    <ClCompile Include="HTTPSite.cpp">
+      <Filter>MarlinServer</Filter>
+    </ClCompile>
+    <ClCompile Include="HTTPTime.cpp">
+      <Filter>MarlinGeneral</Filter>
+    </ClCompile>
+    <ClCompile Include="HTTPURLGroup.cpp">
+      <Filter>MarlinServer</Filter>
+    </ClCompile>
+    <ClCompile Include="JSONMessage.cpp">
+      <Filter>MarlinGeneral</Filter>
+    </ClCompile>
+    <ClCompile Include="JSONParser.cpp">
+      <Filter>MarlinGeneral</Filter>
+    </ClCompile>
+    <ClCompile Include="MultiPartBuffer.cpp">
+      <Filter>MarlinGeneral</Filter>
+    </ClCompile>
+    <ClCompile Include="Namespace.cpp">
+      <Filter>MarlinGeneral</Filter>
+    </ClCompile>
+    <ClCompile Include="PrintToken.cpp">
+      <Filter>MarlinGeneral</Filter>
+    </ClCompile>
+    <ClCompile Include="ProcInfo.cpp">
+      <Filter>MarlinGeneral</Filter>
+    </ClCompile>
+    <ClCompile Include="Redirect.cpp">
+      <Filter>MarlinGeneral</Filter>
+    </ClCompile>
+    <ClCompile Include="RunRedirect.cpp">
+      <Filter>MarlinGeneral</Filter>
+    </ClCompile>
+    <ClCompile Include="SiteFilter.cpp">
+      <Filter>MarlinServer</Filter>
+    </ClCompile>
+    <ClCompile Include="SiteFilterClientCertificate.cpp">
+      <Filter>MarlinServer</Filter>
+    </ClCompile>
+    <ClCompile Include="SiteHandler.cpp">
+      <Filter>MarlinServer</Filter>
+    </ClCompile>
+    <ClCompile Include="SiteHandlerConnect.cpp">
+      <Filter>MarlinServer</Filter>
+    </ClCompile>
+    <ClCompile Include="SiteHandlerDelete.cpp">
+      <Filter>MarlinServer</Filter>
+    </ClCompile>
+    <ClCompile Include="SiteHandlerFormData.cpp">
+      <Filter>MarlinServer</Filter>
+    </ClCompile>
+    <ClCompile Include="SiteHandlerGet.cpp">
+      <Filter>MarlinServer</Filter>
+    </ClCompile>
+    <ClCompile Include="SiteHandlerHead.cpp">
+      <Filter>MarlinServer</Filter>
+    </ClCompile>
+    <ClCompile Include="SiteHandlerJson.cpp">
+      <Filter>MarlinServer</Filter>
+    </ClCompile>
+    <ClCompile Include="SiteHandlerJson2Soap.cpp">
+      <Filter>MarlinServer</Filter>
+    </ClCompile>
+    <ClCompile Include="SiteHandlerMerge.cpp">
+      <Filter>MarlinServer</Filter>
+    </ClCompile>
+    <ClCompile Include="SiteHandlerOptions.cpp">
+      <Filter>MarlinServer</Filter>
+    </ClCompile>
+    <ClCompile Include="SiteHandlerPatch.cpp">
+      <Filter>MarlinServer</Filter>
+    </ClCompile>
+    <ClCompile Include="SiteHandlerPost.cpp">
+      <Filter>MarlinServer</Filter>
+    </ClCompile>
+    <ClCompile Include="SiteHandlerPut.cpp">
+      <Filter>MarlinServer</Filter>
+    </ClCompile>
+    <ClCompile Include="SiteHandlerSoap.cpp">
+      <Filter>MarlinServer</Filter>
+    </ClCompile>
+    <ClCompile Include="SiteHandlerTrace.cpp">
+      <Filter>MarlinServer</Filter>
+    </ClCompile>
+    <ClCompile Include="SiteHandlerWebDAV.cpp">
+      <Filter>MarlinServer</Filter>
+    </ClCompile>
+    <ClCompile Include="SOAPMessage.cpp">
+      <Filter>MarlinGeneral</Filter>
+    </ClCompile>
+    <ClCompile Include="WebConfig.cpp">
+      <Filter>MarlinGeneral</Filter>
+    </ClCompile>
+    <ClCompile Include="ThreadPool.cpp">
+      <Filter>MarlinGeneral</Filter>
+    </ClCompile>
+    <ClCompile Include="StackTrace.cpp">
+      <Filter>MarlinGeneral</Filter>
+    </ClCompile>
+    <ClCompile Include="WebServiceClient.cpp">
+      <Filter>MarlinClient</Filter>
+    </ClCompile>
+    <ClCompile Include="WebServiceServer.cpp">
+      <Filter>MarlinServer</Filter>
+    </ClCompile>
+    <ClCompile Include="WSDLCache.cpp">
+      <Filter>MarlinGeneral</Filter>
+    </ClCompile>
+    <ClCompile Include="XMLMessage.cpp">
+      <Filter>MarlinGeneral</Filter>
+    </ClCompile>
+    <ClCompile Include="XMLParser.cpp">
+      <Filter>MarlinGeneral</Filter>
+    </ClCompile>
+    <ClCompile Include="XMLParserImport.cpp">
+      <Filter>MarlinGeneral</Filter>
+    </ClCompile>
+    <ClCompile Include="XMLRestriction.cpp">
+      <Filter>MarlinGeneral</Filter>
+    </ClCompile>
+    <ClCompile Include="ZLib\inflate.c">
+      <Filter>Zip</Filter>
+    </ClCompile>
+    <ClCompile Include="ZLib\zutil.c">
+      <Filter>Zip</Filter>
+    </ClCompile>
+    <ClCompile Include="ZLib\inftrees.c">
+      <Filter>Zip</Filter>
+    </ClCompile>
+    <ClCompile Include="ZLib\inffast.c">
+      <Filter>Zip</Filter>
+    </ClCompile>
+    <ClCompile Include="ZLib\deflate.c">
+      <Filter>Zip</Filter>
+    </ClCompile>
+    <ClCompile Include="ZLib\adler32.c">
+      <Filter>Zip</Filter>
+    </ClCompile>
+    <ClCompile Include="ZLib\crc32.c">
+      <Filter>Zip</Filter>
+    </ClCompile>
+    <ClCompile Include="ZLib\trees.c">
+      <Filter>Zip</Filter>
+    </ClCompile>
+    <ClCompile Include="Zlib\gzip.cpp">
+      <Filter>Zip</Filter>
+    </ClCompile>
+    <ClCompile Include="stdafx.cpp">
+      <Filter>MarlinGeneral</Filter>
+    </ClCompile>
+    <ClCompile Include="MediaType.cpp">
+      <Filter>MarlinServer</Filter>
+    </ClCompile>
+    <ClCompile Include="HTTPServerMarlin.cpp">
+      <Filter>MarlinServer</Filter>
+    </ClCompile>
+    <ClCompile Include="HTTPServerIIS.cpp">
+      <Filter>MarlinServer</Filter>
+    </ClCompile>
+    <ClCompile Include="IISDebug.cpp">
+      <Filter>MarlinServer</Filter>
+    </ClCompile>
+    <ClCompile Include="MarlinModule.cpp">
+      <Filter>MarlinServer</Filter>
+    </ClCompile>
+    <ClCompile Include="ServerApp.cpp">
+      <Filter>MarlinServer</Filter>
+    </ClCompile>
+    <ClCompile Include="HTTPSiteIIS.cpp">
+      <Filter>MarlinServer</Filter>
+    </ClCompile>
+    <ClCompile Include="HTTPSiteMarlin.cpp">
+      <Filter>MarlinServer</Filter>
+    </ClCompile>
+    <ClCompile Include="WebConfigIIS.cpp">
+      <Filter>MarlinGeneral</Filter>
+    </ClCompile>
+    <ClCompile Include="SiteFilterXSS.cpp">
+      <Filter>MarlinServer</Filter>
+    </ClCompile>
+    <ClCompile Include="CommandBus.cpp">
+      <Filter>MarlinGeneral</Filter>
+    </ClCompile>
+    <ClCompile Include="XMLTemporal.cpp">
+      <Filter>MarlinGeneral</Filter>
+    </ClCompile>
+    <ClCompile Include="HostedWebCore.cpp">
+      <Filter>MarlinServer</Filter>
+    </ClCompile>
+    <ClCompile Include="WebSocket.cpp">
+      <Filter>MarlinGeneral</Filter>
+    </ClCompile>
+    <ClCompile Include="SiteHandlerWebSocket.cpp">
+      <Filter>MarlinServer</Filter>
+    </ClCompile>
+    <ClCompile Include="HTTPRequest.cpp">
+      <Filter>MarlinServer</Filter>
+    </ClCompile>
+    <ClCompile Include="HTTPServerSync.cpp">
+      <Filter>MarlinServer</Filter>
+    </ClCompile>
+    <ClCompile Include="ThreadPoolED.cpp">
+      <Filter>MarlinGeneral</Filter>
+    </ClCompile>
+    <ClCompile Include="SOAPSecurity.cpp">
+      <Filter>MarlinGeneral</Filter>
+    </ClCompile>
+    <ClCompile Include="XMLDataType.cpp">
+      <Filter>MarlinGeneral</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="ZLib\inflate.h">
+      <Filter>Zip\Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="ZLib\zutil.h">
+      <Filter>Zip\Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="ZLib\zlib.h">
+      <Filter>Zip\Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="ZLib\gzguts.h">
+      <Filter>Zip\Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="ZLib\zconf.h">
+      <Filter>Zip\Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="ZLib\inftrees.h">
+      <Filter>Zip\Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="ZLib\inffast.h">
+      <Filter>Zip\Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="ZLib\inffixed.h">
+      <Filter>Zip\Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="ZLib\deflate.h">
+      <Filter>Zip\Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="ZLib\crc32.h">
+      <Filter>Zip\Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="ZLib\trees.h">
+      <Filter>Zip\Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="Zlib\gzip.h">
+      <Filter>Zip\Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="SiteFilter.h">
+      <Filter>MarlinServer\Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="SiteFilterClientCertificate.h">
+      <Filter>MarlinServer\Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="SiteHandler.h">
+      <Filter>MarlinServer\Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="SiteHandlerConnect.h">
+      <Filter>MarlinServer\Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="SiteHandlerDelete.h">
+      <Filter>MarlinServer\Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="SiteHandlerFormData.h">
+      <Filter>MarlinServer\Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="SiteHandlerGet.h">
+      <Filter>MarlinServer\Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="SiteHandlerHead.h">
+      <Filter>MarlinServer\Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="SiteHandlerJson.h">
+      <Filter>MarlinServer\Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="SiteHandlerJson2Soap.h">
+      <Filter>MarlinServer\Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="SiteHandlerMerge.h">
+      <Filter>MarlinServer\Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="SiteHandlerOptions.h">
+      <Filter>MarlinServer\Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="SiteHandlerPatch.h">
+      <Filter>MarlinServer\Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="SiteHandlerPost.h">
+      <Filter>MarlinServer\Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="SiteHandlerPut.h">
+      <Filter>MarlinServer\Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="SiteHandlerSoap.h">
+      <Filter>MarlinServer\Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="SiteHandlerTrace.h">
+      <Filter>MarlinServer\Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="SiteHandlerWebDAV.h">
+      <Filter>MarlinServer\Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="HTTPServer.h">
+      <Filter>MarlinServer\Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="HTTPSite.h">
+      <Filter>MarlinServer\Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="HTTPURLGroup.h">
+      <Filter>MarlinServer\Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="MediaType.h">
+      <Filter>MarlinServer\Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="WebServiceServer.h">
+      <Filter>MarlinServer\Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="HTTPClient.h">
+      <Filter>MarlinClient\Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="HTTPClientTracing.h">
+      <Filter>MarlinClient\Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="WebServiceClient.h">
+      <Filter>MarlinClient\Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="EventSource.h">
+      <Filter>MarlinClient\Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="FindProxy.h">
+      <Filter>MarlinClient\Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="Analysis.h">
+      <Filter>MarlinGeneral\Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="AutoCritical.h">
+      <Filter>MarlinGeneral\Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="Base64.h">
+      <Filter>MarlinGeneral\Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="ConvertWideString.h">
+      <Filter>MarlinGeneral\Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="Cookie.h">
+      <Filter>MarlinGeneral\Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="CPULoad.h">
+      <Filter>MarlinGeneral\Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="CrackURL.h">
+      <Filter>MarlinGeneral\Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="CreateURLPrefix.h">
+      <Filter>MarlinGeneral\Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="Crypto.h">
+      <Filter>MarlinGeneral\Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="DefuseBOM.h">
+      <Filter>MarlinGeneral\Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="EnsureFile.h">
+      <Filter>MarlinGeneral\Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="ErrorReport.h">
+      <Filter>MarlinGeneral\Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="FileBuffer.h">
+      <Filter>MarlinGeneral\Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="GenerateGUID.h">
+      <Filter>MarlinGeneral\Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="GetLastErrorAsString.h">
+      <Filter>MarlinGeneral\Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="GetUserAccount.h">
+      <Filter>MarlinGeneral\Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="HPFCounter.h">
+      <Filter>MarlinGeneral\Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="HTTPCertificate.h">
+      <Filter>MarlinGeneral\Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="HTTPError.h">
+      <Filter>MarlinGeneral\Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="HTTPMessage.h">
+      <Filter>MarlinGeneral\Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="HTTPTime.h">
+      <Filter>MarlinGeneral\Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="JSONMessage.h">
+      <Filter>MarlinGeneral\Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="JSONParser.h">
+      <Filter>MarlinGeneral\Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="MultiPartBuffer.h">
+      <Filter>MarlinGeneral\Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="Namespace.h">
+      <Filter>MarlinGeneral\Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="PrintToken.h">
+      <Filter>MarlinGeneral\Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="ProcInfo.h">
+      <Filter>MarlinGeneral\Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="Redirect.h">
+      <Filter>MarlinGeneral\Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="RunRedirect.h">
+      <Filter>MarlinGeneral\Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="ServerEvent.h">
+      <Filter>MarlinGeneral\Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="SOAPMessage.h">
+      <Filter>MarlinGeneral\Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="SoapTypes.h">
+      <Filter>MarlinGeneral\Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="StackTrace.h">
+      <Filter>MarlinGeneral\Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="stdafx.h">
+      <Filter>MarlinGeneral\Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="targetver.h">
+      <Filter>MarlinGeneral\Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="ThreadPool.h">
+      <Filter>MarlinGeneral\Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="WebConfig.h">
+      <Filter>MarlinGeneral\Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="WinINETError.h">
+      <Filter>MarlinGeneral\Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="WSDLCache.h">
+      <Filter>MarlinGeneral\Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="XMLMessage.h">
+      <Filter>MarlinGeneral\Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="XMLParser.h">
+      <Filter>MarlinGeneral\Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="XMLParserImport.h">
+      <Filter>MarlinGeneral\Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="XMLRestriction.h">
+      <Filter>MarlinGeneral\Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="HTTPServerMarlin.h">
+      <Filter>MarlinServer\Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="HTTPServerIIS.h">
+      <Filter>MarlinServer\Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="IISDebug.h">
+      <Filter>MarlinServer\Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="MarlinModule.h">
+      <Filter>MarlinServer\Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="ServerApp.h">
+      <Filter>MarlinServer\Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="HTTPSiteIIS.h">
+      <Filter>MarlinServer\Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="HTTPSiteMarlin.h">
+      <Filter>MarlinServer\Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="WebConfigIIS.h">
+      <Filter>MarlinGeneral\Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="XMLDataType.h">
+      <Filter>MarlinGeneral\Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="SiteFilterXSS.h">
+      <Filter>MarlinServer\Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="CommandBus.h">
+      <Filter>MarlinGeneral\Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="XMLTemporal.h">
+      <Filter>MarlinGeneral\Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="HostedWebCore.h">
+      <Filter>MarlinServer\Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="IISSiteConfig.h">
+      <Filter>MarlinServer\Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="EventStream.h">
+      <Filter>MarlinServer\Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="WebSocket.h">
+      <Filter>MarlinGeneral\Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="SiteHandlerWebSocket.h">
+      <Filter>MarlinServer\Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="HTTPRequest.h">
+      <Filter>MarlinServer\Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="HTTPServerSync.h">
+      <Filter>MarlinServer\Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="ThreadPoolED.h">
+      <Filter>MarlinGeneral\Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="HTTPLoglevel.h">
+      <Filter>MarlinGeneral\Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="SOAPSecurity.h">
+      <Filter>MarlinGeneral\Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="Version.h" />
+  </ItemGroup>
+</Project>

@@ -118,7 +118,7 @@ CXClass::AddAttribute(CXAttribute* p_attribute)
   CString name = p_attribute->GetName();
   if(FindAttribute(name))
   {
-    throw CString("Duplicate attribute cannot be added to class: ") + name;
+    throw new StdException("Duplicate attribute cannot be added to class: " + name);
   }
   // Just to be sure
   p_attribute->SetClass(this);

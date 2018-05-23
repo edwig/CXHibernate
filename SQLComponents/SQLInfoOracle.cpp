@@ -867,9 +867,11 @@ SQLInfoOracle::GetCATALOGIndexFilter(MetaIndex& p_index) const
       var->GetAsString(expression);
     }
   }
-  catch(CString& error)
+  catch(StdException* error)
   {
-    throw CString("Cannot find index filter: ") + error;
+    CString message = ("Cannot find index filter: ") + MessageFromException(error);
+    error->Delete();
+    throw new StdException(message);
   }
   return expression;
 }
@@ -982,7 +984,7 @@ SQLInfoOracle::GetCATALOGForeignAttributes(CString  p_schema
   // Minimal requirements of the catalog
   if(p_schema.IsEmpty() || p_tablename.IsEmpty())
   {
-    throw CString("Cannot get table references without schema/tablename");
+    throw new StdException("Cannot get table references without schema/tablename");
   }
 
   CString query = "SELECT ora_database_name    AS primary_catalog_name\n"

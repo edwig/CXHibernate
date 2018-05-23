@@ -271,7 +271,7 @@ SQLDatabase::Open(CString const& p_connectString,bool p_readOnly)
   if(!Check(res))
   {
     Close();
-    throw CString("Error at opening database: ") + GetErrorString();
+    throw new StdException(CString("Error at opening database: ") + GetErrorString());
   }
   // Remember the returned completed connect string of the database
   // This contains all the database option settings from the ODBC Driver
@@ -710,7 +710,7 @@ SQLDatabase::MakeEnvHandle()
     // Check results
   if(!Check(res))
   {
-    throw CString("Error at opening: cannot create an ODBC environment.");
+    throw new StdException("Error at opening: cannot create an ODBC environment.");
   }
 
   // Tell the driver how we use the handles
@@ -719,7 +719,7 @@ SQLDatabase::MakeEnvHandle()
   res = SQLSetEnvAttr(m_henv,SQL_ATTR_ODBC_VERSION,startVersion,0);
   if(!Check(res))
   {
-    throw CString("Cannot set the ODBC version for the environment.");
+    throw new StdException("Cannot set the ODBC version for the environment.");
   }
 }
 
@@ -733,7 +733,7 @@ SQLDatabase::MakeDbcHandle()
   // Check the results
   if(!Check(res))
   {
-    throw CString("Error at opening: ") + GetErrorString();
+    throw new StdException(CString("Error at opening: ") + GetErrorString());
   }
 }
 
@@ -745,7 +745,7 @@ SQLDatabase::MakeStmtHandle()
   // Check the hdbc
   if(m_hdbc == SQL_NULL_HANDLE)
   {
-    throw CString("No database handle. Are you logged in to a database?");
+    throw new StdException("No database handle. Are you logged in to a database?");
   }
   // Create the statement handle
   SQLRETURN res = SqlAllocHandle(SQL_HANDLE_STMT,m_hdbc,&stmt);
@@ -755,7 +755,7 @@ SQLDatabase::MakeStmtHandle()
   {
     CString fout;
     fout.Format("Error creating a statement handle: " + GetErrorString());
-    throw fout;
+    throw new StdException(fout);
   }
   // return the statement
   return stmt;
@@ -769,12 +769,16 @@ SQLDatabase::GetSQLHandle(HSTMT *p_statementHandle, BOOL p_exception)
     *p_statementHandle = MakeStmtHandle();
     return SQL_SUCCESS;
   }
-  catch(...)
+  catch(CException* ex)
   {
     *p_statementHandle = NULL;
     if(p_exception)
     {
-      throw;
+      throw ex;
+    }
+    else
+    {
+      ex->Delete();
     }
   }
   return SQL_ERROR;
@@ -836,7 +840,7 @@ SQLDatabase::SetConnectAttr(int attr, int value,int type)
   SQLRETURN ret = SqlSetConnectAttr(m_hdbc,attr,(SQLPOINTER)(DWORD_PTR)value,type);
   if(!Check(ret))
   {
-    throw CString("Error at setting connection attributes at open: ") + GetErrorString();
+    throw new StdException(CString("Error at setting connection attributes at open: ") + GetErrorString());
   }
 }
 
@@ -1074,11 +1078,12 @@ SQLDatabase::StartTransaction(SQLTransaction* p_transaction, bool p_startSubtran
           SetConnectAttr(SQL_ATTR_AUTOCOMMIT,SQL_AUTOCOMMIT_OFF,SQL_IS_UINTEGER);
         }
       }
-      catch(CString& error)
+      catch(StdException* error)
       {
         CString message;
-        message.Format("Error at starting transaction [%s] : %s",p_transaction->GetName().GetString(),error.GetString());
-        throw message;
+        message.Format("Error at starting transaction [%s] : %s",p_transaction->GetName().GetString(),error->GetErrorMessage().GetString());
+        error->Delete();
+        throw new StdException(message);
       }
     }
 
@@ -1099,14 +1104,15 @@ SQLDatabase::StartTransaction(SQLTransaction* p_transaction, bool p_startSubtran
           rs.DoSQLStatement(startSubtrans);
           p_transaction->SetSavepoint(transName);
         }
-        catch(CString& err)
+        catch(StdException* err)
         {
           CString message;
           message.Format("Error starting sub-transaction [%s:%s] : %s"
                         ,p_transaction->GetName().GetString()
                         ,transName.GetString()
-                        ,err.GetString());
-          throw message;
+                        ,err->GetErrorMessage().GetString());
+          err->Delete();
+          throw new StdException(message);
         }
       }
     }
@@ -1132,7 +1138,7 @@ SQLDatabase::CommitTransaction(SQLTransaction* p_transaction)
       // in our application's logic in the calling code.
       CString message;
       message.Format("Error at commit: transaction [%s] is not the current transaction",p_transaction->GetName().GetString());
-      throw message;
+      throw new StdException(message);
     }
 
     // Only the last transaction will really be committed
@@ -1147,7 +1153,7 @@ SQLDatabase::CommitTransaction(SQLTransaction* p_transaction)
         if(!Check(SqlEndTran(SQL_HANDLE_DBC, m_hdbc, SQL_COMMIT)))
         {
           // Throw something, so we reach the catch block
-          throw 0;
+          throw new StdException(0);
         }
         // Re-engage the autocommit mode. If it goes wrong we
         // will automatically reach the catch block
@@ -1156,7 +1162,7 @@ SQLDatabase::CommitTransaction(SQLTransaction* p_transaction)
           SetConnectAttr(SQL_ATTR_AUTOCOMMIT, SQL_AUTOCOMMIT_ON, SQL_IS_UINTEGER);
         }
       }
-      catch(...) 
+      catch(CException* ex) 
       {
         // Get the error information
         CString error = GetErrorString();
@@ -1166,8 +1172,12 @@ SQLDatabase::CommitTransaction(SQLTransaction* p_transaction)
 
         // Throw an exception with the error info of the failed commit
         CString message;
-        message.Format("Error in commit of transaction [%s] : %s",p_transaction->GetName().GetString(),error.GetString());
-        throw message;
+        message.Format("Error in commit of transaction [%s] : %s. OS Error: %s"
+                      ,p_transaction->GetName().GetString()
+                      ,MessageFromException(ex).GetString()
+                      ,error.GetString());
+        ex->Delete();
+        throw new StdException(message);
       }
     }
     else
@@ -1183,14 +1193,15 @@ SQLDatabase::CommitTransaction(SQLTransaction* p_transaction)
           SQLQuery rs(this);
           rs.DoSQLStatement(startSubtrans);
         }
-        catch(CString& error)
+        catch(StdException* error)
         {
           CString message;
           message.Format("Error in commit of sub-transaction [%s:%s] : %s"
                         ,p_transaction->GetName().GetString()
                         ,p_transaction->GetSavePoint().GetString()
-                        ,error.GetString());
-          throw message;
+                        ,MessageFromException(error).GetString());
+          error->Delete();
+          throw new StdException(message);
         }
       }
     }
@@ -1207,7 +1218,7 @@ SQLDatabase::RollbackTransaction(SQLTransaction* p_transaction)
   {
     CString message;
     message.Format("Error in rollback: transaction [%s] is not the current transaction",p_transaction->GetName().GetString());
-    throw message;
+    throw new StdException(message);
   }
 
   // Look for the first saveepoint on the stack
@@ -1244,7 +1255,7 @@ SQLDatabase::RollbackTransaction(SQLTransaction* p_transaction)
         if(!Check(SqlEndTran(SQL_HANDLE_DBC, m_hdbc, SQL_ROLLBACK)))
         {
           // Throw something, so we reach the catch block
-          throw 0;
+          throw new StdException(0);
         }
         // Re-engage the autocommit mode, will throw in case of an error
         if(m_rdbmsType != RDBMS_ACCESS)
@@ -1252,13 +1263,17 @@ SQLDatabase::RollbackTransaction(SQLTransaction* p_transaction)
           SetConnectAttr(SQL_ATTR_AUTOCOMMIT, SQL_AUTOCOMMIT_ON, SQL_IS_UINTEGER);
         }
       }
-      catch(...)
+      catch(StdException* ex)
       {
         // Throw an exception with error info at a failed rollback1
         CString message;
         CString error = GetErrorString();
-        message.Format("Error at rollback of transaction [%s] : %s",p_transaction->GetName().GetString(),error.GetString());
-        throw message;
+        message.Format("Error at rollback of transaction [%s] : %s. OS Error: %s"
+                       ,p_transaction->GetName().GetString()
+                       ,MessageFromException(ex).GetString()
+                       ,error.GetString());
+        ex->Delete();
+        throw new StdException(message);
       }
     }
     else
@@ -1272,14 +1287,15 @@ SQLDatabase::RollbackTransaction(SQLTransaction* p_transaction)
           SQLQuery rs(this);
           rs.DoSQLStatement(startSubtrans);
         }
-        catch(CString& error)
+        catch(StdException* error)
         {
           CString message;
           message.Format("Error in rolling back sub-transaction [%s:%s] : %s"
                         ,p_transaction->GetName().GetString()
                         ,p_transaction->GetSavePoint().GetString()
-                        ,error.GetString());
-          throw message;
+                        ,MessageFromException(error).GetString());
+          error->Delete();
+          throw new StdException(message);
         }
       }
     }
@@ -1536,10 +1552,11 @@ SQLDatabase::SetOracleResultCacheMode(const CString& p_mode)
     SQLQuery rs(this);
     rs.DoSQLStatement(query);
   }
-  catch(CString& s)
+  catch(StdException* ex)
   {
-    CString error = "Database error while setting RESULT_CACHE_MODE: " + s;
-    throw error;
+    CString error = "Database error while setting RESULT_CACHE_MODE: " + MessageFromException(ex);
+    ex->Delete();
+    throw new StdException(error);
   }
 }
 

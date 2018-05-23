@@ -46,6 +46,10 @@ namespace SQLComponents
   // Initialization of the SQLComponents library
   void InitSQLComponents(Language p_language)
   {
+    // Use StdExceptions in this library
+    // BEWARE: All threads must call this function!!
+    _set_se_translator(SeTranslator);
+
     // Setting our default language for SQLDate, SQLTime and SQLTimestamp processing
     SetDefaultSQLLanguage(p_language);
 
@@ -70,7 +74,7 @@ namespace SQLComponents
   {
     if(g_SQLComponentsInitialized == false)
     {
-      throw CString("Call InitSQLComponents() before you use the 'SQLComponents' library.");
+      throw new StdException("Call InitSQLComponents() before you use the 'SQLComponents' library.");
     }
   }
 }

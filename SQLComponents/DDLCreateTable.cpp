@@ -66,11 +66,11 @@ DDLCreateTable::GetTableStatements(CString p_tableName)
     GetSequenceInfo();
     GetAccessInfo();
   }
-  catch(CString& error)
+  catch(CException* error)
   {
     m_ddl.Empty();
     m_statements.clear();
-    throw CString("ERROR in getting table DDL: ") + error;
+    throw error;
   }
   return m_statements;
 }
@@ -164,7 +164,7 @@ DDLCreateTable::GetTableInfo()
     // Find table info
     if(!m_info->MakeInfoTableTable(m_tables,errors,"",m_tableName) || m_tables.empty())
     {
-      throw CString("Cannot find table: ") + m_tableName + " : " + errors;
+      throw new StdException(CString("Cannot find table: ") + m_tableName + " : " + errors);
     }
   }
 
@@ -207,7 +207,7 @@ DDLCreateTable::GetColumnInfo()
     m_columns.clear();
     if(!m_info->MakeInfoTableColumns(m_columns,errors,m_schema,m_tableName) || m_columns.empty())
     {
-      throw CString("Cannot find columns for table: ") + m_tableName + " : " + errors;
+      throw new StdException(CString("Cannot find columns for table: ") + m_tableName + " : " + errors);
     }
   }
 
@@ -283,7 +283,7 @@ DDLCreateTable::GetIndexInfo()
     m_info->MakeInfoTableStatistics(m_indices,errors,m_schema,m_tableName,nullptr);
     if(!errors.IsEmpty())
     {
-      throw CString("Cannot find indices for table: ") + m_tableName + " : " + errors;
+      throw new StdException(CString("Cannot find indices for table: ") + m_tableName + " : " + errors);
     }
   }
 
@@ -331,7 +331,7 @@ DDLCreateTable::GetPrimaryKeyInfo()
     m_info->MakeInfoTablePrimary(m_primaries,errors,m_schema,m_tableName);
     if(!errors.IsEmpty())
     {
-      throw CString("Cannot find the primary key for table: ") + m_tableName + " : " + errors;
+      throw new StdException(CString("Cannot find the primary key for table: ") + m_tableName + " : " + errors);
     }
   }
 
@@ -356,7 +356,7 @@ DDLCreateTable::GetForeignKeyInfo()
     m_info->MakeInfoTableForeign(m_foreigns,errors,m_schema,m_tableName);
     if(!errors.IsEmpty())
     {
-      throw CString("Cannot find the foreign keys for table: ") + m_tableName + " : " + errors;
+      throw new StdException(CString("Cannot find the foreign keys for table: ") + m_tableName + " : " + errors);
     }
   }
 
@@ -398,7 +398,7 @@ DDLCreateTable::GetTriggerInfo()
     m_info->MakeInfoTableTriggers(m_triggers,errors,m_schema,m_tableName);
     if(!errors.IsEmpty())
     {
-      throw CString("Cannot find the triggers for table: ") + m_tableName + " : " + errors;
+      throw new StdException(CString("Cannot find the triggers for table: ") + m_tableName + " : " + errors);
     }
   }
 
@@ -422,7 +422,7 @@ DDLCreateTable::GetSequenceInfo()
     m_info->MakeInfoTableSequences(m_sequences,errors,m_schema,m_tableName);
     if(!errors.IsEmpty())
     {
-      throw CString("Cannot find the sequences for table: ") + m_tableName + " : " + errors;
+      throw new StdException(CString("Cannot find the sequences for table: ") + m_tableName + " : " + errors);
     }
   }
 
@@ -447,7 +447,7 @@ DDLCreateTable::GetAccessInfo()
     m_info->MakeInfoTablePrivileges(m_access,errors,m_schema,m_tableName);
     if(!errors.IsEmpty())
     {
-      throw CString("Cannot find the privileges for table: ") + m_tableName + " : " + errors;
+      throw new StdException(CString("Cannot find the privileges for table: ") + m_tableName + " : " + errors);
     }
   }
 

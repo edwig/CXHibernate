@@ -833,7 +833,7 @@ SQLVariant::SetFromBinaryStreamData(int   p_type
     }
     else
     {
-      throw CString("Cannot set variant from binary stream data.");
+      throw new StdException("Cannot set variant from binary stream data.");
     }
   }
 }
@@ -1899,13 +1899,14 @@ SQLVariant::GetAsDate()
     try
     {
       SQLDate date(m_data.m_dataCHAR);
+      memset(&g_date,0,sizeof(DATE_STRUCT));
       date.AsDateStruct(&g_date);
-      return &g_date;
     }
-    catch(CString& /*er*/)
+    catch(StdException* er)
     {
-      throw;
+      er->Delete();
     }
+    return &g_date;
   }
   ThrowErrorDatatype(SQL_C_DATE);
   return NULL;
@@ -1929,13 +1930,14 @@ SQLVariant::GetAsTime()
     try
     {
       SQLTime time(m_data.m_dataCHAR);
+      memset(&g_time,0,sizeof(TIME_STRUCT));
       time.AsTimeStruct(&g_time);
-      return &g_time;
     }
-    catch(CString& /*er*/)
+    catch(StdException* er)
     {
-      throw;
+      er->Delete();
     }
+    return &g_time;
   }
   ThrowErrorDatatype(SQL_C_TIME);
   return NULL;
@@ -1963,13 +1965,14 @@ SQLVariant::GetAsTimestamp()
     try
     {
       SQLTimestamp stamp(m_data.m_dataCHAR);
+      memset(&g_timestamp,0,sizeof(TIMESTAMP_STRUCT));
       stamp.AsTimeStampStruct(&g_timestamp);
-      return &g_timestamp;
     }
-    catch(CString& /*er*/)
+    catch(StdException* er)
     {
-      throw;
+      er->Delete();
     }
+    return &g_timestamp;
   }
   ThrowErrorDatatype(SQL_C_TIMESTAMP);
   return NULL;
@@ -2109,7 +2112,7 @@ SQLVariant::GetNumericPrecision()
   {
     return m_data.m_dataNUMERIC.precision;
   }
-  throw CString("Cannot get the numeric precision of this datatype");
+  throw new StdException("Cannot get the numeric precision of this datatype");
 }
 
 // Only for SQL_NUMERIC: The scale
@@ -2734,7 +2737,7 @@ SQLVariant::ThrowErrorDatatype(int p_getas)
   char* type  = SQLVariant::FindDatatype(m_datatype);
   char* getas = SQLVariant::FindDatatype(p_getas);
   error.Format("Cannot get a %s as a %s datatype.",type,getas);
-  throw error;
+  throw new StdException(error);
 }
 
 // End of namespace

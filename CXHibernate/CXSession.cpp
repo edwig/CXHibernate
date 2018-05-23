@@ -708,9 +708,10 @@ CXSession::GetMetaSessionInfo()
       }
       trans.Commit();
     }
-    catch(...)
+    catch(StdException* er)
     {
       // Error in silence ?
+      er->Delete();
     }
   }
 }
@@ -990,7 +991,7 @@ CXSession::SelectObjectsFromDatabase(CString p_className,SQLFilterSet& p_filters
 void
 CXSession::SelectObjectsFromFilestore(CString p_className,SQLFilterSet& p_filters)
 {
-  throw CString("Cannot select multiple objects from the filestore");
+  throw new StdException("Cannot select multiple objects from the filestore");
 }
 
 void

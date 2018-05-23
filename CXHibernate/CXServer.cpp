@@ -98,10 +98,11 @@ CXServer::OnCXSelect(int p_code,SOAPMessage* p_message)
           p_message->SetParameter("Result","OK");
           return;
         }
-        catch(CString& er)
+        catch(StdException* er)
         {
           actor  = "Server";
-          errors = "CXSelect search for the object(s) failed: " + er;
+          errors = "CXSelect search for the object(s) failed: " + er->GetErrorMessage();
+          er->Delete();
         }
       }
       else errors = "CXSelect must provide a minimum of 1 filter at least!";
@@ -151,9 +152,10 @@ CXServer::OnCXInsert(int p_code,SOAPMessage* p_message)
             errors = "CXInsert object storage failed";
           }
         }
-        catch(CString& er)
+        catch(StdException* er)
         {
-          errors = "CXInsert de-serialization of the object failed: " + er;
+          errors = "CXInsert de-serialization of the object failed: " + er->GetErrorMessage();
+          er->Delete();
         }
       }
       else errors = "CXInsert entity class name is unknown to the server: " + tablename;
@@ -216,9 +218,10 @@ CXServer::OnCXUpdate(int p_code,SOAPMessage* p_message)
           }
           else errors = "CXUpdate object to be updated not found!";
         }
-        catch(CString& er)
+        catch(StdException* er)
         {
-          errors = "CXUpdate de-serialization of the object failed: " + er;
+          errors = "CXUpdate de-serialization of the object failed: " + er->GetErrorMessage();
+          er->Delete();
         }
       }
       else errors = "CXUpdate entity class name is unknown to the server: " + tablename;
@@ -278,9 +281,10 @@ CXServer::OnCXDelete(int p_code,SOAPMessage* p_message)
           }
           else errors = "CXDelete object to be deleted not found!";
         }
-        catch(CString& er)
+        catch(StdException* er)
         {
-          errors = "CXDelete de-serialization of the object failed: " + er;
+          errors = "CXDelete de-serialization of the object failed: " + er->GetErrorMessage();
+          er->Delete();
         }
       }
       else errors = "CXDelete entity class name is unknown to the server: " + tablename;

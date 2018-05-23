@@ -188,38 +188,40 @@ SQLDataSetXLS::Commit()
     try
     {
       FILE* file = nullptr;
-      fopen_s(&file,m_file,"w");;
+      if(fopen_s(&file,m_file,"w") == 0)
+      {
+        // Write the header of the file
+        CString text;
+        for(unsigned ind = 0;ind < m_names.size();++ind)
         {
-          // Write the header of the file
-          CString text;
-          for(unsigned ind = 0;ind < m_names.size();++ind)
-          {
-            if(ind) text += m_separator;
-            text += "\"" + m_names[ind] + "\"";
-          }
+          if(ind) text += m_separator;
+          text += "\"" + m_names[ind] + "\"";
+        }
         WriteString(file,text,true);
 
-          // Write all the rows of the file
-          for (int i = 0; i < GetNumberOfRecords(); ++i)
+        // Write all the rows of the file
+        for (int i = 0; i < GetNumberOfRecords(); ++i)
+        {
+          text.Empty();
+          SQLRecord* record = GetRecord(i);
+          for(int ind = 0;ind < GetNumberOfFields(); ++ind)
           {
-            text.Empty();
-            SQLRecord* record = GetRecord(i);
-            for(int ind = 0;ind < GetNumberOfFields(); ++ind)
-            {
-              if(ind) text += m_separator;
-              text += CString("\"") + CString(record->GetField(ind)->GetAsChar()) + "\"";
-            }
-          WriteString(file,text,true);
+            if(ind) text += m_separator;
+            text += CString("\"") + CString(record->GetField(ind)->GetAsChar()) + "\"";
           }
-        fclose(file);
-          m_transaction = false;
-          return true;
+          WriteString(file,text,true);
         }
+        fclose(file);
+        m_transaction = false;
+        return true;
+      }
     }
-    catch(...)
+    catch(CException* er)
     {
+      m_lastError = MessageFromException(er);
+      er->Delete();
     }
-    m_lastError = "Error writing file\n";
+    m_lastError += "Error writing file\n";
     return false;
   }
 }
@@ -539,12 +541,13 @@ SQLDataSetXLS::Open()
         }
       }
     }
-    catch(CString str)
+    catch(StdException* ex)
     {
-      m_lastError = "Error reading spreadhseet: " + str;
+      m_lastError = "Error reading spreadhseet: " + MessageFromException(ex);
+      ex->Delete();
       return false;
     }
-    catch (...)
+    catch(...)
     {
       m_lastError = "Error reading spreadsheet\n";
       return false;
@@ -638,10 +641,12 @@ SQLDataSetXLS::Open()
         return result;
       }
     }
-    catch(...)
+    catch(StdException* ex)
     {
+      m_lastError = MessageFromException(ex);
+      ex->Delete();
     }
-    m_lastError = "Error in opening file\n";
+    m_lastError += "Error in opening file\n";
     return false;
   }
 }

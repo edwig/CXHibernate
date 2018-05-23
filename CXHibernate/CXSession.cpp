@@ -189,7 +189,7 @@ CXSession::LoadConfiguration(XMLMessage& p_config)
   while(theclass)
   {
     CString  name = p_config.GetElement(theclass,"name");
-    CXClass* newclass = new CXClass(name,nullptr);
+    CXClass* newclass = new CXClass(name);
 
     if(newclass->LoadMetaInfo(this,p_config,theclass))
     {

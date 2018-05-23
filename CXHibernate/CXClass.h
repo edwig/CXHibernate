@@ -36,7 +36,10 @@ using SubClasses = std::vector<CXClass*>;
 class CXClass
 {
 public:
-  CXClass(CString p_name,CXClass* p_super = nullptr,CreateCXO p_create = nullptr);
+  CXClass(CString   p_name
+         ,CString   p_discriminator = ""
+         ,CXClass*  p_super  = nullptr
+         ,CreateCXO p_create = nullptr);
  ~CXClass();
 
   // The name of the game
@@ -95,6 +98,8 @@ protected:
 private:
   // The name of our class
   CString       m_name;
+  // Discriminator of our class
+  CString       m_discriminator;
   // In case of a sub-class, this is our super-class
   CXClass*      m_super { nullptr };
   // In case of a super-class, these are our sub-classes

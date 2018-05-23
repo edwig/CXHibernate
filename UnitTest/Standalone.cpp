@@ -69,9 +69,9 @@ namespace HibernateTest
         Logger::WriteMessage("Testing 2th master record");
         PrintMaster(master);
       }
-      catch(CString& s)
+      catch(StdException* er)
       {
-        Logger::WriteMessage("ERROR: " + s);
+        Logger::WriteMessage("ERROR: " + er->GetErrorMessage());
         Assert::Fail();
       }
 		}
@@ -334,9 +334,10 @@ namespace HibernateTest
         }
         Assert::Fail();
       }
-      catch(CString& s)
+      catch(StdException* er)
       {
-        Assert::AreEqual(s,"");
+        Assert::AreEqual("",er->GetErrorMessage());
+        er->Delete();
       }
       Assert::Fail();
       return false;
@@ -348,6 +349,11 @@ namespace HibernateTest
       p_class->AddAttribute(new CXAttribute("int",   "invoice"));
       p_class->AddAttribute(new CXAttribute("string","description",250));
       p_class->AddAttribute(new CXAttribute("bcd",   "total"));
+
+      CXPrimaryKey primary;
+      primary.m_constraintName = "pk_master";
+      primary.m_attributes.push_back(p_class->FindAttribute("id"));
+      p_class->AddIdentity(primary);
     }
 
     void DefineDetail(CXClass* p_class)
@@ -357,6 +363,11 @@ namespace HibernateTest
       p_class->AddAttribute(new CXAttribute("int",   "line"));
       p_class->AddAttribute(new CXAttribute("string","description",250));
       p_class->AddAttribute(new CXAttribute("bcd",   "amount"));
+
+      CXPrimaryKey primary;
+      primary.m_constraintName = "pk_detail";
+      primary.m_attributes.push_back(p_class->FindAttribute("id"));
+      p_class->AddIdentity(primary);
     }
 
     void DefineNumbers(CXClass* p_class)
@@ -365,6 +376,11 @@ namespace HibernateTest
       p_class->AddAttribute(new CXAttribute("int",   "field1"));
       p_class->AddAttribute(new CXAttribute("double","field2"));
       p_class->AddAttribute(new CXAttribute("bcd",   "field3"));
+
+      CXPrimaryKey primary;
+      primary.m_constraintName = "pk_test_numbers";
+      primary.m_attributes.push_back(p_class->FindAttribute("id"));
+      p_class->AddIdentity(primary);
     }
 
     void ReadTableDefinition(CXClass* p_class)
@@ -401,9 +417,10 @@ namespace HibernateTest
         }
         trans.Commit();
       }
-      catch(CString& er)
+      catch(StdException* er)
       {
-        Logger::WriteMessage(CString("Failed: ") + er);
+        Logger::WriteMessage(CString("Failed: ") + er->GetErrorMessage());
+        er->Delete();
       }
       return result;
     }
@@ -432,9 +449,10 @@ namespace HibernateTest
         }
         trans.Commit();
       }
-      catch(CString& er)
+      catch(StdException* er)
       {
-        Logger::WriteMessage(CString("Failed: ") + er);
+        Logger::WriteMessage(CString("Failed: ") + er->GetErrorMessage());
+        er->Delete();
       }
       return result;
     }

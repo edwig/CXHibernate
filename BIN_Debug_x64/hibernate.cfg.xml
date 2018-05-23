@@ -13,6 +13,7 @@
     <name>Detail</name>
 	  <schema>sysdba</schema>
     <table>detail</table>
+    <discriminator>det</discriminator>
     <attributes>
       <attribute name="id" datatype="int" primary="true"/>
       <attribute name="mast_id" datatype="int" foreign="true"/>
@@ -32,7 +33,7 @@
     <indices>
       <index name="detail_line" unique="true" ascending="true">
         <attribute name="mast_id" />
-        <attribute name="line" />"
+        <attribute name="line" />
         <filter />
       </index>
     </indices>
@@ -45,6 +46,7 @@
   <class>
     <name>Master</name>
     <table>MASTER</table>
+    <discriminator>mas</discriminator>
     <attributes>
       <attribute name="id" datatype="int" generator="true" primary="true"/>
       <attribute name="invoice" datatype="int"/>
@@ -59,6 +61,7 @@
   <class>
     <name>TestNumber</name>
     <table>TEST_NUMBER</table>
+    <discriminator>tst</discriminator>
     <attributes>
       <attribute name="id" datatype="int" generator="true" primary="true"/>
       <attribute name="field1" datatype="int"/>

@@ -34,8 +34,12 @@
 static char THIS_FILE[] = __FILE__;
 #endif
 
-CXClass::CXClass(CString p_name,CXClass* p_super,CreateCXO p_create)
+CXClass::CXClass(CString    p_name
+                ,CString    p_discriminator
+                ,CXClass*   p_super
+                ,CreateCXO  p_create)
         :m_name(p_name)
+        ,m_discriminator(p_discriminator)
         ,m_create(p_create)
         ,m_super(p_super)
 {
@@ -204,6 +208,10 @@ CXClass::SaveMetaInfo(XMLMessage& p_message,XMLElement* p_elem)
 
   // Class attributes
   p_message.AddElement(theclass,"name",XDT_String,m_name);
+  if(!m_discriminator.IsEmpty())
+  {
+    p_message.AddElement(theclass,"discriminator",XDT_String,m_discriminator);
+  }
   if(m_super)
   {
     p_message.AddElement(theclass,"super",XDT_String,m_super->GetName());
@@ -234,6 +242,9 @@ CXClass::LoadMetaInfo(CXSession* p_session,XMLMessage& p_message,XMLElement* p_e
   CString tableName  = p_message.GetElement(p_elem,"table");
   m_table->SetSchemaTableType(schemaName,tableName,"TABLE");
 
+  // Load discriminator (if any)
+  m_discriminator = p_message.GetElement(p_elem,"discriminator");
+
   // Load superclass
   CString super = p_message.GetElement(p_elem,"super");
   if(!super.IsEmpty())
@@ -261,11 +272,32 @@ CXClass::LoadMetaInfo(CXSession* p_session,XMLMessage& p_message,XMLElement* p_e
 bool
 CXClass::BuildDefaultSelectQuery(SQLInfoDB* p_info)
 {
-  // Default query
-  CString query = CString("SELECT * FROM ") + m_table->DMLTableName(p_info);
-  m_table->GetDataSet()->SetQuery(query);
+  CString columns("*");
+  CString asalias;
 
-  return true;
+  // See if discriminator available
+  if(!m_discriminator.IsEmpty())
+  {
+    columns = m_discriminator + ".*";
+    asalias = " as " + m_discriminator;
+  }
+
+  // Default query will be built as
+  // "SELECT disc.*\n"
+  // "  FROM tablename as disc"
+  CString query = CString("SELECT ") + columns + "\n  FROM " + m_table->DMLTableName(p_info) + asalias;
+
+  // Set on the dataset
+  if(m_table)
+  {
+    SQLDataSet* set = m_table->GetDataSet();
+    if(set)
+    {
+      set->SetQuery(query);
+      return true;
+    }
+  }
+  return false;
 }
 
 //////////////////////////////////////////////////////////////////////////

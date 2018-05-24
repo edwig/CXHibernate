@@ -96,6 +96,11 @@ void
 CXSession::CloseSession()
 {
   Synchronize();
+
+  if (m_use == SESS_Create)
+  {
+    TryDropDatabase();
+  }
   hibernate.RemoveSession(this);
 }
 
@@ -146,12 +151,17 @@ CXSession::GetDatabase()
     {
       m_role = CXH_Database_role;
       GetMetaSessionInfo();
+
+      // Do we need to create a schema?
+      if (m_use == SESS_Create)
+      {
+        TryCreateDatabase();
+      }
       return m_database;
     }
   }
   return nullptr;
 }
-
 
 // Specifiy a database connection
 void
@@ -258,11 +268,6 @@ CXSession::LoadConfiguration(XMLMessage& p_config)
   for(auto& cl : m_classes)
   {
     cl.second->LinkClasses(this);
-  }
-
-  if(m_use == SESS_Create)
-  {
-    TryCreateDatabase();
   }
 }
 
@@ -1288,6 +1293,15 @@ CXSession::TryCreateDatabase()
 {
   for(auto& cl : m_classes)
   {
+    // cl.second->TryCreateTable()
+  }
+}
 
+void
+CXSession::TryDropDatabase()
+{
+  for (auto& cl : m_classes)
+  {
+    // cl.second->TryDropTable()
   }
 }

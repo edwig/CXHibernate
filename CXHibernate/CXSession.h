@@ -114,8 +114,9 @@ public:
 private:
   // Getting meta-session info from our database
   void          GetMetaSessionInfo();
-  // Create a new database
+  // Create a new database and drop it again
   void          TryCreateDatabase();
+  void          TryDropDatabase();
   // Clear the table cache
   void          ClearCache  (CString p_className = "");
   void          ClearClasses(CString p_className = "");

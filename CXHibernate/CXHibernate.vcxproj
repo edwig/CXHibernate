@@ -165,6 +165,7 @@
     <ClInclude Include="CXDataType.h" />
     <ClInclude Include="CXHibernate.h" />
     <ClInclude Include="CXModelWord.h" />
+    <ClInclude Include="CXResourceFile.h" />
     <ClInclude Include="CXRole.h" />
     <ClInclude Include="CXObject.h" />
     <ClInclude Include="CXObjectFactory.h" />
@@ -185,6 +186,7 @@
     <ClCompile Include="CXModelWord.cpp" />
     <ClCompile Include="CXObject.cpp" />
     <ClCompile Include="CXPrimaryHash.cpp" />
+    <ClCompile Include="CXResourceFile.cpp" />
     <ClCompile Include="CXRole.cpp" />
     <ClCompile Include="CXServer.cpp" />
     <ClCompile Include="CXSession.cpp" />

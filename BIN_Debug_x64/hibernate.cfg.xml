@@ -4,6 +4,7 @@
   <default_schema>sysdba</default_schema>
   <strategy>standalone</strategy>
   <session_role>database_role</session_role>
+  <database_use>use</database_use>
   <resources>
     <resource>detail_config.xml</resource>
     <resource>master_config.xml</resource>
@@ -26,7 +27,7 @@
 	  </primarykey>
     <foreignkeys>
 	    <foreign name="fk_detail_master">
-	      <association_class>MASTER</association_class>
+	      <association_class>Master</association_class>
 	        <column name="mast_id" />
 	    </foreign>
     </foreignkeys>

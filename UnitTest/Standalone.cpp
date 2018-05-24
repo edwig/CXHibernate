@@ -58,11 +58,12 @@ namespace HibernateTest
 		{
       Logger::WriteMessage("Getting a record from the MASTER table");
 
-      OpenSession();
       try
       {
+        OpenSession();
+
         CXObject* object = m_session->Load(Master::ClassName(),2);
-        Master* master = reinterpret_cast<Master*>(object);
+        Master*   master = reinterpret_cast<Master*>(object);
 
         Assert::IsNotNull(master);
 
@@ -112,7 +113,7 @@ namespace HibernateTest
         // Setting new value
         bcd total("935.12");
         master->SetTotal(total);
-        bool res = m_session->Update(master);
+        bool res = m_session->Save(master);
         Assert::IsTrue(res);
 
         CString value = TestRecordValue("master","id",1,"total");
@@ -120,7 +121,7 @@ namespace HibernateTest
 
         // Back to the old value
         master->SetTotal(old_total);
-        res = m_session->Update(master);
+        res = m_session->Save(master);
         Assert::IsTrue(res);
 
         value = TestRecordValue("master","id",1,"total");
@@ -284,7 +285,7 @@ namespace HibernateTest
     }
 
     // Open a CXHibernate session and add the 'master' and 'detail' tables
-    bool OpenSession()
+    bool OpenSessionFULL()
     {
       // Check if already done
       if(m_database.IsOpen())
@@ -383,6 +384,40 @@ namespace HibernateTest
       p_class->AddIdentity(primary);
     }
 
+    // Open a CXHibernate session by config file
+    // Without an external database
+    bool OpenSession()
+    {
+      if(m_session)
+      {
+        return true;
+      }
+
+      // Init in the correct language
+      InitSQLComponents(LN_ENGLISH);
+
+      try
+      {
+          m_session = hibernate.CreateSession();
+          if(m_session)
+          {
+            // Where we have our filestore
+            m_session->SetFilestore("C:\\WWW\\Testing");
+
+            // We are a database session
+            m_session->SetDatabaseConnection("Testing","sysdba","altijd");
+
+            return true;
+          }
+      }
+      catch(StdException* er)
+      {
+        Assert::AreEqual("",er->GetErrorMessage());
+        er->Delete();
+      }
+      return OpenSessionFULL();
+    }
+
     void ReadTableDefinition(CXClass* p_class)
     {
       CXTable* table = p_class->GetTable();
@@ -397,7 +432,8 @@ namespace HibernateTest
     {
       int result = 0;
 
-      if(m_database.IsOpen() == false)
+      SQLDatabase* database = m_session->GetDatabase();
+      if(database->IsOpen() == false)
       {
         return -1;
       }
@@ -407,8 +443,8 @@ namespace HibernateTest
         sql.Format("SELECT COUNT(*)\n"
                    "  FROM %s\n"
                    " WHERE %s = ?",p_table,p_column);
-        SQLQuery query(m_database);
-        SQLTransaction trans(&m_database,"count");
+        SQLQuery query(database);
+        SQLTransaction trans(database,"count");
 
         query.DoSQLStatement(sql,p_value);
         if(query.GetRecord())
@@ -429,7 +465,8 @@ namespace HibernateTest
     {
       CString result;
 
-      if(m_database.IsOpen() == false)
+      SQLDatabase* database = m_session->GetDatabase();
+      if(database->IsOpen() == false)
       {
         return "";
       }
@@ -439,8 +476,8 @@ namespace HibernateTest
         sql.Format("SELECT %s\n"
                    "  FROM %s\n"
                    " WHERE %s = ?",p_column,p_table,p_key);
-        SQLQuery query(m_database);
-        SQLTransaction trans(&m_database,"value");
+        SQLQuery query(database);
+        SQLTransaction trans(database,"value");
 
         query.DoSQLStatement(sql,p_value);
         if(query.GetRecord())

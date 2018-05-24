@@ -130,6 +130,58 @@ CXSession::SetDatabase(SQLDatabase* p_database)
   GetMetaSessionInfo();
 }
 
+// Getting our database
+SQLDatabase*
+CXSession::GetDatabase()
+{
+  if(m_database)
+  {
+    return m_database;
+  }
+  if(!m_dbsCatalog.IsEmpty())
+  {
+    m_database = new SQLDatabase();
+    m_database->Open(m_dbsCatalog,m_dbsUser,m_dbsPassword);
+    if(m_database->IsOpen())
+    {
+      m_role = CXH_Database_role;
+      GetMetaSessionInfo();
+      return m_database;
+    }
+  }
+  return nullptr;
+}
+
+
+// Specifiy a database connection
+void
+CXSession::SetDatabaseCatalog(CString p_datasource)
+{
+  m_dbsCatalog = p_datasource;
+}
+
+void
+CXSession::SetDatabaseUsername(CString p_user)
+{
+  m_dbsUser = p_user;
+}
+
+void
+CXSession::SetDatabasePassword(CString p_password)
+{
+  m_dbsPassword = p_password;
+}
+
+void
+CXSession::SetDatabaseConnection(CString p_datasource,CString p_user,CString p_password)
+{
+  m_dbsCatalog  = p_datasource;
+  m_dbsUser     = p_user;
+  m_dbsPassword = p_password;
+  // Clearly we want to do database exchanges
+  m_role = CXH_Database_role;
+}
+
 // Setting an alternate filestore location
 void 
 CXSession::SetFilestore(CString p_directory)
@@ -184,6 +236,9 @@ CXSession::LoadConfiguration(XMLMessage& p_config)
   CString role = p_config.GetElement("session_role");
   m_role = CXStringToRole(role);
 
+  CString use = p_config.GetElement("database_use");
+  m_use = CXStringToSessionUse(use);
+
   // Load all classes
   XMLElement* theclass = p_config.FindElement("class");
   while(theclass)
@@ -204,6 +259,11 @@ CXSession::LoadConfiguration(XMLMessage& p_config)
   {
     cl.second->LinkClasses(this);
   }
+
+  if(m_use == SESS_Create)
+  {
+    TryCreateDatabase();
+  }
 }
 
 // Saving the general configuration XML.
@@ -212,6 +272,7 @@ CXSession::SaveConfiguration(XMLMessage& p_config)
 {
   // Save session parameters
   p_config.AddElement(nullptr,"session_role",XDT_String,CXRoleToString(m_role));
+  p_config.AddElement(nullptr,"database_use",XDT_String,CXSessionUseToString(m_use));
 
   // Save all class info
   for(auto& cl : m_classes)
@@ -249,7 +310,7 @@ CXSession::GetMutationID(bool p_transaction /*= false*/)
   // Create transaction and give new ID
   if(p_transaction)
   {
-    m_transaction = new SQLTransaction(m_database,"mutation");
+    m_transaction = new SQLTransaction(GetDatabase(),"mutation");
   }
   // Reset the sub-transaction
   m_subtrans = 0;
@@ -831,10 +892,10 @@ CXSession::FindObjectInDatabase(CString p_className,VariantSet& p_primary)
   }
 
   // Connect our database
-  dset->SetDatabase(m_database);
+  dset->SetDatabase(GetDatabase());
 
   // Create correct query
-  theClass->BuildDefaultSelectQuery(m_database->GetSQLInfoDB());
+  theClass->BuildDefaultSelectQuery(GetDatabase()->GetSQLInfoDB());
 
   SQLFilterSet fset;
   if(CreateFilterSet(table,p_primary,fset))
@@ -941,7 +1002,7 @@ CXSession::SelectObjectsFromDatabase(CString p_className,SQLFilterSet& p_filters
   }
 
   // Connect our database
-  dset->SetDatabase(m_database);
+  dset->SetDatabase(GetDatabase());
 
   // Close dataset if it was opened
   if(dset->IsOpen())
@@ -952,7 +1013,7 @@ CXSession::SelectObjectsFromDatabase(CString p_className,SQLFilterSet& p_filters
   // Propagate our filters
   dset->SetFilters(&p_filters);
   // Set our query
-  CString query = CString("SELECT * FROM ") + table->DMLTableName(m_database->GetSQLInfoDB());
+  CString query = CString("SELECT * FROM ") + table->DMLTableName(GetDatabase()->GetSQLInfoDB());
   dset->SetQuery(query);
 
   // NOW GO OPEN our dataset
@@ -1009,7 +1070,7 @@ CXSession::UpdateObjectInDatabase(CXObject* p_object,int p_mutationID /*= 0*/)
   SQLDataSet*  dset = table->GetDataSet();
 
   // Connect our database
-  dset->SetDatabase(m_database);
+  dset->SetDatabase(GetDatabase());
 
   // New mutation ID for this update action
   if(p_mutationID == 0)
@@ -1034,7 +1095,7 @@ CXSession::InsertObjectInDatabase(CXObject* p_object,int p_mutationID /*= 0*/)
   SQLVariant zero;
 
   // Connect our database
-  dset->SetDatabase(m_database);
+  dset->SetDatabase(GetDatabase());
 
   // See if dataset is empty
   if(dset->GetNumberOfRecords() == 1 && dset->GetNumberOfFields() == 0)
@@ -1092,7 +1153,7 @@ CXSession::DeleteObjectInDatabase(CXObject* p_object,int p_mutationID /*= 0*/)
   SQLRecord* record = p_object->GetDatabaseRecord();
 
   // Connect our database
-  dset->SetDatabase(m_database);
+  dset->SetDatabase(GetDatabase());
 
   if(record == nullptr || dset == nullptr)
   {
@@ -1214,4 +1275,19 @@ CXSession::DeleteObjectInFilestore(CXObject* p_object,int p_mutationID /*= 0*/)
     }
   }
   return false;
+}
+
+//////////////////////////////////////////////////////////////////////////
+//
+// TRY TO CREATE A NEW (TEST) DATABASE FOR THIS SESSION
+//
+//////////////////////////////////////////////////////////////////////////
+
+void
+CXSession::TryCreateDatabase()
+{
+  for(auto& cl : m_classes)
+  {
+
+  }
 }

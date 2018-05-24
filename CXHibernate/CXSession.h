@@ -28,6 +28,7 @@
 #include "CXTable.h"
 #include "CXObject.h"
 #include "CXRole.h"
+#include "CXSessionUse.h"
 #include <SQLDatabase.h>
 #include <SQLDataSet.h>
 #include <SQLMetaInfo.h>
@@ -56,8 +57,15 @@ public:
   void          CloseSession();
   // Changing our role (database, filestore, internet)
   void          ChangeRole(CXHRole p_role);
+  // Specifiy a database connection
+  void          SetDatabaseCatalog(CString  p_datasource);
+  void          SetDatabaseUsername(CString p_user);
+  void          SetDatabasePassword(CString p_password);
+  void          SetDatabaseConnection(CString p_datasource,CString p_user,CString p_password);
   // Alternate database 
   void          SetDatabase(SQLDatabase* p_database);
+  // Getting our database
+  SQLDatabase*  GetDatabase();
   // Setting an alternate filestore location
   void          SetFilestore(CString p_directory);
   // Add a class to the session
@@ -106,6 +114,8 @@ public:
 private:
   // Getting meta-session info from our database
   void          GetMetaSessionInfo();
+  // Create a new database
+  void          TryCreateDatabase();
   // Clear the table cache
   void          ClearCache  (CString p_className = "");
   void          ClearClasses(CString p_className = "");
@@ -144,9 +154,13 @@ private:
 
   CString       m_sessionKey;                  // As known by CXHibernate
   CXHRole       m_role { CXH_Database_role};   // Master/Slave role of the session
-  bool          m_ownDatabase   { false   };   // We own / destroy this database
+  CXHSessionUse m_use;                         // How to use our database
   CString       m_baseDirectory;               // Base directory for filestore role
+  bool          m_ownDatabase   { false   };   // We own / destroy this database
   SQLDatabase*  m_database      { nullptr };   // Currently using database connection
+  CString       m_dbsCatalog;                  // Database to connect to
+  CString       m_dbsUser;                     // Database user to connect
+  CString       m_dbsPassword;                 // Password of our database user
   ClassMap      m_classes;                     // All classes definitions that we know of
   CXCache       m_cache;                       // All cached objects of all known tables
   int           m_mutation      { 0       };   // Mutation id

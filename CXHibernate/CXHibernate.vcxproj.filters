@@ -60,6 +60,9 @@
     <ClInclude Include="CXModelWord.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="CXSessionUse.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">
@@ -99,6 +102,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="CXModelWord.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="CXSessionUse.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

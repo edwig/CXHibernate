@@ -28,17 +28,6 @@
 #include "SQLComponents.h"
 #include "ConvertWideString.h"
 
-#ifdef _DEBUG
-// C-Runtime memory state for debug leak detection
-static _CrtMemState state;
-
-// To execute at the end of the program
-void __cdecl AtExitOfSQLComponents(void)
-{
-  _CrtMemDumpAllObjectsSince(&state);
-}
-#endif
-
 namespace SQLComponents
 {
   bool g_SQLComponentsInitialized = false;

@@ -111,6 +111,8 @@
       <PreprocessorDefinitions>COMPILED_TOGETHER_WITH_MARLIN;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories>$(SolutionDir)SQLComponents\;$(SolutionDir)Marlin\;</AdditionalIncludeDirectories>
+      <ExceptionHandling>Async</ExceptionHandling>
+      <RuntimeTypeInfo>true</RuntimeTypeInfo>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -147,6 +149,8 @@
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories>$(SolutionDir)SQLComponents\;$(SolutionDir)Marlin\;</AdditionalIncludeDirectories>
+      <ExceptionHandling>Async</ExceptionHandling>
+      <RuntimeTypeInfo>true</RuntimeTypeInfo>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -167,6 +171,7 @@
     <ClInclude Include="CXPrimaryHash.h" />
     <ClInclude Include="CXServer.h" />
     <ClInclude Include="CXSession.h" />
+    <ClInclude Include="CXSessionUse.h" />
     <ClInclude Include="CXStaticInitialization.h" />
     <ClInclude Include="CXTable.h" />
     <ClInclude Include="stdafx.h" />
@@ -183,6 +188,7 @@
     <ClCompile Include="CXRole.cpp" />
     <ClCompile Include="CXServer.cpp" />
     <ClCompile Include="CXSession.cpp" />
+    <ClCompile Include="CXSessionUse.cpp" />
     <ClCompile Include="CXStaticInitialization.cpp" />
     <ClCompile Include="CXTable.cpp" />
     <ClCompile Include="stdafx.cpp">

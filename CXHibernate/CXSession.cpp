@@ -95,6 +95,8 @@ CXSession::~CXSession()
 void
 CXSession::CloseSession()
 {
+  hibernate.Log(CXH_LOG_ACTIONS,true,"Close session: %s",m_sessionKey);
+
   Synchronize();
 
   if (m_use == SESS_Create)
@@ -104,12 +106,15 @@ CXSession::CloseSession()
   hibernate.RemoveSession(this);
 }
 
+// Changing the role of our session
 void
 CXSession::ChangeRole(CXHRole p_role)
 {
+  hibernate.Log(CXH_LOG_ACTIONS,true,"Changing session [%s] role to: %s",m_sessionKey,CXRoleToString(p_role));
   m_role = p_role;
 }
 
+// See if we have an opened database
 bool 
 CXSession::GetDatabaseIsOpen()
 {
@@ -130,7 +135,7 @@ CXSession::SetDatabase(SQLDatabase* p_database)
   }
   m_database = p_database;
   m_ownDatabase = false;
-  m_role = CXH_Database_role;
+  ChangeRole(CXH_Database_role);
 
   GetMetaSessionInfo();
 }
@@ -200,7 +205,7 @@ CXSession::SetFilestore(CString p_directory)
   m_baseDirectory = p_directory;
 }
 
-// Add a table to the session
+// Add a class to the session
 bool
 CXSession::AddClass(CXClass* p_class)
 {
@@ -222,6 +227,7 @@ CXSession::AddClass(CXClass* p_class)
   ObjectCache* objcache = new ObjectCache();
   m_cache.insert(std::make_pair(name,objcache));
 
+  hibernate.Log(CXH_LOG_ACTIONS,true,"Adding class [%s] to session [%s] ",name,m_sessionKey);
   return true;
 }
 
@@ -320,7 +326,9 @@ CXSession::GetMutationID(bool p_transaction /*= false*/)
   // Reset the sub-transaction
   m_subtrans = 0;
   // This is our mutation ID
-  return ++m_mutation;
+  ++m_mutation;
+  hibernate.Log(CXH_LOG_ACTIONS,true,"Started transaction [%d] for session [%s] ",m_mutation,m_sessionKey);
+  return m_mutation;
 }
 
 void
@@ -346,6 +354,7 @@ CXSession::CommitMutation(int p_mutationID)
     delete m_transaction;
     m_transaction = nullptr;
   }
+  hibernate.Log(CXH_LOG_ACTIONS,true,"Commit of transaction [%d] for session [%s] ",m_mutation,m_sessionKey);
 }
 
 void
@@ -360,6 +369,8 @@ CXSession::RollbackMutation(int p_mutationID)
   m_transaction->Rollback();
   delete m_transaction;
   m_transaction = nullptr;
+
+  hibernate.Log(CXH_LOG_ACTIONS,true,"Rollback transaction [%d] for session [%s] ",m_mutation,m_sessionKey);
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -380,6 +391,7 @@ CXSession::CreateObject(CString p_className)
     object->SetClass(theClass);
     return object;
   }
+  hibernate.Log(CXH_LOG_ERRORS,true,"Session [%s] Cannot create object for class: %s",m_sessionKey,p_className);
   return nullptr;
 }
 
@@ -400,19 +412,19 @@ CXSession::Load(CString p_className,int p_primary)
 }
 
 CXObject*
-CXSession::Load(CString p_tableName,SQLVariant* p_primary)
+CXSession::Load(CString p_className,SQLVariant* p_primary)
 {
   VariantSet set;
   set.push_back(p_primary);
 
-  return Load(p_tableName,set);
+  return Load(p_className,set);
 }
 
 CXObject*
-CXSession::Load(CString p_table,VariantSet& p_primary)
+CXSession::Load(CString p_className,VariantSet& p_primary)
 {
   // Search in cache
-  CXObject* object = FindObjectInCache(p_table,p_primary);
+  CXObject* object = FindObjectInCache(p_className,p_primary);
   if(object)
   {
     return object;
@@ -421,17 +433,17 @@ CXSession::Load(CString p_table,VariantSet& p_primary)
   // If not found, search in database / SOAP connection
   if(m_role == CXH_Database_role)
   {
-    object = FindObjectInDatabase(p_table,p_primary);
+    object = FindObjectInDatabase(p_className,p_primary);
   }
   else if(m_role == CXH_Internet_role)
   {
     // Query for object on SOAP connection
-    object = FindObjectOnInternet(p_table,p_primary);
+    object = FindObjectOnInternet(p_className,p_primary);
   }
   else
   {
     // Query for object in the filestore
-    object = FindObjectInFilestore(p_table,p_primary);
+    object = FindObjectInFilestore(p_className,p_primary);
   }
 
   // Place in cache
@@ -443,6 +455,7 @@ CXSession::Load(CString p_table,VariantSet& p_primary)
     }
     delete object;
   }
+  hibernate.Log(CXH_LOG_ERRORS,true,"Session [%s] Cannot load object for class: %s",m_sessionKey,p_className);
   return nullptr;
 }
 
@@ -489,7 +502,6 @@ CXSession::Load(CString p_className,SQLFilterSet& p_filters)
       set.push_back(obj.second);
     }
   }
-
   return set;
 }
 
@@ -704,6 +716,8 @@ CXSession::SaveSOAPMessage(SOAPMessage& p_message, CString p_fileName)
 void 
 CXSession::ClearCache(CString p_className /*= ""*/)
 {
+  hibernate.Log(CXH_LOG_ACTIONS,true,"Clear object cache of session: %s",m_sessionKey);
+
   if(m_cache.empty())
   {
     return;
@@ -733,6 +747,8 @@ CXSession::ClearCache(CString p_className /*= ""*/)
 void
 CXSession::ClearClasses(CString p_className /*= ""*/)
 {
+  hibernate.Log(CXH_LOG_ACTIONS,true,"Clear class definition cache of session: %s",m_sessionKey);
+
   ClassMap::iterator it = m_classes.begin();
   while(it != m_classes.end())
   {
@@ -779,6 +795,17 @@ CXSession::GetMetaSessionInfo()
       // Error in silence ?
       er->Delete();
     }
+  }
+  if(hibernate.GetLogLevel())
+  {
+    hibernate.Log(CXH_LOG_DEBUG,true,"Hibernate session : %s",m_sessionKey);
+    hibernate.Log(CXH_LOG_DEBUG,true,"Database session  : %s",m_metaInfo.m_session);
+    hibernate.Log(CXH_LOG_DEBUG,true,"Database user     : %s",m_metaInfo.m_user);
+    hibernate.Log(CXH_LOG_DEBUG,true,"Database terminal : %s",m_metaInfo.m_terminal);
+    hibernate.Log(CXH_LOG_DEBUG,true,"Database logon    : %s",m_metaInfo.m_logonMoment);
+    hibernate.Log(CXH_LOG_DEBUG,true,"Database address  : %s",m_metaInfo.m_remoteIP);
+    hibernate.Log(CXH_LOG_DEBUG,true,"Processname in dbs: %s",m_metaInfo.m_processName);
+    hibernate.Log(CXH_LOG_DEBUG,true,"Database ID       : %s",m_metaInfo.m_processID);
   }
 }
 
@@ -1291,6 +1318,8 @@ CXSession::DeleteObjectInFilestore(CXObject* p_object,int p_mutationID /*= 0*/)
 void
 CXSession::TryCreateDatabase()
 {
+  hibernate.Log(CXH_LOG_ACTIONS,false,"Try to create database schema");
+
   for(auto& cl : m_classes)
   {
     // cl.second->TryCreateTable()
@@ -1300,6 +1329,8 @@ CXSession::TryCreateDatabase()
 void
 CXSession::TryDropDatabase()
 {
+  hibernate.Log(CXH_LOG_ACTIONS,false,"Try to drop database schema");
+
   for (auto& cl : m_classes)
   {
     // cl.second->TryDropTable()

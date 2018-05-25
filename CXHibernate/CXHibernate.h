@@ -30,6 +30,11 @@
 #include <vector>
 #include <map>
 
+#define CXH_LOG_NOTHING       0   // Logging is OFF
+#define CXH_LOG_ERRORS        1   // Only error logging
+#define CXH_LOG_ACTIONS       2   // Log standard actions
+#define CXH_LOG_DEBUG         3   // Log as much as possible
+
 // ORM Mapping strategy classes -> tables
 typedef enum _map_strategy
 {
@@ -57,6 +62,8 @@ public:
 
   // FUNCTIONS
 
+  // Log a message to the hibernate logfile
+  void         Log(int p_level,bool p_format,const char* p_text,...);
   // Loading and saving the general configuration XML
   CXSession*   LoadConfiguration(CString p_sessionKey,CString p_configFile = "");
   bool         SaveConfiguration(CXSession* p_session,CString p_configFile = "");
@@ -90,6 +97,7 @@ public:
   MapStrategy   GetStrategy();
   CString       GetDefaultCatalog();
   CString       GetDefaultSchema();
+  int           GetLogLevel();
 
 private:
   // Translate strategy names
@@ -97,6 +105,9 @@ private:
   CString       MapStrategyToString(MapStrategy p_strategy);
   // Create an opaque session key
   CString       CreateSessionKey();
+  // Start and stop our logging
+  void          StartLogging(CString p_logfile,int p_level);
+  void          CloseLogfile();
 
   // Relational-Object-Mapping strategy
   MapStrategy   m_strategy { Strategy_standalone };
@@ -106,7 +117,8 @@ private:
   MapCreate     m_createCXO;
   // Current session key
   int           m_key { 1 };
-
+  // Logging for Hibernate
+  LogAnalysis*  m_logfile { nullptr };
   // DEFAULTS
   CString       m_default_catalog;      // Default catalog
   CString       m_default_schema;       // Default schema of all tables

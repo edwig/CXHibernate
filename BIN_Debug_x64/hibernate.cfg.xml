@@ -3,12 +3,14 @@
   <default_catalog />
   <default_schema>sysdba</default_schema>
   <strategy>standalone</strategy>
+  <logfile>C:\TMP\Hibernate_log.txt</logfile>
+  <loglevel>4</loglevel>
   <session_role>database_role</session_role>
   <database_use>use</database_use>
   <resources>
-    <resource>detail_config.xml</resource>
-    <resource>master_config.xml</resource>
-    <resource>testnumber_config.xml</resource>
+    <resource>detail_config.hbm.xml</resource>
+    <resource>master_config.hbm.xml</resource>
+    <resource>testnumber_config.hbm.xml</resource>
   </resources>
   <class>
     <name>Detail</name>

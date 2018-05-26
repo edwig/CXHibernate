@@ -58,6 +58,7 @@ public:
   void        AddPrivilege  (CXAccess&     p_access);
   // Find an attribute
   CXAttribute* FindAttribute(CString p_name);
+  CXAttribute* FindAttribute(int     p_index);
   // Find the generator attribute (if any)
   CXAttribute* FindGenerator();
 

@@ -22,6 +22,8 @@ bld/
 [Oo]bj/
 [Ll]og/
 [Ll]ib/
+BIN_Debug_x64
+BIN_Release_x64
 
 # Visual Studio 2015 cache/options directory
 .vs/
@@ -73,6 +75,9 @@ artifacts/
 *.dll
 *.exp
 *.lib
+*.exe
+*.ipdb
+*.iobj
 
 # Chutzpah Test files
 _Chutzpah*

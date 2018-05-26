@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="utf-8"?>
+<hibernate>
+  <default_catalog />
+  <default_schema>sysdba</default_schema>
+  <strategy>standalone</strategy>
+  <logfile>C:\TMP\Hibernate_log.txt</logfile>
+  <loglevel>4</loglevel>
+  <session_role>database_role</session_role>
+  <database_use>use</database_use>
+  <resources>
+    <resource>detail_config.hbm.xml</resource>
+    <resource>master_config.hbm.xml</resource>
+    <resource>testnumber_config.hbm.xml</resource>
+  </resources>
+  <class>
+    <name>Detail</name>
+	  <schema>sysdba</schema>
+    <table>detail</table>
+    <discriminator>det</discriminator>
+    <attributes>
+      <attribute name="id" datatype="int" primary="true"/>
+      <attribute name="mast_id" datatype="int" foreign="true"/>
+      <attribute name="line" datatype="int"/>
+      <attribute name="description" datatype="string" maxlength="250"/>
+      <attribute name="amount" datatype="bcd"/>
+    </attributes>
+  	<primarykey name="pk_detail">
+	    <column name="id" />
+	  </primarykey>
+    <foreignkeys>
+	    <foreign name="fk_detail_master">
+	      <association_class>Master</association_class>
+	        <column name="mast_id" />
+	    </foreign>
+    </foreignkeys>
+    <indices>
+      <index name="detail_line" unique="true" ascending="true">
+        <attribute name="mast_id" />
+        <attribute name="line" />
+        <filter />
+      </index>
+    </indices>
+    <generator name="detail_seq" start="1" />
+    <access>
+      <user name="public" rights="all" />
+      <user name="pronto" rights="select" grantable="true" />
+    </access>
+  </class>
+  <class>
+    <name>Master</name>
+    <table>MASTER</table>
+    <discriminator>mas</discriminator>
+    <attributes>
+      <attribute name="id" datatype="int" generator="true" primary="true"/>
+      <attribute name="invoice" datatype="int"/>
+      <attribute name="description" datatype="string" maxlength="250"/>
+      <attribute name="total" datatype="bcd"/>
+    </attributes>
+	  <primarykey name="pk_master">
+	    <column name="id" />
+	  </primarykey>
+    <foreignkeys />
+  </class>
+  <class>
+    <name>TestNumber</name>
+    <table>TEST_NUMBER</table>
+    <discriminator>tst</discriminator>
+    <attributes>
+      <attribute name="id" datatype="int" generator="true" primary="true"/>
+      <attribute name="field1" datatype="int"/>
+      <attribute name="field2" datatype="double"/>
+      <attribute name="field3" datatype="bcd"/>
+    </attributes>
+	  <primarykey name="pk_test_number">
+	    <column name="id" />
+	  </primarykey>
+    <foreignkeys />
+  </class>
+</hibernate>

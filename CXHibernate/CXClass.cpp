@@ -180,6 +180,16 @@ CXClass::FindAttribute(CString p_name)
   return nullptr;
 }
 
+CXAttribute*
+CXClass::FindAttribute(int p_index)
+{
+  if (p_index >= 0 && p_index < (int)m_attributes.size())
+  {
+    return m_attributes[p_index];
+  }
+  return nullptr;
+}
+
 // Find the generator (if any)
 CXAttribute* 
 CXClass::FindGenerator()

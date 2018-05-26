@@ -12,5 +12,6 @@
 #include "CppUnitTest.h"
 
 #include <SQLComponents.h>
-
 using namespace SQLComponents;
+#include <CXHibernate.h>
+#include <Marlin.h>

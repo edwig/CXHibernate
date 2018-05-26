@@ -36,11 +36,10 @@
 //
 //////////////////////////////////////////////////////////////////////////
 
-class CXClass;
 class CXObject;
 
 // Prototype for use in method/function declarations
-typedef CXObject* (CALLBACK *CreateCXO)();
+typedef CXObject* (*CreateCXO)(void);
 
 // Macro for calling a method with this factory as a parameter
 #define CXO_FACTORY(classname) CreateCXObject##classname

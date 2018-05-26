@@ -93,7 +93,7 @@ TestNumber::DeSerialize(SQLRecord& p_record)
 // Create our new object factory
 // DEFINE_CXO_FACTORY(TestNumber);
 
-CXObject* CreateCXObjectTestNumber()
+CXObject* CreateCXObjectTestNumber(void)
 {
   return new TestNumber();
 }

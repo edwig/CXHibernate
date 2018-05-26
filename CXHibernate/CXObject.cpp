@@ -105,11 +105,11 @@ CXObject::Hashcode()
 void
 CXObject::SetPrimaryKey(SQLVariant* p_keyValue, int p_part)
 {
-  if(m_primaryKey.size() > p_part)
+  if((int)m_primaryKey.size() > p_part)
   {
     delete m_primaryKey[p_part];
   }
-  else while(m_primaryKey.size() <= p_part)
+  else while((int)m_primaryKey.size() <= p_part)
   {
     m_primaryKey.push_back(nullptr);
   }
@@ -120,7 +120,7 @@ CXObject::SetPrimaryKey(SQLVariant* p_keyValue, int p_part)
 SQLVariant* 
 CXObject::GetPrimaryKey(int p_part)
 {
-  if(m_primaryKey.size() > p_part)
+  if((int)m_primaryKey.size() > p_part)
   {
     return m_primaryKey[p_part];
   }

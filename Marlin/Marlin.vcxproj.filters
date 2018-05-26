@@ -630,5 +630,6 @@
     <ClInclude Include="StdException.h">
       <Filter>MarlinGeneral\Headers</Filter>
     </ClInclude>
+    <ClInclude Include="Marlin.h" />
   </ItemGroup>
 </Project>

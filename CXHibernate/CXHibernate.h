@@ -129,3 +129,22 @@ private:
 
 // Singleton pointer to the library
 extern CXHibernate hibernate;
+
+// Selecting the right library to link with automatically
+// So we do not need to worry about which library to use in the linker settings
+#if defined _M_IX86
+#define CXH_PLATFORM "x86"
+#else
+#define CXH_PLATFORM "x64"
+#endif
+
+#if defined _DEBUG
+#define CXH_CONFIGURATION "D"
+#else
+#define CXH_CONFIGURATION "R"
+#endif 
+
+#ifndef CXH_COMPONENTS_NOAUTOLINK
+#pragma comment(lib,"CXHibernate_"                        CXH_PLATFORM CXH_CONFIGURATION ".lib")
+#pragma message("Automatically linking with CXHibernate_" CXH_PLATFORM CXH_CONFIGURATION ".lib")
+#endif 

@@ -85,7 +85,7 @@ namespace HibernateTest
         SQLFilter* filter = new SQLFilter("line",OP_Greater,1);
 
         CXResultSet set = m_session->Load(Detail::ClassName(),filter);
-        for(int ind = 0;ind < set.size(); ++ind)
+        for(int ind = 0;ind < (int)set.size(); ++ind)
         {
           Detail* detail = reinterpret_cast<Detail*>(set[ind]);
           PrintDetail(detail);

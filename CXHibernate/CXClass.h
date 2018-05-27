@@ -48,6 +48,10 @@ public:
   CreateCXO   GetCreateCXO();
   // Getting our underlying database table
   CXTable*    GetTable();
+  // Getting the superclass
+  CXClass*    GetSuperClass();
+  // Getting our subclasses
+  SubClasses& GetSubClasses();
 
   // Add attributes to the class
   void        AddAttribute  (CXAttribute*  p_attribute);

@@ -115,6 +115,20 @@ CXClass::GetTable()
   return m_table;
 }
 
+// Getting the superclass
+CXClass*
+CXClass::GetSuperClass()
+{
+  return m_super;
+}
+
+// Getting our subclasses
+SubClasses&
+CXClass::GetSubClasses()
+{
+  return m_subClasses;
+}
+
 // Add an attribute to the class
 void
 CXClass::AddAttribute(CXAttribute* p_attribute)
@@ -360,7 +374,7 @@ CXClass::SaveMetaInfoIdentity(XMLMessage& p_message,XMLElement* p_theClass)
 {
   if(!m_primary.m_attributes.empty())
   {
-    XMLElement* primary = p_message.AddElement(p_theClass,"primarykey",XDT_String,"");
+    XMLElement* primary = p_message.AddElement(p_theClass,"identity",XDT_String,"");
     p_message.SetAttribute(primary,"name",m_primary.m_constraintName);
     CString deferrable;
     switch(m_primary.m_deferrable)
@@ -385,10 +399,10 @@ CXClass::SaveMetaInfoIdentity(XMLMessage& p_message,XMLElement* p_theClass)
 void 
 CXClass::SaveMetaInfoAssociations(XMLMessage& p_message,XMLElement* p_theClass)
 {
-  XMLElement* foreigns = p_message.AddElement(p_theClass,"foreignkeys",XDT_String,"");
+  XMLElement* foreigns = p_message.AddElement(p_theClass,"associations",XDT_String,"");
   for(auto& fkey : m_foreigns)
   {
-    XMLElement* foreign = p_message.AddElement(foreigns,"foreign",XDT_String,"");
+    XMLElement* foreign = p_message.AddElement(foreigns,"association",XDT_String,"");
     p_message.SetAttribute(foreign,"name",fkey->m_constraintName);
     // update / delete / deferrable / match / initially-deferred / enabled
     p_message.AddElement(foreign,"association_class",XDT_String,fkey->m_primaryTable);
@@ -500,7 +514,7 @@ CXClass::LoadMetaInfoAttributes(XMLMessage& p_message,XMLElement* p_theClass)
 void 
 CXClass::LoadMetaInfoIdentity(XMLMessage& p_message,XMLElement* p_theClass)
 {
-  XMLElement* primary = p_message.FindElement(p_theClass,"primarykey");
+  XMLElement* primary = p_message.FindElement(p_theClass,"identity");
   if(primary)
   {
     m_primary.m_constraintName = p_message.GetAttribute(primary,"name");
@@ -529,10 +543,10 @@ CXClass::LoadMetaInfoIdentity(XMLMessage& p_message,XMLElement* p_theClass)
 void 
 CXClass::LoadMetaInfoAssociations(XMLMessage& p_message,XMLElement* p_theClass)
 {
-  XMLElement* foreigns = p_message.FindElement(p_theClass,"foreignkeys");
+  XMLElement* foreigns = p_message.FindElement(p_theClass,"associations");
   if(foreigns)
   {
-    XMLElement* foreign = p_message.FindElement(foreigns,"foreign");
+    XMLElement* foreign = p_message.FindElement(foreigns,"association");
     while(foreign)
     {
       CXForeignKey* fkey = new CXForeignKey();

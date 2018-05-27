@@ -44,6 +44,10 @@ public:
 
   // Setting the class is a mandatory action
   void SetClass(CXClass* p_class);
+  // Logging of this object (called by CXSession only!)
+  void LogObject();
+  // Default class name of an object
+  CString ClassName();
 
   // Bring the contents of the class to a SOAPMessage or a SQLRecord
   virtual void Serialize(SOAPMessage& p_message,XMLElement* p_entity) = 0;
@@ -100,10 +104,11 @@ protected:
   VariantSet m_primaryKey;
 
 private:
-  CString ClassName();
   // Fill in the primary key of the object
   void FillPrimaryKey(SOAPMessage& p_message, XMLElement* p_entity);
   void FillPrimaryKey(SQLRecord&   p_record);
+  // Log all attributes of a class (if any)
+  void LogClassAttributes(CXClass* p_class);
 };
 
 //////////////////////////////////////////////////////////////////////////

@@ -37,6 +37,8 @@
 #define CXH_LOG_ERRORS        1   // Only error logging
 #define CXH_LOG_ACTIONS       2   // Log standard actions
 #define CXH_LOG_DEBUG         3   // Log as much as possible
+#define CXH_LOG_SQL           6   // Log all SQL actions
+#define CXH_LOG_MAX           6   // Maximum loglevel
 
 // ORM Mapping strategy classes -> tables
 typedef enum _map_strategy
@@ -61,28 +63,28 @@ class CXHibernate
 {
 public:
   CXHibernate();
- ~CXHibernate();
+  ~CXHibernate();
 
   // FUNCTIONS
 
   // Log a message to the hibernate logfile
-  void         Log(int p_level,bool p_format,const char* p_text,...);
+  void         Log(int p_level, bool p_format, const char* p_text, ...);
   // Loading and saving the general configuration XML
-  CXSession*   LoadConfiguration(CString p_sessionKey,CString p_configFile = "");
-  bool         SaveConfiguration(CXSession* p_session,CString p_configFile = "");
+  CXSession*   LoadConfiguration(CString p_sessionKey, CString p_configFile = "");
+  bool         SaveConfiguration(CXSession* p_session, CString p_configFile = "");
 
   // Getting a (possibly existing) session
   CXSession*   GetSession(CString p_sessionKey = "");
   // Create a new Hibernate session
   CXSession*   CreateSession(CString p_sessionKey = "");
   // Adding a externally created session (but we now own it). You **MUST** supply a session key
-  void         AddSession(CXSession* p_session,CString p_sessionKey);
+  void         AddSession(CXSession* p_session, CString p_sessionKey);
   // Removing a session
   void         RemoveSession(CXSession* p_session);
   // Flushing all data to the database and closing all sessions
   void         CloseAllSessions();
   // Register a create function for a class name
-  void         RegisterCreateCXO(CString p_name,CreateCXO p_create);
+  void         RegisterCreateCXO(CString p_name, CreateCXO p_create);
   // Find a create function for a class name
   CreateCXO    FindCreateCXO(CString p_name);
 
@@ -93,7 +95,7 @@ public:
   // Setting a default catalog for the execution time
   void          SetDefaultCatalog(CString p_catalog);
   // Setting a default database schema for the execution time
-  void          SetDefaultSchema (CString p_schema);
+  void          SetDefaultSchema(CString p_schema);
 
   // GETTERS
 
@@ -109,19 +111,20 @@ private:
   // Create an opaque session key
   CString       CreateSessionKey();
   // Start and stop our logging
-  void          StartLogging(CString p_logfile,int p_level);
+  void          StartLogging(CString p_logfile, int p_level);
   void          CloseLogfile();
 
   // Relational-Object-Mapping strategy
-  MapStrategy   m_strategy { Strategy_standalone };
+  MapStrategy   m_strategy{ Strategy_standalone };
   // Mapping to all open sessions
   MapSessions   m_sessions;
   // Mapping with all create object functions
   MapCreate     m_createCXO;
   // Current session key
-  int           m_key { 1 };
+  int           m_key{ 1 };
   // Logging for Hibernate
-  LogAnalysis*  m_logfile { nullptr };
+  int           m_loglevel = { CXH_LOG_NOTHING };
+  LogAnalysis*  m_logfile    { nullptr };
   // DEFAULTS
   CString       m_default_catalog;      // Default catalog
   CString       m_default_schema;       // Default schema of all tables

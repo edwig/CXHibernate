@@ -199,8 +199,8 @@ CXAttribute::SaveMetaInfo(XMLMessage& p_message,XMLElement* p_elem)
 
   if(m_maxlength) p_message.SetAttribute(attrib,"maxlength",m_maxlength);
   if(m_generator) p_message.SetAttribute(attrib,"generator",m_generator);
-  if(m_isPrimary) p_message.SetAttribute(attrib,"primary",  m_isPrimary);
-  if(m_isForeign) p_message.SetAttribute(attrib,"foreign",  m_isForeign);
+  if(m_isPrimary) p_message.SetAttribute(attrib,"isprimary",m_isPrimary);
+  if(m_isForeign) p_message.SetAttribute(attrib,"isforeign",m_isForeign);
   if(m_notNull)   p_message.SetAttribute(attrib,"not-null", m_notNull);
   if(!m_dbs_column.IsEmpty())
   {
@@ -222,8 +222,8 @@ CXAttribute::LoadMetaInfo(XMLMessage& p_message,XMLElement* p_elem)
 
   m_maxlength  = p_message.GetAttributeInteger(p_elem,"maxlength");
   m_generator  = p_message.GetAttributeBoolean(p_elem,"generator");
-  m_isPrimary  = p_message.GetAttributeBoolean(p_elem,"primary");
-  m_isForeign  = p_message.GetAttributeBoolean(p_elem,"foreign");
+  m_isPrimary  = p_message.GetAttributeBoolean(p_elem,"isprimary");
+  m_isForeign  = p_message.GetAttributeBoolean(p_elem,"isforeign");
   m_notNull    = p_message.GetAttributeBoolean(p_elem,"not-null");
   m_dbs_column = p_message.GetAttribute       (p_elem,"dbs_column");
   m_notNull    = p_message.GetAttribute       (p_elem,"default");

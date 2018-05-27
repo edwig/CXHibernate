@@ -260,6 +260,29 @@ CXObject::PostDeSerialize(SQLRecord& p_record)
 {
 }
 
+// Logging of this object (called by CXSession only!)
+void 
+CXObject::LogObject()
+{
+  // See if we can log this object
+  if(m_class == nullptr || m_record == nullptr)
+  {
+    return;
+  }
+
+  if(m_class->GetSuperClass())
+  {
+    LogClassAttributes(m_class->GetSuperClass());
+  }
+  LogClassAttributes(m_class);
+
+  SubClasses& subs = m_class->GetSubClasses();
+  for(auto& cl : subs)
+  {
+    LogClassAttributes(cl);
+  }
+}
+
 //////////////////////////////////////////////////////////////////////////
 //
 // PRIVATE
@@ -270,6 +293,10 @@ CXObject::PostDeSerialize(SQLRecord& p_record)
 CString
 CXObject::ClassName()
 {
+  if(m_class)
+  {
+    return m_class->GetName();
+  }
   return "<UNKNOWN>";
 }
 
@@ -322,5 +349,22 @@ CXObject::FillPrimaryKey(SOAPMessage& p_message, XMLElement* p_entity)
         }
       }
     }
+  }
+}
+
+// Log all attributes of a class (if any)
+void 
+CXObject::LogClassAttributes(CXClass* p_class)
+{
+  hibernate.Log(CXH_LOG_DEBUG,true,"Attributes of class: %s",p_class->GetName());
+
+  int index = 0;
+  CXAttribute* attribute = p_class->FindAttribute(index);
+  while (attribute)
+  {
+    var* value = m_record->GetField(attribute->GetName());
+    hibernate.Log(CXH_LOG_DEBUG,true,"%d: %-32s:%s",index,attribute->GetName(),value->GetAsChar());
+    // Next attribute
+    attribute = p_class->FindAttribute(++index);
   }
 }

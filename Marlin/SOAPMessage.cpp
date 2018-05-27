@@ -48,11 +48,10 @@ static char THIS_FILE[] = __FILE__;
 #pragma region XTOR
 
 // General XTOR
-// Purpose: Outgoing SOAP 1.2 message
+// Purpose: Opaque SOAP Message
 SOAPMessage::SOAPMessage()
 {
   memset(&m_sender, 0, sizeof(SOCKADDR_IN6));
-  CreateHeaderAndBody();
 }
 
 // XTOR from an incoming message
@@ -2053,6 +2052,7 @@ CString
 SOAPMessage::GetBodyPart()
 {
   bool utf8 = m_encoding == XMLEncoding::ENC_UTF8;
+  FindHeaderAndBody();
   return PrintElements(m_body, utf8);
 }
 

@@ -42,6 +42,26 @@
 static char THIS_FILE[] = __FILE__;
 #endif
 
+//////////////////////////////////////////////////////////////////////////
+// Static functions for logging of the SQLDatbase
+
+static void CXHLogPrint(void* p_context, const char* p_text)
+{
+  hibernate.Log(hibernate.GetLogLevel(),false,p_text);
+}
+
+static int CXHLogLevel(void* p_context)
+{
+  return hibernate.GetLogLevel();
+}
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The CXSesson object
+//
+//////////////////////////////////////////////////////////////////////////
+
+
 // CTOR Default session (slave side of the session)
 CXSession::CXSession(CString p_sessionKey)
           :m_sessionKey(p_sessionKey)
@@ -67,6 +87,7 @@ CXSession::CXSession(CString p_sessionKey,CString p_database,CString p_user,CStr
   {
     GetMetaSessionInfo();
   }
+  m_database->RegisterLogContext(hibernate.GetLogLevel(),CXHLogLevel,CXHLogPrint,this);
 }
 
 // DTOR: Free all tables and records
@@ -137,6 +158,7 @@ CXSession::SetDatabase(SQLDatabase* p_database)
   m_database = p_database;
   m_ownDatabase = false;
   ChangeRole(CXH_Database_role);
+  m_database->RegisterLogContext(hibernate.GetLogLevel(),CXHLogLevel,CXHLogPrint,this);
 
   GetMetaSessionInfo();
 }
@@ -152,6 +174,7 @@ CXSession::GetDatabase()
   if(!m_dbsCatalog.IsEmpty())
   {
     m_database = new SQLDatabase();
+    m_database->RegisterLogContext(hibernate.GetLogLevel(),CXHLogLevel,CXHLogPrint,this);
     m_database->Open(m_dbsCatalog,m_dbsUser,m_dbsPassword);
     if(m_database->IsOpen())
     {
@@ -447,6 +470,14 @@ CXSession::Load(CString p_className,VariantSet& p_primary)
   {
     if(AddObjectInCache(object,p_primary))
     {
+      if(hibernate.GetLogLevel())
+      {
+        hibernate.Log(CXH_LOG_ACTIONS,true,"Loading object [%s:%s]",p_className,CXPrimaryHash(p_primary));
+        if(hibernate.GetLogLevel() >= CXH_LOG_DEBUG)
+        {
+          object->LogObject();
+        }
+      }
       return object;
     }
     delete object;
@@ -495,7 +526,21 @@ CXSession::Load(CString p_className,SQLFilterSet& p_filters)
   {
     for(auto& obj : *it->second)
     {
+      // Remember as one of the gotten object
       set.push_back(obj.second);
+
+      // Log the object as one of the set
+      if(hibernate.GetLogLevel())
+      {
+        hibernate.Log(CXH_LOG_ACTIONS, true, "Loading object [%s:%s]",p_className,CXPrimaryHash(obj.second->GetPrimaryKey()));
+        if (hibernate.GetLogLevel() >= CXH_LOG_DEBUG)
+        {
+          obj.second->LogObject();
+        }
+      }
+
+      // Possibly add to the cache (could already be there!)
+      AddObjectInCache(obj.second,obj.second->GetPrimaryKey());
     }
   }
   return set;
@@ -532,6 +577,17 @@ CXSession::Update(CXObject* p_object)
   {
     UpdateObjectInFilestore(p_object);
   }
+
+  // Log the object as updated
+  if(hibernate.GetLogLevel())
+  {
+    hibernate.Log(CXH_LOG_ACTIONS, true, "Updated object [%s:%s]",p_object->ClassName(),CXPrimaryHash(p_object->GetPrimaryKey()));
+    if (hibernate.GetLogLevel() >= CXH_LOG_DEBUG)
+    {
+      p_object->LogObject();
+    }
+  }
+
   return true;
 }
 
@@ -555,7 +611,18 @@ CXSession::Insert(CXObject* p_object)
   // Add object to the cache
   if(p_object->IsPersistent())
   {
-    return AddObjectInCache(p_object,p_object->GetPrimaryKey());
+    bool result = AddObjectInCache(p_object,p_object->GetPrimaryKey());
+
+    // Log the object as inserted
+    if(hibernate.GetLogLevel())
+    {
+      hibernate.Log(CXH_LOG_ACTIONS,true,"Inserted object [%s:%s]",p_object->ClassName(),CXPrimaryHash(p_object->GetPrimaryKey()));
+      if(hibernate.GetLogLevel() >= CXH_LOG_DEBUG)
+      {
+        p_object->LogObject();
+      }
+    }
+    return result;
   }
   return false;
 }
@@ -563,6 +630,16 @@ CXSession::Insert(CXObject* p_object)
 bool
 CXSession::Delete(CXObject* p_object)
 {
+  // Log the object as deleted
+  if(hibernate.GetLogLevel())
+  {
+    hibernate.Log(CXH_LOG_ACTIONS,true,"Object to delete [%s:%s]",p_object->ClassName(),CXPrimaryHash(p_object->GetPrimaryKey()));
+    if(hibernate.GetLogLevel() >= CXH_LOG_DEBUG)
+    {
+      p_object->LogObject();
+    }
+  }
+
   if(m_role == CXH_Database_role)
   {
     DeleteObjectInDatabase(p_object);
@@ -577,6 +654,7 @@ CXSession::Delete(CXObject* p_object)
     DeleteObjectInFilestore(p_object);
   }
 
+  hibernate.Log(CXH_LOG_ACTIONS,false,"Delete succeeded");
   return RemoveObjectFromCache(p_object,p_object->GetPrimaryKey());
 }
 
@@ -994,6 +1072,11 @@ CXSession::FindObjectInFilestore(CString p_className,VariantSet& p_primary)
         // Fill in our object from the message 
         object->DeSerialize(p_message,entity);
 
+        // Can only log the object from the message!
+        if(hibernate.GetLogLevel() >= CXH_LOG_DEBUG)
+        {
+          hibernate.Log(CXH_LOG_DEBUG,false,p_message.GetBodyPart());
+        }
         return object;
       }
     }

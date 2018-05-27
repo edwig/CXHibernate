@@ -4,7 +4,7 @@
   <default_schema>sysdba</default_schema>
   <strategy>standalone</strategy>
   <logfile>C:\TMP\Hibernate_log.txt</logfile>
-  <loglevel>4</loglevel>
+  <loglevel>6</loglevel>
   <session_role>database_role</session_role>
   <database_use>use</database_use>
   <resources>
@@ -18,21 +18,21 @@
     <table>detail</table>
     <discriminator>det</discriminator>
     <attributes>
-      <attribute name="id" datatype="int" primary="true"/>
-      <attribute name="mast_id" datatype="int" foreign="true"/>
+      <attribute name="id" datatype="int" isprimary="true"/>
+      <attribute name="mast_id" datatype="int" isforeign="true"/>
       <attribute name="line" datatype="int"/>
       <attribute name="description" datatype="string" maxlength="250"/>
       <attribute name="amount" datatype="bcd"/>
     </attributes>
-  	<primarykey name="pk_detail">
+  	<identity name="pk_detail">
 	    <column name="id" />
-	  </primarykey>
-    <foreignkeys>
-	    <foreign name="fk_detail_master">
+	  </identity>
+    <associations>
+	    <association name="master_of_detail">
 	      <association_class>Master</association_class>
 	        <column name="mast_id" />
-	    </foreign>
-    </foreignkeys>
+	    </association>
+    </associations>
     <indices>
       <index name="detail_line" unique="true" ascending="true">
         <attribute name="mast_id" />
@@ -51,29 +51,29 @@
     <table>MASTER</table>
     <discriminator>mas</discriminator>
     <attributes>
-      <attribute name="id" datatype="int" generator="true" primary="true"/>
+      <attribute name="id" datatype="int" generator="true" isprimary="true"/>
       <attribute name="invoice" datatype="int"/>
       <attribute name="description" datatype="string" maxlength="250"/>
       <attribute name="total" datatype="bcd"/>
     </attributes>
-	  <primarykey name="pk_master">
+	  <identity name="pk_master">
 	    <column name="id" />
-	  </primarykey>
-    <foreignkeys />
+	  </identity>
+    <associations />
   </class>
   <class>
     <name>TestNumber</name>
     <table>TEST_NUMBER</table>
     <discriminator>tst</discriminator>
     <attributes>
-      <attribute name="id" datatype="int" generator="true" primary="true"/>
+      <attribute name="id" datatype="int" generator="true" isprimary="true"/>
       <attribute name="field1" datatype="int"/>
       <attribute name="field2" datatype="double"/>
       <attribute name="field3" datatype="bcd"/>
     </attributes>
-	  <primarykey name="pk_test_number">
+	  <identity name="pk_test_number">
 	    <column name="id" />
-	  </primarykey>
-    <foreignkeys />
+	  </identity>
+    <associations />
   </class>
 </hibernate>

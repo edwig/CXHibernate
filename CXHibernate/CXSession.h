@@ -21,8 +21,8 @@
 // WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION 
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
-// Last Revision:   22-04-2018
-// Version number:  0.0.1
+// Last Revision:   27-05-2018
+// Version number:  0.5.0
 //
 #pragma once
 #include "CXTable.h"
@@ -58,7 +58,7 @@ public:
   // Changing our role (database, filestore, internet)
   void          ChangeRole(CXHRole p_role);
   // Specifiy a database connection
-  void          SetDatabaseCatalog(CString  p_datasource);
+  void          SetDatabaseCatalog(CString p_datasource);
   void          SetDatabaseUsername(CString p_user);
   void          SetDatabasePassword(CString p_password);
   void          SetDatabaseConnection(CString p_datasource,CString p_user,CString p_password);
@@ -80,9 +80,10 @@ public:
   void          SaveConfiguration(XMLMessage& p_config);
 
   // Get a master mutation ID, to put actions into one (1) commit
-  int           GetMutationID(bool p_transaction = false);
-  void          CommitMutation(int p_mutationID);
-  void          RollbackMutation(int p_mutationID);
+  int           StartTransaction();
+  void          CommitTransaction();
+  void          RollbackTransaction();
+  bool          HasTransaction();
 
   // SOAP INTERFACE
   // Create a filestore name for a table
@@ -102,10 +103,10 @@ public:
   CXObject*     Load  (CString p_className,VariantSet&   p_primary);
   CXResultSet   Load  (CString p_className,SQLFilter*    p_filter);
   CXResultSet   Load  (CString p_className,SQLFilterSet& p_filters);
-  bool          Save  (CXObject* p_object,int p_mutationID = 0);
-  bool          Update(CXObject* p_object,int p_mutationID = 0);
-  bool          Insert(CXObject* p_object,int p_mutationID = 0);
-  bool          Delete(CXObject* p_object,int p_mutationID = 0);
+  bool          Save  (CXObject* p_object);
+  bool          Update(CXObject* p_object);
+  bool          Insert(CXObject* p_object);
+  bool          Delete(CXObject* p_object);
   // Remove object from the result cache without any database/internet actions
   bool          RemoveObject(CXObject* p_object);
   // Complete cache synchronize with the database, saving all results
@@ -128,30 +129,30 @@ private:
   bool          CreateFilterSet(CXTable* p_table,VariantSet& p_primary,SQLFilterSet& p_filters);
 
   // Try to find an object in the cache
-  CXObject*     FindObjectInCache   (CString p_tableName,VariantSet& p_primary);
+  CXObject*     FindObjectInCache    (CString p_className,VariantSet& p_primary);
   // Try to find an object in the database
-  CXObject*     FindObjectInDatabase (CString p_table,VariantSet& p_primary);
+  CXObject*     FindObjectInDatabase (CString p_className,VariantSet& p_primary);
   // Try to find an object in the filestore
-  CXObject*     FindObjectInFilestore(CString p_table,VariantSet& p_primary);
+  CXObject*     FindObjectInFilestore(CString p_className,VariantSet& p_primary);
   // Try to find an object via the SOAP interface
-  CXObject*     FindObjectOnInternet (CString p_table,VariantSet& p_primary);
+  CXObject*     FindObjectOnInternet (CString p_className,VariantSet& p_primary);
 
   // SELECT objects
   void          SelectObjectsFromDatabase (CString p_className,SQLFilterSet& p_filters);
   void          SelectObjectsFromFilestore(CString p_className,SQLFilterSet& p_filters);
   void          SelectObjectsFromInternet (CString p_className,SQLFilterSet& p_filters);
   // DML operations in the database
-  bool          UpdateObjectInDatabase (CXObject* p_object,int p_mutationID = 0);
-  bool          InsertObjectInDatabase (CXObject* p_object,int p_mutationID = 0);
-  bool          DeleteObjectInDatabase (CXObject* p_object,int p_mutationID = 0);
+  bool          UpdateObjectInDatabase (CXObject* p_object);
+  bool          InsertObjectInDatabase (CXObject* p_object);
+  bool          DeleteObjectInDatabase (CXObject* p_object);
   // DML operations in the filestore
-  bool          UpdateObjectInFilestore(CXObject* p_object,int p_mutationID = 0);
-  bool          InsertObjectInFilestore(CXObject* p_object,int p_mutationID = 0);
-  bool          DeleteObjectInFilestore(CXObject* p_object,int p_mutationID = 0);
+  bool          UpdateObjectInFilestore(CXObject* p_object);
+  bool          InsertObjectInFilestore(CXObject* p_object);
+  bool          DeleteObjectInFilestore(CXObject* p_object);
   // DML operations on the internet
-  bool          UpdateObjectInInternet (CXObject* p_object,int p_mutationID = 0);
-  bool          InsertObjectInInternet (CXObject* p_object,int p_mutationID = 0);
-  bool          DeleteObjectInInternet (CXObject* p_object,int p_mutationID = 0);
+  bool          UpdateObjectInInternet (CXObject* p_object);
+  bool          InsertObjectInInternet (CXObject* p_object);
+  bool          DeleteObjectInInternet (CXObject* p_object);
 
   CString       m_sessionKey;                  // As known by CXHibernate
   CXHRole       m_role { CXH_Database_role};   // Master/Slave role of the session

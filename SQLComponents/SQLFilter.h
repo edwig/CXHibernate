@@ -35,7 +35,7 @@ namespace SQLComponents
 // Operator for a condition filter
 typedef enum _sqlOperator
 {
-  OP_NOP = 0
+   OP_NOP = 0
   ,OP_Equal = 1
   ,OP_NotEqual
   ,OP_Greater
@@ -54,6 +54,10 @@ SQLOperator;
 class SQLRecord;
 // Mapping typedefs
 typedef std::vector<SQLVariant*> VariantSet;
+
+// Translate a string from the message to an operator
+SQLOperator StringToSQLOperator(CString p_oper);
+CString     SQLOperatorToString(SQLOperator p_oper);
 
 // THE FILTER CLASS
 
@@ -213,5 +217,11 @@ public:
 private:
   std::vector<SQLFilter*> m_filters;
 };
+
+//////////////////////////////////////////////////////////////////////////
+// Alias for other systems
+
+typedef SQLFilter Filter;
+
 
 }

@@ -21,8 +21,8 @@
 // WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION 
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
-// Last Revision:   22-04-2018
-// Version number:  0.0.1
+// Last Revision:   27-05-2018
+// Version number:  0.5.0
 //
 #pragma once
 #include "CXObjectFactory.h"
@@ -31,7 +31,7 @@
 #include <map>
 
 #define HIBERNATE_VERSION "0.5.0"
-#define HIBERNATE_DATE    "26-05-2018"
+#define HIBERNATE_DATE    "27-05-2018"
 
 #define CXH_LOG_NOTHING       0   // Logging is OFF
 #define CXH_LOG_ERRORS        1   // Only error logging

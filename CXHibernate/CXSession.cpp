@@ -21,14 +21,15 @@
 // WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION 
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
-// Last Revision:   22-04-2018
-// Version number:  0.0.1
+// Last Revision:   27-05-2018
+// Version number:  0.5.0
 //
 #include "stdafx.h"
 #include "CXSession.h"
 #include "CXClass.h"
 #include "CXPrimaryHash.h"
 #include "CXRole.h"
+#include "CXTransaction.h"
 #include <SQLQuery.h>
 #include <SQLTransaction.h>
 #include <EnsureFile.h>
@@ -300,46 +301,31 @@ CXSession::SaveConfiguration(XMLMessage& p_config)
 
 // Get a master mutation ID, to put actions into one (1) commit
 int
-CXSession::GetMutationID(bool p_transaction /*= false*/)
+CXSession::StartTransaction()
 {
   // On re-entry, and still in transaction
-  if(p_transaction && m_transaction)
+  if(m_transaction)
   {
     // Create a sub transaction
     ++m_subtrans;
     return m_mutation;
   }
 
-  // Should now be without a transaction
-  if(m_transaction)
-  {
-    m_transaction->Rollback();
-    delete m_transaction;
-    m_transaction = nullptr;
-  }
-
   // Create transaction and give new ID
-  if(p_transaction)
-  {
-    m_transaction = new SQLTransaction(GetDatabase(),"mutation");
-  }
+  m_transaction = new SQLTransaction(GetDatabase(),"mutation");
+
   // Reset the sub-transaction
   m_subtrans = 0;
   // This is our mutation ID
   ++m_mutation;
+
   hibernate.Log(CXH_LOG_ACTIONS,true,"Started transaction [%d] for session [%s] ",m_mutation,m_sessionKey);
   return m_mutation;
 }
 
 void
-CXSession::CommitMutation(int p_mutationID)
+CXSession::CommitTransaction()
 {
-  // Verify that it's still the same mutation
-  if(p_mutationID != m_mutation)
-  {
-    return;
-  }
-
   // Commit of sub-transaction
   if(m_subtrans)
   {
@@ -354,16 +340,20 @@ CXSession::CommitMutation(int p_mutationID)
     delete m_transaction;
     m_transaction = nullptr;
   }
+  else
+  {
+    throw new StdException("Not in transaction at Commit()");
+  }
   hibernate.Log(CXH_LOG_ACTIONS,true,"Commit of transaction [%d] for session [%s] ",m_mutation,m_sessionKey);
 }
 
 void
-CXSession::RollbackMutation(int p_mutationID)
+CXSession::RollbackTransaction()
 {
   // See if we have a transaction
   if(m_transaction == nullptr)
   {
-    return;
+    throw new StdException("Not in transaction at Rollback()");
   }
 
   m_transaction->Rollback();
@@ -371,6 +361,12 @@ CXSession::RollbackMutation(int p_mutationID)
   m_transaction = nullptr;
 
   hibernate.Log(CXH_LOG_ACTIONS,true,"Rollback transaction [%d] for session [%s] ",m_mutation,m_sessionKey);
+}
+
+bool
+CXSession::HasTransaction()
+{
+  return (m_transaction != nullptr);
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -506,25 +502,25 @@ CXSession::Load(CString p_className,SQLFilterSet& p_filters)
 }
 
 bool
-CXSession::Save(CXObject* p_object,int p_mutationID /*= 0*/)
+CXSession::Save(CXObject* p_object)
 {
   if(p_object->IsTransient())
   {
-    return Insert(p_object,p_mutationID);
+    return Insert(p_object);
   }
   else
   {
-    return Update(p_object,p_mutationID);
+    return Update(p_object);
   }
 }
 
 // Update an object
 bool
-CXSession::Update(CXObject* p_object,int p_mutationID /*= 0*/)
+CXSession::Update(CXObject* p_object)
 {
   if(m_role == CXH_Database_role)
   {
-    return UpdateObjectInDatabase(p_object,p_mutationID);
+    return UpdateObjectInDatabase(p_object);
   }
   else if(m_role == CXH_Internet_role)
   {
@@ -540,11 +536,11 @@ CXSession::Update(CXObject* p_object,int p_mutationID /*= 0*/)
 }
 
 bool
-CXSession::Insert(CXObject* p_object,int p_mutationID /*= 0*/)
+CXSession::Insert(CXObject* p_object)
 {
   if(m_role == CXH_Database_role)
   {
-    InsertObjectInDatabase(p_object,p_mutationID);
+    InsertObjectInDatabase(p_object);
   }
   else if(m_role == CXH_Internet_role)
   {
@@ -554,7 +550,7 @@ CXSession::Insert(CXObject* p_object,int p_mutationID /*= 0*/)
   }
   else // CXH_Filestore_role
   {
-    InsertObjectInFilestore(p_object,p_mutationID);
+    InsertObjectInFilestore(p_object);
   }
   // Add object to the cache
   if(p_object->IsPersistent())
@@ -565,11 +561,11 @@ CXSession::Insert(CXObject* p_object,int p_mutationID /*= 0*/)
 }
 
 bool
-CXSession::Delete(CXObject* p_object,int p_mutationID /*= 0*/)
+CXSession::Delete(CXObject* p_object)
 {
   if(m_role == CXH_Database_role)
   {
-    DeleteObjectInDatabase(p_object,p_mutationID);
+    DeleteObjectInDatabase(p_object);
   }
   else if(m_role == CXH_Internet_role)
   {
@@ -578,7 +574,7 @@ CXSession::Delete(CXObject* p_object,int p_mutationID /*= 0*/)
   }
   else // CXH_Filestore_role
   {
-    DeleteObjectInFilestore(p_object,p_mutationID);
+    DeleteObjectInFilestore(p_object);
   }
 
   return RemoveObjectFromCache(p_object,p_object->GetPrimaryKey());
@@ -602,7 +598,7 @@ CXSession::Synchronize()
   }
 
   // Getting a new mutation
-  int mutationID = GetMutationID(true);
+  CXTransaction trans(this);
 
   // Walk our object cache
   for(auto& objcache : m_cache)
@@ -614,10 +610,10 @@ CXSession::Synchronize()
       SQLRecord* record = object->GetDatabaseRecord();
       if(record && (record->GetStatus() & SQL_Record_Updated))
       {
-        object->Serialize(*record,mutationID);
-        if(Update(object,mutationID) == false)
+        object->Serialize(*record);
+        if(Update(object) == false)
         {
-          RollbackMutation(mutationID);
+          trans.Rollback();
           return false;
         }
       }
@@ -625,7 +621,7 @@ CXSession::Synchronize()
   }
 
   // Commit in the database
-  CommitMutation(mutationID);
+  trans.Commit();
   return true;
 }
 
@@ -885,12 +881,12 @@ CXSession::CreateFilterSet(CXTable* p_table,VariantSet& p_primary,SQLFilterSet& 
 // Try to find an object in the cache
 // It's a double map lookup (table, object)
 CXObject*
-CXSession::FindObjectInCache(CString p_tableName,VariantSet& p_primary)
+CXSession::FindObjectInCache(CString p_className,VariantSet& p_primary)
 {
   CString hash = CXPrimaryHash(p_primary);
-  p_tableName.MakeLower();
+  p_className.MakeLower();
 
-  CXCache::iterator it = m_cache.find(p_tableName);
+  CXCache::iterator it = m_cache.find(p_className);
   if (it != m_cache.end())
   {
     ObjectCache::iterator tit = it->second->find(hash);
@@ -1005,7 +1001,6 @@ CXSession::FindObjectInFilestore(CString p_className,VariantSet& p_primary)
   return false;
 }
 
-
 // Try to find an object via the SOAP interface
 CXObject*
 CXSession::FindObjectOnInternet(CString p_table,VariantSet& p_primary)
@@ -1094,7 +1089,7 @@ CXSession::SelectObjectsFromInternet(CString p_className,SQLFilterSet& p_filters
 }
 
 bool
-CXSession::UpdateObjectInDatabase(CXObject* p_object,int p_mutationID /*= 0*/)
+CXSession::UpdateObjectInDatabase(CXObject* p_object)
 {
   CXClass* theClass = p_object->GetClass();
   CXTable*    table = theClass->GetTable();
@@ -1105,19 +1100,21 @@ CXSession::UpdateObjectInDatabase(CXObject* p_object,int p_mutationID /*= 0*/)
   dset->SetDatabase(GetDatabase());
 
   // New mutation ID for this update action
-  if(p_mutationID == 0)
-  {
-    p_mutationID = ++m_mutation;
-  }
+  CXTransaction trans(this);
 
   // Serialize object to database record
-  p_object->Serialize(*record,p_mutationID);
-  return dset->Synchronize(p_mutationID);
+  p_object->Serialize(*record,m_mutation);
+  if(dset->Synchronize(m_mutation))
+  {
+    trans.Commit();
+    return true;
+  }
+  return false;
 }
 
 // Insert a new object in the database
 bool
-CXSession::InsertObjectInDatabase(CXObject* p_object,int p_mutationID /*= 0*/)
+CXSession::InsertObjectInDatabase(CXObject* p_object)
 {
   CXClass*   theClass = p_object->GetClass();
   CXTable*      table = theClass->GetTable();
@@ -1145,13 +1142,10 @@ CXSession::InsertObjectInDatabase(CXObject* p_object,int p_mutationID /*= 0*/)
   }
 
   // New mutation ID for this update action
-  if(p_mutationID == 0)
-  {
-    p_mutationID = ++m_mutation;
-  }
+  CXTransaction trans(this);
 
   // Now serialize our object with the 'real' values
-  p_object->Serialize(*record, p_mutationID);
+  p_object->Serialize(*record,m_mutation);
   // Set the record to 'insert-only'
   record->Inserted();
 
@@ -1165,18 +1159,20 @@ CXSession::InsertObjectInDatabase(CXObject* p_object,int p_mutationID /*= 0*/)
   }
 
   // Go save the record
-  bool saved = dset->Synchronize(p_mutationID);
+  bool saved = dset->Synchronize(m_mutation);
   if(saved)
   {
     // Re-sync the primary key
     p_object->ResetPrimaryKey();
     p_object->DeSerialize(*record);
+    // Commit in the database
+    trans.Commit();
   }
   return saved;
 }
 
 bool
-CXSession::DeleteObjectInDatabase(CXObject* p_object,int p_mutationID /*= 0*/)
+CXSession::DeleteObjectInDatabase(CXObject* p_object)
 {
   // Getting the database record
   CXClass* theClass = p_object->GetClass();
@@ -1202,26 +1198,24 @@ CXSession::DeleteObjectInDatabase(CXObject* p_object,int p_mutationID /*= 0*/)
   record->Delete();
 
   // New mutation ID for this update action
-  if(p_mutationID == 0)
-  {
-    p_mutationID = ++m_mutation;
-  }
+  CXTransaction trans(this);
 
   // BEWARE: We need not "Serialize" our object
   // We take the assumption that the primary key is "immutable"
 
   // Go delete the record
-  bool deleted = dset->Synchronize(p_mutationID);
-  if (deleted)
+  bool deleted = dset->Synchronize(m_mutation);
+  if(deleted)
   {
     p_object->MakeTransient();
+    trans.Commit();
   }
   return deleted;
 }
 
 // DML operations in the filestore
 bool
-CXSession::UpdateObjectInFilestore(CXObject* p_object,int p_mutationID /*= 0*/)
+CXSession::UpdateObjectInFilestore(CXObject* p_object)
 {
   CXClass* theClass = p_object->GetClass();
   CXTable* table = theClass->GetTable();
@@ -1258,7 +1252,7 @@ CXSession::UpdateObjectInFilestore(CXObject* p_object,int p_mutationID /*= 0*/)
 }
 
 bool
-CXSession::InsertObjectInFilestore(CXObject* p_object,int p_mutationID /*= 0*/)
+CXSession::InsertObjectInFilestore(CXObject* p_object)
 {
   CXClass* theClass = p_object->GetClass();
   CXTable* table = theClass->GetTable();
@@ -1285,7 +1279,7 @@ CXSession::InsertObjectInFilestore(CXObject* p_object,int p_mutationID /*= 0*/)
 }
 
 bool
-CXSession::DeleteObjectInFilestore(CXObject* p_object,int p_mutationID /*= 0*/)
+CXSession::DeleteObjectInFilestore(CXObject* p_object)
 {
   CXClass* theClass = p_object->GetClass();
   CXTable* table = theClass->GetTable();

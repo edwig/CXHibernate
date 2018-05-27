@@ -21,8 +21,8 @@
 // WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION 
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
-// Last Revision:   22-04-2018
-// Version number:  0.0.1
+// Last Revision:   27-05-2018
+// Version number:  0.5.0
 //
 #pragma once
 #include <WebServiceServer.h>
@@ -41,7 +41,8 @@ class SOAPMessage;
 class CXServer : public WebServiceServer
 {
 public:
-  CXServer(CString    p_name
+  CXServer(CXSession* p_session
+          ,CString    p_name
           ,CString    p_webroot
           ,CString    p_url
           ,PrefixType p_channelType
@@ -62,8 +63,6 @@ private:
   SQLFilterSet FindFilterSet(SOAPMessage* p_message);
   // Add an object to the answer of the SOAP message
   void         AddObjectToMessage(SOAPMessage* p_message,CXObject* object);
-  // Translate a string from the message to an operator
-  SQLOperator  StringToSQLOperator(CString p_oper);
 
   // Our CXHibernate session
   CXSession* m_session { nullptr };

@@ -21,8 +21,8 @@
 // WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION 
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
-// Last Revision:   22-04-2018
-// Version number:  0.0.1
+// Last Revision:   27-05-2018
+// Version number:  0.5.0
 //
 #include "stdafx.h"
 #include "CXServer.h"
@@ -37,13 +37,15 @@ static char THIS_FILE[] = __FILE__;
 
 // Implementation of the CXServer
 
-CXServer::CXServer(CString    p_name
+CXServer::CXServer(CXSession* p_session
+                  ,CString    p_name
                   ,CString    p_webroot
                   ,CString    p_url
                   ,PrefixType p_channelType
                   ,CString    p_targetNamespace
                   ,unsigned   p_maxThreads)
-         :WebServiceServer(p_name,p_webroot,p_url,p_channelType,p_targetNamespace,p_maxThreads)
+         :m_session(p_session)
+         ,WebServiceServer(p_name, p_webroot, p_url, p_channelType, p_targetNamespace, p_maxThreads)
 {
 }
 
@@ -353,26 +355,6 @@ CXServer::FindFilterSet(SOAPMessage* p_message)
     filter = p_message->GetElementSibling(filter);
   }
   return filters;
-}
-
-// Translate a string from the message to an operator
-SQLOperator
-CXServer::StringToSQLOperator(CString p_oper)
-{
-  if(p_oper == "Equal")         return OP_Equal;
-  if(p_oper == "LikeBegin")     return OP_LikeBegin;
-  if(p_oper == "LikeMiddle")    return OP_LikeMiddle;
-  if(p_oper == "IN")            return OP_IN;
-  if(p_oper == "IsNULL")        return OP_IsNULL;
-  if(p_oper == "Greater")       return OP_Greater;
-  if(p_oper == "Smaller")       return OP_Smaller;
-  if(p_oper == "GreaterEqual")  return OP_GreaterEqual;
-  if(p_oper == "Smaller")       return OP_Smaller;
-  if(p_oper == "SmallerEqual")  return OP_SmallerEqual;
-  if(p_oper == "NotEqual")      return OP_NotEqual;
-  if(p_oper == "Between")       return OP_Between;
-
-  return OP_NOP;
 }
 
 // Add an object to the answer of the SOAP message

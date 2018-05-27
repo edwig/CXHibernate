@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////
 //
-// File: CXStaticInitialization.h
+// File: CXTransaction.h
 //
 // Copyright (c) 1998-2018 ir. W.E. Huisman
 // All rights reserved
@@ -25,18 +25,53 @@
 // Version number:  0.5.0
 //
 #pragma once
-#pragma warning(disable : 4075)  
-
-// Declare a pointer to a function (PF)
-typedef void(__cdecl *PF)(void);
-
-// Register the destructor of an object
-int cxoexit(PF pf);
-
-// To be called to let all classes register themselves
-void CXOInitializeClasses();
-
-// To be called to destroy the class registration
-void CXODestroyClasses();
+#include "CXSession.h"
 
 
+//////////////////////////////////////////////////////////////////////////
+//
+// Autopointer class to a SQLTransaction within a CXSession
+// Assures a 'Rollback' when going unplanned off the stack
+//
+//////////////////////////////////////////////////////////////////////////
+
+class CXTransaction
+{
+public:
+  CXTransaction(CXSession* p_session) : m_session(p_session)
+  {
+    m_mutation = p_session->StartTransaction();
+  };
+
+  ~CXTransaction()
+  {
+    Rollback();
+  }
+
+  void Commit()
+  {
+    if(m_session)
+    {
+      m_session->CommitTransaction();
+      m_session = nullptr;
+    }
+  }
+
+  void Rollback()
+  {
+    if(m_session)
+    {
+      m_session->RollbackTransaction();
+      m_session = nullptr;
+    }
+  }
+
+  int  Mutation()
+  {
+    return m_mutation; 
+  }
+
+private:
+  CXSession* m_session;
+  int        m_mutation;
+};

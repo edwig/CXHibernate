@@ -37,6 +37,31 @@ static char THIS_FILE[] = __FILE__;
 namespace SQLComponents
 {
 
+// Word translation of filters, needed for XMLMessages
+typedef struct _filterName
+{
+  const char* m_name;
+  int         m_filter;
+}
+FilterName;
+
+FilterName sqfilter[] =
+{
+   { "Equal",         OP_Equal        }
+  ,{ "LikeBegin",     OP_LikeBegin    }
+  ,{ "LikeMiddle",    OP_LikeMiddle   }
+  ,{ "IN",            OP_IN           }
+  ,{ "IsNULL",        OP_IsNULL       }
+  ,{ "Greater",       OP_Greater      }
+  ,{ "GreaterEqual",  OP_GreaterEqual }
+  ,{ "Smaller",       OP_Smaller      }
+  ,{ "GreaterEqual",  OP_GreaterEqual }
+  ,{ "NotEqual",      OP_NotEqual     }
+  ,{ "Between",       OP_Between      }
+  ,{ "NOP",           OP_NOP          }
+};
+
+
 // XTOR: Creates a new filter
 //       Used for filters without an operand, or more than one
 SQLFilter::SQLFilter(CString p_field,SQLOperator p_operator)
@@ -400,6 +425,45 @@ SQLFilter::MatchBetween(SQLVariant* p_field)
     return true;
   }
   return false;
+}
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Static translation functions (thread safe)
+//
+//////////////////////////////////////////////////////////////////////////
+
+// Translate a string from the message to an operator
+SQLOperator 
+StringToSQLOperator(CString p_oper)
+{
+  FilterName* filter = sqfilter;
+
+  while(filter->m_filter != OP_NOP)
+  {
+    if(p_oper.Compare(filter->m_name) == 0)
+    {
+      return static_cast<SQLOperator>(filter->m_filter);
+    }
+    ++filter;
+  }
+  return OP_NOP;
+}
+
+// Translate an operator to a string
+CString
+SQLOperatorToString(SQLOperator p_oper)
+{
+  FilterName* filter = sqfilter;
+
+  while(filter->m_filter != OP_NOP)
+  {
+    if(filter->m_filter == p_oper)
+    {
+      return filter->m_name;
+    }
+  }
+  return "";
 }
 
 }

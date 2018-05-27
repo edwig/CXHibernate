@@ -62,11 +62,9 @@ namespace HibernateTest
       {
         OpenSession();
 
-        CXObject* object = m_session->Load(Master::ClassName(),2);
-        Master*   master = reinterpret_cast<Master*>(object);
+        Master* master = (Master*) m_session->Load(Master::ClassName(),2);
 
         Assert::IsNotNull(master);
-
         Logger::WriteMessage("Testing 2th master record");
         PrintMaster(master);
       }
@@ -80,57 +78,50 @@ namespace HibernateTest
     TEST_METHOD(T02_SelectDetails)
     {
       Logger::WriteMessage("Getting all records from the DETAIL table with 'line > 1'");
-      if(OpenSession())
-      {
-        SQLFilter* filter = new SQLFilter("line",OP_Greater,1);
+      
+      OpenSession();
 
-        CXResultSet set = m_session->Load(Detail::ClassName(),filter);
-        for(int ind = 0;ind < (int)set.size(); ++ind)
-        {
-          Detail* detail = reinterpret_cast<Detail*>(set[ind]);
-          PrintDetail(detail);
-        }
-      }
-      else
+      Filter* filter = new Filter("line",OP_Greater,1);
+
+      CXResultSet set = m_session->Load(Detail::ClassName(),filter);
+      for(int ind = 0;ind < (int)set.size(); ++ind)
       {
-        Assert::Fail(L"Database was not opened");
+        Detail* detail = reinterpret_cast<Detail*>(set[ind]);
+        PrintDetail(detail);
       }
     }
 
     TEST_METHOD(T03_UpdateTest)
     {
       Logger::WriteMessage("Updating a record from the MASTER table");
-      if (OpenSession())
-      {
-        Master* master = (Master*) m_session->Load(Master::ClassName(),1);
 
-        Assert::IsNotNull(master);
-        Logger::WriteMessage("Updating 1th master record");
+      OpenSession();
 
-        // Keeping the old one (750.00)
-        bcd old_total = master->GetTotal();
+      CXObject* object = m_session->Load(Master::ClassName(),1);
+      Master* master = reinterpret_cast<Master*>(object);
 
-        // Setting new value
-        bcd total("935.12");
-        master->SetTotal(total);
-        bool res = m_session->Save(master);
-        Assert::IsTrue(res);
+      Assert::IsNotNull(master);
+      Logger::WriteMessage("Updating 1th master record");
 
-        CString value = TestRecordValue("master","id",1,"total");
-        Assert::AreEqual(value,"935.12");
+      // Keeping the old one (750.00)
+      bcd old_total = master->GetTotal();
 
-        // Back to the old value
-        master->SetTotal(old_total);
-        res = m_session->Save(master);
-        Assert::IsTrue(res);
+      // Setting new value
+      bcd total("935.12");
+      master->SetTotal(total);
+      bool res = m_session->Save(master);
+      Assert::IsTrue(res);
 
-        value = TestRecordValue("master","id",1,"total");
-        Assert::AreEqual(value,"750");
-      }
-      else
-      {
-        Assert::Fail(L"Database was not opened");
-      }
+      CString value = TestRecordValue("master","id",1,"total");
+      Assert::AreEqual(value,"935.12");
+
+      // Back to the old value
+      master->SetTotal(old_total);
+      res = m_session->Save(master);
+      Assert::IsTrue(res);
+
+      value = TestRecordValue("master","id",1,"total");
+      Assert::AreEqual(value,"750");
     }
 
     void PrintMaster(Master* p_master)
@@ -167,6 +158,8 @@ namespace HibernateTest
       // Insert this object in the database
       m_session->Insert(numbers);
 
+      int id = numbers->GetID();
+
       // Test that it is in the database
       int num = TestRecordCount("test_number","id",numbers->GetID());
       Assert::AreEqual(num,1);
@@ -176,7 +169,7 @@ namespace HibernateTest
       m_session->Delete(numbers);
 
       // Test that it is gone
-      num = TestRecordCount("test_number", "id", numbers->GetID());
+      num = TestRecordCount("test_number", "id", id);
       Assert::AreEqual(num,0);
       Logger::WriteMessage("Test_number record deleted again!");
     }
@@ -184,104 +177,92 @@ namespace HibernateTest
     TEST_METHOD(T05_SelectToFilestore)
     {
       Logger::WriteMessage("Getting all records from the DETAIL table and save in FILESTORE");
-      if (OpenSession())
+      
+      OpenSession();
+
+      var one((long)1);
+      Filter* filter = new Filter("line", OP_GreaterEqual, &one);
+
+      CXResultSet set = m_session->Load("detail",filter);
+
+      m_session->SetFilestore("C:\\WWW\\Testing");
+      m_session->ChangeRole(CXHRole::CXH_Filestore_role);
+
+      for(auto& object : set)
       {
-        SQLVariant one((long)1);
-        SQLFilter* filter = new SQLFilter("line", OP_GreaterEqual, &one);
-
-        CXResultSet set = m_session->Load("detail",filter);
-
-        m_session->SetFilestore("C:\\WWW\\Testing");
-        m_session->ChangeRole(CXHRole::CXH_Filestore_role);
-
-        for(auto& object : set)
-        {
-          m_session->Insert(object);
-        }
-      }
-      else
-      {
-        Assert::Fail(L"Database was not opened");
+        m_session->Insert(object);
       }
     }
 
     TEST_METHOD(T06_SelectFromFilestore)
     {
       Logger::WriteMessage("Getting a record from the DETAIL table from the FILESTORE");
-      if(OpenSession())
-      {
-        SQLVariant one((long)7);
-        m_session->SetFilestore("C:\\WWW\\Testing");
+      
+      OpenSession();
 
-        CXObject* object = m_session->Load(Detail::ClassName(),&one);
-        Detail* detail = reinterpret_cast<Detail*>(object);
-        Assert::IsNotNull(detail);
-        PrintDetail(detail);
-      }
-      else
-      {
-        Assert::Fail(L"Database was not opened");
-      }
+      var one(7);
+      m_session->SetFilestore("C:\\WWW\\Testing");
+
+      CXObject* object = m_session->Load(Detail::ClassName(),&one);
+      Detail* detail = reinterpret_cast<Detail*>(object);
+      Assert::IsNotNull(detail);
+      PrintDetail(detail);
     }
 
     TEST_METHOD(T07_DeleteFromFilestore)
     {
       Logger::WriteMessage("Delete a record from the DETAIL table from the FILESTORE");
-      if (OpenSession())
-      {
-        m_session->ChangeRole(CXHRole::CXH_Filestore_role);
 
-        CXObject* object = m_session->Load(Detail::ClassName(),6);
-        Detail* detail = reinterpret_cast<Detail*>(object);
+      OpenSession();
 
-        Assert::IsNotNull(detail);
-        PrintDetail(detail);
+      m_session->ChangeRole(CXHRole::CXH_Filestore_role);
 
-        bool res = m_session->Delete(detail);
-        Assert::IsTrue(res);
-      }
-      else
-      {
-        Assert::Fail(L"Database was not opened");
-      }
+      CXObject* object = m_session->Load(Detail::ClassName(),6);
+      Detail* detail = reinterpret_cast<Detail*>(object);
+
+      Assert::IsNotNull(detail);
+      PrintDetail(detail);
+
+      bool res = m_session->Delete(detail);
+      Assert::IsTrue(res);
     }
 
     TEST_METHOD(T08_WriteTableInfo)
     {
       Logger::WriteMessage("Write meta info of tables");
-      if(OpenSession())
-      {
-        CXTable* master = m_session->FindClass(Master::ClassName())->GetTable();
-        CXTable* detail = m_session->FindClass(Detail::ClassName())->GetTable();
-        CXTable* number = m_session->FindClass(TestNumber::ClassName())->GetTable();
-        Assert::IsNotNull(master);
-        Assert::IsNotNull(detail);
-        Assert::IsNotNull(number);
 
-        bool res1 = master->SaveMetaInfo(m_session);
-        bool res2 = detail->SaveMetaInfo(m_session);
-        bool res3 = number->SaveMetaInfo(m_session);
-        Assert::IsTrue(res1);
-        Assert::IsTrue(res2);
-        Assert::IsTrue(res3);
-      }
+      OpenSession();
+      
+      CXTable* master = m_session->FindClass(Master::ClassName())->GetTable();
+      CXTable* detail = m_session->FindClass(Detail::ClassName())->GetTable();
+      CXTable* number = m_session->FindClass(TestNumber::ClassName())->GetTable();
+      Assert::IsNotNull(master);
+      Assert::IsNotNull(detail);
+      Assert::IsNotNull(number);
+
+      bool res1 = master->SaveMetaInfo(m_session);
+      bool res2 = detail->SaveMetaInfo(m_session);
+      bool res3 = number->SaveMetaInfo(m_session);
+      Assert::IsTrue(res1);
+      Assert::IsTrue(res2);
+      Assert::IsTrue(res3);
     }
 
     TEST_METHOD(T09_LoadTableInfo)
     {
       Logger::WriteMessage("Write meta info of tables");
-      if (OpenSession())
-      {
-        CXTable* master = m_session->FindClass(Master::ClassName())->GetTable();
-        CXTable* detail = m_session->FindClass(Detail::ClassName())->GetTable();
-        Assert::IsNotNull(master);
-        Assert::IsNotNull(detail);
 
-        bool res1 = master->LoadMetaInfo(m_session);
-        bool res2 = detail->LoadMetaInfo(m_session);
-        Assert::IsTrue(res1);
-        Assert::IsTrue(res2);
-      }
+      OpenSession();
+
+      CXTable* master = m_session->FindClass(Master::ClassName())->GetTable();
+      CXTable* detail = m_session->FindClass(Detail::ClassName())->GetTable();
+      Assert::IsNotNull(master);
+      Assert::IsNotNull(detail);
+
+      bool res1 = master->LoadMetaInfo(m_session);
+      bool res2 = detail->LoadMetaInfo(m_session);
+      Assert::IsTrue(res1);
+      Assert::IsTrue(res2);
     }
 
     // Open a CXHibernate session and add the 'master' and 'detail' tables

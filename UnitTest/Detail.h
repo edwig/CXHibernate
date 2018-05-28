@@ -27,6 +27,12 @@
 #pragma once
 #include <CXObject.h>
 #include <bcd.h>
+#include <SQLDate.h>
+#include <SQLTime.h>
+#include <SQLTimestamp.h>
+#include <SQLInterval.h>
+#include <SQLGuid.h>
+#include <SQLVariant.h>
 
 class Detail : public CXObject
 {
@@ -45,13 +51,12 @@ public:
   bcd     GetAmount()        { return m_amount;      };
 
 protected:
-
-private:
   // Database persistent attributes
   int     m_id      { 0 };    // Primary key part 1
   int     m_line    { 0 };    // Primary key part 2
   int     m_mast_id { 0 };    // Foreign key to Master
   CString m_description;
   bcd     m_amount;
+private:
   // Transient attributes go here
 };

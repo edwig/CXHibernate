@@ -198,7 +198,6 @@ CXServer::OnCXUpdate(int p_code,SOAPMessage* p_message)
           object->DeSerialize(*p_message,entity);
           // Create copy on the stack of the primary key
           VariantSet primary = object->GetPrimaryKey();
-          delete object;
 
           CXObject* realObject = m_session->Load(tablename,primary);
           if(realObject)
@@ -219,6 +218,8 @@ CXServer::OnCXUpdate(int p_code,SOAPMessage* p_message)
             }
           }
           else errors = "CXUpdate object to be updated not found!";
+
+          delete object;
         }
         catch(StdException* er)
         {
@@ -264,7 +265,6 @@ CXServer::OnCXDelete(int p_code,SOAPMessage* p_message)
           object->DeSerialize(*p_message,entity);
           // Create copy on the stack of the primary key
           VariantSet primary = object->GetPrimaryKey();
-          delete object;
 
           CXObject* realObject = m_session->Load(tablename,primary);
           if(realObject)
@@ -282,6 +282,8 @@ CXServer::OnCXDelete(int p_code,SOAPMessage* p_message)
             }
           }
           else errors = "CXDelete object to be deleted not found!";
+
+          delete object;
         }
         catch(StdException* er)
         {

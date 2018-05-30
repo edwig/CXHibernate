@@ -121,6 +121,7 @@
       <PreprocessorDefinitions>COMPILED_TOGETHER_WITH_MARLIN;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ExceptionHandling>Async</ExceptionHandling>
       <RuntimeTypeInfo>true</RuntimeTypeInfo>
+      <ProgramDataBaseFileName>$(OutDir)$(ProjectName).pdb</ProgramDataBaseFileName>
     </ClCompile>
     <Lib>
       <AdditionalOptions>/ignore:4221 %(AdditionalOptions)</AdditionalOptions>

@@ -103,6 +103,7 @@ public:
   CString       GetDefaultCatalog();
   CString       GetDefaultSchema();
   int           GetLogLevel();
+  LogAnalysis*  GetLogAnalysis();
 
 private:
   // Translate strategy names

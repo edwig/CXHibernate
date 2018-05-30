@@ -119,12 +119,19 @@ CXSession::CloseSession()
 {
   hibernate.Log(CXH_LOG_ACTIONS,true,"Close session: %s",m_sessionKey);
 
-  Synchronize();
+  // If still an open database: synchronize our caches
+  if(m_database && m_database->IsOpen())
+  {
+    Synchronize();
+  }
 
-  if (m_use == SESS_Create)
+  // If create/drop cycle testing, try to drop the database
+  if(m_use == SESS_Create)
   {
     TryDropDatabase();
   }
+
+  // Remove our session from the global registration
   hibernate.RemoveSession(this);
 }
 
@@ -188,11 +195,12 @@ CXSession::GetDatabase()
       }
       return m_database;
     }
+    m_ownDatabase = true;
   }
   return nullptr;
 }
 
-// Specifiy a database connection
+// Specify a database connection
 void
 CXSession::SetDatabaseCatalog(CString p_datasource)
 {

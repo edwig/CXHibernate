@@ -35,6 +35,7 @@
 #include <map>
 
 class CXClass;
+class HTTPClient;
 using namespace SQLComponents;
 
 using ClassMap    = std::map<CString,CXClass*>;
@@ -68,6 +69,8 @@ public:
   SQLDatabase*  GetDatabase();
   // Setting an alternate filestore location
   void          SetFilestore(CString p_directory);
+  // Setting an alternate internet location
+  void          SetInternet(CString p_url);
   // Add a class to the session
   bool          AddClass(CXClass* p_table);
   // Finding a class
@@ -118,6 +121,8 @@ private:
   // Create a new database and drop it again
   void          TryCreateDatabase();
   void          TryDropDatabase();
+  // Getting a HTTP client object
+  HTTPClient*   GetHTTPClient();
   // Clear the table cache
   void          ClearCache  (CString p_className = "");
   void          ClearClasses(CString p_className = "");
@@ -154,10 +159,15 @@ private:
   bool          InsertObjectInInternet (CXObject* p_object);
   bool          DeleteObjectInInternet (CXObject* p_object);
 
+  // Used by filestore and internet roles
+  CXObject*     LoadObjectFromXML(SOAPMessage& p_message,XMLElement* p_entity,CXClass* p_class);
+
+
   CString       m_sessionKey;                  // As known by CXHibernate
   CXHRole       m_role { CXH_Database_role};   // Master/Slave role of the session
   CXHSessionUse m_use;                         // How to use our database
   CString       m_baseDirectory;               // Base directory for filestore role
+  CString       m_url;                         // Internet url where we get our data
   bool          m_ownDatabase   { false   };   // We own / destroy this database
   SQLDatabase*  m_database      { nullptr };   // Currently using database connection
   CString       m_dbsCatalog;                  // Database to connect to
@@ -169,4 +179,5 @@ private:
   MetaSession   m_metaInfo;                    // Database meta-session info
   SQLTransaction* m_transaction { nullptr };   // Enveloping transaction for all updates
   int             m_subtrans    { 0       };   // Sub-transaction
+  HTTPClient*     m_client      { nullptr };   // Client for internet role
 };

@@ -34,6 +34,7 @@
 #include <SQLTransaction.h>
 #include <EnsureFile.h>
 #include <SOAPMessage.h>
+#include <HTTPClient.h>
 #include <io.h>
 
 #ifdef _DEBUG
@@ -110,6 +111,13 @@ CXSession::~CXSession()
   {
     delete m_database;
     m_database = nullptr;
+  }
+
+  // Destroy HTTP client
+  if(m_client)
+  {
+    delete m_client;
+    m_client = nullptr;
   }
 }
 
@@ -235,6 +243,14 @@ CXSession::SetFilestore(CString p_directory)
 {
   m_role = CXH_Filestore_role;
   m_baseDirectory = p_directory;
+}
+
+// Setting an alternate internet location
+void
+CXSession::SetInternet(CString p_url)
+{
+  m_role = CXH_Internet_role;
+  m_url = p_url;
 }
 
 // Add a class to the session
@@ -891,6 +907,19 @@ CXSession::GetMetaSessionInfo()
   }
 }
 
+// Getting a HTTP client object
+HTTPClient*
+CXSession::GetHTTPClient()
+{
+  if(m_client)
+  {
+    return m_client;
+  }
+  m_client = new HTTPClient();
+  return m_client;
+}
+
+
 // Add an object to the cache
 bool
 CXSession::AddObjectInCache(CXObject* p_object, VariantSet& p_primary)
@@ -1058,13 +1087,13 @@ CXSession::FindObjectInFilestore(CString p_className,VariantSet& p_primary)
   CString filename = CreateFilestoreName(table,p_primary);
   if(filename.IsEmpty())
   {
-    return false;
+    return nullptr;
   }
 
   // Test if we can access this file
   if(_access(filename, 0) == 0)
   {
-    // Try to delete it
+    // Try to load the object
     SOAPMessage p_message;
     if(p_message.LoadFile(filename))
     {
@@ -1072,31 +1101,71 @@ CXSession::FindObjectInFilestore(CString p_className,VariantSet& p_primary)
       XMLElement* entity = p_message.FindElement("Entity");
       if(entity)
       {
-        // Create our object by the creation factory
-        CreateCXO create = theClass->GetCreateCXO();
-        CXObject* object = (*create)();
-        object->SetClass(theClass);
-
-        // Fill in our object from the message 
-        object->DeSerialize(p_message,entity);
-
-        // Can only log the object from the message!
-        if(hibernate.GetLogLevel() >= CXH_LOG_DEBUG)
-        {
-          hibernate.Log(CXH_LOG_DEBUG,false,p_message.GetBodyPart());
-        }
-        return object;
+        return LoadObjectFromXML(p_message,entity,theClass);
       }
     }
   }
-  return false;
+  return nullptr;
 }
 
 // Try to find an object via the SOAP interface
 CXObject*
-CXSession::FindObjectOnInternet(CString p_table,VariantSet& p_primary)
+CXSession::FindObjectOnInternet(CString p_className,VariantSet& p_primary)
 {
+  CXClass* theClass = FindClass(p_className);
+
+  // Create a SOAP message for select
+  CString namesp(DEFAULT_NAMESPACE);
+  CString action("CXH_Select");
+  SOAPMessage msg(namesp,action,SoapVersion::SOAP_12);
+  XMLElement* entity = msg.SetParameter("Entity", "");
+  msg.SetAttribute(entity,"name",p_className); 
+  
+  // Load filters in message
+
+  // Send to client
+  msg.SetURL(m_url);
+  if(GetHTTPClient()->Send(&msg))
+  {
+    // Find our object (just one entity in the message)
+    XMLElement* entity = msg.FindElement("Entity");
+    if(entity)
+    {
+      return LoadObjectFromXML(msg,entity,theClass);
+    }
+  }
+  else
+  {
+    CString httpError;
+    CString error;
+    error.Format("Could not reach CXServer on: %s\n%s\n"
+                 ,m_url
+                 ,msg.GetFault());
+    GetHTTPClient()->GetError(&httpError);
+    error += httpError;
+    throw new StdException(error);
+  }
   return nullptr;
+}
+
+CXObject*
+CXSession::LoadObjectFromXML(SOAPMessage& p_message,XMLElement* p_entity,CXClass* p_class)
+{
+  // Create our object by the creation factory
+  CreateCXO create = p_class->GetCreateCXO();
+  CXObject* object = (*create)();
+  object->SetClass(p_class);
+
+  // Fill in our object from the message 
+  object->DeSerialize(p_message,p_entity);
+
+  // Can only log the object from the message!
+  if (hibernate.GetLogLevel() >= CXH_LOG_DEBUG)
+  {
+    hibernate.Log(CXH_LOG_DEBUG, false,p_message.GetBodyPart());
+  }
+  return object;
+
 }
 
 void

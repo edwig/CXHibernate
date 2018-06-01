@@ -1135,18 +1135,14 @@ CXSession::FindObjectOnInternet(CString p_className,VariantSet& p_primary)
       return LoadObjectFromXML(msg,entity,theClass);
     }
   }
-  else
-  {
-    CString httpError;
-    CString error;
-    error.Format("Could not reach CXServer on: %s\n%s\n"
-                 ,m_url
-                 ,msg.GetFault());
-    GetHTTPClient()->GetError(&httpError);
-    error += httpError;
-    throw new StdException(error);
-  }
-  return nullptr;
+  CString httpError;
+  CString error;
+  error.Format("Could not reach CXServer on: %s\n%s\n"
+                ,m_url
+                ,msg.GetFault());
+  GetHTTPClient()->GetError(&httpError);
+  error += httpError;
+  throw new StdException(error);
 }
 
 CXObject*

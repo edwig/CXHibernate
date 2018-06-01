@@ -324,6 +324,46 @@ CXClass::BuildDefaultSelectQuery(SQLInfoDB* p_info)
   return false;
 }
 
+// Load filters in message for an internet selection
+void
+CXClass::BuildPrimaryKeyFilter(SOAPMessage& p_message,XMLElement* p_entity,VariantSet& p_primary)
+{
+  // Check number of primaries against VariantSet
+  if(m_primary.m_attributes.size() != p_primary.size())
+  {
+    throw new StdException("Primary key size mismatches the load key");
+  }
+  if(p_primary.empty())
+  {
+    throw new StdException("Cannot select an object without a filter");
+  }
+
+  // All filters under this node
+  XMLElement* filters = p_message.AddElement(p_entity,"Filters",XDT_String,"");
+
+  // Prepare for iteration
+  CXAttribMap::iterator att = m_primary.m_attributes.begin();
+  VariantSet::iterator  key = p_primary.begin();
+
+  while(att != m_primary.m_attributes.end())
+  {
+    int     xmltype = XDT_String | ODBCToXmlDataType((*key)->GetDataType());
+    CString column  = (*att)->GetDatabaseColumn();
+    CString operat  = SQLOperatorToString(OP_Equal);
+    CString value;
+    (*key)->GetAsString(value);
+
+    XMLElement* filter = p_message.AddElement(filters,"Filter",XDT_String,"");
+    p_message.AddElement(filter,"Column",  XDT_String,column);
+    p_message.AddElement(filter,"Operator",XDT_String,operat);
+    p_message.AddElement(filter,"Value",   xmltype,   value);
+
+    // Next attribute
+    ++att;
+    ++key;
+  }
+}
+
 //////////////////////////////////////////////////////////////////////////
 //
 // PROTECTED

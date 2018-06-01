@@ -49,6 +49,10 @@ public:
           ,CString    p_targetNamespace
           ,unsigned   p_maxThreads);
   virtual ~CXServer();
+
+  // Regsiter our service operations
+  void     RegisterOperations();
+
 protected:
   WEBSERVICE_MAP; // Using a WEBSERVICE mapping
 
@@ -63,6 +67,11 @@ private:
   SQLFilterSet FindFilterSet(SOAPMessage* p_message);
   // Add an object to the answer of the SOAP message
   void         AddObjectToMessage(SOAPMessage* p_message,CXObject* object);
+  // Register all operations
+  void         RegisterSelectOperation();
+  void         RegisterInsertOperation();
+  void         RegisterUpdateOperation();
+  void         RegisterDeleteOperation();
 
   // Our CXHibernate session
   CXSession* m_session { nullptr };

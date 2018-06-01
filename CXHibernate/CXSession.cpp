@@ -1122,6 +1122,7 @@ CXSession::FindObjectOnInternet(CString p_className,VariantSet& p_primary)
   msg.SetAttribute(entity,"name",p_className); 
   
   // Load filters in message
+  theClass->BuildPrimaryKeyFilter(msg,entity,p_primary);
 
   // Send to client
   msg.SetURL(m_url);
@@ -1165,7 +1166,6 @@ CXSession::LoadObjectFromXML(SOAPMessage& p_message,XMLElement* p_entity,CXClass
     hibernate.Log(CXH_LOG_DEBUG, false,p_message.GetBodyPart());
   }
   return object;
-
 }
 
 void

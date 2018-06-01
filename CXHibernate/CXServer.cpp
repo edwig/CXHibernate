@@ -62,6 +62,16 @@ WEBSERVICE_MAP_BEGIN(CXServer)
   WEBSERVICE(CXDELETE,OnCXDelete)
 WEBSERVICE_MAP_END
 
+// Register our services for the WSDL and the service mapper
+void
+CXServer::RegisterOperations()
+{
+  RegisterSelectOperation();
+  RegisterInsertOperation();
+  RegisterUpdateOperation();
+  RegisterDeleteOperation();
+}
+
 //////////////////////////////////////////////////////////////////////////
 //
 // HERE ARE THE SERVICE HANDLERS!!
@@ -369,4 +379,85 @@ CXServer::AddObjectToMessage(SOAPMessage* p_message,CXObject* object)
 
   // Serialize our object to this message on this node
   object->Serialize(*p_message,entity);
+}
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Register all operations
+//
+//////////////////////////////////////////////////////////////////////////
+
+void
+CXServer::RegisterSelectOperation()
+{
+  CString request("CXH_Select");
+  CString response = request + "Response";
+
+  SOAPMessage input (m_targetNamespace,request);
+  SOAPMessage output(m_targetNamespace,response);
+
+  // Entity met een filter
+  XMLElement* entity  = input.AddElement(NULL,   "Entity", WSDL_Mandatory|XDT_String,"");
+  XMLElement* filters = input.AddElement(entity, "Filters",WSDL_Mandatory|WSDL_OneMany|XDT_String,"");
+  XMLElement* filter  = input.AddElement(filters,"Filter", WSDL_Mandatory|XDT_String,"");
+  // Filter must contain these
+  input.AddElement(filter,"Column",  WSDL_Mandatory|XDT_String,"string");
+  input.AddElement(filter,"Operator",WSDL_Mandatory|XDT_String,"string");
+  input.AddElement(filter,"Value",   WSDL_Optional |XDT_String,"string");
+
+  // Returns an entity (Unspecified)
+  output.AddElement(NULL,"Entity",   WSDL_Optional |XDT_String,"string");
+
+  AddOperation(CXSELECT,request,&input,&output);
+}
+
+void
+CXServer::RegisterInsertOperation()
+{
+  CString request("CXH_Insert");
+  CString response = request + "Response";
+
+  SOAPMessage input (m_targetNamespace,request);
+  SOAPMessage output(m_targetNamespace,response);
+
+  // Entity (Unspecified
+  input .AddElement(NULL,"Entity",WSDL_Mandatory|XDT_String,"");
+  // Returns an entity (Unspecified)
+  output.AddElement(NULL,"Entity",WSDL_Optional |XDT_String,"string");
+
+  AddOperation(CXINSERT,request,&input,&output);
+}
+
+void
+CXServer::RegisterUpdateOperation()
+{
+  CString request("CXH_Update");
+  CString response = request + "Response";
+
+  SOAPMessage input (m_targetNamespace,request);
+  SOAPMessage output(m_targetNamespace,response);
+
+  // Entity (Unspecified
+  input .AddElement(NULL,"Entity",WSDL_Mandatory|XDT_String,"");
+  // Returns an entity (Unspecified)
+  output.AddElement(NULL,"Entity",WSDL_Optional |XDT_String,"string");
+
+  AddOperation(CXUPDATE,request,&input,&output);
+}
+
+void
+CXServer::RegisterDeleteOperation()
+{
+  CString request("CXH_Delete");
+  CString response = request + "Response";
+
+  SOAPMessage input (m_targetNamespace,request);
+  SOAPMessage output(m_targetNamespace,response);
+
+  // Entity (Unspecified
+  input .AddElement(NULL,"Entity",WSDL_Mandatory|XDT_String,"");
+  // Returns an entity (Unspecified)
+  output.AddElement(NULL,"Entity",WSDL_Optional |XDT_String,"string");
+
+  AddOperation(CXDELETE,request,&input,&output);
 }

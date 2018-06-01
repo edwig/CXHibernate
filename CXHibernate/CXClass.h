@@ -75,6 +75,9 @@ public:
 
   // Build default SELECT query
   bool        BuildDefaultSelectQuery(SQLInfoDB* p_info);
+  // Load filters in message for an internet selection
+  void        BuildPrimaryKeyFilter(SOAPMessage& p_message,XMLElement* p_entity,VariantSet& p_primary);
+
 
 protected:
   // Adding a sub-class

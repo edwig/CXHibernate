@@ -65,6 +65,7 @@ public:
   CXAttribute*   FindAttribute(int     p_index);
   // Find an association
   CXAssociation* FindAssociation(CString p_toClass,CString p_associationName);
+  CXAssociation* FindAssociation(int index);
   // Find the generator attribute (if any)
   CXAttribute*   FindGenerator();
 
@@ -124,7 +125,7 @@ private:
   // All attributes of this class
   CXAttribMap     m_attributes;   // Column attributes
   CXPrimaryKey    m_primary;      // Our primary key
-  CXAssociations  m_associations; // Foreign key associations
+  CXAssociations  m_associations; // Associations to other classes
   CXIndices       m_indices;      // Constraints and performance speed-ups
   CString         m_generator;    // Generator name
   int             m_gen_value;    // Initial generator value

@@ -247,6 +247,16 @@ CXClass::FindAssociation(CString p_toClass,CString p_associationName)
   return found;
 }
 
+CXAssociation* 
+CXClass::FindAssociation(int index)
+{
+  if(index >= 0 && index < (int)m_associations.size())
+  {
+    return m_associations[index];
+  }
+  return nullptr;
+}
+
 // Serialize to a configuration XML file
 bool
 CXClass::SaveMetaInfo(XMLMessage& p_message,XMLElement* p_elem)

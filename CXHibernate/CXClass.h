@@ -54,17 +54,19 @@ public:
   SubClasses& GetSubClasses();
 
   // Add attributes to the class
-  void        AddAttribute  (CXAttribute*  p_attribute);
-  void        AddIdentity   (CXPrimaryKey& p_primary);
-  void        AddAssociation(CXForeignKey* p_key);
-  void        AddIndex      (CXIndex*      p_index);
-  void        AddGenerator  (CString       p_generator,int p_start);
-  void        AddPrivilege  (CXAccess&     p_access);
+  void        AddAttribute  (CXAttribute*   p_attribute);
+  void        AddIdentity   (CXPrimaryKey&  p_primary);
+  void        AddAssociation(CXAssociation* p_key);
+  void        AddIndex      (CXIndex*       p_index);
+  void        AddGenerator  (CString        p_generator,int p_start);
+  void        AddPrivilege  (CXAccess&      p_access);
   // Find an attribute
-  CXAttribute* FindAttribute(CString p_name);
-  CXAttribute* FindAttribute(int     p_index);
+  CXAttribute*   FindAttribute(CString p_name);
+  CXAttribute*   FindAttribute(int     p_index);
+  // Find an association
+  CXAssociation* FindAssociation(CString p_toClass,CString p_associationName);
   // Find the generator attribute (if any)
-  CXAttribute* FindGenerator();
+  CXAttribute*   FindGenerator();
 
   // Serialize to a configuration XML file
   bool        SaveMetaInfo(XMLMessage& p_message,XMLElement* p_elem);
@@ -77,6 +79,8 @@ public:
   bool        BuildDefaultSelectQuery(SQLInfoDB* p_info);
   // Load filters in message for an internet selection
   void        BuildPrimaryKeyFilter(SOAPMessage& p_message,XMLElement* p_entity,VariantSet& p_primary);
+  // Build filter for primary key or association selection
+  void        BuildFilter(CXAttribMap& p_attributes,VariantSet& p_values,SQLFilterSet& p_filters);
 
 
 protected:
@@ -98,31 +102,31 @@ protected:
   void LoadMetaInfoSubClasses  (XMLMessage& p_message,XMLElement* p_theClass);
   void LoadMetaInfoAttributes  (XMLMessage& p_message,XMLElement* p_theClass);
   void LoadMetaInfoIdentity    (XMLMessage& p_message,XMLElement* p_theClass);
-  void LoadMetaInfoAssociations(XMLMessage& p_message,XMLElement* p_theClass);
+  void LoadMetaInfoAssociations(XMLMessage& p_message,XMLElement* p_theClass,CXSession* p_session);
   void LoadMetaInfoIndices     (XMLMessage& p_message,XMLElement* p_theClass);
   void LoadMetaInfoGenerator   (XMLMessage& p_message,XMLElement* p_theClass);
   void LoadMetaInfoPrivileges  (XMLMessage& p_message,XMLElement* p_theClass);
 
 private:
   // The name of our class
-  CString       m_name;
+  CString         m_name;
   // Discriminator of our class
-  CString       m_discriminator;
+  CString         m_discriminator;
   // In case of a sub-class, this is our super-class
-  CXClass*      m_super { nullptr };
+  CXClass*        m_super { nullptr };
   // In case of a super-class, these are our sub-classes
-  SubClasses    m_subClasses;
-  WordList      m_subNames;
+  SubClasses      m_subClasses;
+  WordList        m_subNames;
   // Our CXObject factory function
-  CreateCXO     m_create { nullptr };
+  CreateCXO       m_create { nullptr };
   // Underlying database table (in current mapping strategy)
-  CXTable*      m_table;
+  CXTable*        m_table;
   // All attributes of this class
-  CXAttribMap   m_attributes;   // Column attributes
-  CXPrimaryKey  m_primary;      // Our primary key
-  CXForeigns    m_foreigns;     // Foreign key associations
-  CXIndices     m_indices;      // Constraints and performance speed-ups
-  CString       m_generator;    // Generator name
-  int           m_gen_value;    // Initial generator value
-  CXPrivileges  m_privileges;   // All access rights
+  CXAttribMap     m_attributes;   // Column attributes
+  CXPrimaryKey    m_primary;      // Our primary key
+  CXAssociations  m_associations; // Foreign key associations
+  CXIndices       m_indices;      // Constraints and performance speed-ups
+  CString         m_generator;    // Generator name
+  int             m_gen_value;    // Initial generator value
+  CXPrivileges    m_privileges;   // All access rights
 };

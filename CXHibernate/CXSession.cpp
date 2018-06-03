@@ -793,6 +793,57 @@ CXSession::SaveSOAPMessage(SOAPMessage& p_message, CString p_fileName)
   return result;
 }
 
+// FOLLOW AN ASSOCIATION
+
+// Getting the result of an association
+CXResultSet
+CXSession::FollowAssociation(CString p_fromClass,CString p_toClass,int p_value,CString p_associationName /*= ""*/)
+{
+  SQLVariant prim(p_value);
+  VariantSet primary;
+  primary.push_back(&prim);
+
+  return FollowAssociation(p_fromClass,p_toClass,primary,p_associationName);
+}
+
+CXResultSet
+CXSession::FollowAssociation(CString p_fromClass,CString p_toClass,SQLVariant* p_value,CString p_associationName /*= ""*/)
+{
+  VariantSet primary;
+  primary.push_back(p_value);
+
+  return FollowAssociation(p_fromClass, p_toClass, primary, p_associationName);
+}
+
+CXResultSet
+CXSession::FollowAssociation(CString p_fromClass,CString p_toClass,VariantSet& p_value,CString p_associationName /*= ""*/)
+{
+  CXResultSet  set;
+  SQLFilterSet filters;
+  CXObject*     object = nullptr;
+  CXClass*   fromClass = FindClass(p_fromClass);
+  CXAssociation* assoc = fromClass->FindAssociation(p_toClass,p_associationName);
+
+  if(assoc == nullptr)
+  {
+    throw new StdException("Association not found to class: " + p_toClass);
+  }
+  switch(assoc->m_assocType)
+  {
+    case ASSOC_MANY_TO_ONE: object = Load(p_toClass,p_value);
+                            if(object)
+                            {
+                              set.push_back(object);
+                            }
+                            return set;
+    case ASSOC_ONE_TO_MANY: fromClass->BuildFilter(assoc->m_attributes,p_value,filters);
+                            return Load(p_toClass,filters);
+    case ASSOC_MANY_TO_MANY:throw new StdException("Association type many-to-many not yet implemented!");
+    default:                break;
+  }
+  throw new StdException("Association type not found for association: " + assoc->m_constraintName);
+}
+
 //////////////////////////////////////////////////////////////////////////
 //
 // PRIVATE

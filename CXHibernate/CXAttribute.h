@@ -45,8 +45,21 @@ typedef struct _primaryKey
 }
 CXPrimaryKey;
 
-typedef struct _foreignKey
+typedef enum _assocType
 {
+  ASSOC_UNKNOWN           // Not yet known association
+ ,ASSOC_MANY_TO_ONE       // Regular foreign key to a master
+ ,ASSOC_ONE_TO_MANY       // Master sees all details
+ ,ASSOC_MANY_TO_MANY      // Assoc table in between
+}
+CXAssocType;
+
+CXAssocType CXStringToAssocType(CString p_type);
+CString CXAssocTypeToSTring(CXAssocType p_type);
+
+typedef struct _assoc
+{
+  CXAssocType m_assocType;
   CString     m_constraintName;
   CXAttribMap m_attributes;
   CString     m_primaryTable;
@@ -58,9 +71,9 @@ typedef struct _foreignKey
   int       m_initiallyDeferred{ 0 };   // 0=Immediate, 1=initially deferred
   int       m_enabled   { 0 };          // 1=Disabled,  0=enabled
 }
-CXForeignKey;
+CXAssociation;
 
-using CXForeigns = std::vector<CXForeignKey*>;
+using CXAssociations = std::vector<CXAssociation*>;
 
 typedef struct _index
 {

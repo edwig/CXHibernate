@@ -1,148 +1,26 @@
-Marlin-SOAP => ServiceDataSet => SQLComponents => ODBC Database
-Marlin-SOAP <= ServiceDataSet <= SQLComponents <= ODBC Database
+Roadmap for CX-Hibernate
+========================
 
-<Envelope>
-<Header>
-   <Action>CXHUpdate</Action>
-</Header>
-<Body>
-  <Entity name="master_Entity">
-    <ID  type="int">45</ID>
-	  <ORG type="string">A</ORG>
-    <Budget type="decimal">15000000</Budget>
-	  <Address type="string">J.F. Kennedy Avenue 15</Address>
-  </Entity>
-</Body>
-</Envelope>
-
-=> Transforms to
-
-Update master_Entity
-   set budget  = 1500000
-      ,address = 'J.F. Kennedy Avenue 15'
- where id  = 45
-   and org = 'A';
-   
- 
+Still to do:
+------------
+Version 0.7: Follow associations
+Version 0.8: Derived classes in class-hierarchy table
+Version 0.9: Derived classes in their own table
+Version 1.0: First stable version + Documentation
 
 
-<Envelope>
-<Header>
-   <Action>CXHInsert</Action>
-</Header>
-<Body>
-  <Entity name="master_Entity">
-    <ID  type="int">45</ID>
-    <ORG type="string">A</ORG>
-    <Budget  type="decimal">15000000</Budget>
-    <Address type="string">J.F. Kennedy Avenue 15</Address>
-  </Entity>
-</Body>
-</Envelope>
-
-=> Transforms to
-
-insert into master_Entity(id,org,budget,address)
-values (45,'A',15000000,'J.F. Kennedy Avenue 15');
-
-<Envelope>
-<Header>
-   <Action>CXHInsert</Action>
-</Header>
-<Body>
-  <CXHInsertResponse>
-    <Result>OK</Result>
-  </CXHInsertResponse>
-</Body>
+Features that will not go into 1.0
+But will be implemented in a later version
+------------------------------------------
+- Naming the discriminator attribute other than "Discriminator"
+- Other generators than a native database "SEQUENCE"
+- Other generator names than "<classname>_seq"
+- Greater cache control. Especially on the second line cache
+- many-to-many associations
 
 
-
-
-
-<Envelope>
-<Header>
-   <Action>CXHDelete</Action>
-</Header>
-<Body>
-  <Entity name="master_Entity">
-    <ID  type="int">45</ID>
-    <ORG type="string">A</ORG>
-  </Entity>
-</Body>
-</Envelope>
-
-=> Transforms to
-
-delete from master_Entity
- where id  = 45
-   and org = 'A';
-
-  
-  
-<Envelope>
-<Header>
-  <Action>CXHSelect</Action>
-</Header>
-<Body>
-  <CXHSelect>
-    <Entity>master_table</Entity>
-    <Columns>
-       <ALL />
-    </Columns>
-    <Filters>
-      <Filter>
-	      <Column>ID</Column>
-	      <Operator>Equal</Operator>
-	      <Value>24</Value>
-      </Filter>
-      <Filter>
-	      <Column>line</Column>
-	      <Operator>GreaterThan</Operator>
-	      <Value>2</Value>
-      </Filter>
-    </Filters>
-    <Order>
-      <ID />
-      <Line />
-    </Order>
-    <SQL>
-    </SQL>
-  </Entity>
-  </CXHSelect>
-</Body>
-</Envelope>  
-
-=> Transforms to
-
-SELECT *
-  FROM master_table
- WHERE id = 24
-   AND line > 2
- ORDER BY id,line;
- 
-<Envelope>
-<Header>
-  <Action>CXHSelect</Action>
-</Header>
-<Body>
-  <CXHSelectResponse>
-    <Entity name="master_table">
-      <ID      type="int">24</ID>
-      <ORG     type="string">A</ORG>
-      <LINE    type="int">3</LINE>
-      <Budget  type="decimal">15000000</Budget>
-	    <Address type="string">J.F. Kennedy Avenue 15</Address>
-    </Entity>
-  </CXHSelectResponse>
-</Body>
- 
---------------------                            ----------------------
-SET CLIENT                                      SET MASTER
-
-1) Status: STABLE             <-                STATUS: STABLE
-2) Status: UDATE 
-3) Status: UPDATE + SENT      ->                STATUS: UPDATE
-                                                STATUS: UPDATE + SYNC
-   OK or ROLLBACK ?           <- OK / ROLLBACK
-4) Status: STABLE			        <-                Status: STABLE
- 
+Features from (N)Hibernate that will NEVER be implemented:
+----------------------------------------------------------
+- Lazy loading: too many runtime problems at customer sites
+- Automatic reflection: cannot be done in C++, but pending 
+  requests on the ISO C++ commities exist.

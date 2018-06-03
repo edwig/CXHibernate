@@ -26,6 +26,7 @@
 //
 #include "stdafx.h"
 #include "Detail.h"
+#include "CXSession.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -39,9 +40,27 @@ Detail::Detail()
   // Things to do in the constructor ...
 }
 
+// DTOR
+Detail::~Detail()
+{
+  // Things to do in the destructor...
+}
+
+// Getting a many-to-one association's object from Master
+Master*
+Detail::GetMasterOfDetail(CXSession* p_session)
+{
+  CXResultSet set = p_session->FollowAssociation(Detail::ClassName(),Master::ClassName(),m_mast_id);
+  if(set.size() == 1)
+  {
+    return (Master*) set.front();
+  }
+  return nullptr;
+}
 
 //////////////////////////////////////////////////////////////////////////
 //
 // Normal class methods
 //
 //////////////////////////////////////////////////////////////////////////
+

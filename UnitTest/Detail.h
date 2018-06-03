@@ -33,12 +33,14 @@
 #include <SQLInterval.h>
 #include <SQLGuid.h>
 #include <SQLVariant.h>
+#include "Master.h"
 
 class Detail : public CXObject
 {
 public:
   // CTOR of an CXObject
   Detail();
+  virtual ~Detail();
 
   // Serialization of our persistent objects
   DECLARE_CXO_SERIALIZATION;
@@ -50,6 +52,9 @@ public:
   CString GetDescription()   { return m_description; };
   bcd     GetAmount()        { return m_amount;      };
 
+  // Associations
+  Master* GetMasterOfDetail(CXSession* p_session);
+
 protected:
   // Database persistent attributes
   int     m_id      { 0 };    // Primary key part 1
@@ -57,6 +62,7 @@ protected:
   int     m_mast_id { 0 };    // Foreign key to Master
   CString m_description;
   bcd     m_amount;
+
 private:
   // Transient attributes go here
 };

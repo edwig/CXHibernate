@@ -88,7 +88,7 @@ public:
   void          RollbackTransaction();
   bool          HasTransaction();
 
-  // SOAP INTERFACE
+  // Filestore & SOAP interface
   // Create a filestore name for a table
   CString       CreateFilestoreName(CXTable* p_table);
   // Create a filestore name for an object
@@ -101,11 +101,11 @@ public:
   // Create an object prior to inserting it
   CXObject*     CreateObject(CString p_className);
   // Primary operations
-  CXObject*     Load  (CString p_className,int           p_primary);
-  CXObject*     Load  (CString p_className,SQLVariant*   p_primary);
-  CXObject*     Load  (CString p_className,VariantSet&   p_primary);
-  CXResultSet   Load  (CString p_className,SQLFilter*    p_filter);
-  CXResultSet   Load  (CString p_className,SQLFilterSet& p_filters);
+  CXObject*     Load  (CString p_className,int           p_primary);    // One primary type integer
+  CXObject*     Load  (CString p_className,SQLVariant*   p_primary);    // One primary of other type than integer
+  CXObject*     Load  (CString p_className,VariantSet&   p_primary);    // One primary of other type than integer
+  CXResultSet   Load  (CString p_className,SQLFilter*    p_filter);     // Multiple objects from one filter
+  CXResultSet   Load  (CString p_className,SQLFilterSet& p_filters);    // Multiple objects from <n> filters
   bool          Save  (CXObject* p_object);
   bool          Update(CXObject* p_object);
   bool          Insert(CXObject* p_object);
@@ -114,6 +114,11 @@ public:
   bool          RemoveObject(CXObject* p_object);
   // Complete cache synchronize with the database, saving all results
   bool          Synchronize();
+
+  // Getting the result of an association
+  CXResultSet   FollowAssociation(CString p_fromClass,CString p_toClass,int         p_value,CString p_associationName = "");
+  CXResultSet   FollowAssociation(CString p_fromClass,CString p_toClass,SQLVariant* p_value,CString p_associationName = "");
+  CXResultSet   FollowAssociation(CString p_fromClass,CString p_toClass,VariantSet& p_value,CString p_associationName = "");
 
 private:
   // Getting meta-session info from our database
@@ -168,7 +173,7 @@ private:
   CXHRole       m_role { CXH_Database_role};   // Master/Slave role of the session
   CXHSessionUse m_use;                         // How to use our database
   CString       m_baseDirectory;               // Base directory for filestore role
-  CString       m_url;                         // Internet url where we get our data
+  CString       m_url;                         // Internet URL where we get our data
   bool          m_ownDatabase   { false   };   // We own / destroy this database
   SQLDatabase*  m_database      { nullptr };   // Currently using database connection
   CString       m_dbsCatalog;                  // Database to connect to

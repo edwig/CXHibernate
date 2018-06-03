@@ -230,3 +230,26 @@ CXAttribute::LoadMetaInfo(XMLMessage& p_message,XMLElement* p_elem)
 
   return false;
 }
+
+//////////////////////////////////////////////////////////////////////////
+// String translations
+
+CXAssocType CXStringToAssocType(CString p_type)
+{
+  if(p_type.Compare("many-to-one")  == 0) return ASSOC_MANY_TO_ONE;
+  if(p_type.Compare("one-to-many")  == 0) return ASSOC_ONE_TO_MANY;
+  if(p_type.Compare("many-to-many") == 0) return ASSOC_MANY_TO_MANY;
+
+  return ASSOC_UNKNOWN;
+}
+
+CString CXAssocTypeToSTring(CXAssocType p_type)
+{
+  switch(p_type)
+  {
+    case ASSOC_MANY_TO_ONE:  return "many-to-one";
+    case ASSOC_ONE_TO_MANY:  return "one-to-many";
+    case ASSOC_MANY_TO_MANY: return "many-to-many";
+  }
+  return "";
+}

@@ -33,6 +33,7 @@ class Master : public CXObject
 public:
   // CTOR of an CXObject
   Master();
+  virtual ~Master();
 
   // Serialization of our persistent objects
   DECLARE_CXO_SERIALIZATION;
@@ -42,6 +43,9 @@ public:
   int     GetInvoice()      { return m_invoice;     };
   CString GetDescription()  { return m_description; };
   bcd     GetTotal()        { return m_total;       };
+
+  // Associations
+  CXResultSet GetDetailsOfMaster(CXSession* p_session);
 
   // Setters
   void    SetTotal(bcd p_bcd);

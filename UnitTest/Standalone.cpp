@@ -265,6 +265,71 @@ namespace HibernateTest
       Assert::IsTrue(res2);
     }
 
+    TEST_METHOD(T10_FollowAssocToDetails)
+    {
+      Logger::WriteMessage("Testing following an association to our details");
+      try
+      {
+        OpenSession();
+
+        Master* master = (Master*)m_session->Load(Master::ClassName(),2);
+        Assert::IsNotNull(master);
+        Logger::WriteMessage("Testing 1th master record and it's details");
+        PrintMaster(master);
+
+     // The following two lines are identical
+     // CXResultSet set = m_session->FollowAssociation(Master::ClassName(),Detail::ClassName(),master->GetID());
+        CXResultSet set = master->GetDetailsOfMaster(m_session);
+        for(auto& object : set)
+        {
+          Detail* detail = (Detail*)object;
+          CString message;
+          message.Format("Detail: %d Master: %d : Detail line: %d Amount: %s"
+                         ,detail->GetID()
+                         ,master->GetID()
+                         ,detail->GetLine()
+                         ,detail->GetAmount().AsString().GetString());
+          Logger::WriteMessage(message);
+        }
+      }
+      catch (StdException* er)
+      {
+        Logger::WriteMessage("ERROR: " + er->GetErrorMessage());
+        Assert::Fail();
+      }
+    }
+
+    TEST_METHOD(T11_FollowAssocToMaster)
+    {
+      Logger::WriteMessage("Testing following an association to our master record");
+
+      try
+      {
+        OpenSession();
+
+        Detail* detail = (Detail*) m_session->Load(Detail::ClassName(),7);
+        Assert::IsNotNull(detail);
+
+        Master* master = detail->GetMasterOfDetail(m_session);
+        Assert::IsNotNull(master);
+
+        CString message1;
+        message1.Format("Detail record [%d] of master [%d]. Description [%s] Amount: %s"
+                        ,detail->GetID()
+                        ,master->GetID()
+                        ,detail->GetDescription().GetString()
+                        ,detail->GetAmount().AsString().GetString());
+        Logger::WriteMessage(message1);
+        Logger::WriteMessage("This is our master:");
+        PrintMaster(master);
+      }
+      catch (StdException* er)
+      {
+        Logger::WriteMessage("ERROR: " + er->GetErrorMessage());
+        Assert::Fail();
+      }
+    }
+
     // Open a CXHibernate session and add the 'master' and 'detail' tables
     bool OpenSessionFULL()
     {
@@ -318,7 +383,7 @@ namespace HibernateTest
       }
       catch(StdException* er)
       {
-        Assert::AreEqual("",er->GetErrorMessage());
+        Logger::WriteMessage(er->GetErrorMessage());
         er->Delete();
       }
       Assert::Fail();

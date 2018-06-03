@@ -180,7 +180,7 @@ SQLFilter::GetNegate()
 }
 
 //////////////////////////////////////////////////////////////////////////
-// And finaly: a filter set is a vector of SQLFilters
+// And finally: a filter set is a vector of SQLFilters
 
 // using SQLFilterSet = std::vector<SQLFilter>;
 class SQLFilterSet
@@ -195,6 +195,12 @@ public:
   }
 
   void AddFilter(SQLFilter* p_filter)
+  {
+    SQLFilter* filter = new SQLFilter(p_filter);
+    m_filters.push_back(filter);
+  }
+
+  void AddFilter(SQLFilter& p_filter)
   {
     SQLFilter* filter = new SQLFilter(p_filter);
     m_filters.push_back(filter);

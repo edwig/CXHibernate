@@ -81,8 +81,8 @@ CXClass::~CXClass()
     delete attrib;
   }
 
-  // Clear our foreign keys
-  for(auto& fkey : m_foreigns)
+  // Clear our associations
+  for(auto& fkey : m_associations)
   {
     delete fkey;
   }
@@ -151,9 +151,9 @@ CXClass::AddIdentity(CXPrimaryKey& p_primary)
 }
 
 void
-CXClass::AddAssociation(CXForeignKey* p_key)
+CXClass::AddAssociation(CXAssociation* p_assoc)
 {
-  m_foreigns.push_back(p_key);
+  m_associations.push_back(p_assoc);
 }
 
 void
@@ -224,6 +224,29 @@ CXClass::FindGenerator()
   return nullptr;
 }
 
+// Find an association
+CXAssociation* 
+CXClass::FindAssociation(CString p_toClass,CString p_associationName)
+{
+  CXAssociation* found = nullptr;
+
+  for(auto& assoc : m_associations)
+  {
+    if(!p_associationName.IsEmpty() && assoc->m_constraintName.CompareNoCase(p_associationName) == 0)
+    {
+      // Definitely our association
+      return assoc;
+    }
+    if(assoc->m_primaryTable.CompareNoCase(p_toClass) == 0)
+    {
+      // If table is found more than once, you must specify the association name!
+      if(found) found = nullptr;
+      else      found = assoc;
+    }
+  }
+  return found;
+}
+
 // Serialize to a configuration XML file
 bool
 CXClass::SaveMetaInfo(XMLMessage& p_message,XMLElement* p_elem)
@@ -281,7 +304,7 @@ CXClass::LoadMetaInfo(CXSession* p_session,XMLMessage& p_message,XMLElement* p_e
   // Load all other meta info
   LoadMetaInfoAttributes  (p_message,p_elem);
   LoadMetaInfoIdentity    (p_message,p_elem);
-  LoadMetaInfoAssociations(p_message,p_elem);
+  LoadMetaInfoAssociations(p_message,p_elem,p_session);
   LoadMetaInfoIndices     (p_message,p_elem);
   LoadMetaInfoGenerator   (p_message,p_elem);
   LoadMetaInfoPrivileges  (p_message,p_elem);
@@ -308,7 +331,7 @@ CXClass::BuildDefaultSelectQuery(SQLInfoDB* p_info)
 
   // Default query will be built as
   // "SELECT disc.*\n"
-  // "  FROM tablename as disc"
+  // "  FROM table as disc"
   CString query = CString("SELECT ") + columns + "\n  FROM " + m_table->DMLTableName(p_info) + asalias;
 
   // Set on the dataset
@@ -363,6 +386,28 @@ CXClass::BuildPrimaryKeyFilter(SOAPMessage& p_message,XMLElement* p_entity,Varia
     ++key;
   }
 }
+
+// Build filter for primary key or association selection
+void
+CXClass::BuildFilter(CXAttribMap& p_attributes,VariantSet& p_values,SQLFilterSet& p_filters)
+{
+  if(p_attributes.size() != p_values.size())
+  {
+    throw new StdException("Attributes / values mismatch in building an SQL Filter set");
+  }
+  CXAttribMap::iterator att = p_attributes.begin();
+  VariantSet::iterator  val = p_values.begin();
+
+  while(att != p_attributes.end())
+  {
+    SQLFilter filter((*att)->GetDatabaseColumn(),SQLOperator::OP_Equal,*val);
+    p_filters.AddFilter(filter);
+    // Next attribute
+    ++att;
+    ++val;
+  }
+}
+
 
 //////////////////////////////////////////////////////////////////////////
 //
@@ -439,16 +484,17 @@ CXClass::SaveMetaInfoIdentity(XMLMessage& p_message,XMLElement* p_theClass)
 void 
 CXClass::SaveMetaInfoAssociations(XMLMessage& p_message,XMLElement* p_theClass)
 {
-  XMLElement* foreigns = p_message.AddElement(p_theClass,"associations",XDT_String,"");
-  for(auto& fkey : m_foreigns)
+  XMLElement* associations = p_message.AddElement(p_theClass,"associations",XDT_String,"");
+  for(auto& assoc : m_associations)
   {
-    XMLElement* foreign = p_message.AddElement(foreigns,"association",XDT_String,"");
-    p_message.SetAttribute(foreign,"name",fkey->m_constraintName);
+    XMLElement* ass = p_message.AddElement(associations,"association",XDT_String,"");
+    p_message.SetAttribute(ass,"name",assoc->m_constraintName);
+    p_message.SetAttribute(ass,"type",CXAssocTypeToSTring(assoc->m_assocType));
     // update / delete / deferrable / match / initially-deferred / enabled
-    p_message.AddElement(foreign,"association_class",XDT_String,fkey->m_primaryTable);
-    for(auto& col : fkey->m_attributes)
+    p_message.AddElement(ass,"association_class",XDT_String,assoc->m_primaryTable);
+    for(auto& col : assoc->m_attributes)
     {
-      XMLElement* column = p_message.AddElement(foreign,"attribute",XDT_String,"");
+      XMLElement* column = p_message.AddElement(ass,"attribute",XDT_String,"");
       p_message.SetAttribute(column,"name",col->GetDatabaseColumn());
     }
   }
@@ -565,7 +611,7 @@ CXClass::LoadMetaInfoIdentity(XMLMessage& p_message,XMLElement* p_theClass)
     if(deferr.CompareNoCase("not_deferrable") == 0)     m_primary.m_deferrable = SQL_NOT_DEFERRABLE;
     m_primary.m_initiallyDeferred = initdef.CompareNoCase("deferred") == 0;
 
-    XMLElement* column = p_message.FindElement(primary,"column");
+    XMLElement* column = p_message.FindElement(primary,"attribute");
     while(column)
     {
       CString name = p_message.GetAttribute(column,"name");
@@ -581,33 +627,43 @@ CXClass::LoadMetaInfoIdentity(XMLMessage& p_message,XMLElement* p_theClass)
 
 // Loading the associations to other classes
 void 
-CXClass::LoadMetaInfoAssociations(XMLMessage& p_message,XMLElement* p_theClass)
+CXClass::LoadMetaInfoAssociations(XMLMessage& p_message,XMLElement* p_theClass,CXSession* p_session)
 {
-  XMLElement* foreigns = p_message.FindElement(p_theClass,"associations");
-  if(foreigns)
+  XMLElement* assocs = p_message.FindElement(p_theClass,"associations");
+  if(assocs)
   {
-    XMLElement* foreign = p_message.FindElement(foreigns,"association");
-    while(foreign)
+    XMLElement* assoc = p_message.FindElement(assocs,"association");
+    while(assoc)
     {
-      CXForeignKey* fkey = new CXForeignKey();
-      fkey->m_constraintName = p_message.GetAttribute(foreign,"name");
-      fkey->m_primaryTable   = p_message.GetElement(foreign,"association_class");
+      CXAssociation* ass = new CXAssociation();
+      ass->m_assocType      = CXStringToAssocType(p_message.GetAttribute(assoc,"type"));
+      ass->m_constraintName = p_message.GetAttribute(assoc,"name");
+      ass->m_primaryTable   = p_message.GetElement(assoc,"association_class");
 
-      XMLElement* column = p_message.FindElement(foreign,"column");
+      XMLElement* column = p_message.FindElement(assoc,"attribute");
       while(column)
       {
         CString name = p_message.GetAttribute(column,"name");
         CXAttribute* attrib = FindAttribute(name);
         if(attrib)
         {
-          fkey->m_attributes.push_back(attrib);
+          ass->m_attributes.push_back(attrib);
+        }
+        else
+        {
+          CXClass* related = p_session->FindClass(ass->m_primaryTable);
+          attrib = related->FindAttribute(name);
+          if (attrib)
+          {
+            ass->m_attributes.push_back(attrib);
+          }
         }
         column = p_message.GetElementSibling(column);
       }
       // Keep this foreign key
-      m_foreigns.push_back(fkey);
+      m_associations.push_back(ass);
       // Next foreign key
-      foreign = p_message.GetElementSibling(foreign);
+      assoc = p_message.GetElementSibling(assoc);
     }
   }
 }
@@ -732,7 +788,7 @@ CXClass::FillTableInfoFromClassInfo()
   }
 
   // Add foreign keys
-  for(auto& foreign : m_foreigns)
+  for(auto& foreign : m_associations)
   {
     position = 1;
     for(auto& col : foreign->m_attributes)

@@ -26,6 +26,8 @@
 //
 #include "stdafx.h"
 #include "Master.h"
+#include "Detail.h"
+#include "CXSession.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -37,6 +39,25 @@ static char THIS_FILE[] = __FILE__;
 Master::Master()
 {
 }
+
+// DTOR
+Master::~Master()
+{
+  // Things to do in the destructor
+}
+
+// Getting a one-to-many association's objects from Detail
+CXResultSet 
+Master::GetDetailsOfMaster(CXSession* p_session)
+{
+  return p_session->FollowAssociation(ClassName(),Detail::ClassName(),m_id);
+}
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Normal class methods
+//
+//////////////////////////////////////////////////////////////////////////
 
 // Setters
 

@@ -45,5 +45,4 @@ CXModelWord cxmodelWords[] =
   ,{ "param_output",        SQL_PARAM_OUTPUT        }
   ,{ "return_value",        SQL_RETURN_VALUE        }
   ,{ "result_column",       SQL_RESULT_COL          }
-  
 };

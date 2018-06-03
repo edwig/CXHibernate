@@ -97,8 +97,8 @@ CXServer::OnCXSelect(int p_code,SOAPMessage* p_message)
   }
   if(nameAttribute)
   {
-    CString tablename = nameAttribute->m_value;
-    CXClass* theClass = m_session->FindClass(tablename);
+    CString classname = nameAttribute->m_value;
+    CXClass* theClass = m_session->FindClass(classname);
     CXTable* table = theClass->GetTable();
     if(table)
     {
@@ -108,12 +108,12 @@ CXServer::OnCXSelect(int p_code,SOAPMessage* p_message)
         p_message->Reset();
         try
         {
-          CXResultSet set = m_session->Load(tablename,filters);
+          CXResultSet set = m_session->Load(classname,filters);
           for(auto& object : set)
           {
             AddObjectToMessage(p_message,object);
           }
-          p_message->SetParameter("Result","OK");
+          p_message->SetParameter("CXResult","OK");
           return;
         }
         catch(StdException* er)
@@ -125,7 +125,7 @@ CXServer::OnCXSelect(int p_code,SOAPMessage* p_message)
       }
       else errors = "CXSelect must provide a minimum of 1 filter at least!";
     }
-    else errors = "CXSelect entity class name is unknown to the server: " + tablename;
+    else errors = "CXSelect entity class name is unknown to the server: " + classname;
   }
   else errors = "CXSelect action is missing an 'Entity'";
 
@@ -168,7 +168,7 @@ CXServer::OnCXInsert(int p_code,SOAPMessage* p_message)
             object->Serialize(*p_message,entity);
 
             // Add the "OK" sign
-            p_message->SetParameter("Result","OK");
+            p_message->SetParameter("CXResult","OK");
             return;
           }
           else
@@ -207,8 +207,8 @@ CXServer::OnCXUpdate(int p_code,SOAPMessage* p_message)
     XMLAttribute* nm = p_message->FindAttribute(entity,"name");
     if(nm)
     {
-      CString tablename = nm->m_value;
-      CXClass* theClass = m_session->FindClass(tablename);
+      CString classname = nm->m_value;
+      CXClass* theClass = m_session->FindClass(classname);
       CXTable* table = theClass->GetTable();
       if(table)
       {
@@ -222,7 +222,7 @@ CXServer::OnCXUpdate(int p_code,SOAPMessage* p_message)
           // Create copy on the stack of the primary key
           VariantSet primary = object->GetPrimaryKey();
 
-          CXObject* realObject = m_session->Load(tablename,primary);
+          CXObject* realObject = m_session->Load(classname,primary);
           if(realObject)
           {
             // Now de-serialize AGAIN, but now in the correct object
@@ -231,7 +231,7 @@ CXServer::OnCXUpdate(int p_code,SOAPMessage* p_message)
             if(m_session->Update(realObject))
             {
               p_message->Reset();
-              p_message->SetParameter("Result","OK");
+              p_message->SetParameter("CXResult","OK");
               return;
             }
             else
@@ -248,7 +248,7 @@ CXServer::OnCXUpdate(int p_code,SOAPMessage* p_message)
           er->Delete();
         }
       }
-      else errors = "CXUpdate entity class name is unknown to the server: " + tablename;
+      else errors = "CXUpdate entity class name is unknown to the server: " + classname;
     }
     else errors = "CXUpdate action: Entity is missing a 'name'";
   }
@@ -272,8 +272,8 @@ CXServer::OnCXDelete(int p_code,SOAPMessage* p_message)
     XMLAttribute* nm = p_message->FindAttribute(entity,"name");
     if(nm)
     {
-      CString tablename = nm->m_value;
-      CXClass* theClass = m_session->FindClass(tablename);
+      CString classname = nm->m_value;
+      CXClass* theClass = m_session->FindClass(classname);
       CXTable* table = theClass->GetTable();
       if(table)
       {
@@ -287,13 +287,13 @@ CXServer::OnCXDelete(int p_code,SOAPMessage* p_message)
           // Create copy on the stack of the primary key
           VariantSet primary = object->GetPrimaryKey();
 
-          CXObject* realObject = m_session->Load(tablename,primary);
+          CXObject* realObject = m_session->Load(classname,primary);
           if(realObject)
           {
             if(m_session->Delete(realObject))
             {
               p_message->Reset();
-              p_message->SetParameter("Result","OK");
+              p_message->SetParameter("CXResult","OK");
               return;
             }
             else
@@ -310,7 +310,7 @@ CXServer::OnCXDelete(int p_code,SOAPMessage* p_message)
           er->Delete();
         }
       }
-      else errors = "CXDelete entity class name is unknown to the server: " + tablename;
+      else errors = "CXDelete entity class name is unknown to the server: " + classname;
     }
     else errors = "CXDelete action: Entity is missing a 'name'";
   }

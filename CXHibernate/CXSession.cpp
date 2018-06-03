@@ -127,16 +127,18 @@ CXSession::CloseSession()
 {
   hibernate.Log(CXH_LOG_ACTIONS,true,"Close session: %s",m_sessionKey);
 
-  // If still an open database: synchronize our caches
-  if(m_database && m_database->IsOpen())
-  {
-    Synchronize();
-  }
-
   // If create/drop cycle testing, try to drop the database
   if(m_use == SESS_Create)
   {
     TryDropDatabase();
+  }
+  else
+  {
+    // If still an open database: synchronize our caches
+    if(m_database && m_database->IsOpen())
+    {
+      Synchronize();
+    }
   }
 
   // Remove our session from the global registration
@@ -541,7 +543,7 @@ CXSession::Load(CString p_className,SQLFilterSet& p_filters)
   }
   else // CXH_Filestore_role
   {
-    SelectObjectsFromFilestore(p_className,p_filters);
+    set = SelectObjectsFromFilestore(p_className,p_filters);
   }
 
   // Log the object as one of the set
@@ -584,7 +586,6 @@ CXSession::Update(CXObject* p_object)
   }
   else if(m_role == CXH_Internet_role)
   {
-    // Save as a SOAP message
     result = UpdateObjectInInternet(p_object);
   }
   else // CXH_Filestore_role
@@ -667,7 +668,7 @@ CXSession::Delete(CXObject* p_object)
     result = DeleteObjectInFilestore(p_object);
   }
 
-  hibernate.Log(CXH_LOG_ACTIONS,false,"Delete succeeded");
+  hibernate.Log(CXH_LOG_ACTIONS,true,"Delete succeeded: %s",result ? "yes" : "no");
   return result;
 }
 
@@ -704,7 +705,7 @@ CXSession::Synchronize()
         object->Serialize(*record);
         if(Update(object) == false)
         {
-          trans.Rollback();
+          // Implicit rollback transaction
           return false;
         }
       }
@@ -1222,10 +1223,19 @@ CXSession::SelectObjectsFromDatabase(CString p_className,SQLFilterSet& p_filters
       // Add object to the cache
       if (object->IsPersistent())
       {
-        AddObjectInCache(object,object->GetPrimaryKey());
+        if(AddObjectInCache(object, object->GetPrimaryKey()) == false)
+        {
+          // LOG!
+          delete object;
+        }
+        // Keep in the return set
+        set.push_back(object);
       }
-      // Keep in the return set
-      set.push_back(object);
+      else
+      {
+        // LOG
+        delete object;
+      }
 
       // Getting the next record
       ++recnum;
@@ -1343,7 +1353,7 @@ CXSession::UpdateObjectInInternet(CXObject* p_object)
   msg.SetURL(m_url);
   if(GetHTTPClient()->Send(&msg))
   {
-    CString result = msg.GetParameter("Result");
+    CString result = msg.GetParameter("CXResult");
     if(result == "OK")
     {
       return true;
@@ -1435,7 +1445,7 @@ CXSession::InsertObjectInInternet(CXObject* p_object)
   msg.SetURL(m_url);
   if(GetHTTPClient()->Send(&msg))
   {
-    CString result = msg.GetParameter("Result");
+    CString result = msg.GetParameter("CXResult");
     if(result == "OK")
     {
       // De-Serialize the result (gives us the new primary key)
@@ -1606,7 +1616,7 @@ CXSession::DeleteObjectInInternet(CXObject* p_object)
   msg.SetURL(m_url);
   if (GetHTTPClient()->Send(&msg))
   {
-    CString result = msg.GetParameter("Result");
+    CString result = msg.GetParameter("CXResult");
     if (result == "OK")
     {
       // Object is deleted. Remove from the caches

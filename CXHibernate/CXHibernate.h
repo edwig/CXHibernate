@@ -30,15 +30,15 @@
 #include <vector>
 #include <map>
 
-#define HIBERNATE_VERSION "0.5.0"
-#define HIBERNATE_DATE    "27-05-2018"
+#define HIBERNATE_VERSION "0.6.0"
+#define HIBERNATE_DATE    "03-06-2018"
 
 #define CXH_LOG_NOTHING       0   // Logging is OFF
 #define CXH_LOG_ERRORS        1   // Only error logging
 #define CXH_LOG_ACTIONS       2   // Log standard actions
 #define CXH_LOG_DEBUG         3   // Log as much as possible
 #define CXH_LOG_SQL           6   // Log all SQL actions
-#define CXH_LOG_MAX           6   // Maximum loglevel
+#define CXH_LOG_MAX           6   // Maximum log level
 
 // ORM Mapping strategy classes -> tables
 typedef enum _map_strategy

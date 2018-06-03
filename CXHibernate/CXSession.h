@@ -132,6 +132,7 @@ private:
   bool          RemoveObjectFromCache(CXObject* p_object, VariantSet& p_primary);
   // Create a filters set for a DataSet
   bool          CreateFilterSet(CXTable* p_table,VariantSet& p_primary,SQLFilterSet& p_filters);
+  void          BuildFilter(SOAPMessage& p_message,XMLElement* p_entity,SQLFilterSet& p_filters);
 
   // Try to find an object in the cache
   CXObject*     FindObjectInCache    (CString p_className,VariantSet& p_primary);
@@ -143,9 +144,9 @@ private:
   CXObject*     FindObjectOnInternet (CString p_className,VariantSet& p_primary);
 
   // SELECT objects
-  void          SelectObjectsFromDatabase (CString p_className,SQLFilterSet& p_filters);
-  void          SelectObjectsFromFilestore(CString p_className,SQLFilterSet& p_filters);
-  void          SelectObjectsFromInternet (CString p_className,SQLFilterSet& p_filters);
+  CXResultSet   SelectObjectsFromDatabase (CString p_className,SQLFilterSet& p_filters);
+  CXResultSet   SelectObjectsFromFilestore(CString p_className,SQLFilterSet& p_filters);
+  CXResultSet   SelectObjectsFromInternet (CString p_className,SQLFilterSet& p_filters);
   // DML operations in the database
   bool          UpdateObjectInDatabase (CXObject* p_object);
   bool          InsertObjectInDatabase (CXObject* p_object);

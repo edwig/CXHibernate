@@ -115,6 +115,21 @@ SQLFilter::SQLFilter(SQLFilter* p_other)
   }
 }
 
+// XTOR from another filter
+SQLFilter::SQLFilter(SQLFilter& p_other)
+{
+  m_field      = p_other.m_field;
+  m_operator   = p_other.m_operator;
+  m_expression = p_other.m_expression;
+  m_negate     = p_other.m_negate;
+
+  for(auto& variant : p_other.m_values)
+  {
+    var* value = new SQLVariant(variant);
+    m_values.push_back(value);
+  }
+}
+
 // DTOR: Remove all variant values
 SQLFilter::~SQLFilter()
 {
@@ -462,6 +477,7 @@ SQLOperatorToString(SQLOperator p_oper)
     {
       return filter->m_name;
     }
+    ++filter;
   }
   return "";
 }

@@ -313,8 +313,12 @@ CXObject::FillPrimaryKey(SQLRecord& p_record)
   WordList keys = m_class->GetTable()->GetPrimaryKeyAsList();
   for (auto& key : keys)
   {
-    SQLVariant* var = new SQLVariant(p_record.GetField(key));
-    m_primaryKey.push_back(var);
+    SQLVariant* field = p_record.GetField(key);
+    if(field)
+    {
+      SQLVariant* value = new SQLVariant(field);
+      m_primaryKey.push_back(value);
+    }
   }
 }
 

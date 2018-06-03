@@ -28,6 +28,7 @@
 #include "CXServer.h"
 #include "CXClass.h"
 #include "CXSession.h"
+#include <memory>
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -88,15 +89,20 @@ CXServer::OnCXSelect(int p_code,SOAPMessage* p_message)
   CString errors;
   CString actor("Client");
   SQLFilterSet filters;
+  XMLAttribute* nameAttribute = nullptr;
   XMLElement* entity = p_message->FindElement("Entity");
   if(entity)
   {
-    CString tablename = entity->GetValue();
+    nameAttribute = p_message->FindAttribute(entity, "name");
+  }
+  if(nameAttribute)
+  {
+    CString tablename = nameAttribute->m_value;
     CXClass* theClass = m_session->FindClass(tablename);
     CXTable* table = theClass->GetTable();
     if(table)
     {
-      filters = FindFilterSet(p_message);
+      FindFilterSet(p_message,filters);
       if(!filters.Empty())
       {
         p_message->Reset();
@@ -141,8 +147,8 @@ CXServer::OnCXInsert(int p_code,SOAPMessage* p_message)
     XMLAttribute* nm = p_message->FindAttribute(entity,"name");
     if(nm)
     {
-      CString tablename = nm->m_value;
-      CXClass* theClass = m_session->FindClass(tablename);
+      CString classname = nm->m_value;
+      CXClass* theClass = m_session->FindClass(classname);
       CXTable* table = theClass->GetTable();
       if(table)
       {
@@ -155,6 +161,13 @@ CXServer::OnCXInsert(int p_code,SOAPMessage* p_message)
           if(m_session->Insert(object))
           {
             p_message->Reset();
+
+            // Place resulting object in the message
+            entity = p_message->SetParameter("Entity","");
+            p_message->SetAttribute(entity,"name",classname);
+            object->Serialize(*p_message,entity);
+
+            // Add the "OK" sign
             p_message->SetParameter("Result","OK");
             return;
           }
@@ -170,7 +183,7 @@ CXServer::OnCXInsert(int p_code,SOAPMessage* p_message)
           er->Delete();
         }
       }
-      else errors = "CXInsert entity class name is unknown to the server: " + tablename;
+      else errors = "CXInsert entity class name is unknown to the server: " + classname;
     }
     else errors = "CXInsert action: Entity is missing a 'name'";
   }
@@ -203,7 +216,7 @@ CXServer::OnCXUpdate(int p_code,SOAPMessage* p_message)
         {
           // Creating a temporary object to discover our primary key
           CreateCXO creating = theClass->GetCreateCXO();
-          CXObject* object = (*creating)();
+          std::auto_ptr<CXObject> object((*creating)());
           object->SetClass(theClass);
           object->DeSerialize(*p_message,entity);
           // Create copy on the stack of the primary key
@@ -228,8 +241,6 @@ CXServer::OnCXUpdate(int p_code,SOAPMessage* p_message)
             }
           }
           else errors = "CXUpdate object to be updated not found!";
-
-          delete object;
         }
         catch(StdException* er)
         {
@@ -270,7 +281,7 @@ CXServer::OnCXDelete(int p_code,SOAPMessage* p_message)
         {
           // Creating a temporary object to discover our primary key
           CreateCXO creating = theClass->GetCreateCXO();
-          CXObject* object = (*creating)();
+          std::auto_ptr<CXObject> object((*creating)());
           object->SetClass(theClass);
           object->DeSerialize(*p_message,entity);
           // Create copy on the stack of the primary key
@@ -292,8 +303,6 @@ CXServer::OnCXDelete(int p_code,SOAPMessage* p_message)
             }
           }
           else errors = "CXDelete object to be deleted not found!";
-
-          delete object;
         }
         catch(StdException* er)
         {
@@ -318,21 +327,19 @@ CXServer::OnCXDelete(int p_code,SOAPMessage* p_message)
 //////////////////////////////////////////////////////////////////////////
 
 // Find our filter set in the SOAP message
-SQLFilterSet 
-CXServer::FindFilterSet(SOAPMessage* p_message)
+void
+CXServer::FindFilterSet(SOAPMessage* p_message,SQLFilterSet& p_filters)
 {
-  SQLFilterSet filters;
-
   XMLElement* fselem = p_message->FindElement("Filters");
   if(fselem == nullptr)
   {
-    return filters;
+    return;
   }
 
   XMLElement* filter = p_message->FindElement(fselem,"Filter");
   if(filter == nullptr)
   {
-    return filters;
+    return;
   }
 
   // Iterate through all the filters
@@ -346,27 +353,26 @@ CXServer::FindFilterSet(SOAPMessage* p_message)
       SQLOperator oper = StringToSQLOperator(operat->GetValue());
       if(oper == OP_NOP)
       {
-        return SQLFilterSet();
+        return;
       }
 
       // Create extra filter
-      SQLFilter* filt = new SQLFilter(column->GetValue(),oper);
+      SQLFilter filt(column->GetValue(),oper);
 
       XMLElement* value = p_message->FindElement(filter,"Value",false);
       while(value)
       {
-        SQLVariant* var = new SQLVariant(value->GetValue());
-        filt->AddValue(var);
+        SQLVariant var(value->GetValue());
+        filt.AddValue(&var);
         // Next value in the filter
         value = p_message->GetElementSibling(value);
       }
       // Keep the filter
-      filters.AddFilter(filt);
+      p_filters.AddFilter(&filt);
     }
     // Next filter
     filter = p_message->GetElementSibling(filter);
   }
-  return filters;
 }
 
 // Add an object to the answer of the SOAP message
@@ -374,7 +380,8 @@ void
 CXServer::AddObjectToMessage(SOAPMessage* p_message,CXObject* object)
 {
   // Add a new entity node
-  XMLElement* entity = p_message->SetParameter("Entity","");
+  XMLElement* param  = p_message->GetParameterObjectNode();
+  XMLElement* entity = p_message->AddElement(param,"Entity",XDT_String,"");
   p_message->SetAttribute(entity,"name",object->GetClass()->GetTable()->TableName());
 
   // Serialize our object to this message on this node
@@ -396,7 +403,7 @@ CXServer::RegisterSelectOperation()
   SOAPMessage input (m_targetNamespace,request);
   SOAPMessage output(m_targetNamespace,response);
 
-  // Entity met een filter
+  // Entity with a filter
   XMLElement* entity  = input.AddElement(NULL,   "Entity", WSDL_Mandatory|XDT_String,"");
   XMLElement* filters = input.AddElement(entity, "Filters",WSDL_Mandatory|WSDL_OneMany|XDT_String,"");
   XMLElement* filter  = input.AddElement(filters,"Filter", WSDL_Mandatory|XDT_String,"");

@@ -70,6 +70,7 @@ public:
   SQLFilter(CString p_field,SQLOperator p_operator,int         p_value);
   SQLFilter(CString p_field,SQLOperator p_operator,CString     p_value);
   SQLFilter(SQLFilter* p_other);
+  SQLFilter(SQLFilter& p_other);
   ~SQLFilter();
 
   // Adding extra values for the IN or BETWEEN operators

@@ -64,7 +64,7 @@ protected:
   WEBSERVICE_DECLARE(OnCXDelete)
 private:
   // Find our filter set in the SOAP message
-  SQLFilterSet FindFilterSet(SOAPMessage* p_message);
+  void         FindFilterSet(SOAPMessage* p_message,SQLFilterSet& p_filters);
   // Add an object to the answer of the SOAP message
   void         AddObjectToMessage(SOAPMessage* p_message,CXObject* object);
   // Register all operations

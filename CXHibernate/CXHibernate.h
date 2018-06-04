@@ -30,8 +30,8 @@
 #include <vector>
 #include <map>
 
-#define HIBERNATE_VERSION "0.6.0"
-#define HIBERNATE_DATE    "03-06-2018"
+#define HIBERNATE_VERSION "0.7.0"
+#define HIBERNATE_DATE    "04-06-2018"
 
 #define CXH_LOG_NOTHING       0   // Logging is OFF
 #define CXH_LOG_ERRORS        1   // Only error logging
@@ -96,6 +96,8 @@ public:
   void          SetDefaultCatalog(CString p_catalog);
   // Setting a default database schema for the execution time
   void          SetDefaultSchema(CString p_schema);
+  // Toolset: incomplete model
+  void          SetIncomplete(bool p_incomplete);
 
   // GETTERS
 
@@ -129,6 +131,8 @@ private:
   // DEFAULTS
   CString       m_default_catalog;      // Default catalog
   CString       m_default_schema;       // Default schema of all tables
+  // Incomplete mode: Only for tools and partly running models
+  bool          m_incomplete{ false };
 };
 
 // Singleton pointer to the library

@@ -1,9 +1,14 @@
 Roadmap for CX-Hibernate
 ========================
 
+Already done:
+-------------
+Version 0.5: Stable 1-class = 1-table database engine
+Version 0.6: HTTP Internet role
+Version 0.7: Follow associations
+
 Still to do:
 ------------
-Version 0.7: Follow associations
 Version 0.8: Derived classes in class-hierarchy table
 Version 0.9: Derived classes in their own table
 Version 1.0: First stable version + Documentation

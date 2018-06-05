@@ -309,12 +309,29 @@ CXSession::LoadConfiguration(XMLMessage& p_config)
   XMLElement* theclass = p_config.FindElement("class");
   while(theclass)
   {
-    CString  name = p_config.GetElement(theclass,"name");
-    CXClass* newclass = new CXClass(name);
+    CXClass* superclass = nullptr;
+    CString    name = p_config.GetElement(theclass,"name");
+    CString   super = p_config.GetElement(theclass,"super");
+    CString discrim = p_config.GetElement(theclass,"discriminator");
 
+    // Find any superclass
+    if(!super.IsEmpty())
+    {
+      superclass = FindClass(super);
+    }
+    
+    // Create class, superclass & table
+    CXClass* newclass = new CXClass(name,discrim,superclass);
+
+    // Perform the rest of the loading of the class
     if(newclass->LoadMetaInfo(this,p_config,theclass))
     {
       AddClass(newclass);
+    }
+    else
+    {
+      delete newclass;
+      throw new StdException("Cannot load class: " + name);
     }
     // Find next class
     theclass = p_config.GetElementSibling(theclass);

@@ -56,11 +56,7 @@ CXClass::CXClass(CString    p_name
   }
 
   // Getting a database table
-  if(m_super && hibernate.GetStrategy() == Strategy_one_table)
-  {
-    m_table = m_super->GetTable();
-  }
-  else
+  if(m_super == nullptr || hibernate.GetStrategy() != Strategy_one_table)
   {
     m_table = new CXTable(p_name);
   }
@@ -112,6 +108,10 @@ CXClass::GetCreateCXO()
 CXTable*
 CXClass::GetTable()
 {
+  if(m_super && hibernate.GetStrategy() == Strategy_one_table)
+  {
+    return m_super->GetTable();
+  }
   return m_table;
 }
 
@@ -299,15 +299,6 @@ CXClass::LoadMetaInfo(CXSession* p_session,XMLMessage& p_message,XMLElement* p_e
   CString tableName  = p_message.GetElement(p_elem,"table");
   m_table->SetSchemaTableType(schemaName,tableName,"TABLE");
 
-  // Load discriminator (if any)
-  m_discriminator = p_message.GetElement(p_elem,"discriminator");
-
-  // Load superclass
-  CString super = p_message.GetElement(p_elem,"super");
-  if(!super.IsEmpty())
-  {
-    m_super = p_session->FindClass(super);
-  }
   // Load subclasses
   LoadMetaInfoSubClasses(p_message,p_elem);
 

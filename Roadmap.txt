@@ -9,7 +9,7 @@ Version 0.7: Follow associations
 
 Still to do:
 ------------
-Version 0.8: Derived classes in class-hierarchy table
+Version 0.8: Derived classes in one-table strategy
 Version 0.9: Derived classes in their own table
 Version 1.0: First stable version + Documentation
 
@@ -22,6 +22,8 @@ But will be implemented in a later version
 - Other generator names than "<classname>_seq"
 - Greater cache control. Especially on the second line cache
 - many-to-many associations
+- mapping strategy not global but in each super-class of it's one
+  (also kwown as union-classes)
 
 
 Features from (N)Hibernate that will NEVER be implemented:

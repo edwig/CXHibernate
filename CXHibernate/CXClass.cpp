@@ -42,6 +42,7 @@ CXClass::CXClass(CString    p_name
         ,m_discriminator(p_discriminator)
         ,m_create(p_create)
         ,m_super(p_super)
+        ,m_table(nullptr)
 {
   // Registering with our super-class
   if(m_super)
@@ -273,7 +274,10 @@ CXClass::SaveMetaInfo(XMLMessage& p_message,XMLElement* p_elem)
   {
     p_message.AddElement(theclass,"super",XDT_String,m_super->GetName());
   }
-  p_message.AddElement(theclass,"table",XDT_String,m_table->TableName());
+  if(m_table)
+  {
+    p_message.AddElement(theclass,"table",XDT_String,m_table->TableName());
+  }
 
   // Add subclass references
   SaveMetaInfoSubClasses(p_message,theclass);
@@ -295,10 +299,12 @@ bool
 CXClass::LoadMetaInfo(CXSession* p_session,XMLMessage& p_message,XMLElement* p_elem)
 {
   // Load underlying table name
-  CString schemaName = p_message.GetElement(p_elem,"schema");
-  CString tableName  = p_message.GetElement(p_elem,"table");
-  m_table->SetSchemaTableType(schemaName,tableName,"TABLE");
-
+  if(m_table)
+  {
+    CString schemaName = p_message.GetElement(p_elem,"schema");
+    CString tableName  = p_message.GetElement(p_elem,"table");
+    m_table->SetSchemaTableType(schemaName,tableName,"TABLE");
+  }
   // Load subclasses
   LoadMetaInfoSubClasses(p_message,p_elem);
 
@@ -333,12 +339,12 @@ CXClass::BuildDefaultSelectQuery(SQLInfoDB* p_info)
   // Default query will be built as
   // "SELECT disc.*\n"
   // "  FROM table as disc"
-  CString query = CString("SELECT ") + columns + "\n  FROM " + m_table->DMLTableName(p_info) + asalias;
+  CString query = CString("SELECT ") + columns + "\n  FROM " + GetTable()->DMLTableName(p_info) + asalias;
 
   // Set on the dataset
-  if(m_table)
+  if(GetTable())
   {
-    SQLDataSet* set = m_table->GetDataSet();
+    SQLDataSet* set = GetTable()->GetDataSet();
     if(set)
     {
       set->SetQuery(query);
@@ -567,7 +573,7 @@ CXClass::LoadMetaInfoSubClasses(XMLMessage& p_message,XMLElement* p_theClass)
     while(sub)
     {
       m_subNames.push_back(sub->GetValue());
-      sub = p_message.GetElementSibling(subs);
+      sub = p_message.GetElementSibling(sub);
     }
   }
 }
@@ -764,13 +770,13 @@ CXClass::FillTableInfoFromClassInfo()
   for(auto& attrib : m_attributes)
   {
     MetaColumn column;
-    column.m_table      = m_table->TableName();
+    column.m_table      = GetTable()->TableName();
     column.m_column     = attrib->GetDatabaseColumn();
     column.m_datatype   = attrib->GetDataType();
     column.m_columnSize = attrib->GetMaxLength();
     column.m_position   = position++;
 
-    m_table->AddInfoColumn(column);
+    GetTable()->AddInfoColumn(column);
   }
 
   // Add primary key info
@@ -778,14 +784,14 @@ CXClass::FillTableInfoFromClassInfo()
   for(auto& attrib : m_primary.m_attributes)
   {
     MetaPrimary prim;
-    prim.m_table             = m_table->TableName();
+    prim.m_table             = GetTable()->TableName();
     prim.m_columnName        = attrib->GetDatabaseColumn();
     prim.m_columnPosition    = position++;
     prim.m_constraintName    = m_primary.m_constraintName;
     prim.m_deferrable        = m_primary.m_deferrable;
     prim.m_initiallyDeferred = m_primary.m_initiallyDeferred;
 
-    m_table->AddPrimaryKey(prim);
+    GetTable()->AddPrimaryKey(prim);
   }
 
   // Add foreign keys
@@ -796,14 +802,14 @@ CXClass::FillTableInfoFromClassInfo()
     {
       MetaForeign fkey;
 
-      fkey.m_fkSchemaName      = m_table->SchemaName();
-      fkey.m_fkTableName       = m_table->TableName();
+      fkey.m_fkSchemaName      = GetTable()->SchemaName();
+      fkey.m_fkTableName       = GetTable()->TableName();
       fkey.m_pkTableName       = foreign->m_primaryTable;
       fkey.m_foreignConstraint = foreign->m_constraintName;
       fkey.m_keySequence       = position++;
       fkey.m_fkColumnName      = col->GetDatabaseColumn();
 
-      m_table->AddForeignKey(fkey);
+      GetTable()->AddForeignKey(fkey);
     }
   }
 
@@ -814,8 +820,8 @@ CXClass::FillTableInfoFromClassInfo()
     for(auto& col : index->m_attributes)
     {
       MetaIndex ind;
-      ind.m_schemaName = m_table->SchemaName();
-      ind.m_tableName  = m_table->TableName();
+      ind.m_schemaName = GetTable()->SchemaName();
+      ind.m_tableName  = GetTable()->TableName();
       ind.m_indexName  = index->m_name;
       ind.m_columnName = col->GetDatabaseColumn();
       ind.m_unique     = index->m_unique;
@@ -823,7 +829,7 @@ CXClass::FillTableInfoFromClassInfo()
       ind.m_position   = position++;
       ind.m_filter     = index->m_filter;
 
-      m_table->AddIndex(ind);
+      GetTable()->AddIndex(ind);
     }
   }
 
@@ -831,24 +837,24 @@ CXClass::FillTableInfoFromClassInfo()
   if(!m_generator.IsEmpty())
   {
     MetaSequence seq;
-    seq.m_schemaName   = m_table->SchemaName();
+    seq.m_schemaName   = GetTable()->SchemaName();
     seq.m_sequenceName = m_generator;
     seq.m_currentValue = m_gen_value;
 
-    m_table->AddSequence(seq);
+    GetTable()->AddSequence(seq);
   }
 
   // Add privileges
   for(auto& access : m_privileges)
   {
     MetaPrivilege priv;
-    priv.m_schemaName = m_table->SchemaName();
-    priv.m_tableName  = m_table->TableName();
+    priv.m_schemaName = GetTable()->SchemaName();
+    priv.m_tableName  = GetTable()->TableName();
     priv.m_grantee    = access.m_grantee;
     priv.m_privilege  = access.m_privilege;
     priv.m_grantable  = access.m_grantable;
 
-    m_table->AddPrivilege(priv);
+    GetTable()->AddPrivilege(priv);
   }
 }
 

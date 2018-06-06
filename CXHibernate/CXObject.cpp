@@ -260,6 +260,12 @@ CXObject::PostDeSerialize(SQLRecord& p_record)
 {
 }
 
+// Does nothing here!!
+void CXObject::Serialize  (SOAPMessage& p_message,XMLElement* p_entity) {}
+void CXObject::Serialize  (SQLRecord&   p_record,int p_mutation) {}
+void CXObject::DeSerialize(SOAPMessage& p_message,XMLElement* p_entity) {}
+void CXObject::DeSerialize(SQLRecord&   p_record) {}
+
 // Logging of this object (called by CXSession only!)
 void 
 CXObject::LogObject()
@@ -367,7 +373,10 @@ CXObject::LogClassAttributes(CXClass* p_class)
   while (attribute)
   {
     var* value = m_record->GetField(attribute->GetName());
-    hibernate.Log(CXH_LOG_DEBUG,true,"%d: %-32s:%s",index,attribute->GetName(),value->GetAsChar());
+    if(value)
+    {
+      hibernate.Log(CXH_LOG_DEBUG,true,"%d: %-32s:%s",index,attribute->GetName(),value->GetAsChar());
+    }
     // Next attribute
     attribute = p_class->FindAttribute(++index);
   }

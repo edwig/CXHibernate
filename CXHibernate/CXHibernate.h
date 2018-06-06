@@ -76,7 +76,7 @@ public:
   // Getting a (possibly existing) session
   CXSession*   GetSession(CString p_sessionKey = "");
   // Create a new Hibernate session
-  CXSession*   CreateSession(CString p_sessionKey = "");
+  CXSession*   CreateSession(CString p_sessionKey = "",CString p_configFile = "");
   // Adding a externally created session (but we now own it). You **MUST** supply a session key
   void         AddSession(CXSession* p_session, CString p_sessionKey);
   // Removing a session
@@ -98,6 +98,8 @@ public:
   void          SetDefaultSchema(CString p_schema);
   // Toolset: incomplete model
   void          SetIncomplete(bool p_incomplete);
+  // Setting a default configuration file (can be called once!)
+  void          SetConfiguration(CString p_configFile);
 
   // GETTERS
 
@@ -106,6 +108,7 @@ public:
   CString       GetDefaultSchema();
   int           GetLogLevel();
   LogAnalysis*  GetLogAnalysis();
+  CString       GetConfiguration();
 
 private:
   // Translate strategy names
@@ -123,6 +126,8 @@ private:
   MapSessions   m_sessions;
   // Mapping with all create object functions
   MapCreate     m_createCXO;
+  // Configuration file
+  CString       m_configFile;
   // Current session key
   int           m_key{ 1 };
   // Logging for Hibernate

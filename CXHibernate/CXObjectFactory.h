@@ -86,20 +86,24 @@ CXOReg##classname _register##classname;
 #define   CXO_XML_SERIALIZE(c_type,property,column,XDT) AddElement(p_message,p_entity,column,XDT | XDT_Type,property)
 #define CXO_XML_DESERIALIZE(c_type,property,column,XDT) property = GetElement##c_type(p_message,p_entity,column)
 
-#define BEGIN_DBS_SERIALIZE(Classname)   void Classname::Serialize(SQLRecord& p_record,int p_mutation)\
-                                         {PreSerialize(p_record);
-#define END_DBS_SERIALIZE                PostSerialize(p_record);}
+#define BEGIN_DBS_SERIALIZE(Classname,super)   void Classname::Serialize(SQLRecord& p_record,int p_mutation)\
+                                               {PreSerialize(p_record);\
+                                                super::Serialize(p_record,p_mutation);
+#define END_DBS_SERIALIZE                       PostSerialize(p_record);}
 
-#define BEGIN_DBS_DESERIALIZE(Classname) void Classname::DeSerialize(SQLRecord& p_record)\
-                                         {PreDeSerialize(p_record);
-#define END_DBS_DESERIALIZE              PostDeSerialize(p_record);}
+#define BEGIN_DBS_DESERIALIZE(Classname,super) void Classname::DeSerialize(SQLRecord& p_record)\
+                                               {PreDeSerialize(p_record);\
+                                                super::DeSerialize(p_record);
+#define END_DBS_DESERIALIZE                     PostDeSerialize(p_record);}
 
-#define BEGIN_XML_SERIALIZE(Classname)   void Classname::Serialize(SOAPMessage& p_message,XMLElement* p_entity)\
-                                         {PreSerialize(p_message,p_entity);
-#define END_XML_SERIALIZE                PostSerialize(p_message,p_entity);}
-#define BEGIN_XML_DESERIALIZE(Classname) void Classname::DeSerialize(SOAPMessage& p_message,XMLElement* p_entity)\
-                                         {PreDeSerialize(p_message,p_entity);
-#define END_XML_DESERIALIZE              PostDeSerialize(p_message,p_entity);}
+#define BEGIN_XML_SERIALIZE(Classname,super)   void Classname::Serialize(SOAPMessage& p_message,XMLElement* p_entity)\
+                                               {PreSerialize(p_message,p_entity);\
+                                                super::Serialize(p_message,p_entity);
+#define END_XML_SERIALIZE                       PostSerialize(p_message,p_entity);}
+#define BEGIN_XML_DESERIALIZE(Classname,super) void Classname::DeSerialize(SOAPMessage& p_message,XMLElement* p_entity)\
+                                               {PreDeSerialize(p_message,p_entity);\
+                                                super::DeSerialize(p_message,p_entity);
+#define END_XML_DESERIALIZE                     PostDeSerialize(p_message,p_entity);}
 
 //////////////////////////////////////////////////////////////////////////
 //

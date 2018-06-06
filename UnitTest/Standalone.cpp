@@ -344,7 +344,7 @@ namespace HibernateTest
 
       try
       {
-        m_database.Open("Testing","sysdba","altijd");
+        m_database.Open("hibtest","sysdba","altijd");
         if(m_database.IsOpen())
         {
           hibernate.SetDefaultSchema("sysdba");
@@ -451,7 +451,7 @@ namespace HibernateTest
             m_session->SetFilestore("C:\\WWW\\Testing");
 
             // We are a database session
-            m_session->SetDatabaseConnection("Testing","sysdba","altijd");
+            m_session->SetDatabaseConnection("hibtest","sysdba","altijd");
 
             return true;
           }

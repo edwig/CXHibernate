@@ -169,7 +169,11 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="Detail.h" />
+    <ClInclude Include="Infant.h" />
     <ClInclude Include="Master.h" />
+    <ClInclude Include="NaturalPerson.h" />
+    <ClInclude Include="Subject.h" />
+    <ClInclude Include="Supplier.h" />
     <ClInclude Include="TestNumber.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="targetver.h" />
@@ -177,14 +181,23 @@
   <ItemGroup>
     <ClCompile Include="Detail.cpp" />
     <ClCompile Include="Detail_cxh.cpp" />
+    <ClCompile Include="Infant.cpp" />
+    <ClCompile Include="Infant_cxh.cpp" />
     <ClCompile Include="Master.cpp" />
     <ClCompile Include="Master_cxh.cpp" />
+    <ClCompile Include="NaturalPerson.cpp" />
+    <ClCompile Include="NaturalPerson_cxh.cpp" />
+    <ClCompile Include="OneTable.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="Subject.cpp" />
+    <ClCompile Include="Subject_cxh.cpp" />
+    <ClCompile Include="Supplier.cpp" />
+    <ClCompile Include="Supplier_cxh.cpp" />
     <ClCompile Include="TestNumber.cpp" />
     <ClCompile Include="TestNumber_cxh.cpp" />
     <ClCompile Include="Standalone.cpp" />

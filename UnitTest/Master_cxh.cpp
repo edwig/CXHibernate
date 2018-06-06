@@ -37,7 +37,7 @@ static char THIS_FILE[] = __FILE__;
 #endif
 
 // Bring the contents of the class to a SOAPMessage 
-BEGIN_XML_SERIALIZE(Master)
+BEGIN_XML_SERIALIZE(Master,CXObject)
     CXO_XML_SERIALIZE(long,   m_id,         "id",         XDT_Integer);
     CXO_XML_SERIALIZE(long,   m_invoice,    "invoice",    XDT_Integer);
     CXO_XML_SERIALIZE(CString,m_description,"description",XDT_String);
@@ -45,21 +45,21 @@ BEGIN_XML_SERIALIZE(Master)
 END_XML_SERIALIZE
 
 // Read the contents of an object from a SOAPMessage or a SQLRecord
-BEGIN_XML_DESERIALIZE(Master)
+BEGIN_XML_DESERIALIZE(Master,CXObject)
   CXO_XML_DESERIALIZE(long,   m_id,         "id",         XDT_Integer);
   CXO_XML_DESERIALIZE(long,   m_invoice,    "invoice",    XDT_Integer);
   CXO_XML_DESERIALIZE(CString,m_description,"description",XDT_String);
   CXO_XML_DESERIALIZE(bcd,    m_total,      "total",      XDT_Decimal);
 END_XML_DESERIALIZE
 
-BEGIN_DBS_SERIALIZE(Master)
+BEGIN_DBS_SERIALIZE(Master,CXObject)
     CXO_DBS_SERIALIZE(long,   m_id,         "id",         XDT_Integer);
     CXO_DBS_SERIALIZE(long,   m_invoice,    "invoice",    XDT_Integer);
     CXO_DBS_SERIALIZE(CString,m_description,"description",XDT_String);
     CXO_DBS_SERIALIZE(bcd,    m_total,      "total",      XDT_Decimal);
 END_DBS_SERIALIZE
 
-BEGIN_DBS_DESERIALIZE(Master)
+BEGIN_DBS_DESERIALIZE(Master,CXObject)
   CXO_DBS_DESERIALIZE(long,   m_id,         "id",         XDT_Integer);
   CXO_DBS_DESERIALIZE(long,   m_invoice,    "invoice",    XDT_Integer);
   CXO_DBS_DESERIALIZE(CString,m_description,"description",XDT_String);

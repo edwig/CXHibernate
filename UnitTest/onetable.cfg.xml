@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="utf-8"?>
+<hibernate>
+  <default_catalog />
+  <default_schema>sysdba</default_schema>
+  <strategy>one_table</strategy>
+  <logfile>C:\WWW\Hibernate_log.txt</logfile>
+  <loglevel>6</loglevel>
+  <session_role>database_role</session_role>
+  <database_use>use</database_use>
+  <class>
+    <name>Subject</name>
+	  <schema>sysdba</schema>
+    <table>subject</table>
+    <discriminator>sub</discriminator>
+    <subclasses>
+      <subclass>NaturalPerson</subclass>
+      <subclass>Supplier</subclass>
+    </subclasses>
+    <attributes>
+      <attribute name="id" datatype="int" isprimary="true"/>
+      <attribute name="name" datatype="string" maxlength="200" />
+      <attribute name="adresline1" datatype="string" maxlength="250" />
+      <attribute name="adresline2" datatype="string" maxlength="250"/>
+      <attribute name="account_id" datatype="int"/>
+    </attributes>
+  	<identity name="pk_detail">
+	    <attribute name="id" />
+	  </identity>
+    <generator name="subject_seq" start="1" />
+  </class>
+  <class>
+    <name>NaturalPerson</name>
+    <super>Subject</super>
+    <subclasses>
+      <subclass>Infant</subclass>
+    </subclasses>
+    <discriminator>nat</discriminator>
+    <attributes>
+      <attribute name="firstname"     datatype="string" maxlength="200" />
+      <attribute name="date_of_birth" datatype="date"/>
+      <attribute name="length"         datatype="bcd" />
+    </attributes>
+  </class>
+  <class>
+    <name>Supplier</name>
+    <discriminator>spl</discriminator>
+    <super>Subject</super>
+    <attributes>
+      <attribute name="deliveryAddress" datatype="string" maxlength="200" />
+      <attribute name="balance"       datatype="bcd" />
+      <attribute name="open_orders"   datatype="bcd" />
+      <attribute name="open_billing" datatype="bcd"/>
+    </attributes>
+  </class>
+  <class>
+    <name>Infant</name>
+    <discriminator>inf</discriminator>
+    <super>NaturalPerson</super>
+    <attributes>
+      <attribute name="immunisation" datatype="string" maxlength="4000" />
+      <attribute name="complication" datatype="string" maxlength="4000" />
+      <attribute name="hospital" datatype="string" maxlength="100" />
+    </attributes>
+  </class>
+</hibernate>

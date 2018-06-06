@@ -63,6 +63,7 @@ public:
   // Find an attribute
   CXAttribute*   FindAttribute(CString p_name);
   CXAttribute*   FindAttribute(int     p_index);
+  WordList       FindAllDBSAttributes();
   // Find an association
   CXAssociation* FindAssociation(CString p_toClass,CString p_associationName);
   CXAssociation* FindAssociation(int index);

@@ -28,14 +28,14 @@ public:
   CString    GetDeliveryAddress() { return m_deliveryAddress;   };
   bcd        GetBalance()         { return m_balance;           };
   bcd        GetOpen_orders()     { return m_open_orders;       };
-  bcd        GetOpen_billing()    { return m_open_billing;      };
+  bcd        GetOpen_billings()   { return m_open_billings;     };
 
 protected:
   // Database persistent attributes
   CString    m_deliveryAddress   ;
   bcd        m_balance           ;
   bcd        m_open_orders       ;
-  bcd        m_open_billing      ;
+  bcd        m_open_billings     ;
 
 private:
   // Transient attributes go here

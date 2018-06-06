@@ -1050,7 +1050,7 @@ CXSession::CreateFilterSet(CXTable* p_table,VariantSet& p_primary,SQLFilterSet& 
   int ind = 0;
   for(auto& column : list)
   {
-    SQLFilter* filter = new SQLFilter(column,SQLOperator::OP_Equal,p_primary[ind++]);
+    SQLFilter filter(column,SQLOperator::OP_Equal,p_primary[ind++]);
     p_filters.AddFilter(filter);
   }
 

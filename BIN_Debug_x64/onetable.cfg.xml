@@ -49,7 +49,7 @@
       <attribute name="deliveryAddress" datatype="string" maxlength="200" />
       <attribute name="balance"       datatype="bcd" />
       <attribute name="open_orders"   datatype="bcd" />
-      <attribute name="open_billing" datatype="bcd"/>
+      <attribute name="open_billings" datatype="bcd"/>
     </attributes>
   </class>
   <class>

@@ -205,6 +205,29 @@ CXClass::FindAttribute(int p_index)
   return nullptr;
 }
 
+// Find all the attribute names of all my attributes
+// including all the attributes of my superclass(es)
+WordList
+CXClass::FindAllDBSAttributes()
+{
+  WordList list;
+
+  // Gather names of all superclasses recursively
+  if(m_super)
+  {
+    list = m_super->FindAllDBSAttributes();
+  }
+
+  // Add all my database attributes
+  for(auto& attrib : m_attributes)
+  {
+    list.push_back(attrib->GetDatabaseColumn());
+  }
+
+  return list;
+}
+
+
 // Find the generator (if any)
 CXAttribute* 
 CXClass::FindGenerator()
@@ -326,20 +349,25 @@ CXClass::LoadMetaInfo(CXSession* p_session,XMLMessage& p_message,XMLElement* p_e
 bool
 CXClass::BuildDefaultSelectQuery(SQLInfoDB* p_info)
 {
-  CString columns("*");
-  CString asalias;
+  CString  columns("SELECT ");
+  CString  asalias  = " as " + m_discriminator;
+  WordList dbsNames = FindAllDBSAttributes();
+  bool     firstdone = false;
 
-  // See if discriminator available
-  if(!m_discriminator.IsEmpty())
+  for(auto& dbsname : dbsNames)
   {
-    columns = m_discriminator + ".*";
-    asalias = " as " + m_discriminator;
+    if(firstdone)
+    {
+      columns += "      ,";
+    }
+    columns  += m_discriminator + "." + dbsname + "\n";
+    firstdone = true;
   }
 
   // Default query will be built as
-  // "SELECT disc.*\n"
+  // "SELECT disc.columnname\n"
   // "  FROM table as disc"
-  CString query = CString("SELECT ") + columns + "\n  FROM " + GetTable()->DMLTableName(p_info) + asalias;
+  CString query = columns + "  FROM " + GetTable()->DMLTableName(p_info) + asalias;
 
   // Set on the dataset
   if(GetTable())

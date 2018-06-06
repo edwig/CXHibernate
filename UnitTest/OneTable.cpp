@@ -151,7 +151,7 @@ namespace HibernateTest
       text.Format("Delivery address: %s",p_supplier->GetDeliveryAddress());         Logger::WriteMessage(text);
       text.Format("Balance         : %s",p_supplier->GetBalance().AsString());      Logger::WriteMessage(text);
       text.Format("Open orders     : %s",p_supplier->GetOpen_orders().AsString());  Logger::WriteMessage(text);
-      text.Format("Open billings   : %s",p_supplier->GetOpen_billing().AsString()); Logger::WriteMessage(text);
+      text.Format("Open billings   : %s",p_supplier->GetOpen_billings().AsString());Logger::WriteMessage(text);
     }
 
     void PrintInfant(Infant* p_infant)

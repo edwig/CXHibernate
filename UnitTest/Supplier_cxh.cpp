@@ -16,28 +16,28 @@ BEGIN_XML_SERIALIZE(Supplier,Subject)
   CXO_XML_SERIALIZE(CString     ,m_deliveryAddress ,"deliveryAddress" ,XDT_String);
   CXO_XML_SERIALIZE(bcd         ,m_balance         ,"balance"         ,XDT_Decimal);
   CXO_XML_SERIALIZE(bcd         ,m_open_orders     ,"open_orders"     ,XDT_Decimal);
-  CXO_XML_SERIALIZE(bcd         ,m_open_billing    ,"open_billing"    ,XDT_Decimal);
+  CXO_XML_SERIALIZE(bcd         ,m_open_billings   ,"open_billings"   ,XDT_Decimal);
 END_XML_SERIALIZE
 
 BEGIN_XML_DESERIALIZE(Supplier,Subject)
   CXO_XML_DESERIALIZE(CString     ,m_deliveryAddress ,"deliveryAddress" ,XDT_String);
   CXO_XML_DESERIALIZE(bcd         ,m_balance         ,"balance"         ,XDT_Decimal);
   CXO_XML_DESERIALIZE(bcd         ,m_open_orders     ,"open_orders"     ,XDT_Decimal);
-  CXO_XML_DESERIALIZE(bcd         ,m_open_billing    ,"open_billing"    ,XDT_Decimal);
+  CXO_XML_DESERIALIZE(bcd         ,m_open_billings   ,"open_billings"   ,XDT_Decimal);
 END_XML_DESERIALIZE
 
 BEGIN_DBS_SERIALIZE(Supplier,Subject)
   CXO_DBS_SERIALIZE(CString     ,m_deliveryAddress ,"deliveryAddress" ,XDT_String);
   CXO_DBS_SERIALIZE(bcd         ,m_balance         ,"balance"         ,XDT_Decimal);
   CXO_DBS_SERIALIZE(bcd         ,m_open_orders     ,"open_orders"     ,XDT_Decimal);
-  CXO_DBS_SERIALIZE(bcd         ,m_open_billing    ,"open_billing"    ,XDT_Decimal);
+  CXO_DBS_SERIALIZE(bcd         ,m_open_billings   ,"open_billings"   ,XDT_Decimal);
 END_DBS_SERIALIZE
 
 BEGIN_DBS_DESERIALIZE(Supplier,Subject)
   CXO_DBS_DESERIALIZE(CString     ,m_deliveryAddress ,"deliveryAddress" ,XDT_String);
   CXO_DBS_DESERIALIZE(bcd         ,m_balance         ,"balance"         ,XDT_Decimal);
   CXO_DBS_DESERIALIZE(bcd         ,m_open_orders     ,"open_orders"     ,XDT_Decimal);
-  CXO_DBS_DESERIALIZE(bcd         ,m_open_billing    ,"open_billing"    ,XDT_Decimal);
+  CXO_DBS_DESERIALIZE(bcd         ,m_open_billings   ,"open_billings"   ,XDT_Decimal);
 END_DBS_DESERIALIZE
 
 // Static factory to create a new object if this class

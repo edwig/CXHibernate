@@ -68,6 +68,14 @@ CXObject::GetClass()
   return m_class;
 }
 
+// Discriminator of the class of the object
+CString
+CXObject::GetDiscriminator()
+{
+  return m_class->GetDiscriminator();
+}
+
+
 // See if the object has the same business key as the other
 // Can also be used to sort the objects on
 int

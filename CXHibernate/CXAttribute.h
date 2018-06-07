@@ -34,7 +34,9 @@ class XMLMessage;
 class XMLElement;
 using CXAttribMap = std::vector<CXAttribute*>;
 
-typedef struct _primaryKey
+// Identity of an object: candidate primary key
+// Does sync with the primary key of a table
+typedef struct _identity
 {
   CString     m_constraintName;
   CXAttribMap m_attributes;
@@ -43,7 +45,7 @@ typedef struct _primaryKey
   // 0=Immediate, 1=initially deferred
   int         m_initiallyDeferred { 0 };
 }
-CXPrimaryKey;
+CXIdentity;
 
 typedef enum _assocType
 {

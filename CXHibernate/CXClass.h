@@ -52,11 +52,14 @@ public:
   CXClass*    GetSuperClass();
   // Getting our subclasses
   SubClasses& GetSubClasses();
-  CXPrimaryKey& GetIdentity();
+  // Getting our main identity
+  CXIdentity& GetIdentity();
+  // Getting our discriminator value
+  CString     GetDiscriminator();
 
   // Add attributes to the class
   void        AddAttribute  (CXAttribute*   p_attribute);
-  void        AddIdentity   (CXPrimaryKey&  p_primary);
+  void        AddIdentity   (CXIdentity&  p_primary);
   void        AddAssociation(CXAssociation* p_key);
   void        AddIndex      (CXIndex*       p_index);
   void        AddGenerator  (CString        p_generator,int p_start);
@@ -64,7 +67,7 @@ public:
   // Find an attribute
   CXAttribute*   FindAttribute(CString p_name);
   CXAttribute*   FindAttribute(int     p_index);
-  WordList       FindAllDBSAttributes();
+  WordList       FindAllDBSAttributes(bool p_superIncluded);
   // Find an association
   CXAssociation* FindAssociation(CString p_toClass,CString p_associationName);
   CXAssociation* FindAssociation(int index);
@@ -86,9 +89,6 @@ public:
   void        BuildPrimaryKeyFilter(SOAPMessage& p_message,XMLElement* p_entity,VariantSet& p_primary);
   // Build filter for primary key or association selection
   void        BuildFilter(CXAttribMap& p_attributes,VariantSet& p_values,SQLFilterSet& p_filters);
-
-
-
 
 protected:
   // Adding a sub-class
@@ -114,6 +114,11 @@ protected:
   void LoadMetaInfoGenerator   (XMLMessage& p_message,XMLElement* p_theClass);
   void LoadMetaInfoPrivileges  (XMLMessage& p_message,XMLElement* p_theClass);
 
+  CString BuildSelectQueryOneTable(SQLInfoDB* p_info);
+  CString BuildSelectQuerySubTable(SQLInfoDB* p_info);
+  CString BuildSelectQuerySubclass(SQLInfoDB* p_info);
+  void    BuildSelectQuerySubTableRecursive(SQLInfoDB* p_info,CString& p_columns,CString& p_frompart,bool& p_firstdone);
+
 private:
   // The name of our class
   CString         m_name;
@@ -130,7 +135,7 @@ private:
   CXTable*        m_table;
   // All attributes of this class
   CXAttribMap     m_attributes;   // Column attributes
-  CXPrimaryKey    m_primary;      // Our primary key
+  CXIdentity      m_identity;     // Our candidate primary key
   CXAssociations  m_associations; // Associations to other classes
   CXIndices       m_indices;      // Constraints and performance speed-ups
   CString         m_generator;    // Generator name

@@ -397,7 +397,7 @@ namespace HibernateTest
       p_class->AddAttribute(new CXAttribute("string","description",250));
       p_class->AddAttribute(new CXAttribute("bcd",   "total"));
 
-      CXPrimaryKey primary;
+      CXIdentity primary;
       primary.m_constraintName = "pk_master";
       primary.m_attributes.push_back(p_class->FindAttribute("id"));
       p_class->AddIdentity(primary);
@@ -411,7 +411,7 @@ namespace HibernateTest
       p_class->AddAttribute(new CXAttribute("string","description",250));
       p_class->AddAttribute(new CXAttribute("bcd",   "amount"));
 
-      CXPrimaryKey primary;
+      CXIdentity primary;
       primary.m_constraintName = "pk_detail";
       primary.m_attributes.push_back(p_class->FindAttribute("id"));
       p_class->AddIdentity(primary);
@@ -424,7 +424,7 @@ namespace HibernateTest
       p_class->AddAttribute(new CXAttribute("double","field2"));
       p_class->AddAttribute(new CXAttribute("bcd",   "field3"));
 
-      CXPrimaryKey primary;
+      CXIdentity primary;
       primary.m_constraintName = "pk_test_numbers";
       primary.m_attributes.push_back(p_class->FindAttribute("id"));
       p_class->AddIdentity(primary);

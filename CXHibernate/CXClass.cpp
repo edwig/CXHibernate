@@ -131,10 +131,17 @@ CXClass::GetSubClasses()
 }
 
 // Getting the identity
-CXPrimaryKey&
+CXIdentity&
 CXClass::GetIdentity()
 {
-  return m_primary;
+  return m_identity;
+}
+
+// Getting our discriminator value
+CString
+CXClass::GetDiscriminator()
+{
+  return m_discriminator;
 }
 
 // Add an attribute to the class
@@ -153,9 +160,9 @@ CXClass::AddAttribute(CXAttribute* p_attribute)
 }
 
 void
-CXClass::AddIdentity(CXPrimaryKey& p_primary)
+CXClass::AddIdentity(CXIdentity& p_identity)
 {
-  m_primary = p_primary;
+  m_identity = p_identity;
 }
 
 void
@@ -215,14 +222,14 @@ CXClass::FindAttribute(int p_index)
 // Find all the attribute names of all my attributes
 // including all the attributes of my superclass(es)
 WordList
-CXClass::FindAllDBSAttributes()
+CXClass::FindAllDBSAttributes(bool p_superIncluded)
 {
   WordList list;
 
-  // Gather names of all superclasses recursively
-  if(m_super)
+  // Gather names of all super classes recursively
+  if(m_super && p_superIncluded)
   {
-    list = m_super->FindAllDBSAttributes();
+    list = m_super->FindAllDBSAttributes(p_superIncluded);
   }
 
   // Add all my database attributes
@@ -356,27 +363,18 @@ CXClass::LoadMetaInfo(CXSession* p_session,XMLMessage& p_message,XMLElement* p_e
 bool
 CXClass::BuildDefaultSelectQuery(SQLInfoDB* p_info)
 {
-  CString  columns("SELECT ");
-  CString  asalias  = " as " + m_discriminator;
-  WordList dbsNames = FindAllDBSAttributes();
-  bool     firstdone = false;
+  CString query;
 
-  for(auto& dbsname : dbsNames)
+  // Calculate our query
+  switch(hibernate.GetStrategy())
   {
-    if(firstdone)
-    {
-      columns += "      ,";
-    }
-    columns  += m_discriminator + "." + dbsname + "\n";
-    firstdone = true;
+    case MapStrategy::Strategy_standalone:  // Fall through
+    case MapStrategy::Strategy_one_table:   query = BuildSelectQueryOneTable(p_info); break;
+    case MapStrategy::Strategy_sub_tables:  query = BuildSelectQuerySubTable(p_info); break;
+    case MapStrategy::Strategy_classtable:  query = BuildSelectQuerySubclass(p_info); break;
   }
 
-  // Default query will be built as
-  // "SELECT disc.columnname\n"
-  // "  FROM table as disc"
-  CString query = columns + "  FROM " + GetTable()->DMLTableName(p_info) + asalias;
-
-  // Set on the dataset
+  // Set query on the dataset
   if(GetTable())
   {
     SQLDataSet* set = GetTable()->GetDataSet();
@@ -394,7 +392,7 @@ void
 CXClass::BuildPrimaryKeyFilter(SOAPMessage& p_message,XMLElement* p_entity,VariantSet& p_primary)
 {
   // Check number of primaries against VariantSet
-  if(m_primary.m_attributes.size() != p_primary.size())
+  if(m_identity.m_attributes.size() != p_primary.size())
   {
     throw new StdException("Primary key size mismatches the load key");
   }
@@ -407,10 +405,10 @@ CXClass::BuildPrimaryKeyFilter(SOAPMessage& p_message,XMLElement* p_entity,Varia
   XMLElement* filters = p_message.AddElement(p_entity,"Filters",XDT_String,"");
 
   // Prepare for iteration
-  CXAttribMap::iterator att = m_primary.m_attributes.begin();
+  CXAttribMap::iterator att = m_identity.m_attributes.begin();
   VariantSet::iterator  key = p_primary.begin();
 
-  while(att != m_primary.m_attributes.end())
+  while(att != m_identity.m_attributes.end())
   {
     int     xmltype = XDT_String | ODBCToXmlDataType((*key)->GetDataType());
     CString column  = (*att)->GetDatabaseColumn();
@@ -454,11 +452,14 @@ CXClass::BuildFilter(CXAttribMap& p_attributes,VariantSet& p_values,SQLFilterSet
 void
 CXClass::BuildClassTable(CXSession* p_session)
 {
-  // See if we need the discriminator in the table
+  // See if we need the discriminator in the table (super table only!)
   if(hibernate.GetStrategy() != MapStrategy::Strategy_standalone)
   {
-    CXAttribute* attrib = new CXAttribute("string","discriminator",3);
-    m_attributes.push_back(attrib);
+    if(m_super == nullptr)
+    {
+      CXAttribute* attrib = new CXAttribute("string","discriminator",3);
+      m_attributes.push_back(attrib);
+    }
   }
 
   // See if we must copy the identity to our class/table
@@ -473,15 +474,13 @@ CXClass::BuildClassTable(CXSession* p_session)
       {
         super = super->GetSuperClass();
       }
-      m_primary = super->GetIdentity();
+      m_identity = super->GetIdentity();
     }
   }
 
   // Fill in the table info
   FillTableInfoFromClassInfo();
-
 }
-
 
 //////////////////////////////////////////////////////////////////////////
 //
@@ -531,24 +530,24 @@ CXClass::SaveMetaInfoAttributes(XMLMessage& p_message,XMLElement* p_theClass)
 void 
 CXClass::SaveMetaInfoIdentity(XMLMessage& p_message,XMLElement* p_theClass)
 {
-  if(!m_primary.m_attributes.empty())
+  if(!m_identity.m_attributes.empty())
   {
-    XMLElement* primary = p_message.AddElement(p_theClass,"identity",XDT_String,"");
-    p_message.SetAttribute(primary,"name",m_primary.m_constraintName);
+    XMLElement* identity = p_message.AddElement(p_theClass,"identity",XDT_String,"");
+    p_message.SetAttribute(identity,"name",m_identity.m_constraintName);
     CString deferrable;
-    switch(m_primary.m_deferrable)
+    switch(m_identity.m_deferrable)
     {
       case SQL_INITIALLY_DEFERRED:    deferrable = "initially_deferred";  break;
       case SQL_INITIALLY_IMMEDIATE:   deferrable = "initially_immediate"; break;
       case SQL_NOT_DEFERRABLE:        deferrable = "not_deferrable";      break;
     }
-    p_message.SetAttribute(primary,"deferrable",deferrable);
-    p_message.SetAttribute(primary,"initially_deferred",m_primary.m_initiallyDeferred ? "deferred" : "immediate");
+    p_message.SetAttribute(identity,"deferrable",deferrable);
+    p_message.SetAttribute(identity,"initially_deferred",m_identity.m_initiallyDeferred ? "deferred" : "immediate");
 
     // Add the columns of the primary key
-    for(auto& col : m_primary.m_attributes)
+    for(auto& col : m_identity.m_attributes)
     {
-      XMLElement* column = p_message.AddElement(primary,"attribute",XDT_String,"");
+      XMLElement* column = p_message.AddElement(identity,"attribute",XDT_String,"");
       p_message.SetAttribute(column,"name",col->GetDatabaseColumn());
     }
   }
@@ -670,29 +669,29 @@ CXClass::LoadMetaInfoAttributes(XMLMessage& p_message,XMLElement* p_theClass)
   }
 }
 
-// Loading the primary key identity info
+// Loading the identity info
 void 
 CXClass::LoadMetaInfoIdentity(XMLMessage& p_message,XMLElement* p_theClass)
 {
-  XMLElement* primary = p_message.FindElement(p_theClass,"identity");
-  if(primary)
+  XMLElement* identity = p_message.FindElement(p_theClass,"identity");
+  if(identity)
   {
-    m_primary.m_constraintName = p_message.GetAttribute(primary,"name");
-    CString deferr  = p_message.GetAttribute(primary,"deferrable");
-    CString initdef = p_message.GetAttribute(primary,"initially_deferred");
-    if(deferr.CompareNoCase("initailly_deferred") == 0) m_primary.m_deferrable = SQL_INITIALLY_DEFERRED;
-    if(deferr.CompareNoCase("initially_immediate")== 0) m_primary.m_deferrable = SQL_INITIALLY_IMMEDIATE;
-    if(deferr.CompareNoCase("not_deferrable") == 0)     m_primary.m_deferrable = SQL_NOT_DEFERRABLE;
-    m_primary.m_initiallyDeferred = initdef.CompareNoCase("deferred") == 0;
+    m_identity.m_constraintName = p_message.GetAttribute(identity,"name");
+    CString deferr  = p_message.GetAttribute(identity,"deferrable");
+    CString initdef = p_message.GetAttribute(identity,"initially_deferred");
+    if(deferr.CompareNoCase("initailly_deferred") == 0) m_identity.m_deferrable = SQL_INITIALLY_DEFERRED;
+    if(deferr.CompareNoCase("initially_immediate")== 0) m_identity.m_deferrable = SQL_INITIALLY_IMMEDIATE;
+    if(deferr.CompareNoCase("not_deferrable") == 0)     m_identity.m_deferrable = SQL_NOT_DEFERRABLE;
+    m_identity.m_initiallyDeferred = initdef.CompareNoCase("deferred") == 0;
 
-    XMLElement* column = p_message.FindElement(primary,"attribute");
+    XMLElement* column = p_message.FindElement(identity,"attribute");
     while(column)
     {
       CString name = p_message.GetAttribute(column,"name");
       CXAttribute* attrib = FindAttribute(name);
       if(attrib)
       {
-        m_primary.m_attributes.push_back(attrib);
+        m_identity.m_attributes.push_back(attrib);
       }
       column = p_message.GetElementSibling(column);
     }
@@ -848,15 +847,15 @@ CXClass::FillTableInfoFromClassInfo()
 
   // Add primary key info
   position = 1;
-  for(auto& attrib : m_primary.m_attributes)
+  for(auto& attrib : m_identity.m_attributes)
   {
     MetaPrimary prim;
     prim.m_table             = GetTable()->TableName();
     prim.m_columnName        = attrib->GetDatabaseColumn();
     prim.m_columnPosition    = position++;
-    prim.m_constraintName    = m_primary.m_constraintName;
-    prim.m_deferrable        = m_primary.m_deferrable;
-    prim.m_initiallyDeferred = m_primary.m_initiallyDeferred;
+    prim.m_constraintName    = m_identity.m_constraintName;
+    prim.m_deferrable        = m_identity.m_deferrable;
+    prim.m_initiallyDeferred = m_identity.m_initiallyDeferred;
 
     GetTable()->AddPrimaryKey(prim);
   }
@@ -925,4 +924,102 @@ CXClass::FillTableInfoFromClassInfo()
   }
 }
 
+//////////////////////////////////////////////////////////////////////////
+//
+// Default SELECT query
+//
+//////////////////////////////////////////////////////////////////////////
 
+CString 
+CXClass::BuildSelectQueryOneTable(SQLInfoDB* p_info)
+{
+  CString  columns("SELECT ");
+  CString  asalias   = " as " + m_discriminator;
+  WordList dbsNames  = FindAllDBSAttributes(true);
+  bool     firstdone = false;
+
+  // Build select part
+  for(auto& dbsname : dbsNames)
+  {
+    if(firstdone)
+    {
+      columns += "      ,";
+    }
+    columns  += m_discriminator + "." + dbsname + "\n";
+    firstdone = true;
+  }
+
+  // Default query will be built as
+  // "SELECT disc.columnname\n"
+  // "  FROM table as disc"
+  CString query = columns + "  FROM " + GetTable()->DMLTableName(p_info) + asalias;
+
+  return query;
+}
+
+CString 
+CXClass::BuildSelectQuerySubTable(SQLInfoDB* p_info)
+{
+  CString columns("SELECT ");
+  CString frompart;
+  bool    firstdone = false;
+
+  BuildSelectQuerySubTableRecursive(p_info,columns,frompart,firstdone);
+
+  return columns + frompart;
+}
+
+CString 
+CXClass::BuildSelectQuerySubclass(SQLInfoDB* p_info)
+{
+  return "";
+}
+
+void 
+CXClass::BuildSelectQuerySubTableRecursive(SQLInfoDB* p_info,CString& p_columns,CString& p_frompart,bool& p_firstdone)
+{
+  // Build superclass part first
+  if(m_super)
+  {
+    BuildSelectQuerySubTableRecursive(p_info,p_columns,p_frompart,p_firstdone);
+  }
+
+  // Build select part
+  WordList dbsNames = FindAllDBSAttributes(false);
+  for(auto& dbsname : dbsNames)
+  {
+    if(p_firstdone)
+    {
+      p_columns += "      ,";
+    }
+    p_columns += m_discriminator + "." + dbsname + "\n";
+    p_firstdone = true;
+  }
+
+  if(p_frompart.IsEmpty())
+  {
+    p_frompart = "  FROM " + GetTable()->DMLTableName(p_info) + " as " + m_discriminator;
+  }
+  else
+  {
+    p_frompart += "\n       LEFT INNER JOIN " + GetTable()->DMLTableName(p_info) + " as " + m_discriminator;
+    p_frompart += " ON (";
+
+    // Link on the identities of the classes
+    int ind = 0;
+    CString supdis = m_super->GetDiscriminator();
+    CXIdentity& supiden = m_super->GetIdentity();
+    for(auto& attrib : m_identity.m_attributes)
+    {
+      if(ind > 0)
+      {
+        p_frompart += " AND ";
+      }
+      p_frompart += supdis + "." + supiden.m_attributes[ind]->GetDatabaseColumn();
+      p_frompart += " = ";
+      p_frompart += m_discriminator + "." + attrib->GetDatabaseColumn();
+      ++ind;
+    }
+    p_frompart += " )";
+  }
+}

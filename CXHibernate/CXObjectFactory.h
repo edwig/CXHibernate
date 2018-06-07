@@ -78,7 +78,7 @@ CXOReg##classname _register##classname;
                                   virtual void   Serialize(SQLRecord&   p_record,int p_mutation = 0);     \
                                   virtual void DeSerialize(SOAPMessage& p_message,XMLElement* p_entity);\
                                   virtual void DeSerialize(SQLRecord&   p_record);\
-                                  static CString ClassName()
+                                  static  CString ClassName()
 
 // Serialization and de-serialization of your class object
 #define   CXO_DBS_SERIALIZE(c_type,property,column,XDT) p_record.ModifyField(column,property,p_mutation)

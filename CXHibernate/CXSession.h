@@ -167,6 +167,9 @@ private:
 
   // Used by filestore and internet roles
   CXObject*     LoadObjectFromXML(SOAPMessage& p_message,XMLElement* p_entity,CXClass* p_class);
+  // Used in table mapping modes to set the discriminator
+  void          SerializeDiscriminator(CXObject* p_object,SQLRecord*   p_record);
+  void          SerializeDiscriminator(CXObject* p_object,SOAPMessage& p_message,XMLElement* p_entity);
 
 
   CString       m_sessionKey;                  // As known by CXHibernate

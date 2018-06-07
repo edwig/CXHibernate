@@ -717,8 +717,10 @@ CXSession::Synchronize()
     {
       CXObject*  object = obj.second;
       SQLRecord* record = object->GetDatabaseRecord();
+      // Only relevant status is 'Updated'. Cannot be otherwise!
       if(record && (record->GetStatus() & SQL_Record_Updated))
       {
+        SerializeDiscriminator(object,record);
         object->Serialize(*record);
         if(Update(object) == false)
         {
@@ -1415,6 +1417,7 @@ CXSession::UpdateObjectInInternet(CXObject* p_object)
   msg.SetAttribute(entity,"name",p_object->ClassName());
 
   // Now serialize our object into this message
+  SerializeDiscriminator(p_object,msg,entity);
   p_object->Serialize(msg,entity);
 
   // Send to client
@@ -1470,6 +1473,7 @@ CXSession::InsertObjectInDatabase(CXObject* p_object)
   CXTransaction trans(this);
 
   // Now serialize our object with the 'real' values
+  SerializeDiscriminator(p_object,record);
   p_object->Serialize(*record,m_mutation);
   // Set the record to 'insert-only'
   record->Inserted();
@@ -1507,6 +1511,7 @@ CXSession::InsertObjectInInternet(CXObject* p_object)
   msg.SetAttribute(entity,"name",p_object->ClassName());
 
   // Now serialize our object into this message
+  SerializeDiscriminator(p_object,msg,entity);
   p_object->Serialize(msg,entity);
 
   // Send to client
@@ -1602,6 +1607,7 @@ CXSession::UpdateObjectInFilestore(CXObject* p_object)
   msg.SetAttribute(entity,"name",table->TableName());
 
   // Serialize our object
+  SerializeDiscriminator(p_object,msg,entity);
   p_object->Serialize(msg,entity);
 
   // Test if we can access this file
@@ -1635,6 +1641,7 @@ CXSession::InsertObjectInFilestore(CXObject* p_object)
   msg.SetAttribute(entity,"name",table->TableName());
 
   // Serialize our object
+  SerializeDiscriminator(p_object,msg,entity);
   p_object->Serialize(msg,entity);
 
   // Save to the file: overwriting the file
@@ -1723,6 +1730,27 @@ CXSession::BuildFilter(SOAPMessage& p_message, XMLElement* p_entity, SQLFilterSe
     p_message.AddElement(filter, "Column",   XDT_String, column);
     p_message.AddElement(filter, "Operator", XDT_String, operat);
     p_message.AddElement(filter, "Value",    xmltype,    value);
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////
+
+void
+CXSession::SerializeDiscriminator(CXObject* p_object,SQLRecord* p_record)
+{
+  if(hibernate.GetStrategy() != MapStrategy::Strategy_standalone)
+  {
+    SQLVariant disc(p_object->GetDiscriminator());
+    p_record->SetField("discriminator",&disc,m_mutation);
+  }
+}
+
+void
+CXSession::SerializeDiscriminator(CXObject* p_object,SOAPMessage& p_message,XMLElement* p_entity)
+{
+  if(hibernate.GetStrategy() != MapStrategy::Strategy_standalone)
+  {
+    p_message.AddElement(p_entity,"discriminator",XDT_String|XDT_Type,p_object->GetDiscriminator());
   }
 }
 

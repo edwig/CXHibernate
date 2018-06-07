@@ -43,22 +43,25 @@ public:
   virtual ~CXObject();
 
   // Setting the class is a mandatory action
-  void SetClass(CXClass* p_class);
+  // Regularly only called by the CX-Hibernate framework
+  void            SetClass(CXClass* p_class);
   // Logging of this object (called by CXSession only!)
-  void LogObject();
+  void            LogObject();
   // Default class name of an object
-  CString ClassName();
+  virtual CString ClassName();
+  // Discriminator of the class of the object
+  virtual CString GetDiscriminator() = 0;
 
   // Bring the contents of the class to a SOAPMessage or a SQLRecord
-  virtual void Serialize(SOAPMessage& p_message,XMLElement* p_entity);
-  virtual void Serialize(SQLRecord&   p_record, int p_mutation = 0);
+  virtual void    Serialize(SOAPMessage& p_message,XMLElement* p_entity);
+  virtual void    Serialize(SQLRecord&   p_record, int p_mutation = 0);
 
   // Read the contents of an object from a SOAPMessage or a SQLRecord
-  virtual void DeSerialize(SOAPMessage& p_message,XMLElement* p_entity);
-  virtual void DeSerialize(SQLRecord&   p_record);
+  virtual void    DeSerialize(SOAPMessage& p_message,XMLElement* p_entity);
+  virtual void    DeSerialize(SQLRecord&   p_record);
 
   // Overridable functionality in the framework
-  virtual int  Compare(CXObject* p_other);
+  virtual int     Compare(CXObject* p_other);
   virtual CString Hashcode();
 
   // Getting or setting the Primary key of the object

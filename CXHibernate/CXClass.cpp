@@ -130,6 +130,13 @@ CXClass::GetSubClasses()
   return m_subClasses;
 }
 
+// Getting the identity
+CXPrimaryKey&
+CXClass::GetIdentity()
+{
+  return m_primary;
+}
+
 // Add an attribute to the class
 void
 CXClass::AddAttribute(CXAttribute* p_attribute)
@@ -339,8 +346,8 @@ CXClass::LoadMetaInfo(CXSession* p_session,XMLMessage& p_message,XMLElement* p_e
   LoadMetaInfoGenerator   (p_message,p_elem);
   LoadMetaInfoPrivileges  (p_message,p_elem);
 
-  // Fill in the table info
-  FillTableInfoFromClassInfo();
+  // Now build our table
+  BuildClassTable(p_session);
 
   return !m_attributes.empty();
 }
@@ -441,6 +448,38 @@ CXClass::BuildFilter(CXAttribMap& p_attributes,VariantSet& p_values,SQLFilterSet
     ++att;
     ++val;
   }
+}
+
+// Call after adding everything. Also called by LoadMetaInfo
+void
+CXClass::BuildClassTable(CXSession* p_session)
+{
+  // See if we need the discriminator in the table
+  if(hibernate.GetStrategy() != MapStrategy::Strategy_standalone)
+  {
+    CXAttribute* attrib = new CXAttribute("string","discriminator",3);
+    m_attributes.push_back(attrib);
+  }
+
+  // See if we must copy the identity to our class/table
+  if((hibernate.GetStrategy() == MapStrategy::Strategy_sub_tables) ||
+     (hibernate.GetStrategy() == MapStrategy::Strategy_classtable)  )
+  {
+    // But only if we are NOT the superclass
+    if(m_super)
+    {
+      CXClass* super = GetSuperClass();
+      while(super->GetSuperClass())
+      {
+        super = super->GetSuperClass();
+      }
+      m_primary = super->GetIdentity();
+    }
+  }
+
+  // Fill in the table info
+  FillTableInfoFromClassInfo();
+
 }
 
 

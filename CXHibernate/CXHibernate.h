@@ -46,7 +46,7 @@ typedef enum _map_strategy
    Strategy_standalone   // No sub/super classes. 1 table = 1 class
   ,Strategy_one_table    // 1 table for super    + all sub-classes
   ,Strategy_sub_tables   // 1 table for super    + 1 table per sub-class
-//,Strategy_unions       // 1 table for subclass + all its supers
+  ,Strategy_classtable   // 1 table for subclass + all its supers
 }
 MapStrategy;
 

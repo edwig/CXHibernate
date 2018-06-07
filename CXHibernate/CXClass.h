@@ -52,6 +52,7 @@ public:
   CXClass*    GetSuperClass();
   // Getting our subclasses
   SubClasses& GetSubClasses();
+  CXPrimaryKey& GetIdentity();
 
   // Add attributes to the class
   void        AddAttribute  (CXAttribute*   p_attribute);
@@ -76,6 +77,8 @@ public:
   bool        LoadMetaInfo(CXSession* p_session,XMLMessage& p_message,XMLElement* p_elem);
   // After loading we do the linking
   void        LinkClasses(CXSession* p_session);
+  // Call after adding everything. Also called by LoadMetaInfo
+  void        BuildClassTable(CXSession* p_session);
 
   // Build default SELECT query
   bool        BuildDefaultSelectQuery(SQLInfoDB* p_info);
@@ -83,6 +86,8 @@ public:
   void        BuildPrimaryKeyFilter(SOAPMessage& p_message,XMLElement* p_entity,VariantSet& p_primary);
   // Build filter for primary key or association selection
   void        BuildFilter(CXAttribMap& p_attributes,VariantSet& p_values,SQLFilterSet& p_filters);
+
+
 
 
 protected:

@@ -18,6 +18,7 @@ Features that will not go into 1.0
 But will be implemented in a later version
 ------------------------------------------
 - Naming the discriminator attribute other than "Discriminator"
+- Setting the size of the discriminator other than "3"
 - Other generators than a native database "SEQUENCE"
 - Other generator names than "<classname>_seq"
 - Greater cache control. Especially on the second line cache

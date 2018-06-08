@@ -52,6 +52,8 @@ public:
   CXClass*    GetSuperClass();
   // Getting our subclasses
   SubClasses& GetSubClasses();
+  // Getting the root class
+  CXClass*    GetRootClass();
   // Getting our main identity
   CXIdentity& GetIdentity();
   // Getting our discriminator value

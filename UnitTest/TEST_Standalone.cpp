@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////
 //
-// File: UnitTest.cpp
+// File: TEST_Standalone.cpp
 //
 // Copyright (c) 1998-2018 ir. W.E. Huisman
 // All rights reserved

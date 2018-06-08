@@ -436,7 +436,7 @@ SQLDataSet::ParseSelection(SQLQuery& p_query)
 
 // Parse the fitlers (m_filters must be non-null)
 CString
-SQLDataSet::ParseFilters()
+SQLDataSet::ParseFilters(SQLQuery& p_query)
 {
   CString query(m_query);
   query.MakeUpper();
@@ -454,14 +454,15 @@ SQLDataSet::ParseFilters()
     {
       if(!whereFound)
       {
-        query += "\nWHERE ";
+        query += "\n WHERE ";
       }
+      first = false;
     }
     else
     {
       query += "\n   AND ";
     }
-    query += filt->GetSQLFilter();
+    query += filt->GetSQLFilter(p_query);
   }
   return query;
 }
@@ -501,7 +502,7 @@ SQLDataSet::Open(bool p_stopIfNoColumns /*=false*/)
       }
       else if(m_filters && !m_filters->Empty())
       {
-        query = ParseFilters();
+        query = ParseFilters(qry);
       }
     }
     else
@@ -584,7 +585,7 @@ SQLDataSet::Append()
       }
       else if(m_filters && !m_filters->Empty())
       {
-        query = ParseFilters();
+        query = ParseFilters(qry);
       }
     }
     else

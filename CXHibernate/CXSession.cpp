@@ -1033,7 +1033,7 @@ CXSession::RemoveObjectFromCache(CXObject* p_object, VariantSet& p_primary)
 
 // Create a filters set for a DataSet
 bool
-CXSession::CreateFilterSet(CXTable* p_table,VariantSet& p_primary,SQLFilterSet& p_filters)
+CXSession::CreateFilterSet(CXClass* p_class,VariantSet& p_primary,SQLFilterSet&  p_filters)
 {
   // Check if we have a primary key, or an empty key
   if(p_primary.empty())
@@ -1042,18 +1042,32 @@ CXSession::CreateFilterSet(CXTable* p_table,VariantSet& p_primary,SQLFilterSet& 
   }
 
   // Check if number of columns of the primary key matches the number of values
-  WordList list = p_table->GetPrimaryKeyAsList();
+  CXTable* table = p_class->GetTable();
+  WordList list  = table->GetPrimaryKeyAsList();
   if(list.size() != p_primary.size())
   {
     return false;
   }
 
+  // Find discriminators
+  CString discriminator = p_class->GetDiscriminator();
+  CString rootdiscrim   = p_class->GetRootClass()->GetDiscriminator();
+
   // Walk the list of columns / values
   int ind = 0;
   for(auto& column : list)
   {
-    SQLFilter filter(column,SQLOperator::OP_Equal,p_primary[ind++]);
+    CString dbscolumn = discriminator + "." + column;
+    SQLFilter filter(dbscolumn,SQLOperator::OP_Equal,p_primary[ind++]);
     p_filters.AddFilter(filter);
+  }
+
+  // Add class filter by discriminator
+  if(hibernate.GetStrategy() != MapStrategy::Strategy_standalone)
+  {
+    CString column = rootdiscrim + ".discriminator";
+    SQLFilter discrim(column,SQLOperator::OP_Equal,discriminator);
+    p_filters.AddFilter(discrim);
   }
 
   return true;
@@ -1107,7 +1121,7 @@ CXSession::FindObjectInDatabase(CString p_className,VariantSet& p_primary)
   theClass->BuildDefaultSelectQuery(GetDatabase()->GetSQLInfoDB());
 
   SQLFilterSet fset;
-  if(CreateFilterSet(table,p_primary,fset))
+  if(CreateFilterSet(theClass,p_primary,fset))
   {
     dset->SetFilters(&fset);
 
@@ -1257,9 +1271,9 @@ CXSession::SelectObjectsFromDatabase(CString p_className,SQLFilterSet& p_filters
 
   // Propagate our filters
   dset->SetFilters(&p_filters);
-  // Set our query
-  CString query = CString("SELECT * FROM ") + table->DMLTableName(GetDatabase()->GetSQLInfoDB());
-  dset->SetQuery(query);
+
+  // Create correct query
+  theClass->BuildDefaultSelectQuery(GetDatabase()->GetSQLInfoDB());
 
   // NOW GO OPEN our dataset
   bool selected = false;

@@ -168,8 +168,12 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="Animal.h" />
+    <ClInclude Include="Cat.h" />
     <ClInclude Include="Detail.h" />
+    <ClInclude Include="Dog.h" />
     <ClInclude Include="Infant.h" />
+    <ClInclude Include="Kitten.h" />
     <ClInclude Include="Master.h" />
     <ClInclude Include="NaturalPerson.h" />
     <ClInclude Include="Subject.h" />
@@ -179,15 +183,23 @@
     <ClInclude Include="targetver.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="Animal.cpp" />
+    <ClCompile Include="Animal_cxh.cpp" />
+    <ClCompile Include="Cat.cpp" />
+    <ClCompile Include="Cat_cxh.cpp" />
     <ClCompile Include="Detail.cpp" />
     <ClCompile Include="Detail_cxh.cpp" />
+    <ClCompile Include="Dog.cpp" />
+    <ClCompile Include="Dog_cxh.cpp" />
     <ClCompile Include="Infant.cpp" />
     <ClCompile Include="Infant_cxh.cpp" />
+    <ClCompile Include="Kitten.cpp" />
+    <ClCompile Include="Kitten_cxh.cpp" />
     <ClCompile Include="Master.cpp" />
     <ClCompile Include="Master_cxh.cpp" />
     <ClCompile Include="NaturalPerson.cpp" />
     <ClCompile Include="NaturalPerson_cxh.cpp" />
-    <ClCompile Include="OneTable.cpp" />
+    <ClCompile Include="TEST_OneTable.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
@@ -200,7 +212,8 @@
     <ClCompile Include="Supplier_cxh.cpp" />
     <ClCompile Include="TestNumber.cpp" />
     <ClCompile Include="TestNumber_cxh.cpp" />
-    <ClCompile Include="Standalone.cpp" />
+    <ClCompile Include="TEST_Standalone.cpp" />
+    <ClCompile Include="TEST_SubTable.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

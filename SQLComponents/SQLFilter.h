@@ -52,6 +52,7 @@ SQLOperator;
 
 // Forward declarations
 class SQLRecord;
+class SQLQuery;
 // Mapping typedefs
 typedef std::vector<SQLVariant*> VariantSet;
 
@@ -83,7 +84,7 @@ public:
   // OPERATIONS
 
   // Getting the SQL Condition filter
-  CString     GetSQLFilter();
+  CString     GetSQLFilter(SQLQuery& p_query);
   // Match a record to the filter internally
   bool        MatchRecord(SQLRecord* p_record);
 
@@ -101,13 +102,13 @@ private:
   void        CheckValue();
   void        CheckTwoValues();
   // Constructing the default operand
-  void        ConstructOperand(CString& p_sql);
+  void        ConstructOperand(CString& p_sql,SQLQuery& p_query);
   // Constructing the LIKE clause
   void        ConstructLike(CString& p_sql);
   // Constructing the IN clause
-  void        ConstructIN(CString& p_sql);
+  void        ConstructIN(CString& p_sql,SQLQuery& p_query);
   // Constructing the BETWEEN clause
-  void        ConstructBetween(CString& p_sql);
+  void        ConstructBetween(CString& p_sql,SQLQuery& p_query);
 
   // Internal matching
   bool        MatchEqual(SQLVariant* p_field);

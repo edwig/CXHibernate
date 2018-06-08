@@ -207,7 +207,7 @@ private:
   // Parse the selection
   CString      ParseSelection(SQLQuery& p_query);
   // Parse the fitlers
-  CString      ParseFilters();
+  CString      ParseFilters(SQLQuery& p_query);
   // Get the variant of a parameter
   SQLVariant*  GetParameter(CString& p_name);
   // Get all the columns of the record

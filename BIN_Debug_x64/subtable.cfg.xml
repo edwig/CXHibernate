@@ -19,9 +19,9 @@
     <attributes>
       <attribute name="id" datatype="int" isprimary="true"/>
       <attribute name="animalName" datatype="string" maxlength="200" />
-      <attribute name="has_claws" datatype="boolean" />
-      <attribute name="has_hair"  datatype="boolean" />
-      <attribute name="has_wings"  datatype="boolean" />
+      <attribute name="has_claws" datatype="bool" />
+      <attribute name="has_hair"  datatype="bool" />
+      <attribute name="has_wings"  datatype="bool" />
       <attribute name="numberOfLegs" datatype="int"/>
     </attributes>
   	<identity name="pk_animal">
@@ -31,6 +31,7 @@
   </class>
   <class>
     <name>Cat</name>
+    <table>cat</table>
     <super>Animal</super>
     <subclasses>
       <subclass>Kitten</subclass>
@@ -38,29 +39,31 @@
     <discriminator>cat</discriminator>
     <attributes>
       <attribute name="color"         datatype="string" maxlength="50" />
-      <attribute name="catdoor"       datatype="boolean"/>
-      <attribute name="likesWhiskas"  datatype="boolean" />
+      <attribute name="catdoor"       datatype="bool"/>
+      <attribute name="likesWhiskas"  datatype="bool" />
     </attributes>
   </class>
   <class>
     <name>Dog</name>
+    <table>dog</table>
     <discriminator>dog</discriminator>
     <super>Animal</super>
     <attributes>
       <attribute name="subrace"       datatype="string" maxlength="200" />
       <attribute name="walksPerDay"   datatype="int" />
-      <attribute name="hunting"       datatype="boolean" />
-      <attribute name="waterdog"      datatype="boolean"/>
+      <attribute name="hunting"       datatype="bool" />
+      <attribute name="waterdog"      datatype="bool"/>
     </attributes>
   </class>
   <class>
     <name>Kitten</name>
+    <table>kitten</table>
     <discriminator>kit</discriminator>
     <super>Cat</super>
     <attributes>
       <attribute name="color"         datatype="string" maxlength="50" />
-      <attribute name="immuun"        datatype="boolean" />
-      <attribute name="inLitter"      datatype="boolean" />
+      <attribute name="immuun"        datatype="bool" />
+      <attribute name="inLitter"      datatype="bool" />
     </attributes>
   </class>
 </hibernate>

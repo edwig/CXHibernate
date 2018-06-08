@@ -116,6 +116,18 @@ CXClass::GetTable()
   return m_table;
 }
 
+// Getting the root class
+CXClass*
+CXClass::GetRootClass()
+{
+  if(m_super)
+  {
+    return m_super->GetRootClass();
+  }
+  return this;
+}
+
+
 // Getting the superclass
 CXClass*
 CXClass::GetSuperClass()
@@ -370,7 +382,7 @@ CXClass::BuildDefaultSelectQuery(SQLInfoDB* p_info)
   {
     case MapStrategy::Strategy_standalone:  // Fall through
     case MapStrategy::Strategy_one_table:   query = BuildSelectQueryOneTable(p_info); break;
-    case MapStrategy::Strategy_sub_tables:  query = BuildSelectQuerySubTable(p_info); break;
+    case MapStrategy::Strategy_sub_table:   query = BuildSelectQuerySubTable(p_info); break;
     case MapStrategy::Strategy_classtable:  query = BuildSelectQuerySubclass(p_info); break;
   }
 
@@ -463,7 +475,7 @@ CXClass::BuildClassTable(CXSession* p_session)
   }
 
   // See if we must copy the identity to our class/table
-  if((hibernate.GetStrategy() == MapStrategy::Strategy_sub_tables) ||
+  if((hibernate.GetStrategy() == MapStrategy::Strategy_sub_table) ||
      (hibernate.GetStrategy() == MapStrategy::Strategy_classtable)  )
   {
     // But only if we are NOT the superclass
@@ -981,7 +993,7 @@ CXClass::BuildSelectQuerySubTableRecursive(SQLInfoDB* p_info,CString& p_columns,
   // Build superclass part first
   if(m_super)
   {
-    BuildSelectQuerySubTableRecursive(p_info,p_columns,p_frompart,p_firstdone);
+    m_super->BuildSelectQuerySubTableRecursive(p_info,p_columns,p_frompart,p_firstdone);
   }
 
   // Build select part
@@ -1002,7 +1014,7 @@ CXClass::BuildSelectQuerySubTableRecursive(SQLInfoDB* p_info,CString& p_columns,
   }
   else
   {
-    p_frompart += "\n       LEFT INNER JOIN " + GetTable()->DMLTableName(p_info) + " as " + m_discriminator;
+    p_frompart += "\n       INNER JOIN " + GetTable()->DMLTableName(p_info) + " as " + m_discriminator;
     p_frompart += " ON (";
 
     // Link on the identities of the classes
@@ -1020,6 +1032,6 @@ CXClass::BuildSelectQuerySubTableRecursive(SQLInfoDB* p_info,CString& p_columns,
       p_frompart += m_discriminator + "." + attrib->GetDatabaseColumn();
       ++ind;
     }
-    p_frompart += " )";
+    p_frompart += ")";
   }
 }

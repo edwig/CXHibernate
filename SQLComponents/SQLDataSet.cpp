@@ -442,28 +442,16 @@ SQLDataSet::ParseFilters(SQLQuery& p_query)
   query.MakeUpper();
   query.Replace("\t"," ");
   bool whereFound = m_query.Find("WHERE ") > 0;
-  bool first = true;
 
   // Restart with original query
   query = m_query;
 
+  // Offset in the WHERE clause
+  query += whereFound ? "\n   AND " : "\n WHERE ";
+
   // Add all filters
-  for(auto& filt : m_filters->GetFilters())
-  {
-    if(first == true)
-    {
-      if(!whereFound)
-      {
-        query += "\n WHERE ";
-      }
-      first = false;
-    }
-    else
-    {
-      query += "\n   AND ";
-    }
-    query += filt->GetSQLFilter(p_query);
-  }
+  query += m_filters->ParseFiltersToCondition(p_query);
+
   return query;
 }
 

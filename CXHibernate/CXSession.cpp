@@ -1049,12 +1049,9 @@ CXSession::CreateFilterSet(CXClass* p_class,VariantSet& p_primary,SQLFilterSet& 
     return false;
   }
 
-  // Find discriminators
-  CString discriminator = p_class->GetDiscriminator();
-  CString rootdiscrim   = p_class->GetRootClass()->GetDiscriminator();
-
   // Walk the list of columns / values
   int ind = 0;
+  CString discriminator = p_class->GetRootClass()->GetDiscriminator();
   for(auto& column : list)
   {
     CString dbscolumn = discriminator + "." + column;
@@ -1062,15 +1059,43 @@ CXSession::CreateFilterSet(CXClass* p_class,VariantSet& p_primary,SQLFilterSet& 
     p_filters.AddFilter(filter);
   }
 
+  // Adding our discriminators (if any)
+  AddDiscriminatorToFilters(p_class, p_filters);
+
+  return true;
+}
+
+// Adding our discriminators to the filter
+void
+CXSession::AddDiscriminatorToFilters(CXClass* p_class,SQLFilterSet& p_filters)
+{
   // Add class filter by discriminator
   if(hibernate.GetStrategy() != MapStrategy::Strategy_standalone)
   {
-    CString column = rootdiscrim + ".discriminator";
-    SQLFilter discrim(column,SQLOperator::OP_Equal,discriminator);
-    p_filters.AddFilter(discrim);
-  }
+    // Find discriminators
+    CString discriminator = p_class->GetDiscriminator();
+    CString rootdiscrim   = p_class->GetRootClass()->GetDiscriminator();
+    CString column        = rootdiscrim + ".discriminator";
 
-  return true;
+    SubClasses& subs = p_class->GetSubClasses();
+    if(subs.empty())
+    {
+      // Optimized for 1 (one) class
+      SQLFilter discrim(column,SQLOperator::OP_Equal,discriminator);
+      p_filters.AddFilter(discrim);
+    }
+    else
+    {
+      // Filter for this class and all it's subclasses
+      SQLFilter discrim(column, SQLOperator::OP_IN,discriminator);
+      for(auto& cl : subs)
+      {
+        SQLVariant dis(cl->GetDiscriminator());
+        discrim.AddValue(&dis);
+      }
+      p_filters.AddFilter(discrim);
+    }
+  }
 }
 
 // Try to find an object in the cache

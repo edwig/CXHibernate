@@ -47,6 +47,7 @@ typedef enum _sqlOperator
   ,OP_LikeMiddle
   ,OP_IN
   ,OP_Between
+  ,OP_OR               // OR chaining to next filter(s)
 }
 SQLOperator;
 
@@ -128,7 +129,7 @@ private:
   SQLOperator m_operator;           // Operator of the condition
   VariantSet  m_values;             // Multiple values for IN and BETWEEN
   CString     m_expression;         // Free expression (no values!)
-  bool        m_negate{false};   // Negate the whole condition
+  bool        m_negate { false };   // Negate the whole condition
 };
 
 inline CString
@@ -221,6 +222,8 @@ public:
   {
     return (int)m_filters.size();
   }
+
+  CString ParseFiltersToCondition(SQLQuery& p_query);
 
 private:
   std::vector<SQLFilter*> m_filters;

@@ -339,11 +339,11 @@ namespace HibernateTest
         return true;
       }
 
-      // Init in the correct language
-      InitSQLComponents(LN_ENGLISH);
-
       try
       {
+        // Init in the correct language, before 'CreateSession' is called!!
+        InitSQLComponents(LN_ENGLISH);
+
         m_database.Open("hibtest","sysdba","altijd");
         if(m_database.IsOpen())
         {
@@ -438,9 +438,6 @@ namespace HibernateTest
       {
         return true;
       }
-
-      // Init in the correct language
-      InitSQLComponents(LN_ENGLISH);
 
       try
       {

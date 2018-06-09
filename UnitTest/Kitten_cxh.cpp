@@ -13,25 +13,25 @@ static char THIS_FILE[] = __FILE__;
 #endif
 
 BEGIN_XML_SERIALIZE(Kitten,Cat)
-  CXO_XML_SERIALIZE(CString     ,m_color           ,"color"           ,XDT_String);
+  CXO_XML_SERIALIZE(CString     ,m_kit_color       ,"kit_color"       ,XDT_String);
   CXO_XML_SERIALIZE(bool        ,m_immuun          ,"immuun"          ,XDT_Boolean);
   CXO_XML_SERIALIZE(bool        ,m_inLitter        ,"inLitter"        ,XDT_Boolean);
 END_XML_SERIALIZE
 
 BEGIN_XML_DESERIALIZE(Kitten,Cat)
-  CXO_XML_DESERIALIZE(CString     ,m_color           ,"color"           ,XDT_String);
+  CXO_XML_DESERIALIZE(CString     ,m_kit_color       ,"kit_color"       ,XDT_String);
   CXO_XML_DESERIALIZE(bool        ,m_immuun          ,"immuun"          ,XDT_Boolean);
   CXO_XML_DESERIALIZE(bool        ,m_inLitter        ,"inLitter"        ,XDT_Boolean);
 END_XML_DESERIALIZE
 
 BEGIN_DBS_SERIALIZE(Kitten,Cat)
-  CXO_DBS_SERIALIZE(CString     ,m_color           ,"color"           ,XDT_String);
+  CXO_DBS_SERIALIZE(CString     ,m_kit_color       ,"kit_color"       ,XDT_String);
   CXO_DBS_SERIALIZE(bool        ,m_immuun          ,"immuun"          ,XDT_Boolean);
   CXO_DBS_SERIALIZE(bool        ,m_inLitter        ,"inLitter"        ,XDT_Boolean);
 END_DBS_SERIALIZE
 
 BEGIN_DBS_DESERIALIZE(Kitten,Cat)
-  CXO_DBS_DESERIALIZE(CString     ,m_color           ,"color"           ,XDT_String);
+  CXO_DBS_DESERIALIZE(CString     ,m_kit_color       ,"kit_color"       ,XDT_String);
   CXO_DBS_DESERIALIZE(bool        ,m_immuun          ,"immuun"          ,XDT_Boolean);
   CXO_DBS_DESERIALIZE(bool        ,m_inLitter        ,"inLitter"        ,XDT_Boolean);
 END_DBS_DESERIALIZE

@@ -25,13 +25,13 @@ public:
   DECLARE_CXO_SERIALIZATION;
 
   // GETTERS
-  CString    GetColor()           { return m_color;             };
+  CString    GetKit_color()       { return m_kit_color;         };
   bool       GetImmuun()          { return m_immuun;            };
   bool       GetInLitter()        { return m_inLitter;          };
 
 protected:
   // Database persistent attributes
-  CString    m_color             ;
+  CString    m_kit_color;
   bool       m_immuun             { false };
   bool       m_inLitter           { false };
 

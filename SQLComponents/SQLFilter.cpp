@@ -484,4 +484,52 @@ SQLOperatorToString(SQLOperator p_oper)
   return "";
 }
 
+//////////////////////////////////////////////////////////////////////////
+//
+// HERE IT COMES ALL TOGETHER
+// We parse a FilterSet to a condition filter for a WHERE part
+//
+//////////////////////////////////////////////////////////////////////////
+
+CString 
+SQLFilterSet::ParseFiltersToCondition(SQLQuery& p_query)
+{
+  CString query;
+  bool first = true;
+  int closing = 0;
+
+  // Add all filters
+  for(auto& filt : m_filters)
+  {
+    if(first == true)
+    {
+      first = false;
+    }
+    else
+    {
+      if(filt->GetOperator() == SQLOperator::OP_OR)
+      {
+        query = "(" + query + ")\n"
+                "    OR (";
+        ++closing;
+      }
+      else
+      {
+        query += "\n   AND ";
+      }
+    }
+    query += filt->GetSQLFilter(p_query);
+  }
+
+  // Do the closing of all 'OR' groups
+  while(closing--)
+  {
+    query += ")";
+  }
+  return query;
 }
+
+
+
+}
+

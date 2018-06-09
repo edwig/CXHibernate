@@ -69,6 +69,7 @@ namespace HibernateTest
       {
         Logger::WriteMessage(ex->GetErrorMessage());
         ex->Delete();
+        Assert::Fail();
       }
     }
 
@@ -86,6 +87,7 @@ namespace HibernateTest
       {
         Logger::WriteMessage(ex->GetErrorMessage());
         ex->Delete();
+        Assert::Fail();
       }
     }
 
@@ -103,6 +105,7 @@ namespace HibernateTest
       {
         Logger::WriteMessage(ex->GetErrorMessage());
         ex->Delete();
+        Assert::Fail();
       }
     }
     
@@ -120,6 +123,7 @@ namespace HibernateTest
       {
         Logger::WriteMessage(ex->GetErrorMessage());
         ex->Delete();
+        Assert::Fail();
       }
     }
 
@@ -172,9 +176,6 @@ namespace HibernateTest
       {
         return true;
       }
-
-      // Init in the correct language
-      InitSQLComponents(LN_ENGLISH);
 
       try
       {

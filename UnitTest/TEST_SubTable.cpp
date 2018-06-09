@@ -67,8 +67,98 @@ namespace HibernateTest
         Assert::IsNotNull(kitten);
 
         PrintKitten(kitten);
+
+        CloseSession();
       }
       catch(StdException* er)
+      {
+        CString error = er->GetErrorMessage();
+        Logger::WriteMessage(error);
+        er->Delete();
+        Assert::Fail();
+      }
+    }
+
+    TEST_METHOD(T02_SelectCat)
+    {
+      Logger::WriteMessage("Getting a record from the CAT class");
+
+      try
+      {
+        OpenSession();
+
+        Cat* pussy = (Cat*)m_session->Load(Cat::ClassName(), 2);
+        Assert::IsNotNull(pussy);
+
+        PrintCat(pussy);
+
+        CloseSession();
+      }
+      catch (StdException* er)
+      {
+        CString error = er->GetErrorMessage();
+        Logger::WriteMessage(error);
+        er->Delete();
+        Assert::Fail();
+      }
+    }
+
+    TEST_METHOD(T03_SelectDog)
+    {
+      Logger::WriteMessage("Getting a record from the DOG class");
+
+      try
+      {
+        OpenSession();
+
+        Dog* bello = (Dog*)m_session->Load(Dog::ClassName(), 3);
+        Assert::IsNotNull(bello);
+
+        PrintDog(bello);
+
+        CloseSession();
+      }
+      catch (StdException* er)
+      {
+        CString error = er->GetErrorMessage();
+        Logger::WriteMessage(error);
+        er->Delete();
+        Assert::Fail();
+      }
+    }
+
+    TEST_METHOD(T04_SelectCats)
+    {
+      Logger::WriteMessage("Getting records from the CAT/KITTEN class");
+
+      try
+      {
+        OpenSession();
+
+        SQLFilter filt("ani.id",OP_Smaller,4);
+        CXResultSet set = m_session->Load(Cat::ClassName(),&filt);
+        Assert::IsTrue(!set.empty());
+
+        // Print all gotten animals, checking the class
+        for(auto& object : set)
+        {
+          if(object->GetDiscriminator() == "cat")
+          {
+            PrintCat((Cat*)object);
+          }
+          else if(object->GetDiscriminator() == "kit")
+          {
+            PrintKitten((Kitten*)object);
+          }
+          else
+          {
+            Assert::Fail(L"Neither a CAT nor a KITTEN");
+          }
+        }
+
+        CloseSession();
+      }
+      catch (StdException* er)
       {
         CString error = er->GetErrorMessage();
         Logger::WriteMessage(error);
@@ -98,28 +188,37 @@ namespace HibernateTest
       text.Format("Cat likes Whiskas     : %s",p_cat->GetLikesWhiskas() ? "yes" : "no");  Logger::WriteMessage(text);
     }
 
+    void PrintDog(Dog* p_dog)
+    {
+      PrintAnimal(p_dog);
+
+      CString text;
+      text.Format("Subrace of dog        : %s",p_dog->GetSubrace());
+      text.Format("Need walks per day    : %d",p_dog->GetWalksPerDay());                  Logger::WriteMessage(text);
+      text.Format("Can be used hunting   : %s",p_dog->GetHunting()  ? "yes" : "no");      Logger::WriteMessage(text);
+      text.Format("Is a waterdog         : %s",p_dog->GetWaterdog() ? "yes" : "no");      Logger::WriteMessage(text);
+    }
+
 
     void PrintKitten(Kitten* p_kitten)
     {
       PrintCat(p_kitten);
 
       CString text;
-      text.Format("Color of kitten       : %s",p_kitten->GetColor());                   Logger::WriteMessage(text);
+      text.Format("Color of kitten       : %s",p_kitten->GetKit_color());               Logger::WriteMessage(text);
       text.Format("Kitten is immuun      : %s",p_kitten->GetImmuun()   ? "yes" : "no"); Logger::WriteMessage(text);
       text.Format("Kitten still in litter: %s",p_kitten->GetInLitter() ? "yes" : "no"); Logger::WriteMessage(text);
     }
 
     // Open a CXHibernate session by config file
     // Without an external database
-    bool OpenSession()
+    void OpenSession()
     {
+      // See if we already have a session
       if(m_session)
       {
-        return true;
+        return;
       }
-
-      // Init in the correct language
-      InitSQLComponents(LN_ENGLISH);
 
       try
       {
@@ -129,17 +228,31 @@ namespace HibernateTest
           // We are a database session
           m_session->SetDatabaseConnection("hibtest","sysdba","altijd");
 
-          return true;
+          Logger::WriteMessage("Opened session for sub_table configuration");
+
+          return;
         }
       }
       catch(StdException* er)
       {
-        Assert::AreEqual("",er->GetErrorMessage());
+        CString msg = er->GetErrorMessage();
+        Logger::WriteMessage(msg);
         er->Delete();
       }
       Assert::Fail();
     }
 
+    // Test, closing our session without relying on hibernate closing
+    void CloseSession()
+    {
+      if(m_session)
+      {
+        m_session->CloseSession();
+        m_session = nullptr;
+        Logger::WriteMessage("Closed session");
+      }
+    }
+    
     CXSession* m_session;
   };
 }

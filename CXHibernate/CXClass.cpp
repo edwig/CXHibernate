@@ -163,7 +163,9 @@ CXClass::AddAttribute(CXAttribute* p_attribute)
   CString name = p_attribute->GetName();
   if(FindAttribute(name))
   {
-    throw new StdException("Duplicate attribute cannot be added to class: " + name);
+    CString error;
+    error.Format("Duplicate attribute [%s] cannot be added to class: %s",name.GetString(),m_name.GetString());
+    throw new StdException(error);
   }
   // Just to be sure
   p_attribute->SetClass(this);
@@ -674,7 +676,8 @@ CXClass::LoadMetaInfoAttributes(XMLMessage& p_message,XMLElement* p_theClass)
       attribute->LoadMetaInfo(p_message,attrib);
 
       // Keep the attribute
-      m_attributes.push_back(attribute);
+      AddAttribute(attribute);
+
       // Next attributes
       attrib = p_message.GetElementSibling(attrib);
     }
@@ -946,7 +949,8 @@ CString
 CXClass::BuildSelectQueryOneTable(SQLInfoDB* p_info)
 {
   CString  columns("SELECT ");
-  CString  asalias   = " as " + m_discriminator;
+  CString  discrim   = GetRootClass()->GetDiscriminator();
+  CString  asalias   = " as " + discrim;
   WordList dbsNames  = FindAllDBSAttributes(true);
   bool     firstdone = false;
 
@@ -957,7 +961,7 @@ CXClass::BuildSelectQueryOneTable(SQLInfoDB* p_info)
     {
       columns += "      ,";
     }
-    columns  += m_discriminator + "." + dbsname + "\n";
+    columns  += discrim + "." + dbsname + "\n";
     firstdone = true;
   }
 

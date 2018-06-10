@@ -156,6 +156,13 @@ CXClass::GetDiscriminator()
   return m_discriminator;
 }
 
+// Are we the root class of an hierarchy?
+bool
+CXClass::GetIsRootClass()
+{
+  return m_super == nullptr;
+}
+
 // Add an attribute to the class
 void
 CXClass::AddAttribute(CXAttribute* p_attribute)
@@ -494,6 +501,89 @@ CXClass::BuildClassTable(CXSession* p_session)
 
   // Fill in the table info
   FillTableInfoFromClassInfo();
+}
+
+// DATABASE INTERFACE
+
+bool
+CXClass::InsertObjectInDatabase(SQLDatabase* p_database,CXObject* p_object,int p_mutation)
+{
+  // Check for a table definition
+  if(m_table == nullptr)
+  {
+    throw new StdException("No table while inserting object into class: " + m_name);
+  }
+
+  // Default status for stand alone / single-table classes
+  bool inserted = true;
+
+  // Insert into superclass tables first (recursively!)
+  if(m_super && ((hibernate.GetStrategy() == MapStrategy::Strategy_sub_table) ||
+                 (hibernate.GetStrategy() == MapStrategy::Strategy_classtable)))
+  {
+    inserted = m_super->InsertObjectInDatabase(p_database,p_object,p_mutation);
+  }
+
+  // If succeeded, insert into our table
+  if(inserted)
+  {
+    return m_table->InsertObjectInDatabase(p_database,p_object,p_mutation,GetIsRootClass());
+  }
+  return false;
+}
+
+bool
+CXClass::UpdateObjectInDatabase(SQLDatabase* p_database,CXObject* p_object,int p_mutation)
+{
+  // Check for a table definition
+  if(m_table == nullptr)
+  {
+    throw new StdException("No table while updating an object of class: " + m_name);
+  }
+
+  // Default status for stand alone / single-table classes
+  bool updated = true;
+
+  // Update in superclass tables first (recursively!)
+  if(m_super && ((hibernate.GetStrategy() == MapStrategy::Strategy_sub_table) ||
+                 (hibernate.GetStrategy() == MapStrategy::Strategy_classtable)))
+  {
+    updated = m_super->UpdateObjectInDatabase(p_database,p_object,p_mutation);
+  }
+
+  // If succeeded, update into our table
+  if(updated)
+  {
+    return m_table->UpdateObjectInDatabase(p_database,p_object,p_mutation);
+  }
+  return false;
+}
+
+bool
+CXClass::DeleteObjectInDatabase(SQLDatabase* p_database,CXObject* p_object,int p_mutation)
+{
+  // Check for a table definition
+  if(m_table == nullptr)
+  {
+    throw new StdException("No table while deleting an object of class: " + m_name);
+  }
+
+  // Default status for stand alone / single-table classes
+  bool deleted = true;
+
+  // Delete in superclass tables first (recursively!)
+  if(m_super && ((hibernate.GetStrategy() == MapStrategy::Strategy_sub_table) ||
+                 (hibernate.GetStrategy() == MapStrategy::Strategy_classtable)))
+  {
+    deleted = m_super->DeleteObjectInDatabase(p_database,p_object,p_mutation);
+  }
+
+  // If succeeded, delete from our table
+  if(deleted)
+  {
+    return m_table->DeleteObjectInDatabase(p_database,p_object,p_mutation);
+  }
+  return false;
 }
 
 //////////////////////////////////////////////////////////////////////////

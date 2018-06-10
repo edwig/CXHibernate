@@ -98,9 +98,9 @@ public:
 
   // THE DATABASE INTERFACE
 
-  bool      InsertObjectInDatabase(SQLDatabase* p_database,CXObject* p_object,int p_mutation);
-  bool      UpdateObjectInDatabase(CXObject* p_object);
-  bool      DeleteObjectInDatabase(CXObject* p_object);
+  bool      InsertObjectInDatabase(SQLDatabase* p_database,CXObject* p_object,int p_mutation,bool p_root);
+  bool      UpdateObjectInDatabase(SQLDatabase* p_database,CXObject* p_object,int p_mutation);
+  bool      DeleteObjectInDatabase(SQLDatabase* p_database,CXObject* p_object,int p_mutation);
 
 private:
   void      SerializeDiscriminator(CXObject* p_object,SQLRecord* p_record,int p_mutation);

@@ -347,7 +347,7 @@ CXTable::LoadMetaInfo(CXSession* p_session,CString p_filename)
 // DATABASE INTERFACE
 
 bool
-CXTable::InsertObjectInDatabase(SQLDatabase* p_database,CXObject* p_object,int p_mutation)
+CXTable::InsertObjectInDatabase(SQLDatabase* p_database,CXObject* p_object,int p_mutation,bool p_root)
 {
   // Be sure we have a data set
   GetDataSet();
@@ -373,42 +373,78 @@ CXTable::InsertObjectInDatabase(SQLDatabase* p_database,CXObject* p_object,int p
     record->AddField(&zero,true);
   }
 
+  // For a root-class object, set the discriminator and generator
+  if(p_root)
+  {
+    // Now serialize our object with the correct discriminator
+    SerializeDiscriminator(p_object,record,p_mutation);
+
+    // Check if we must generate our primary key
+    CXAttribute* gen = p_object->GetClass()->GetRootClass()->FindGenerator();
+    if(gen && p_object->IsTransient())
+    {
+      // -1: not found, 0 -> (n-1) is the field number of the generator
+      int generator = m_dataSet->GetFieldNumber(gen->GetName());
+      record->SetGenerator(generator);
+    }
+  }
+
   // Now serialize our object with the 'real' values
-  SerializeDiscriminator(p_object,record,p_mutation);
-  p_object->Serialize(*record,p_mutation);
+  p_object->Serialize(*record, p_mutation);
   // Set the record to 'insert-only'
   record->Inserted();
 
-  // Check if we must generate our primary key
-  CXAttribute* gen = p_object->GetClass()->GetRootClass()->FindGenerator();
-  if(gen && p_object->IsTransient())
-  {
-    // -1: not found, 0 -> (n-1) is the field number of the generator
-    int generator = m_dataSet->GetFieldNumber(gen->GetName());
-    record->SetGenerator(generator);
-  }
-
   // Go save the record
   bool saved = m_dataSet->Synchronize(p_mutation);
-  if(saved)
+
+  // Getting the generated value in the primary key
+  if(saved && p_root)
   {
     // Re-sync the primary key
     p_object->ResetPrimaryKey();
+    // Re-sync the class object
     p_object->DeSerializeGenerator(*record);
   }
   return saved;
 }
 
 bool
-CXTable::UpdateObjectInDatabase(CXObject* p_object)
+CXTable::UpdateObjectInDatabase(SQLDatabase* p_database,CXObject* p_object,int p_mutation)
 {
-  return false;
+  SQLRecord* record = p_object->GetDatabaseRecord();
+  SQLDataSet*  dset = GetDataSet();
+
+  // Connect our database
+  dset->SetDatabase(p_database);
+
+  // Serialize object to database record
+  p_object->Serialize(*record,p_mutation);
+  return dset->Synchronize(p_mutation);
 }
 
 bool
-CXTable::DeleteObjectInDatabase(CXObject* p_object)
+CXTable::DeleteObjectInDatabase(SQLDatabase* p_database,CXObject* p_object,int p_mutation)
 {
-  return false;
+  // Be sure we have a dataset
+  GetDataSet();
+
+  SQLRecord* record = p_object->GetDatabaseRecord();
+
+  // Connect our database
+  m_dataSet->SetDatabase(p_database);
+  if (record == nullptr || m_dataSet == nullptr)
+  {
+    return false;
+  }
+
+  // Set the record to the delete status
+  record->Delete();
+
+  // BEWARE: We need not "Serialize" our object
+  // We take the assumption that the primary key is "immutable"
+
+  // Go delete the record
+  return m_dataSet->Synchronize(p_mutation);
 }
 
 //////////////////////////////////////////////////////////////////////////

@@ -57,7 +57,7 @@ namespace HibernateTest
 
     TEST_METHOD(T01_SelectKitten)
     {
-      Logger::WriteMessage("Getting a record from the KITTEN class");
+      Logger::WriteMessage("Getting a object from the KITTEN class");
 
       try
       {
@@ -81,7 +81,7 @@ namespace HibernateTest
 
     TEST_METHOD(T02_SelectCat)
     {
-      Logger::WriteMessage("Getting a record from the CAT class");
+      Logger::WriteMessage("Getting a object from the CAT class");
 
       try
       {
@@ -105,7 +105,7 @@ namespace HibernateTest
 
     TEST_METHOD(T03_SelectDog)
     {
-      Logger::WriteMessage("Getting a record from the DOG class");
+      Logger::WriteMessage("Getting a object from the DOG class");
 
       try
       {
@@ -129,7 +129,7 @@ namespace HibernateTest
 
     TEST_METHOD(T04_SelectCats)
     {
-      Logger::WriteMessage("Getting records from the CAT/KITTEN class");
+      Logger::WriteMessage("Getting objects from the CAT/KITTEN class");
 
       try
       {
@@ -166,6 +166,44 @@ namespace HibernateTest
         Assert::Fail();
       }
     }
+
+    TEST_METHOD(T05_InsertCat)
+    {
+      Logger::WriteMessage("Inserting an object of the CAT class");
+
+      try
+      {
+        OpenSession();
+
+        Cat* pussy = (Cat*) m_session->CreateObject(Cat::ClassName());
+
+        // Fill in our object with reasonable values
+        pussy->SetAnimalName("Silvester");
+        pussy->SetHas_claws(true);
+        pussy->SetHas_hair(true);
+        pussy->SetHas_wings(false);
+        pussy->SetNumberOfLegs(4);
+        pussy->SetColor("black");
+        pussy->SetCatdoor(true);
+        pussy->SetLikesWhiskas(true);
+
+        // Go save it in the database in two tables
+        bool result = m_session->Save(pussy);
+        Assert::IsTrue(result);
+
+        PrintCat(pussy);
+
+        CloseSession();
+      }
+      catch (StdException* er)
+      {
+        CString error = er->GetErrorMessage();
+        Logger::WriteMessage(error);
+        er->Delete();
+        Assert::Fail();
+      }
+    }
+
 
     void PrintAnimal(Animal* p_animal)
     {

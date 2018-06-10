@@ -29,6 +29,11 @@ public:
   bool       GetCatdoor()         { return m_catdoor;           };
   bool       GetLikesWhiskas()    { return m_likesWhiskas;      };
 
+  // SETTERS
+  void SetColor(CString p_color)            { m_color         = p_color;        };
+  void SetCatdoor(bool p_catdoor)           { m_catdoor       = p_catdoor;      };
+  void SetLikesWhiskas(bool p_likesWhiskas) { m_likesWhiskas  = p_likesWhiskas; };
+
 protected:
   // Database persistent attributes
   CString    m_color             ;

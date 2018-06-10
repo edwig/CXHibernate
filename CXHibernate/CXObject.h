@@ -48,9 +48,9 @@ public:
   // Logging of this object (called by CXSession only!)
   void            LogObject();
   // Default class name of an object
-  CString         ClassName();
+  const CString   ClassName() const;
   // Discriminator of the class of the object
-  CString         GetDiscriminator();
+  const CString   GetDiscriminator() const;
 
   // Bring the contents of the class to a SOAPMessage or a SQLRecord
   virtual void    Serialize(SOAPMessage& p_message,XMLElement* p_entity);

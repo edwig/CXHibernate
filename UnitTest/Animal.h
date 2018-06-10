@@ -30,7 +30,13 @@ public:
   bool       GetHas_hair()        { return m_has_hair;          };
   bool       GetHas_wings()       { return m_has_wings;         };
   int        GetNumberOfLegs()    { return m_numberOfLegs;      };
-  CString    GetDiscriminator()   { return m_discriminator;     };
+
+  // SETTERS
+  void       SetAnimalName(CString p_animalName) { m_animalName   = p_animalName; };
+  void       SetHas_claws(bool p_has_claws)      { m_has_claws    = p_has_claws;  };
+  void       SetHas_hair(bool p_has_hair)        { m_has_hair     = p_has_hair;   };
+  void       SetHas_wings(bool p_has_wings)      { m_has_wings    = p_has_wings;  };
+  void       SetNumberOfLegs(int p_numberOfLegs) { m_numberOfLegs = p_numberOfLegs; };
 
 protected:
   // Database persistent attributes
@@ -40,7 +46,6 @@ protected:
   bool       m_has_hair           { false };
   bool       m_has_wings          { false };
   int        m_numberOfLegs       { 0 };
-  CString    m_discriminator     ;
 
 private:
   // Transient attributes go here

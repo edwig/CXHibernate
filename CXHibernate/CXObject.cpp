@@ -69,12 +69,11 @@ CXObject::GetClass()
 }
 
 // Discriminator of the class of the object
-CString
-CXObject::GetDiscriminator()
+const CString
+CXObject::GetDiscriminator() const
 {
   return m_class->GetDiscriminator();
 }
-
 
 // See if the object has the same business key as the other
 // Can also be used to sort the objects on
@@ -312,8 +311,8 @@ CXObject::LogObject()
 //////////////////////////////////////////////////////////////////////////
 
 // Super class of object does NOT have a specific class name
-CString
-CXObject::ClassName()
+const CString
+CXObject::ClassName() const
 {
   if(m_class)
   {

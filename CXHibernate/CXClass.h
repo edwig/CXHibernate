@@ -58,6 +58,8 @@ public:
   CXIdentity& GetIdentity();
   // Getting our discriminator value
   CString     GetDiscriminator();
+  // Are we the rootclass of an hierarchy?
+  bool        GetIsRootClass();
 
   // Add attributes to the class
   void        AddAttribute  (CXAttribute*   p_attribute);
@@ -91,6 +93,12 @@ public:
   void        BuildPrimaryKeyFilter(SOAPMessage& p_message,XMLElement* p_entity,VariantSet& p_primary);
   // Build filter for primary key or association selection
   void        BuildFilter(CXAttribMap& p_attributes,VariantSet& p_values,SQLFilterSet& p_filters);
+
+  // THE DATABASE INTERFACE
+
+  bool        InsertObjectInDatabase(SQLDatabase* p_database,CXObject* p_object,int p_mutation);
+  bool        UpdateObjectInDatabase(SQLDatabase* p_database,CXObject* p_object,int p_mutation);
+  bool        DeleteObjectInDatabase(SQLDatabase* p_database,CXObject* p_object,int p_mutation);
 
 protected:
   // Adding a sub-class

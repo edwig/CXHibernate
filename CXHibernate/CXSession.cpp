@@ -1426,24 +1426,21 @@ bool
 CXSession::UpdateObjectInDatabase(CXObject* p_object)
 {
   CXClass* theClass = p_object->GetClass();
-  CXTable*    table = theClass->GetTable();
-  SQLRecord* record = p_object->GetDatabaseRecord();
-  SQLDataSet*  dset = table->GetDataSet();
-
-  // Connect our database
-  dset->SetDatabase(GetDatabase());
+  if(theClass == nullptr)
+  {
+    throw new StdException("Missing class on UPDATE of an object. Did you tinkle with the PrimaryKey?");
+  }
 
   // New mutation ID for this update action
   CXTransaction trans(this);
 
-  // Serialize object to database record
-  p_object->Serialize(*record,m_mutation);
-  if(dset->Synchronize(m_mutation))
+  bool result = theClass->UpdateObjectInDatabase(GetDatabase(),p_object,m_mutation);
+  if(result)
   {
+    // Commit our transaction in the database
     trans.Commit();
-    return true;
   }
-  return false;
+  return result;
 }
 
 bool
@@ -1490,13 +1487,11 @@ CXSession::InsertObjectInDatabase(CXObject* p_object)
   {
     throw new StdException("Object without a connected class. Did you call CXSession::CreateObject(<classname>)??");
   }
-  // Check for a table definition
-  CXTable* table = theClass->GetTable();
 
   // New mutation ID for this update action
   CXTransaction trans(this);
 
-  bool saved = table->InsertObjectInDatabase(GetDatabase(),p_object,m_mutation);
+  bool saved = theClass->InsertObjectInDatabase(GetDatabase(),p_object,m_mutation);
   if(saved)
   {
     // Commit in the database
@@ -1546,42 +1541,31 @@ CXSession::InsertObjectInInternet(CXObject* p_object)
 bool
 CXSession::DeleteObjectInDatabase(CXObject* p_object)
 {
-  // Getting the database record
+  // Finding our object's class
   CXClass* theClass = p_object->GetClass();
-  CXTable*    table = theClass->GetTable();
-  SQLDataSet*  dset = table->GetDataSet();
-  SQLRecord* record = p_object->GetDatabaseRecord();
-
-  // Connect our database
-  dset->SetDatabase(GetDatabase());
-
-  if(record == nullptr || dset == nullptr)
+  if(theClass == nullptr)
   {
-    return false;
+    throw new StdException("No class definition while deleting an object");
   }
-
-  // If object was **NOT** in the database, removal did work ok
+  // If object was **NOT** in the database, removal did work out OK!
   if(p_object->IsPersistent() == false)
   {
     return true;
   }
 
-  // Set the record to the delete status
-  record->Delete();
-
   // New mutation ID for this update action
   CXTransaction trans(this);
 
-  // BEWARE: We need not "Serialize" our object
-  // We take the assumption that the primary key is "immutable"
-
   // Go delete the record
-  bool deleted = dset->Synchronize(m_mutation);
+  bool deleted = theClass->DeleteObjectInDatabase(GetDatabase(),p_object,m_mutation);
   if(deleted)
   {
+    // Commit in the database first
+    trans.Commit();
+
+    // Remove the object from the cache, and make it transient
     RemoveObjectFromCache(p_object,p_object->GetPrimaryKey());
     p_object->MakeTransient();
-    trans.Commit();
   }
   return deleted;
 }

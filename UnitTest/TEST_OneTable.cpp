@@ -175,6 +175,42 @@ namespace HibernateTest
       }
     }
 
+    TEST_METHOD(T06_UpdateNaturalPerson)
+    {
+      Logger::WriteMessage("T06_UpdateNaturalPerson shows updating a person in the database");
+
+      try
+      {
+        OpenSession();
+
+        NaturalPerson* person = (NaturalPerson*)m_session->Load(NaturalPerson::ClassName(),2);
+        Assert::IsNotNull(person);
+        PrintNaturalPerson(person);
+
+        int account = person->GetAccount_id();
+
+        SQLDate birth("15-05-1962");
+        person->SetDate_of_birth(birth);
+        person->SetAccount_id(567123);
+
+        m_session->Update(person);
+        PrintNaturalPerson(person);
+
+        SQLDate unknown;
+        person->SetDate_of_birth(unknown);
+        person->SetAccount_id(account);
+
+        m_session->Update(person);
+        PrintNaturalPerson(person);
+      }
+      catch (StdException* ex)
+      {
+        Logger::WriteMessage(ex->GetErrorMessage());
+        ex->Delete();
+        Assert::Fail();
+      }
+    }
+
     void PrintSubject(Subject* p_subject)
     {
       CString text;

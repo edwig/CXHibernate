@@ -19,7 +19,6 @@ BEGIN_XML_SERIALIZE(Animal,CXObject)
   CXO_XML_SERIALIZE(bool        ,m_has_hair        ,"has_hair"        ,XDT_Boolean);
   CXO_XML_SERIALIZE(bool        ,m_has_wings       ,"has_wings"       ,XDT_Boolean);
   CXO_XML_SERIALIZE(int         ,m_numberOfLegs    ,"numberOfLegs"    ,XDT_Integer);
-  CXO_XML_SERIALIZE(CString     ,m_discriminator   ,"discriminator"   ,XDT_String);
 END_XML_SERIALIZE
 
 BEGIN_XML_DESERIALIZE(Animal,CXObject)
@@ -29,7 +28,6 @@ BEGIN_XML_DESERIALIZE(Animal,CXObject)
   CXO_XML_DESERIALIZE(bool        ,m_has_hair        ,"has_hair"        ,XDT_Boolean);
   CXO_XML_DESERIALIZE(bool        ,m_has_wings       ,"has_wings"       ,XDT_Boolean);
   CXO_XML_DESERIALIZE(int         ,m_numberOfLegs    ,"numberOfLegs"    ,XDT_Integer);
-  CXO_XML_DESERIALIZE(CString     ,m_discriminator   ,"discriminator"   ,XDT_String);
 END_XML_DESERIALIZE
 
 BEGIN_DBS_SERIALIZE(Animal,CXObject)
@@ -39,7 +37,6 @@ BEGIN_DBS_SERIALIZE(Animal,CXObject)
   CXO_DBS_SERIALIZE(bool        ,m_has_hair        ,"has_hair"        ,XDT_Boolean);
   CXO_DBS_SERIALIZE(bool        ,m_has_wings       ,"has_wings"       ,XDT_Boolean);
   CXO_DBS_SERIALIZE(int         ,m_numberOfLegs    ,"numberOfLegs"    ,XDT_Integer);
-  CXO_DBS_SERIALIZE(CString     ,m_discriminator   ,"discriminator"   ,XDT_String);
 END_DBS_SERIALIZE
 
 BEGIN_DBS_DESERIALIZE(Animal,CXObject)
@@ -49,7 +46,6 @@ BEGIN_DBS_DESERIALIZE(Animal,CXObject)
   CXO_DBS_DESERIALIZE(bool        ,m_has_hair        ,"has_hair"        ,XDT_Boolean);
   CXO_DBS_DESERIALIZE(bool        ,m_has_wings       ,"has_wings"       ,XDT_Boolean);
   CXO_DBS_DESERIALIZE(int         ,m_numberOfLegs    ,"numberOfLegs"    ,XDT_Integer);
-  CXO_DBS_DESERIALIZE(CString     ,m_discriminator   ,"discriminator"   ,XDT_String);
 END_DBS_DESERIALIZE
 
 BEGIN_DESERIALIZE_GENERATOR(Animal)

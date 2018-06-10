@@ -17,7 +17,7 @@
       <subclass>Dog</subclass>
     </subclasses>
     <attributes>
-      <attribute name="id" datatype="int" isprimary="true"/>
+      <attribute name="id" datatype="int" isprimary="true" generator="true"/>
       <attribute name="animalName" datatype="string" maxlength="200" />
       <attribute name="has_claws" datatype="bool" />
       <attribute name="has_hair"  datatype="bool" />

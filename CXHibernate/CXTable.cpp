@@ -412,14 +412,14 @@ bool
 CXTable::UpdateObjectInDatabase(SQLDatabase* p_database,CXObject* p_object,int p_mutation)
 {
   SQLRecord* record = p_object->GetDatabaseRecord();
-  SQLDataSet*  dset = GetDataSet();
+  GetDataSet();
 
   // Connect our database
-  dset->SetDatabase(p_database);
+  m_dataSet->SetDatabase(p_database);
 
   // Serialize object to database record
   p_object->Serialize(*record,p_mutation);
-  return dset->Synchronize(p_mutation);
+  return m_dataSet->Synchronize(p_mutation);
 }
 
 bool
@@ -591,6 +591,19 @@ CXTable::GetPrimaryKeyAsList()
   }
   return list;
 }
+
+WordList
+CXTable::GetAttributesAsList()
+{
+  WordList list;
+
+  for(auto& column : m_columns)
+  {
+    list.push_back(column.m_column);
+  }
+  return list;
+}
+
 
 //////////////////////////////////////////////////////////////////////////
 

@@ -1032,73 +1032,6 @@ CXSession::RemoveObjectFromCache(CXObject* p_object, VariantSet& p_primary)
   return false;
 }
 
-// Create a filters set for a DataSet
-bool
-CXSession::CreateFilterSet(CXClass* p_class,VariantSet& p_primary,SQLFilterSet&  p_filters)
-{
-  // Check if we have a primary key, or an empty key
-  if(p_primary.empty())
-  {
-    return true;
-  }
-
-  // Check if number of columns of the primary key matches the number of values
-  CXTable* table = p_class->GetTable();
-  WordList list  = table->GetPrimaryKeyAsList();
-  if(list.size() != p_primary.size())
-  {
-    return false;
-  }
-
-  // Walk the list of columns / values
-  int ind = 0;
-  CString discriminator = p_class->GetRootClass()->GetDiscriminator();
-  for(auto& column : list)
-  {
-    CString dbscolumn = discriminator + "." + column;
-    SQLFilter filter(dbscolumn,SQLOperator::OP_Equal,p_primary[ind++]);
-    p_filters.AddFilter(filter);
-  }
-
-  // Adding our discriminators (if any)
-  AddDiscriminatorToFilters(p_class, p_filters);
-
-  return true;
-}
-
-// Adding our discriminators to the filter
-void
-CXSession::AddDiscriminatorToFilters(CXClass* p_class,SQLFilterSet& p_filters)
-{
-  // Add class filter by discriminator
-  if(hibernate.GetStrategy() != MapStrategy::Strategy_standalone)
-  {
-    // Find discriminators
-    CString discriminator = p_class->GetDiscriminator();
-    CString rootdiscrim   = p_class->GetRootClass()->GetDiscriminator();
-    CString column        = rootdiscrim + ".discriminator";
-
-    SubClasses& subs = p_class->GetSubClasses();
-    if(subs.empty())
-    {
-      // Optimized for 1 (one) class
-      SQLFilter discrim(column,SQLOperator::OP_Equal,discriminator);
-      p_filters.AddFilter(discrim);
-    }
-    else
-    {
-      // Filter for this class and all it's subclasses
-      SQLFilter discrim(column, SQLOperator::OP_IN,discriminator);
-      for(auto& cl : subs)
-      {
-        SQLVariant dis(cl->GetDiscriminator());
-        discrim.AddValue(&dis);
-      }
-      p_filters.AddFilter(discrim);
-    }
-  }
-}
-
 // Try to find an object in the cache
 // It's a double map lookup (table, object)
 CXObject*
@@ -1123,63 +1056,24 @@ CXSession::FindObjectInCache(CString p_className,VariantSet& p_primary)
 CXObject*
 CXSession::FindObjectInDatabase(CString p_className,VariantSet& p_primary)
 {
-  // Find the CXTable object
-  p_className.MakeLower();
-  ClassMap::iterator it = m_classes.find(p_className);
-  if(it == m_classes.end())
+  // Find the class of the object
+  CXClass* theClass = FindClass(p_className);
+
+
+  SQLRecord* record = theClass->SelectObjectInDatabase(GetDatabase(),p_primary);
+  if(record)
   {
-    return nullptr;
+    // Create our object by the creation factory
+    CreateCXO create = theClass->GetCreateCXO();
+    CXObject* object = (*create)();
+    object->SetClass(theClass);
+
+    // De-serialize the SQL Record to an CXObject derived object
+    object->DeSerialize(*record);
+
+    return object;
   }
-  CXClass* theClass = it->second;
-  CXTable* table = theClass->GetTable();
-
-  // See if we have a data set
-  SQLDataSet* dset = table->GetDataSet();
-  if(dset == nullptr)
-  {
-    return nullptr;
-  }
-
-  // Connect our database
-  dset->SetDatabase(GetDatabase());
-
-  // Create correct query
-  theClass->BuildDefaultSelectQuery(GetDatabase()->GetSQLInfoDB());
-
-  SQLFilterSet fset;
-  if(CreateFilterSet(theClass,p_primary,fset))
-  {
-    dset->SetFilters(&fset);
-
-    // Open our dataset (and search)
-    if(dset->IsOpen() == false)
-    {
-      dset->Open();
-    }
-    else
-    {
-      dset->Append();
-    }
-    dset->SetFilters(nullptr);
-  }
-  else return nullptr;
-
-  // See if we have a record
-  SQLRecord* record = dset->FindObjectRecord(p_primary);
-  if(record == nullptr)
-  {
-    return nullptr;
-  }
-
-  // Create our object by the creation factory
-  CreateCXO create = theClass->GetCreateCXO();
-  CXObject* object = (*create)();
-  object->SetClass(theClass);
-
-  // De-serialize the SQL Record to an CXObject derived object
-  object->DeSerialize(*record);
-
-  return object;
+  return nullptr;
 }
 
 // Try to find an object in the filestore
@@ -1564,8 +1458,11 @@ CXSession::DeleteObjectInDatabase(CXObject* p_object)
     trans.Commit();
 
     // Remove the object from the cache, and make it transient
-    RemoveObjectFromCache(p_object,p_object->GetPrimaryKey());
-    p_object->MakeTransient();
+    if(RemoveObjectFromCache(p_object, p_object->GetPrimaryKey()) == false)
+    {
+      // Could not be removed / deleted: so make it transient
+      p_object->MakeTransient();
+    }
   }
   return deleted;
 }

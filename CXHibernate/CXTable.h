@@ -76,6 +76,7 @@ public:
   MIndicesMap&    GetIndicesInfo() const;
   MPrivilegeMap&  GetPrivilegesInfo() const;
   WordList        GetPrimaryKeyAsList();
+  WordList        GetAttributesAsList();
 
   // SET INFO BY API
   void      SetInfoTable (MetaTable&     p_metaTable);

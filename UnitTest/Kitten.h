@@ -29,6 +29,11 @@ public:
   bool       GetImmuun()          { return m_immuun;            };
   bool       GetInLitter()        { return m_inLitter;          };
 
+  // SETTERS
+  void SetKit_color(CString p_kit_color)  { m_kit_color = p_kit_color;  };
+  void SetImmuun(bool p_immuun)           { m_immuun    = p_immuun;     };
+  void SetInLitter(bool p_inLitter)       { m_inLitter  = p_inLitter;   };
+
 protected:
   // Database persistent attributes
   CString    m_kit_color;

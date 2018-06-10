@@ -57,7 +57,7 @@ namespace HibernateTest
 
     TEST_METHOD(T01_SelectKitten)
     {
-      Logger::WriteMessage("Getting a object from the KITTEN class");
+      Logger::WriteMessage("Getting an object from the KITTEN class");
 
       try
       {
@@ -81,7 +81,7 @@ namespace HibernateTest
 
     TEST_METHOD(T02_SelectCat)
     {
-      Logger::WriteMessage("Getting a object from the CAT class");
+      Logger::WriteMessage("Getting an object from the CAT class");
 
       try
       {
@@ -105,7 +105,7 @@ namespace HibernateTest
 
     TEST_METHOD(T03_SelectDog)
     {
-      Logger::WriteMessage("Getting a object from the DOG class");
+      Logger::WriteMessage("Getting an object from the DOG class");
 
       try
       {
@@ -189,9 +189,91 @@ namespace HibernateTest
 
         // Go save it in the database in two tables
         bool result = m_session->Save(pussy);
-        Assert::IsTrue(result);
+        if (!result)
+        {
+          delete pussy;
+          Assert::Fail();
+        }
+        else
+        {
+          PrintCat(pussy);
+        }
+        CloseSession();
+      }
+      catch (StdException* er)
+      {
+        CString error = er->GetErrorMessage();
+        Logger::WriteMessage(error);
+        er->Delete();
+        Assert::Fail();
+      }
+    }
 
-        PrintCat(pussy);
+    TEST_METHOD(T06_InsertDeleteKitten)
+    {
+      Logger::WriteMessage("Inserting an object of the KITTEN class and deleting it right away");
+
+      try
+      {
+        OpenSession();
+
+        Kitten* little = (Kitten*)m_session->CreateObject(Kitten::ClassName());
+
+        // Fill in our object with reasonable values
+        little->SetAnimalName("Silvester's son");
+        little->SetHas_claws(false);
+        little->SetHas_hair(true);
+        little->SetHas_wings(false);
+        little->SetNumberOfLegs(4);
+        little->SetColor("White");
+        little->SetCatdoor(false);
+        little->SetLikesWhiskas(false);
+        little->SetImmuun(true);
+        little->SetInLitter(true);
+        little->SetKit_color("gray");
+
+        // Go save it in the database in two tables
+        bool result = m_session->Save(little);
+        if (!result)
+        {
+          delete little;
+          Assert::Fail();
+        }
+        else
+        {
+          PrintCat(little);
+
+          result = m_session->Delete(little);
+        }
+        CloseSession();
+      }
+      catch (StdException* er)
+      {
+        CString error = er->GetErrorMessage();
+        Logger::WriteMessage(error);
+        er->Delete();
+        Assert::Fail();
+      }
+    }
+
+    TEST_METHOD(T07_UpdateDog)
+    {
+      Logger::WriteMessage("Updating an object from the DOG class");
+
+      try
+      {
+        OpenSession();
+
+        Dog* bello = (Dog*)m_session->Load(Dog::ClassName(),3);
+        Assert::IsNotNull(bello);
+
+        PrintDog(bello);
+
+        bello->SetNumberOfLegs(4);
+        bello->SetWalksPerDay(4);
+
+        bool result = m_session->Save(bello);
+        Assert::IsTrue(result);
 
         CloseSession();
       }

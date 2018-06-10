@@ -30,6 +30,12 @@ public:
   bool       GetHunting()         { return m_hunting;           };
   bool       GetWaterdog()        { return m_waterdog;          };
 
+  // SETTERS
+  void SetSubrace(CString p_subrace)      { m_subrace     = p_subrace;      };
+  void SetWalksPerDay(int p_walksPerDay)  { m_walksPerDay = p_walksPerDay;  };
+  void SetHunting(bool p_hunting)         { m_hunting     = p_hunting;      };
+  void SetWaterdog(bool p_waterdog)       { m_waterdog    = p_waterdog;     };
+
 protected:
   // Database persistent attributes
   CString    m_subrace           ;

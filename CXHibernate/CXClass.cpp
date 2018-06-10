@@ -25,6 +25,7 @@
 // Version number:  0.5.0
 //
 #include "stdafx.h"
+#include "CXHibernate.h"
 #include "CXClass.h"
 #include <algorithm>
 
@@ -505,12 +506,52 @@ CXClass::BuildClassTable(CXSession* p_session)
 
 // DATABASE INTERFACE
 
+SQLRecord*
+CXClass::SelectObjectInDatabase(SQLDatabase* p_database,VariantSet& p_set)
+{
+  // Make sure we have a dataset
+  SQLDataSet* dset = m_table->GetDataSet();
+
+  // Connect our database
+  dset->SetDatabase(p_database);
+
+  // Create correct query
+  BuildDefaultSelectQuery(p_database->GetSQLInfoDB());
+
+  // Open dataset by the filter of the primary key
+  SQLFilterSet fset;
+  if(CreateFilterSet(p_set,fset))
+  {
+    dset->SetFilters(&fset);
+
+    // Open our dataset (and search)
+    if(dset->IsOpen() == false)
+    {
+      dset->Open();
+    }
+    else
+    {
+      dset->Append();
+    }
+    dset->SetFilters(nullptr);
+  }
+  else return nullptr;
+
+  // See if we have a record
+  return dset->FindObjectRecord(p_set);
+}
+
 bool
 CXClass::InsertObjectInDatabase(SQLDatabase* p_database,CXObject* p_object,int p_mutation)
 {
   // Check for a table definition
   if(m_table == nullptr)
   {
+    if(hibernate.GetStrategy() == MapStrategy::Strategy_one_table && m_super)
+    {
+      return GetRootClass()->InsertObjectInDatabase(p_database,p_object,p_mutation);
+    }
+    // No legal table definition found
     throw new StdException("No table while inserting object into class: " + m_name);
   }
 
@@ -538,6 +579,11 @@ CXClass::UpdateObjectInDatabase(SQLDatabase* p_database,CXObject* p_object,int p
   // Check for a table definition
   if(m_table == nullptr)
   {
+    if(hibernate.GetStrategy() == MapStrategy::Strategy_one_table && m_super)
+    {
+      return GetRootClass()->UpdateObjectInDatabase(p_database,p_object,p_mutation);
+    }
+    // No legal table definition found
     throw new StdException("No table while updating an object of class: " + m_name);
   }
 
@@ -548,6 +594,11 @@ CXClass::UpdateObjectInDatabase(SQLDatabase* p_database,CXObject* p_object,int p
   if(m_super && ((hibernate.GetStrategy() == MapStrategy::Strategy_sub_table) ||
                  (hibernate.GetStrategy() == MapStrategy::Strategy_classtable)))
   {
+    if(hibernate.GetStrategy() == MapStrategy::Strategy_sub_table)
+    {
+      // Select from that table first, so we can do a partial update
+      SelectObjectInDatabase(p_database,p_object->GetPrimaryKey());
+    }
     updated = m_super->UpdateObjectInDatabase(p_database,p_object,p_mutation);
   }
 
@@ -565,6 +616,11 @@ CXClass::DeleteObjectInDatabase(SQLDatabase* p_database,CXObject* p_object,int p
   // Check for a table definition
   if(m_table == nullptr)
   {
+    if(hibernate.GetStrategy() == MapStrategy::Strategy_one_table && m_super)
+    {
+      return GetRootClass()->DeleteObjectInDatabase(p_database,p_object,p_mutation);
+    }
+    // No legal table definition found
     throw new StdException("No table while deleting an object of class: " + m_name);
   }
 
@@ -602,6 +658,74 @@ CXClass::AddSubClass(CXClass* p_subclass)
     m_subClasses.push_back(p_subclass);
   }
 }
+
+// Create a filters set for a DataSet
+bool
+CXClass::CreateFilterSet(VariantSet& p_primary,SQLFilterSet&  p_filters)
+{
+  // Check if we have a primary key, or an empty key
+  if(p_primary.empty())
+  {
+    return true;
+  }
+
+  // Check if number of columns of the primary key matches the number of values
+  WordList list = m_table->GetPrimaryKeyAsList();
+  if (list.size() != p_primary.size())
+  {
+    return false;
+  }
+
+  // Walk the list of columns / values
+  int ind = 0;
+  CString discriminator = GetRootClass()->GetDiscriminator();
+  for (auto& column : list)
+  {
+    CString dbscolumn = discriminator + "." + column;
+    SQLFilter filter(dbscolumn, SQLOperator::OP_Equal, p_primary[ind++]);
+    p_filters.AddFilter(filter);
+  }
+
+  // Adding our discriminators (if any)
+  AddDiscriminatorToFilters(p_filters);
+
+  return true;
+}
+
+// Adding our discriminators to the filter
+void
+CXClass::AddDiscriminatorToFilters(SQLFilterSet& p_filters)
+{
+  // Add class filter by discriminator
+  if (hibernate.GetStrategy() != MapStrategy::Strategy_standalone)
+  {
+    // Find discriminators
+    CString discriminator = GetDiscriminator();
+    CString rootdiscrim   = GetRootClass()->GetDiscriminator();
+    CString column = rootdiscrim + ".discriminator";
+
+    SubClasses& subs = GetSubClasses();
+    if (subs.empty())
+    {
+      // Optimized for 1 (one) class
+      SQLFilter discrim(column, SQLOperator::OP_Equal, discriminator);
+      p_filters.AddFilter(discrim);
+    }
+    else
+    {
+      // Filter for this class and all it's subclasses
+      SQLFilter discrim(column, SQLOperator::OP_IN, discriminator);
+      for (auto& cl : subs)
+      {
+        SQLVariant dis(cl->GetDiscriminator());
+        discrim.AddValue(&dis);
+      }
+      p_filters.AddFilter(discrim);
+    }
+  }
+}
+
+
 
 // SAVING THE CONFIGURATION
 
@@ -936,6 +1060,23 @@ void
 CXClass::FillTableInfoFromClassInfo()
 {
   int position = 1;
+
+  if(hibernate.GetStrategy() == MapStrategy::Strategy_sub_table ||
+     hibernate.GetStrategy() == MapStrategy::Strategy_classtable)
+  {
+    // Add primary key attributes as columns
+    for(auto& attrib : m_identity.m_attributes)
+    {
+      MetaColumn column;
+      column.m_table      = GetTable()->GetTableName();
+      column.m_column     = attrib->GetDatabaseColumn();
+      column.m_datatype   = attrib->GetDataType();
+      column.m_columnSize = attrib->GetMaxLength();
+      column.m_position   = position++;
+
+      GetTable()->AddInfoColumn(column);
+    }
+  }
 
   // Add column info
   for(auto& attrib : m_attributes)

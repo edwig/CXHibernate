@@ -145,7 +145,7 @@ CXObject::GetPrimaryKey()
 void
 CXObject::ResetPrimaryKey()
 {
-  for (auto& key : m_primaryKey)
+  for(auto& key : m_primaryKey)
   {
     delete key;
   }

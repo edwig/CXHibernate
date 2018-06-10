@@ -136,9 +136,7 @@ private:
   // And remove again from the cache
   bool          RemoveObjectFromCache(CXObject* p_object, VariantSet& p_primary);
   // Create a filters set for a DataSet
-  bool          CreateFilterSet(CXClass* p_class, VariantSet& p_primary,SQLFilterSet& p_filters);
   void          BuildFilter(SOAPMessage& p_message,XMLElement* p_entity,SQLFilterSet& p_filters);
-  void          AddDiscriminatorToFilters(CXClass* p_class,SQLFilterSet& p_filters);
 
   // Try to find an object in the cache
   CXObject*     FindObjectInCache    (CString p_className,VariantSet& p_primary);

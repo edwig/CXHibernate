@@ -99,7 +99,7 @@ public:
   bool Open(bool p_stopIfNoColumns = false);
   // Append (read extra) into the dataset
   bool Append();
-  // Remove resultset
+  // Remove result set
   void Close();
 
   // Navigate in the records
@@ -154,8 +154,6 @@ public:
   void         SetPrimaryKeyColumn(WordList& p_list);
   // Setting the sequence/generator name to something different than "<tablename>_seq"
   void         SetSequenceName(CString p_sequence);
-  // Set searchable column
-  // void         SetSearchableColumn(CString p_name);
   // Set parameter for a query
   void         SetParameter(SQLParameter p_parameter);
   void         SetParameter(CString p_naam,SQLVariant p_waarde);

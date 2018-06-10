@@ -96,6 +96,7 @@ public:
 
   // THE DATABASE INTERFACE
 
+  SQLRecord*  SelectObjectInDatabase(SQLDatabase* p_database,VariantSet& p_set);
   bool        InsertObjectInDatabase(SQLDatabase* p_database,CXObject* p_object,int p_mutation);
   bool        UpdateObjectInDatabase(SQLDatabase* p_database,CXObject* p_object,int p_mutation);
   bool        DeleteObjectInDatabase(SQLDatabase* p_database,CXObject* p_object,int p_mutation);
@@ -130,6 +131,10 @@ protected:
   void    BuildSelectQuerySubTableRecursive(SQLInfoDB* p_info,CString& p_columns,CString& p_frompart,bool& p_firstdone);
 
 private:
+  bool    CreateFilterSet(VariantSet& p_primary,SQLFilterSet& p_filters);
+  void    AddDiscriminatorToFilters(SQLFilterSet& p_filters);
+
+
   // The name of our class
   CString         m_name;
   // Discriminator of our class

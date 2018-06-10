@@ -94,6 +94,14 @@ TestNumber::DeSerialize(SQLRecord& p_record)
   PostDeSerialize(p_record);
 }
 
+void
+TestNumber::DeSerializeGenerator(SQLRecord& p_record)
+{
+  PreDeSerialize(p_record);     // Re-Sync the primary key & the record
+  m_id = (long)p_record["id"];  // Re-sync the generator column
+}
+
+
 // Create our new object factory
 // DEFINE_CXO_FACTORY(TestNumber);
 

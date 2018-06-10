@@ -127,6 +127,54 @@ namespace HibernateTest
       }
     }
 
+    TEST_METHOD(T05_InsertDeleteNaturalPerson)
+    {
+      Logger::WriteMessage("T05_InsertNaturalPerson in the database");
+
+      try
+      {
+        OpenSession();
+
+        NaturalPerson* person = (NaturalPerson*) m_session->CreateObject(NaturalPerson::ClassName());
+        person->SetName("Test person 1");
+        person->SetAdresline1("Downingstreet 10");
+        person->SetAdresline2("London, City of Westminster");
+        person->SetAccount_id(665512);
+        person->SetFirstname("Florian-Robert");
+        person->SetDate_of_birth(SQLDate("12-03-1992"));
+        person->SetLength(bcd("180"));
+
+        if(m_session->Save(person))
+        {
+          int id = person->GetId();
+          PrintNaturalPerson(person);
+
+          if(m_session->Delete(person))
+          {
+            Logger::WriteMessage("Person deleted again");
+          }
+          else
+          {
+            CString error;
+            error.Format("Person with ID [%d] is ***NOT*** deleted",id);
+            Logger::WriteMessage(error);
+            Assert::Fail();
+          }
+        }
+        else
+        {
+          Logger::WriteMessage("Person ***NOT*** saved");
+          Assert::Fail();
+        }
+      }
+      catch (StdException* ex)
+      {
+        Logger::WriteMessage(ex->GetErrorMessage());
+        ex->Delete();
+        Assert::Fail();
+      }
+    }
+
     void PrintSubject(Subject* p_subject)
     {
       CString text;

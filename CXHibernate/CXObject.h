@@ -60,14 +60,17 @@ public:
   virtual void    DeSerialize(SOAPMessage& p_message,XMLElement* p_entity);
   virtual void    DeSerialize(SQLRecord&   p_record);
 
+  // Re-synchronize the value of the generator after an 'INSERT'
+  virtual void    DeSerializeGenerator(SQLRecord& p_record);
+
   // Overridable functionality in the framework
   virtual int     Compare(CXObject* p_other);
   virtual CString Hashcode();
 
   // Getting or setting the Primary key of the object
-  void         SetPrimaryKey(SQLVariant* p_keyValue,int p_part);
-  SQLVariant*  GetPrimaryKey(int p_part);
-  void         ResetPrimaryKey();
+  void            SetPrimaryKey(SQLVariant* p_keyValue,int p_part);
+  SQLVariant*     GetPrimaryKey(int p_part);
+  void            ResetPrimaryKey();
 
   // Object status
   bool         IsTransient();

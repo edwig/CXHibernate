@@ -27,6 +27,9 @@
 #include "stdafx.h"
 #include "CXHibernate.h"
 #include "CXTable.h"
+#include "CXAttribute.h"
+#include "CXObject.h"
+#include "CXClass.h"
 #include <SOAPMessage.h>
 
 #ifdef _DEBUG
@@ -85,7 +88,7 @@ CXTable::GetDataSet()
     m_dataSet = new SQLDataSet();
 
     // Fill in the dataset
-    m_dataSet->SetPrimaryTable(SchemaName(),TableName());
+    m_dataSet->SetPrimaryTable(GetSchemaName(),GetTableName());
     WordList list = GetPrimaryKeyAsList();
     m_dataSet->SetPrimaryKeyColumn(list);
   }
@@ -93,19 +96,19 @@ CXTable::GetDataSet()
 }
 
 CString
-CXTable::SchemaName()
+CXTable::GetSchemaName()
 {
   return m_table.m_schema;
 }
 
 CString   
-CXTable::TableName()
+CXTable::GetTableName()
 {
   return m_table.m_table;
 }
 
 CString
-CXTable::SchemaTableName()
+CXTable::GetSchemaTableName()
 {
   CString name;
 
@@ -113,12 +116,12 @@ CXTable::SchemaTableName()
   {
     name += m_table.m_schema + ".";
   }
-  name += TableName();
+  name += GetTableName();
   return name;
 }
 
 CString   
-CXTable::FullQualifiedTableName()
+CXTable::GetFullQualifiedTableName()
 {
   CString name;
 
@@ -130,7 +133,7 @@ CXTable::FullQualifiedTableName()
   {
     name += m_table.m_schema + ".";
   }
-  name += TableName();
+  name += GetTableName();
 
   return name;
 }
@@ -142,7 +145,7 @@ CXTable::FullQualifiedTableName()
 // SQLServer: catalog.schema.tablename
 // MySQL    : schema.tablename
 CString   
-CXTable::DMLTableName(SQLInfoDB* p_info)
+CXTable::GetDMLTableName(SQLInfoDB* p_info)
 {
   CString name;
   CString catalog;
@@ -171,7 +174,7 @@ CXTable::DMLTableName(SQLInfoDB* p_info)
   }
 
   // Now comes the table name
-  name += TableName();
+  name += GetTableName();
 
   // Catalog at the end of the name
   if((catalogLocation == SQL_CL_END) && !catalog.IsEmpty())
@@ -341,6 +344,73 @@ CXTable::LoadMetaInfo(CXSession* p_session,CString p_filename)
   return true;
 }
 
+// DATABASE INTERFACE
+
+bool
+CXTable::InsertObjectInDatabase(SQLDatabase* p_database,CXObject* p_object,int p_mutation)
+{
+  // Be sure we have a data set
+  GetDataSet();
+
+  SQLRecord* record = m_dataSet->InsertRecord();
+  SQLVariant zero;
+
+  // Connect our database
+  m_dataSet->SetDatabase(p_database);
+
+  // See if dataset is empty
+  if(m_dataSet->GetNumberOfRecords() == 1 && m_dataSet->GetNumberOfFields() == 0)
+  {
+    for(auto& column : m_columns)
+    {
+      m_dataSet->InsertField(column.m_column,&zero);
+    }
+  }
+
+  // Set the values on the record
+  for(int ind = 0;ind < m_dataSet->GetNumberOfFields();++ind)
+  {
+    record->AddField(&zero,true);
+  }
+
+  // Now serialize our object with the 'real' values
+  SerializeDiscriminator(p_object,record,p_mutation);
+  p_object->Serialize(*record,p_mutation);
+  // Set the record to 'insert-only'
+  record->Inserted();
+
+  // Check if we must generate our primary key
+  CXAttribute* gen = p_object->GetClass()->GetRootClass()->FindGenerator();
+  if(gen && p_object->IsTransient())
+  {
+    // -1: not found, 0 -> (n-1) is the field number of the generator
+    int generator = m_dataSet->GetFieldNumber(gen->GetName());
+    record->SetGenerator(generator);
+  }
+
+  // Go save the record
+  bool saved = m_dataSet->Synchronize(p_mutation);
+  if(saved)
+  {
+    // Re-sync the primary key
+    p_object->ResetPrimaryKey();
+    p_object->DeSerializeGenerator(*record);
+  }
+  return saved;
+}
+
+bool
+CXTable::UpdateObjectInDatabase(CXObject* p_object)
+{
+  return false;
+}
+
+bool
+CXTable::DeleteObjectInDatabase(CXObject* p_object)
+{
+  return false;
+}
+
 //////////////////////////////////////////////////////////////////////////
 //
 // PRIVATE
@@ -356,7 +426,7 @@ CXTable::GetTableInfo(SQLInfoDB* p_info)
   // Find table info
   if(!p_info->MakeInfoTableTable(tables,errors,m_table.m_schema,m_table.m_table))
   {
-    throw new StdException("Cannot find table: " + FullQualifiedTableName() + " : " + errors);
+    throw new StdException("Cannot find table: " + GetFullQualifiedTableName() + " : " + errors);
   }
 
   // Some engines get a synonym AND a table/view record
@@ -376,7 +446,7 @@ CXTable::GetColumnInfo(SQLInfoDB* p_info)
   m_columns.clear();
   if(!p_info->MakeInfoTableColumns(m_columns,errors,m_table.m_schema,m_table.m_table))
   {
-    throw new StdException("Cannot find columns for table: " + FullQualifiedTableName() + " : " + errors);
+    throw new StdException("Cannot find columns for table: " + GetFullQualifiedTableName() + " : " + errors);
   }
 }
 
@@ -390,7 +460,7 @@ CXTable::GetPrimaryKeyInfo(SQLInfoDB* p_info)
   p_info->MakeInfoTablePrimary(m_primary,errors,m_table.m_schema,m_table.m_table);
   if(!errors.IsEmpty())
   {
-    throw new StdException("Cannot find the primary key for table: " + FullQualifiedTableName() + " : " + errors);
+    throw new StdException("Cannot find the primary key for table: " + GetFullQualifiedTableName() + " : " + errors);
   }
 }
 
@@ -404,7 +474,7 @@ CXTable::GetForeignKeyInfo(SQLInfoDB* p_info)
   p_info->MakeInfoTableForeign(m_foreigns,errors,m_table.m_schema,m_table.m_table);
   if (!errors.IsEmpty())
   {
-    throw new StdException("Cannot find the foreign keys for table: " + FullQualifiedTableName() + " : " + errors);
+    throw new StdException("Cannot find the foreign keys for table: " + GetFullQualifiedTableName() + " : " + errors);
   }
 }
 
@@ -418,7 +488,7 @@ CXTable::GetIndexInfo(SQLInfoDB* p_info)
   p_info->MakeInfoTableStatistics(m_indices,errors,m_table.m_schema,m_table.m_table,nullptr);
   if (!errors.IsEmpty())
   {
-    throw new StdException("Cannot find indices for table: " + FullQualifiedTableName() + " : " + errors);
+    throw new StdException("Cannot find indices for table: " + GetFullQualifiedTableName() + " : " + errors);
   }
 }
 
@@ -432,7 +502,7 @@ CXTable::GetPrivilegeInfo(SQLInfoDB* p_info)
   p_info->MakeInfoTablePrivileges(m_privileges,errors,m_table.m_schema,m_table.m_table);
   if(!errors.IsEmpty())
   {
-    throw new StdException("Cannot find the privileges for table: " + FullQualifiedTableName() + " : " + errors);
+    throw new StdException("Cannot find the privileges for table: " + GetFullQualifiedTableName() + " : " + errors);
   }
 }
 
@@ -487,6 +557,16 @@ CXTable::GetPrimaryKeyAsList()
 }
 
 //////////////////////////////////////////////////////////////////////////
+
+void
+CXTable::SerializeDiscriminator(CXObject* p_object,SQLRecord* p_record,int p_mutation)
+{
+  if(hibernate.GetStrategy() != MapStrategy::Strategy_standalone)
+  {
+    SQLVariant disc(p_object->GetDiscriminator());
+    p_record->SetField("discriminator",&disc,p_mutation);
+  }
+}
 
 void 
 CXTable::SaveTableInfo(SOAPMessage& p_msg)

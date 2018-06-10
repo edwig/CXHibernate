@@ -36,6 +36,10 @@ BEGIN_DBS_DESERIALIZE(Kitten,Cat)
   CXO_DBS_DESERIALIZE(bool        ,m_inLitter        ,"inLitter"        ,XDT_Boolean);
 END_DBS_DESERIALIZE
 
+BEGIN_DESERIALIZE_GENERATOR(Kitten)
+  CXO_DBS_DESERIALIZE(long, m_id, "id", XDT_Integer);
+END_DESERIALIZE_GENERATOR
+
 // Static factory to create a new object if this class
 DEFINE_CXO_FACTORY(Kitten);
 

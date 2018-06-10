@@ -90,6 +90,11 @@ TestNumber::DeSerialize(SQLRecord& p_record)
   PostDeSerialize(p_record);
 }
 
+BEGIN_DESERIALIZE_GENERATOR(TestNumber)
+  CXO_DBS_DESERIALIZE(long, m_id, "id", XDT_Integer);
+END_DESERIALIZE_GENERATOR
+
+
 // Create our new object factory
 // DEFINE_CXO_FACTORY(TestNumber);
 

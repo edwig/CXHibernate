@@ -274,6 +274,14 @@ void CXObject::Serialize  (SQLRecord&   p_record,int p_mutation) {}
 void CXObject::DeSerialize(SOAPMessage& p_message,XMLElement* p_entity) {}
 void CXObject::DeSerialize(SQLRecord&   p_record) {}
 
+// Re-synchronize the value of the generator after an 'INSERT'
+void
+CXObject::DeSerializeGenerator(SQLRecord& p_record)
+{
+  // Does nothing on the main CXObject
+  // Function is here for classes without a generator
+}
+
 // Logging of this object (called by CXSession only!)
 void 
 CXObject::LogObject()

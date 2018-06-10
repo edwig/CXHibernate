@@ -625,23 +625,25 @@ CXSession::Update(CXObject* p_object)
 bool
 CXSession::Insert(CXObject* p_object)
 {
+  bool result = false;
+
   if(m_role == CXH_Database_role)
   {
-    InsertObjectInDatabase(p_object);
+    result = InsertObjectInDatabase(p_object);
   }
   else if(m_role == CXH_Internet_role)
   {
     // Insert as a SOAP Message
-    InsertObjectInInternet(p_object);
+    result = InsertObjectInInternet(p_object);
   }
   else // CXH_Filestore_role
   {
-    InsertObjectInFilestore(p_object);
+    result = InsertObjectInFilestore(p_object);
   }
   // Add object to the cache
-  if(p_object->IsPersistent())
+  if(result && p_object->IsPersistent())
   {
-    bool result = AddObjectInCache(p_object,p_object->GetPrimaryKey());
+    result = AddObjectInCache(p_object,p_object->GetPrimaryKey());
 
     // Log the object as inserted
     if(hibernate.GetLogLevel())
@@ -652,9 +654,8 @@ CXSession::Insert(CXObject* p_object)
         p_object->LogObject();
       }
     }
-    return result;
   }
-  return false;
+  return result;
 }
 
 bool
@@ -740,7 +741,7 @@ CXSession::Synchronize()
 CString
 CXSession::CreateFilestoreName(CXTable* p_table)
 {
-  CString tablename = p_table->FullQualifiedTableName();
+  CString tablename = p_table->GetFullQualifiedTableName();
   tablename.Replace(".", "_");
 
   CString fileName = m_baseDirectory;
@@ -766,7 +767,7 @@ CXSession::CreateFilestoreName(CXTable* p_table)
 CString
 CXSession::CreateFilestoreName(CXTable* p_table, VariantSet& p_primary)
 {
-  CString tablename = p_table->FullQualifiedTableName();
+  CString tablename = p_table->GetFullQualifiedTableName();
   tablename.Replace(".", "_");
 
   CString fileName = m_baseDirectory;
@@ -1012,7 +1013,7 @@ bool
 CXSession::RemoveObjectFromCache(CXObject* p_object, VariantSet& p_primary)
 {
   CString hash = CXPrimaryHash(p_primary);
-  CString tableName = p_object->GetClass()->GetTable()->TableName();
+  CString tableName = p_object->GetClass()->GetTable()->GetTableName();
   tableName.MakeLower();
 
   CXCache::iterator it = m_cache.find(tableName);
@@ -1483,56 +1484,21 @@ CXSession::UpdateObjectInInternet(CXObject* p_object)
 bool
 CXSession::InsertObjectInDatabase(CXObject* p_object)
 {
-  CXClass*   theClass = p_object->GetClass();
-  CXTable*      table = theClass->GetTable();
-  SQLDataSet*    dset = table->GetDataSet();
-  SQLRecord*   record = dset->InsertRecord();
-  MColumnMap& columns = table->GetColumnInfo();
-  SQLVariant zero;
-
-  // Connect our database
-  dset->SetDatabase(GetDatabase());
-
-  // See if dataset is empty
-  if(dset->GetNumberOfRecords() == 1 && dset->GetNumberOfFields() == 0)
+  // Get class and check original constructor
+  CXClass* theClass = p_object->GetClass();
+  if(theClass == nullptr)
   {
-    for (auto& column : columns)
-    {
-      dset->InsertField(column.m_column, &zero);
-    }
+    throw new StdException("Object without a connected class. Did you call CXSession::CreateObject(<classname>)??");
   }
-
-  // Set the values on the record
-  for(int ind = 0;ind < dset->GetNumberOfFields();++ind)
-  {
-    record->AddField(&zero,true);
-  }
+  // Check for a table definition
+  CXTable* table = theClass->GetTable();
 
   // New mutation ID for this update action
   CXTransaction trans(this);
 
-  // Now serialize our object with the 'real' values
-  SerializeDiscriminator(p_object,record);
-  p_object->Serialize(*record,m_mutation);
-  // Set the record to 'insert-only'
-  record->Inserted();
-
-  // Check if we must generate our primary key
-  CXAttribute* gen = theClass->FindGenerator();
-  if(gen && p_object->IsTransient())
-  {
-    // -1: not found, 0 -> (n-1) is the field number of the generator
-    int generator = dset->GetFieldNumber(gen->GetName());
-    record->SetGenerator(generator);
-  }
-
-  // Go save the record
-  bool saved = dset->Synchronize(m_mutation);
+  bool saved = table->InsertObjectInDatabase(GetDatabase(),p_object,m_mutation);
   if(saved)
   {
-    // Re-sync the primary key
-    p_object->ResetPrimaryKey();
-    p_object->DeSerialize(*record);
     // Commit in the database
     trans.Commit();
   }
@@ -1639,11 +1605,11 @@ CXSession::UpdateObjectInFilestore(CXObject* p_object)
 
   // Adding an entity with name attributes
   XMLElement* entity = msg.SetParameter("Entity", "");
-  if(!table->SchemaName().IsEmpty())
+  if(!table->GetSchemaName().IsEmpty())
   {
-    msg.SetAttribute(entity,"schema",table->SchemaName());
+    msg.SetAttribute(entity,"schema",table->GetSchemaName());
   }
-  msg.SetAttribute(entity,"name",table->TableName());
+  msg.SetAttribute(entity,"name",table->GetTableName());
 
   // Serialize our object
   SerializeDiscriminator(p_object,msg,entity);
@@ -1677,7 +1643,7 @@ CXSession::InsertObjectInFilestore(CXObject* p_object)
   CString action("Object");
   SOAPMessage msg(namesp,action,SoapVersion::SOAP_12);
   XMLElement* entity = msg.SetParameter("Entity","");
-  msg.SetAttribute(entity,"name",table->TableName());
+  msg.SetAttribute(entity,"name",table->GetTableName());
 
   // Serialize our object
   SerializeDiscriminator(p_object,msg,entity);

@@ -52,6 +52,10 @@ BEGIN_DBS_DESERIALIZE(Animal,CXObject)
   CXO_DBS_DESERIALIZE(CString     ,m_discriminator   ,"discriminator"   ,XDT_String);
 END_DBS_DESERIALIZE
 
+BEGIN_DESERIALIZE_GENERATOR(Animal)
+  CXO_DBS_DESERIALIZE(long, m_id, "id", XDT_Integer);
+END_DESERIALIZE_GENERATOR
+
 // Static factory to create a new object if this class
 DEFINE_CXO_FACTORY(Animal);
 

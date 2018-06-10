@@ -17,7 +17,7 @@
       <subclass>Supplier</subclass>
     </subclasses>
     <attributes>
-      <attribute name="id" datatype="int" isprimary="true"/>
+      <attribute name="id" datatype="int" isprimary="true" generator="true" />
       <attribute name="name" datatype="string" maxlength="200" />
       <attribute name="adresline1" datatype="string" maxlength="250" />
       <attribute name="adresline2" datatype="string" maxlength="250"/>

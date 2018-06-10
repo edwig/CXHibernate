@@ -40,6 +40,10 @@ BEGIN_DBS_DESERIALIZE(Dog,Animal)
   CXO_DBS_DESERIALIZE(bool        ,m_waterdog        ,"waterdog"        ,XDT_Boolean);
 END_DBS_DESERIALIZE
 
+BEGIN_DESERIALIZE_GENERATOR(Dog)
+  CXO_DBS_DESERIALIZE(long, m_id, "id", XDT_Integer);
+END_DESERIALIZE_GENERATOR
+
 // Static factory to create a new object if this class
 DEFINE_CXO_FACTORY(Dog);
 

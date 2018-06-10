@@ -382,7 +382,7 @@ CXServer::AddObjectToMessage(SOAPMessage* p_message,CXObject* object)
   // Add a new entity node
   XMLElement* param  = p_message->GetParameterObjectNode();
   XMLElement* entity = p_message->AddElement(param,"Entity",XDT_String,"");
-  p_message->SetAttribute(entity,"name",object->GetClass()->GetTable()->TableName());
+  p_message->SetAttribute(entity,"name",object->GetClass()->GetTable()->GetTableName());
 
   // Serialize our object to this message on this node
   object->Serialize(*p_message,entity);

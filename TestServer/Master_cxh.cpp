@@ -66,6 +66,10 @@ BEGIN_DBS_DESERIALIZE(Master,CXObject)
   CXO_DBS_DESERIALIZE(bcd,    m_total,      "total",      XDT_Decimal);
 END_DBS_DESERIALIZE
 
+BEGIN_DESERIALIZE_GENERATOR(Master)
+  CXO_DBS_DESERIALIZE(long, m_id, "id", XDT_Integer);
+END_DESERIALIZE_GENERATOR
+
 //////////////////////////////////////////////////////////////////////////
 
 // Create our new object factory

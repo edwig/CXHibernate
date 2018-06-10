@@ -327,7 +327,7 @@ CXClass::SaveMetaInfo(XMLMessage& p_message,XMLElement* p_elem)
   }
   if(m_table)
   {
-    p_message.AddElement(theclass,"table",XDT_String,m_table->TableName());
+    p_message.AddElement(theclass,"table",XDT_String,m_table->GetTableName());
   }
 
   // Add subclass references
@@ -851,7 +851,7 @@ CXClass::FillTableInfoFromClassInfo()
   for(auto& attrib : m_attributes)
   {
     MetaColumn column;
-    column.m_table      = GetTable()->TableName();
+    column.m_table      = GetTable()->GetTableName();
     column.m_column     = attrib->GetDatabaseColumn();
     column.m_datatype   = attrib->GetDataType();
     column.m_columnSize = attrib->GetMaxLength();
@@ -865,7 +865,7 @@ CXClass::FillTableInfoFromClassInfo()
   for(auto& attrib : m_identity.m_attributes)
   {
     MetaPrimary prim;
-    prim.m_table             = GetTable()->TableName();
+    prim.m_table             = GetTable()->GetTableName();
     prim.m_columnName        = attrib->GetDatabaseColumn();
     prim.m_columnPosition    = position++;
     prim.m_constraintName    = m_identity.m_constraintName;
@@ -883,8 +883,8 @@ CXClass::FillTableInfoFromClassInfo()
     {
       MetaForeign fkey;
 
-      fkey.m_fkSchemaName      = GetTable()->SchemaName();
-      fkey.m_fkTableName       = GetTable()->TableName();
+      fkey.m_fkSchemaName      = GetTable()->GetSchemaName();
+      fkey.m_fkTableName       = GetTable()->GetTableName();
       fkey.m_pkTableName       = foreign->m_primaryTable;
       fkey.m_foreignConstraint = foreign->m_constraintName;
       fkey.m_keySequence       = position++;
@@ -901,8 +901,8 @@ CXClass::FillTableInfoFromClassInfo()
     for(auto& col : index->m_attributes)
     {
       MetaIndex ind;
-      ind.m_schemaName = GetTable()->SchemaName();
-      ind.m_tableName  = GetTable()->TableName();
+      ind.m_schemaName = GetTable()->GetSchemaName();
+      ind.m_tableName  = GetTable()->GetTableName();
       ind.m_indexName  = index->m_name;
       ind.m_columnName = col->GetDatabaseColumn();
       ind.m_unique     = index->m_unique;
@@ -918,7 +918,7 @@ CXClass::FillTableInfoFromClassInfo()
   if(!m_generator.IsEmpty())
   {
     MetaSequence seq;
-    seq.m_schemaName   = GetTable()->SchemaName();
+    seq.m_schemaName   = GetTable()->GetSchemaName();
     seq.m_sequenceName = m_generator;
     seq.m_currentValue = m_gen_value;
 
@@ -929,8 +929,8 @@ CXClass::FillTableInfoFromClassInfo()
   for(auto& access : m_privileges)
   {
     MetaPrivilege priv;
-    priv.m_schemaName = GetTable()->SchemaName();
-    priv.m_tableName  = GetTable()->TableName();
+    priv.m_schemaName = GetTable()->GetSchemaName();
+    priv.m_tableName  = GetTable()->GetTableName();
     priv.m_grantee    = access.m_grantee;
     priv.m_privilege  = access.m_privilege;
     priv.m_grantable  = access.m_grantable;
@@ -968,7 +968,7 @@ CXClass::BuildSelectQueryOneTable(SQLInfoDB* p_info)
   // Default query will be built as
   // "SELECT disc.columnname\n"
   // "  FROM table as disc"
-  CString query = columns + "  FROM " + GetTable()->DMLTableName(p_info) + asalias;
+  CString query = columns + "  FROM " + GetTable()->GetDMLTableName(p_info) + asalias;
 
   return query;
 }
@@ -1014,11 +1014,11 @@ CXClass::BuildSelectQuerySubTableRecursive(SQLInfoDB* p_info,CString& p_columns,
 
   if(p_frompart.IsEmpty())
   {
-    p_frompart = "  FROM " + GetTable()->DMLTableName(p_info) + " as " + m_discriminator;
+    p_frompart = "  FROM " + GetTable()->GetDMLTableName(p_info) + " as " + m_discriminator;
   }
   else
   {
-    p_frompart += "\n       INNER JOIN " + GetTable()->DMLTableName(p_info) + " as " + m_discriminator;
+    p_frompart += "\n       INNER JOIN " + GetTable()->GetDMLTableName(p_info) + " as " + m_discriminator;
     p_frompart += " ON (";
 
     // Link on the identities of the classes

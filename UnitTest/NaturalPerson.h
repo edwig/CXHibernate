@@ -29,6 +29,11 @@ public:
   SQLDate    GetDate_of_birth()   { return m_date_of_birth;     };
   bcd        GetLength()          { return m_length;            };
 
+  // SETTERS
+  void SetFirstname(CString p_firstname)         { m_firstname      = p_firstname;          };
+  void SetDate_of_birth(SQLDate p_date_of_birth) { m_date_of_birth  = p_date_of_birth;      };
+  void SetLength(bcd p_length)                   { m_length         = p_length;             };
+
 protected:
   // Database persistent attributes
   CString    m_firstname         ;

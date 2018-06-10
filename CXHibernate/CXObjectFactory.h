@@ -41,10 +41,6 @@ class CXObject;
 // Prototype for use in method/function declarations
 typedef CXObject* (*CreateCXO)(void);
 
-// Macro for calling a method with this factory as a parameter
-#define CXO_FACTORY(classname) CreateCXObject##classname
-// Declaring a factory in your derived class
-#define DECLARE_CXO_FACTORY(classname) CXObject* CreateCXObject##classname()
 // Defining the factory in your class implementation
 #define DEFINE_CXO_FACTORY(classname)  CXObject* CreateCXObject##classname()\
                                        {\
@@ -78,7 +74,9 @@ CXOReg##classname _register##classname;
                                   virtual void   Serialize(SQLRecord&   p_record,int p_mutation = 0);     \
                                   virtual void DeSerialize(SOAPMessage& p_message,XMLElement* p_entity);\
                                   virtual void DeSerialize(SQLRecord&   p_record);\
+                                  virtual void DeSerializeGenerator(SQLRecord& p_record);\
                                   static  CString ClassName()
+
 
 // Serialization and de-serialization of your class object
 #define   CXO_DBS_SERIALIZE(c_type,property,column,XDT) p_record.ModifyField(column,property,p_mutation)
@@ -104,6 +102,11 @@ CXOReg##classname _register##classname;
                                                {PreDeSerialize(p_message,p_entity);\
                                                 super::DeSerialize(p_message,p_entity);
 #define END_XML_DESERIALIZE                     PostDeSerialize(p_message,p_entity);}
+
+#define BEGIN_DESERIALIZE_GENERATOR(Classname) void Classname::DeSerializeGenerator(SQLRecord& p_record)\
+                                               {PreDeSerialize(p_record);
+#define END_DESERIALIZE_GENERATOR              }
+
 
 //////////////////////////////////////////////////////////////////////////
 //

@@ -43,6 +43,8 @@ public:
   CXTable(CString p_table);
  ~CXTable();
 
+  // SETTERS
+
   // Setting a different schema only
   void      SetSchema(CString p_schema);
   // Setting the schema/table/type info
@@ -50,15 +52,14 @@ public:
   // Master side must apply a SQLDataSet
   void      SetDataSet(SQLDataSet* p_dataset);
 
-  // Names of this object
-  CString   SchemaName();
-  CString   TableName();
-  CString   SchemaTableName();
-  CString   FullQualifiedTableName();
-  CString   DMLTableName(SQLInfoDB* p_info);
-
   // GETTERS
 
+  // Names of this object
+  CString     GetSchemaName();
+  CString     GetTableName();
+  CString     GetSchemaTableName();
+  CString     GetFullQualifiedTableName();
+  CString     GetDMLTableName(SQLInfoDB* p_info);
   // Table types
   bool        GetIsTable();
   bool        GetIsView();
@@ -95,7 +96,15 @@ public:
   bool      SaveMetaInfo(CXSession* p_session,CString p_filename = "");
   bool      LoadMetaInfo(CXSession* p_session,CString p_filename = "");
 
+  // THE DATABASE INTERFACE
+
+  bool      InsertObjectInDatabase(SQLDatabase* p_database,CXObject* p_object,int p_mutation);
+  bool      UpdateObjectInDatabase(CXObject* p_object);
+  bool      DeleteObjectInDatabase(CXObject* p_object);
+
 private:
+  void      SerializeDiscriminator(CXObject* p_object,SQLRecord* p_record,int p_mutation);
+
   // Getting table info from the ODBC database
   void GetTableInfo     (SQLInfoDB* p_info);
   void GetColumnInfo    (SQLInfoDB* p_info);

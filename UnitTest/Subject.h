@@ -30,6 +30,12 @@ public:
   CString    GetAdresline2()      { return m_adresline2;        };
   int        GetAccount_id()      { return m_account_id;        };
 
+  // SETTERS
+  void       SetName(CString p_name)             { m_name       = p_name;       };
+  void       SetAdresline1(CString p_adresline1) { m_adresline1 = p_adresline1; };
+  void       SetAdresline2(CString p_adresline2) { m_adresline2 = p_adresline2; };
+  void       SetAccount_id(int p_account_id)     { m_account_id = p_account_id; };
+
 protected:
   // Database persistent attributes
   int        m_id                 { 0 };

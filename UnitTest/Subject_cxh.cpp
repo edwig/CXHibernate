@@ -44,6 +44,10 @@ BEGIN_DBS_DESERIALIZE(Subject,CXObject)
   CXO_DBS_DESERIALIZE(int         ,m_account_id      ,"account_id"      ,XDT_Integer);
 END_DBS_DESERIALIZE
 
+BEGIN_DESERIALIZE_GENERATOR(Subject)
+  CXO_DBS_DESERIALIZE(long, m_id, "id", XDT_Integer);
+END_DESERIALIZE_GENERATOR
+
 // Static factory to create a new object if this class
 DEFINE_CXO_FACTORY(Subject);
 

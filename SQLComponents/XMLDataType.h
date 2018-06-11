@@ -26,8 +26,8 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 //
-// Last Revision:   04-02-2018
-// Version number:  1.4.5
+// Last Revision:   28-05-2018
+// Version number:  1.5.0
 //
 #pragma once
 

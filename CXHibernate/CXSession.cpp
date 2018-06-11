@@ -949,10 +949,10 @@ CXSession::GetMetaSessionInfo()
       }
       trans.Commit();
     }
-    catch(StdException* er)
+    catch(StdException& er)
     {
       // Error in silence ?
-      er->Delete();
+      UNREFERENCED_PARAMETER(er);
     }
   }
   if(hibernate.GetLogLevel())

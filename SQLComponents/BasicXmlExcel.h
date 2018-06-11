@@ -25,7 +25,7 @@
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
 // Last Revision:   25-05-2015
-// Version number:  1.4.5
+// Version number:  1.5.0
 //
 #pragma once
 #include "unzip.h"

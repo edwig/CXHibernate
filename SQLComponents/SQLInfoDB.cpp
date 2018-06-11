@@ -21,8 +21,8 @@
 // WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION 
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
-// Last Revision:   04-02-2018
-// Version number:  1.4.5
+// Last Revision:   28-05-2018
+// Version number:  1.5.0
 //
 #include "stdafx.h"
 #include "SQLComponents.h"
@@ -86,10 +86,9 @@ SQLInfoDB::MakeInfoTableObject(MTableMap& p_tables
     qry.DoSQLStatement(sql);
     return ReadTablesFromQuery(qry,p_tables);
   }
-  catch(StdException* er)
+  catch(StdException& er)
   {
-    p_errors += MessageFromException(er);
-    er->Delete();
+    p_errors += er.GetErrorMessage();
   }
   return 0;
 }
@@ -113,10 +112,9 @@ SQLInfoDB::MakeInfoTableTable(MTableMap& p_tables
     qry.DoSQLStatement(sql);
     return ReadTablesFromQuery(qry,p_tables);
   }
-  catch(StdException* er)
+  catch(StdException& er)
   {
-    p_errors += er->GetErrorMessage();
-    er->Delete();
+    p_errors += er.GetErrorMessage();
   }
   return 0;
 }
@@ -140,10 +138,9 @@ SQLInfoDB::MakeInfoTableView(MTableMap& p_tables
     qry.DoSQLStatement(sql);
     return ReadTablesFromQuery(qry,p_tables);
   }
-  catch (StdException* er)
+  catch(StdException& er)
   {
-    p_errors += er->GetErrorMessage();
-    er->Delete();
+    p_errors += er.GetErrorMessage();
   }
   return 0;
 }
@@ -173,10 +170,9 @@ SQLInfoDB::MakeInfoTableSynonyms(MTableMap& p_tables
     qry.DoSQLStatement(sql);
     return ReadTablesFromQuery(qry,p_tables);
   }
-  catch (StdException* er)
+  catch(StdException& er)
   {
-    p_errors += er->GetErrorMessage();
-    er->Delete();
+    p_errors += er.GetErrorMessage();
   }
   return 0;
 }
@@ -202,10 +198,9 @@ SQLInfoDB::MakeInfoTableCatalog(MTableMap&  p_tables
     qry.DoSQLStatement(sql);
     return ReadTablesFromQuery(qry,p_tables);
   }
-  catch(StdException* er)
+  catch(StdException& er)
   {
-    p_errors += er->GetErrorMessage();
-    er->Delete();
+    p_errors += er.GetErrorMessage();
   }
   return 0;
 }
@@ -289,10 +284,9 @@ SQLInfoDB::MakeInfoTableColumns(MColumnMap& p_columns
     }
     return !p_columns.empty();
   }
-  catch(StdException* er)
+  catch(StdException& er)
   {
-    p_errors += er->GetErrorMessage();
-    er->Delete();
+    p_errors += er.GetErrorMessage();
   }
   return 0;
 }
@@ -329,10 +323,9 @@ SQLInfoDB::MakeInfoTablePrimary(MPrimaryMap&  p_primaries
     }
     return !p_primaries.empty();
   }
-  catch(StdException* er)
+  catch(StdException& er)
   {
-    p_errors += er->GetErrorMessage();
-    er->Delete();
+    p_errors += er.GetErrorMessage();
   }
   return 0;
 }
@@ -383,10 +376,9 @@ SQLInfoDB::MakeInfoTableForeign(MForeignMap&  p_foreigns
     }
     return !p_foreigns.empty();
   }
-  catch(StdException* er)
+  catch(StdException& er)
   {
-    p_errors += er->GetErrorMessage();
-    er->Delete();
+    p_errors += er.GetErrorMessage();
   }
   return 0;
 }
@@ -430,10 +422,9 @@ SQLInfoDB::MakeInfoTableStatistics(MIndicesMap& p_indices
     }
     return !p_indices.empty();
   }
-  catch(StdException* er)
+  catch(StdException& er)
   {
-    p_errors += er->GetErrorMessage();
-    er->Delete();
+    p_errors += er.GetErrorMessage();
   }
   return false;
 }
@@ -506,10 +497,9 @@ SQLInfoDB::MakeInfoPSMProcedures(MProcedureMap&  p_procedures
     }
     return !p_procedures.empty();
   }
-  catch(StdException* er)
+  catch(StdException& er)
   {
-    p_errors += er->GetErrorMessage();
-    er->Delete();
+    p_errors += er.GetErrorMessage();
   }
   return 0;
 }
@@ -577,10 +567,9 @@ SQLInfoDB::MakeInfoPSMParameters(MParameterMap& p_parameters
     }
     return !p_parameters.empty();
   }
-  catch(StdException* er)
+  catch(StdException& er)
   {
-    p_errors += er->GetErrorMessage();
-    er->Delete();
+    p_errors += er.GetErrorMessage();
   }
   return 0;
 }
@@ -649,10 +638,9 @@ SQLInfoDB::MakeInfoTableTriggers(MTriggerMap& p_triggers
     }
     return !p_triggers.empty();
   }
-  catch(StdException* er)
+  catch(StdException& er)
   {
-    p_errors += er->GetErrorMessage();
-    er->Delete();
+    p_errors += er.GetErrorMessage();
   }
   return 0;
 }
@@ -690,9 +678,9 @@ SQLInfoDB::MakeInfoTableSequences(MSequenceMap& p_sequences,CString& p_errors,CS
     }
     return !p_sequences.empty();
   }
-  catch(StdException* er)
+  catch(StdException& er)
   {
-    CString message = er->GetErrorMessage();
+    CString message = er.GetErrorMessage();
     if(message.Find("[42S02]") > 0)
     {
       // Older versions of MS-SQLServer return this SQLSTATE
@@ -702,7 +690,6 @@ SQLInfoDB::MakeInfoTableSequences(MSequenceMap& p_sequences,CString& p_errors,CS
     {
       p_errors += message;
     }
-    er->Delete();
   }
   return 0;
 }

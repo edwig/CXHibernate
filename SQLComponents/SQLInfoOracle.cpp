@@ -21,8 +21,8 @@
 // WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION 
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
-// Last Revision:   04-02-2018
-// Version number:  1.4.5
+// Last Revision:   28-05-2018
+// Version number:  1.5.0
 //
 #include "stdafx.h"
 #include "SQLComponents.h"
@@ -867,10 +867,9 @@ SQLInfoOracle::GetCATALOGIndexFilter(MetaIndex& p_index) const
       var->GetAsString(expression);
     }
   }
-  catch(StdException* error)
+  catch(StdException& error)
   {
-    CString message = ("Cannot find index filter: ") + MessageFromException(error);
-    error->Delete();
+    CString message = ("Cannot find index filter: ") + error.GetErrorMessage();
     throw new StdException(message);
   }
   return expression;

@@ -21,8 +21,8 @@
 // WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION 
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
-// Last Revision:   04-02-2018
-// Version number:  1.4.5
+// Last Revision:   28-05-2018
+// Version number:  1.5.0
 //
 #include "stdafx.h"
 #include "SQLComponents.h"
@@ -51,8 +51,8 @@ namespace SQLComponents
   { \
   m_retCode = SQL_ERROR; \
   m_retCode = (SQLFunc); \
-  } catch(StdException* ex)\
-  { ex->Delete();\
+  } catch(StdException& ex)\
+  { UNREFERENCED_PARAMETER(ex);\
   }
 
 SQLInfo::SQLInfo(SQLDatabase* p_database)

@@ -538,15 +538,22 @@ HTTPServerIIS::GetHTTPMessageFromRequest(IHttpContext* p_context
     }
   }
 
+  // See if there are more entity chunks in the queue of IIS
+  if(p_request->Flags & HTTP_REQUEST_FLAG_MORE_ENTITY_BODY_EXISTS)
+  {
+    // Remember the fact that we should read the rest of the message, and how much
+    // We offload this to the HTTPSite handler for local servers and IIS alike
+    message->SetReadBuffer(true,atoi(contentLength));
+  }
+  else
+  {
   // Chunks already read by IIS, so just copy them in the message
+    // No more are coming, we already have everything for a HTTPMessage
   if(p_request->EntityChunkCount)
   {
     ReadEntityChunks(message,p_request);
   }
-
-  // Remember the fact that we should read the rest of the message
-  message->SetReadBuffer(p_request->Flags & HTTP_REQUEST_FLAG_MORE_ENTITY_BODY_EXISTS,atoi(contentLength));
-
+  }
   // This is the result
   return message;
 }
@@ -1226,10 +1233,9 @@ HTTPServerIIS::CancelRequestStream(HTTP_OPAQUE_ID p_response)
 
     DETAILLOG1("Event/Socket connection closed");
   }
-  catch(StdException* er)
+  catch(StdException& er)
   {
-    ERRORLOG(ERROR_INVALID_PARAMETER,"Cannot close Event/WebSocket stream! " + er->GetErrorMessage());
-    er->Delete();
+    ERRORLOG(ERROR_INVALID_PARAMETER,"Cannot close Event/WebSocket stream! " + er.GetErrorMessage());
   }
 }
 

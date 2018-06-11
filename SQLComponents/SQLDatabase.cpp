@@ -21,8 +21,8 @@
 // WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION 
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
-// Last Revision:   04-02-2018
-// Version number:  1.4.5
+// Last Revision:   28-05-2018
+// Version number:  1.5.0
 //
 #include "stdafx.h"
 #include "SQLComponents.h"
@@ -1078,11 +1078,10 @@ SQLDatabase::StartTransaction(SQLTransaction* p_transaction, bool p_startSubtran
           SetConnectAttr(SQL_ATTR_AUTOCOMMIT,SQL_AUTOCOMMIT_OFF,SQL_IS_UINTEGER);
         }
       }
-      catch(StdException* error)
+      catch(StdException& error)
       {
         CString message;
-        message.Format("Error at starting transaction [%s] : %s",p_transaction->GetName().GetString(),error->GetErrorMessage().GetString());
-        error->Delete();
+        message.Format("Error at starting transaction [%s] : %s",p_transaction->GetName().GetString(),error.GetErrorMessage().GetString());
         throw new StdException(message);
       }
     }
@@ -1104,14 +1103,13 @@ SQLDatabase::StartTransaction(SQLTransaction* p_transaction, bool p_startSubtran
           rs.DoSQLStatement(startSubtrans);
           p_transaction->SetSavepoint(transName);
         }
-        catch(StdException* err)
+        catch(StdException& err)
         {
           CString message;
           message.Format("Error starting sub-transaction [%s:%s] : %s"
                         ,p_transaction->GetName().GetString()
                         ,transName.GetString()
-                        ,err->GetErrorMessage().GetString());
-          err->Delete();
+                        ,err.GetErrorMessage().GetString());
           throw new StdException(message);
         }
       }
@@ -1193,14 +1191,13 @@ SQLDatabase::CommitTransaction(SQLTransaction* p_transaction)
           SQLQuery rs(this);
           rs.DoSQLStatement(startSubtrans);
         }
-        catch(StdException* error)
+        catch(StdException& error)
         {
           CString message;
           message.Format("Error in commit of sub-transaction [%s:%s] : %s"
                         ,p_transaction->GetName().GetString()
                         ,p_transaction->GetSavePoint().GetString()
-                        ,MessageFromException(error).GetString());
-          error->Delete();
+                        ,MessageFromException(&error).GetString());
           throw new StdException(message);
         }
       }
@@ -1263,16 +1260,15 @@ SQLDatabase::RollbackTransaction(SQLTransaction* p_transaction)
           SetConnectAttr(SQL_ATTR_AUTOCOMMIT, SQL_AUTOCOMMIT_ON, SQL_IS_UINTEGER);
         }
       }
-      catch(StdException* ex)
+      catch(StdException& ex)
       {
         // Throw an exception with error info at a failed rollback1
         CString message;
         CString error = GetErrorString();
         message.Format("Error at rollback of transaction [%s] : %s. OS Error: %s"
                        ,p_transaction->GetName().GetString()
-                       ,MessageFromException(ex).GetString()
+                       ,ex.GetErrorMessage().GetString()
                        ,error.GetString());
-        ex->Delete();
         throw new StdException(message);
       }
     }
@@ -1287,14 +1283,13 @@ SQLDatabase::RollbackTransaction(SQLTransaction* p_transaction)
           SQLQuery rs(this);
           rs.DoSQLStatement(startSubtrans);
         }
-        catch(StdException* error)
+        catch(StdException& error)
         {
           CString message;
           message.Format("Error in rolling back sub-transaction [%s:%s] : %s"
                         ,p_transaction->GetName().GetString()
                         ,p_transaction->GetSavePoint().GetString()
-                        ,MessageFromException(error).GetString());
-          error->Delete();
+                        ,error.GetErrorMessage().GetString());
           throw new StdException(message);
         }
       }
@@ -1552,10 +1547,9 @@ SQLDatabase::SetOracleResultCacheMode(const CString& p_mode)
     SQLQuery rs(this);
     rs.DoSQLStatement(query);
   }
-  catch(StdException* ex)
+  catch(StdException& ex)
   {
-    CString error = "Database error while setting RESULT_CACHE_MODE: " + MessageFromException(ex);
-    ex->Delete();
+    CString error = "Database error while setting RESULT_CACHE_MODE: " + ex.GetErrorMessage();
     throw new StdException(error);
   }
 }

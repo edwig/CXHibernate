@@ -68,9 +68,9 @@ namespace HibernateTest
         Logger::WriteMessage("Testing 2th master record");
         PrintMaster(master);
       }
-      catch(StdException* er)
+      catch(StdException& er)
       {
-        Logger::WriteMessage("ERROR: " + er->GetErrorMessage());
+        Logger::WriteMessage("ERROR: " + er.GetErrorMessage());
         Assert::Fail();
       }
 		}
@@ -292,9 +292,9 @@ namespace HibernateTest
           Logger::WriteMessage(message);
         }
       }
-      catch (StdException* er)
+      catch (StdException& er)
       {
-        Logger::WriteMessage("ERROR: " + er->GetErrorMessage());
+        Logger::WriteMessage("ERROR: " + er.GetErrorMessage());
         Assert::Fail();
       }
     }
@@ -323,9 +323,9 @@ namespace HibernateTest
         Logger::WriteMessage("This is our master:");
         PrintMaster(master);
       }
-      catch (StdException* er)
+      catch (StdException& er)
       {
-        Logger::WriteMessage("ERROR: " + er->GetErrorMessage());
+        Logger::WriteMessage("ERROR: " + er.GetErrorMessage());
         Assert::Fail();
       }
     }
@@ -381,10 +381,9 @@ namespace HibernateTest
         }
         Assert::Fail();
       }
-      catch(StdException* er)
+      catch(StdException& er)
       {
-        Logger::WriteMessage(er->GetErrorMessage());
-        er->Delete();
+        Logger::WriteMessage(er.GetErrorMessage());
       }
       Assert::Fail();
       return false;
@@ -453,10 +452,9 @@ namespace HibernateTest
             return true;
           }
       }
-      catch(StdException* er)
+      catch(StdException& er)
       {
-        Assert::AreEqual("",er->GetErrorMessage());
-        er->Delete();
+        Assert::AreEqual("",er.GetErrorMessage());
       }
       return OpenSessionFULL();
     }
@@ -496,10 +494,9 @@ namespace HibernateTest
         }
         trans.Commit();
       }
-      catch(StdException* er)
+      catch(StdException& er)
       {
-        Logger::WriteMessage(CString("Failed: ") + er->GetErrorMessage());
-        er->Delete();
+        Logger::WriteMessage(CString("Failed: ") + er.GetErrorMessage());
       }
       return result;
     }
@@ -529,10 +526,9 @@ namespace HibernateTest
         }
         trans.Commit();
       }
-      catch(StdException* er)
+      catch(StdException& er)
       {
-        Logger::WriteMessage(CString("Failed: ") + er->GetErrorMessage());
-        er->Delete();
+        Logger::WriteMessage(CString("Failed: ") + er.GetErrorMessage());
       }
       return result;
     }

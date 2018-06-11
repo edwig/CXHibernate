@@ -23,8 +23,8 @@
 // Loosely based on the article by: Yap Chun Wei
 // http://www.codeproject.com/Articles/1636/CSpreadSheet-A-Class-to-Read-and-Write-to-Excel-an
 // 
-// Last Revision:   04-02-2018
-// Version number:  1.4.5
+// Last Revision:   28-05-2018
+// Version number:  1.5.0
 //
 #include "stdafx.h"
 #include "SQLComponents.h"
@@ -541,10 +541,9 @@ SQLDataSetXLS::Open()
         }
       }
     }
-    catch(StdException* ex)
+    catch(StdException& ex)
     {
-      m_lastError = "Error reading spreadhseet: " + MessageFromException(ex);
-      ex->Delete();
+      m_lastError = "Error reading spreadhseet: " + ex.GetErrorMessage();
       return false;
     }
     catch(...)
@@ -641,10 +640,9 @@ SQLDataSetXLS::Open()
         return result;
       }
     }
-    catch(StdException* ex)
+    catch(StdException& ex)
     {
-      m_lastError = MessageFromException(ex);
-      ex->Delete();
+      m_lastError = ex.GetErrorMessage();
     }
     m_lastError += "Error in opening file\n";
     return false;

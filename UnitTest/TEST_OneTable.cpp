@@ -65,10 +65,9 @@ namespace HibernateTest
         Subject* sub = (Subject*)m_session->Load(Subject::ClassName(),1);
         PrintSubject(sub);
       }
-      catch(StdException* ex)
+      catch(StdException& ex)
       {
-        Logger::WriteMessage(ex->GetErrorMessage());
-        ex->Delete();
+        Logger::WriteMessage(ex.GetErrorMessage());
         Assert::Fail();
       }
     }
@@ -83,10 +82,9 @@ namespace HibernateTest
         NaturalPerson* person = (NaturalPerson*)m_session->Load(NaturalPerson::ClassName(),2);
         PrintNaturalPerson(person);
       }
-      catch(StdException* ex)
+      catch(StdException& ex)
       {
-        Logger::WriteMessage(ex->GetErrorMessage());
-        ex->Delete();
+        Logger::WriteMessage(ex.GetErrorMessage());
         Assert::Fail();
       }
     }
@@ -101,10 +99,9 @@ namespace HibernateTest
         Supplier* supp = (Supplier*)m_session->Load(Supplier::ClassName(),3);
         PrintSupplier(supp);
       }
-      catch(StdException* ex)
+      catch(StdException& ex)
       {
-        Logger::WriteMessage(ex->GetErrorMessage());
-        ex->Delete();
+        Logger::WriteMessage(ex.GetErrorMessage());
         Assert::Fail();
       }
     }
@@ -119,10 +116,9 @@ namespace HibernateTest
         Infant* infant = (Infant*)m_session->Load(Infant::ClassName(),4);
         PrintInfant(infant);
       }
-      catch(StdException* ex)
+      catch(StdException& ex)
       {
-        Logger::WriteMessage(ex->GetErrorMessage());
-        ex->Delete();
+        Logger::WriteMessage(ex.GetErrorMessage());
         Assert::Fail();
       }
     }
@@ -167,10 +163,9 @@ namespace HibernateTest
           Assert::Fail();
         }
       }
-      catch (StdException* ex)
+      catch (StdException& ex)
       {
-        Logger::WriteMessage(ex->GetErrorMessage());
-        ex->Delete();
+        Logger::WriteMessage(ex.GetErrorMessage());
         Assert::Fail();
       }
     }
@@ -203,10 +198,9 @@ namespace HibernateTest
         m_session->Update(person);
         PrintNaturalPerson(person);
       }
-      catch (StdException* ex)
+      catch (StdException& ex)
       {
-        Logger::WriteMessage(ex->GetErrorMessage());
-        ex->Delete();
+        Logger::WriteMessage(ex.GetErrorMessage());
         Assert::Fail();
       }
     }
@@ -272,10 +266,9 @@ namespace HibernateTest
           return true;
         }
       }
-      catch(StdException* er)
+      catch(StdException& er)
       {
-        Assert::AreEqual("",er->GetErrorMessage());
-        er->Delete();
+        Assert::AreEqual("",er.GetErrorMessage());
       }
       Assert::Fail();
     }

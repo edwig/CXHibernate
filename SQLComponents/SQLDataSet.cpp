@@ -21,8 +21,8 @@
 // WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION 
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
-// Last Revision:   04-02-2018
-// Version number:  1.4.5
+// Last Revision:   28-05-2018
+// Version number:  1.5.0
 //
 #include "stdafx.h"
 #include "SQLComponents.h"
@@ -520,10 +520,10 @@ SQLDataSet::Open(bool p_stopIfNoColumns /*=false*/)
 
     trans.Commit();
   }
-  catch(StdException* er)
+  catch(StdException& er)
   {
     Close();
-    throw er;
+    throw new StdException(er.GetErrorMessage());
   }
   if(m_records.size())
   {
@@ -596,10 +596,10 @@ SQLDataSet::Append()
     result = true;
     trans.Commit();
   }
-  catch(StdException* er)
+  catch(StdException& er)
   {
     Close();
-    throw er;
+    throw new StdException(er.GetErrorMessage());
   }
   // Goto the first freshly read record
   if(m_records.size() > sizeBefore)
@@ -1124,13 +1124,12 @@ SQLDataSet::Synchronize(int p_mutationID /*=0*/)
     // After the commit we throw away our changes
     Reduce(p_mutationID);
   }
-  catch(StdException* er)
+  catch(StdException& er)
   {
     // Automatic rollback will be done now
-    m_database->LogPrint(1,"Database synchronization stopped: " + er->GetErrorMessage());
+    m_database->LogPrint(1,"Database synchronization stopped: " + er.GetErrorMessage());
     // Restore original status of the dataset, reduce never done
     m_status = oldStatus;
-    er->Delete();
     return false;
   }
   // Ready

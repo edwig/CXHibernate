@@ -24,8 +24,8 @@
 // WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION 
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
-// Last Revision:   04-02-2018
-// Version number:  1.4.5
+// Last Revision:   28-05-2018
+// Version number:  1.5.0
 //
 #include "ExcelFormat.h"
 
@@ -5781,16 +5781,13 @@ size_t BasicExcel::Read(const char* data, size_t dataSize)
         bytesRead += workbook_.Read(data+bytesRead);
         break;
 
-      case VISUAL_BASIC_MODULE:
-        bytesRead += rec.Read(data+bytesRead);
-        break;
-
       case WORKSHEET:
         worksheets_.push_back(Worksheet());
         bytesRead += worksheets_.back().Read(data+bytesRead);
         break;
 
-      case CHART:
+      case CHART:               // Fall through
+      case VISUAL_BASIC_MODULE: // Fall through
       default:
         bytesRead += rec.Read(data+bytesRead);
         break;

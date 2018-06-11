@@ -21,8 +21,8 @@
 // WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION 
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
-// Last Revision:   04-02-2018
-// Version number:  1.4.5
+// Last Revision:   28-05-2018
+// Version number:  1.5.0
 //
 #include "stdafx.h"
 #include "SQLComponents.h"
@@ -75,10 +75,10 @@ SQLTransaction::~SQLTransaction()
   {
     Rollback();
   }
-  catch(StdException* error)
+  catch(StdException& error)
   {
     CString message;
-    message.Format("Error in rollback of transaction [%s] : %s\n",m_name.GetString(),MessageFromException(error).GetString());
+    message.Format("Error in rollback of transaction [%s] : %s\n",m_name.GetString(),error.GetErrorMessage().GetString());
     if(m_database)
     {
       m_database->LogPrint(LOGLEVEL_ERROR,message);
@@ -90,7 +90,6 @@ SQLTransaction::~SQLTransaction()
     }
     // Cannot throw in a destructor. Stops here
     // But we where already 'cornered', why would we otherwise need to rollback :-(
-    error->Delete();
   }
 }
 

@@ -70,11 +70,10 @@ namespace HibernateTest
 
         CloseSession();
       }
-      catch(StdException* er)
+      catch(StdException& er)
       {
-        CString error = er->GetErrorMessage();
+        CString error = er.GetErrorMessage();
         Logger::WriteMessage(error);
-        er->Delete();
         Assert::Fail();
       }
     }
@@ -94,11 +93,10 @@ namespace HibernateTest
 
         CloseSession();
       }
-      catch (StdException* er)
+      catch (StdException& er)
       {
-        CString error = er->GetErrorMessage();
+        CString error = er.GetErrorMessage();
         Logger::WriteMessage(error);
-        er->Delete();
         Assert::Fail();
       }
     }
@@ -118,11 +116,10 @@ namespace HibernateTest
 
         CloseSession();
       }
-      catch (StdException* er)
+      catch (StdException& er)
       {
-        CString error = er->GetErrorMessage();
+        CString error = er.GetErrorMessage();
         Logger::WriteMessage(error);
-        er->Delete();
         Assert::Fail();
       }
     }
@@ -158,11 +155,10 @@ namespace HibernateTest
 
         CloseSession();
       }
-      catch (StdException* er)
+      catch (StdException& er)
       {
-        CString error = er->GetErrorMessage();
+        CString error = er.GetErrorMessage();
         Logger::WriteMessage(error);
-        er->Delete();
         Assert::Fail();
       }
     }
@@ -200,11 +196,10 @@ namespace HibernateTest
         }
         CloseSession();
       }
-      catch (StdException* er)
+      catch (StdException& er)
       {
-        CString error = er->GetErrorMessage();
+        CString error = er.GetErrorMessage();
         Logger::WriteMessage(error);
-        er->Delete();
         Assert::Fail();
       }
     }
@@ -247,11 +242,10 @@ namespace HibernateTest
         }
         CloseSession();
       }
-      catch (StdException* er)
+      catch (StdException& er)
       {
-        CString error = er->GetErrorMessage();
+        CString error = er.GetErrorMessage();
         Logger::WriteMessage(error);
-        er->Delete();
         Assert::Fail();
       }
     }
@@ -277,11 +271,10 @@ namespace HibernateTest
 
         CloseSession();
       }
-      catch (StdException* er)
+      catch (StdException& er)
       {
-        CString error = er->GetErrorMessage();
+        CString error = er.GetErrorMessage();
         Logger::WriteMessage(error);
-        er->Delete();
         Assert::Fail();
       }
     }
@@ -353,11 +346,10 @@ namespace HibernateTest
           return;
         }
       }
-      catch(StdException* er)
+      catch(StdException& er)
       {
-        CString msg = er->GetErrorMessage();
+        CString msg = er.GetErrorMessage();
         Logger::WriteMessage(msg);
-        er->Delete();
       }
       Assert::Fail();
     }

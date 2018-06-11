@@ -3,9 +3,9 @@ create table animal
   id             integer    not null
   ,discriminator varchar(5) not null
   ,animalName    varchar(200)
-  ,has_claws     boolean
-  ,has_hair      boolean
-  ,has_wings     boolean
+  ,has_claws     bool
+  ,has_hair      bool
+  ,has_wings     bool
   ,numberOfLegs  integer
 );
 
@@ -51,3 +51,22 @@ create table kitten
 alter table kitten
   add constraint pk_kitten
        primary key (id);
+
+       
+insert into ANIMAL
+(id,discriminator,animalname,has_claws,has_hair,has_wings,numberoflegs)
+VALUES
+(1,'kit','Fluffy Kitten',true,true,false,4);
+
+insert into CAT
+(id,color,catdoor,likeswhiskas)
+VALUES
+(1,'Black',false,true);
+
+insert into KITTEN
+(id,color,immuun,inlitter)
+VALUES
+(1,'Black-and-White',true,true);
+
+
+select * from kitten;       

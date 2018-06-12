@@ -523,7 +523,7 @@ SQLDataSet::Open(bool p_stopIfNoColumns /*=false*/)
   catch(StdException& er)
   {
     Close();
-    throw new StdException(er.GetErrorMessage());
+    throw StdException(er.GetErrorMessage());
   }
   if(m_records.size())
   {
@@ -599,7 +599,7 @@ SQLDataSet::Append()
   catch(StdException& er)
   {
     Close();
-    throw new StdException(er.GetErrorMessage());
+    throw StdException(er.GetErrorMessage());
   }
   // Goto the first freshly read record
   if(m_records.size() > sizeBefore)
@@ -728,7 +728,7 @@ SQLDataSet::CheckNames(SQLQuery& p_query)
     p_query.GetColumnName(ind,name);
     if(m_names[ind-1].CompareNoCase(name))
     {
-      throw new StdException("Append needs exactly the same query column names");
+      throw StdException("Append needs exactly the same query column names");
     }
   }
 }
@@ -743,7 +743,7 @@ SQLDataSet::CheckTypes(SQLQuery& p_query)
     int type = p_query.GetColumnType(ind);
     if(m_types[ind-1] != type)
     {
-      throw new StdException("Append needs exactly the same datatypes for the query columns.");
+      throw StdException("Append needs exactly the same datatypes for the query columns.");
     }
   }
 }
@@ -1206,7 +1206,7 @@ SQLDataSet::Deletes(int p_mutationID)
       {
         case MUT_OnlyOthers: ++it;  // do nothing with record
                              break;
-        case MUT_Mixed:      throw new StdException("Mixed mutations");
+        case MUT_Mixed:      throw StdException("Mixed mutations");
         case MUT_NoMutation: // Fall through: Remove record
         case MUT_MyMutation: sql = GetSQLDelete(&query,record);
                              query.DoSQLStatement(sql);
@@ -1262,7 +1262,7 @@ SQLDataSet::Updates(int p_mutationID)
       {
         case MUT_NoMutation: // Fall through: do nothing
         case MUT_OnlyOthers: break;
-        case MUT_Mixed:      throw new StdException("Mixed mutations");
+        case MUT_Mixed:      throw StdException("Mixed mutations");
         case MUT_MyMutation: sql = GetSQLUpdate(&query,record);
                              query.DoSQLStatement(sql);
                              ++update;
@@ -1299,7 +1299,7 @@ SQLDataSet::Inserts(int p_mutationID)
       {
         case MUT_NoMutation: // Fall through: Do nothing
         case MUT_OnlyOthers: break;
-        case MUT_Mixed:      throw new StdException("Mixed mutations");
+        case MUT_Mixed:      throw StdException("Mixed mutations");
         case MUT_MyMutation: sql = GetSQLInsert(&query,record,serial);
                              query.DoSQLStatement(sql);
                              ++insert;
@@ -1377,6 +1377,7 @@ SQLDataSet::GetSQLUpdate(SQLQuery* p_query,SQLRecord* p_record)
 {
   int parameter = 1;
   CString sql("UPDATE " + m_primaryTableName + "\n");
+  WordList::iterator it;
 
   // New set of parameters
   p_query->ResetParameters();
@@ -1385,7 +1386,24 @@ SQLDataSet::GetSQLUpdate(SQLQuery* p_query,SQLRecord* p_record)
   bool first = true;
   for(unsigned ind = 0;ind < m_names.size(); ++ind)
   {
-    if(p_record->IsModified(ind))
+    // Filter for specific columns that are allowed to be updated
+    bool update = true;
+    if(!m_updateColumns.empty())
+    {
+      update = false;
+      for(auto& column : m_updateColumns)
+      {
+        if (m_names[ind].CompareNoCase(column) == 0)
+        {
+          update = true;
+          break;
+        }
+      }
+    }
+
+    // If we may update, and only if the field in the record IS updated!
+    // This reduces the number of columns to write back to the database!
+    if(update && p_record->IsModified(ind))
     {
       SQLVariant* value = p_record->GetField(ind);
 
@@ -1553,8 +1571,8 @@ SQLDataSet::XMLLoad(XMLMessage* p_msg,XMLElement* p_dataset)
 {
   XMLElement* structur = p_msg->FindElement(p_dataset,dataset_names[g_defaultLanguage][DATASET_STRUCTURE],false);
   XMLElement* records  = p_msg->FindElement(p_dataset,dataset_names[g_defaultLanguage][DATASET_RECORDS],  false);
-  if(structur == NULL) throw new StdException("Structure part missing in the XML dataset." + m_name);
-  if(records  == NULL) throw new StdException("Records part missing in the XML dataset" + m_name);
+  if(structur == NULL) throw StdException("Structure part missing in the XML dataset." + m_name);
+  if(records  == NULL) throw StdException("Records part missing in the XML dataset" + m_name);
 
   // Read the structure
   XMLElement* field = p_msg->GetElementFirstChild(structur);

@@ -154,13 +154,13 @@ public:
   void         SetPrimaryKeyColumn(WordList& p_list);
   // Setting the sequence/generator name to something different than "<tablename>_seq"
   void         SetSequenceName(CString p_sequence);
-  // Set searchable column
-  // void         SetSearchableColumn(CString p_name);
   // Set parameter for a query
   void         SetParameter(SQLParameter p_parameter);
   void         SetParameter(CString p_naam,SQLVariant p_waarde);
   // Set filters for a query
   void         SetFilters(SQLFilterSet* p_filters);
+  // Set columns that can be updated
+  void         SetUpdateColumns(WordList p_list);
   // Set the status to modified/saved
   void         SetStatus(int m_add,int m_delete = 0);
   // Set a field value in the current record
@@ -256,6 +256,7 @@ private:
   ParameterSet m_parameters;
   NamenMap     m_primaryKey;
   SQLFilterSet* m_filters;
+  WordList     m_updateColumns;
 protected:
   int          m_status;
   int          m_current;
@@ -356,6 +357,12 @@ inline int
 SQLDataSet::Current()
 {
   return m_current;
+}
+
+inline void
+SQLDataSet::SetUpdateColumns(WordList p_list)
+{
+  m_updateColumns = p_list;
 }
 
 inline void

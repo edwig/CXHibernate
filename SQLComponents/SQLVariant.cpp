@@ -833,7 +833,7 @@ SQLVariant::SetFromBinaryStreamData(int   p_type
     }
     else
     {
-      throw new StdException("Cannot set variant from binary stream data.");
+      throw StdException("Cannot set variant from binary stream data.");
     }
   }
 }
@@ -2112,7 +2112,7 @@ SQLVariant::GetNumericPrecision()
   {
     return m_data.m_dataNUMERIC.precision;
   }
-  throw new StdException("Cannot get the numeric precision of this datatype");
+  throw StdException("Cannot get the numeric precision of this datatype");
 }
 
 // Only for SQL_NUMERIC: The scale
@@ -2737,7 +2737,7 @@ SQLVariant::ThrowErrorDatatype(int p_getas)
   char* type  = SQLVariant::FindDatatype(m_datatype);
   char* getas = SQLVariant::FindDatatype(p_getas);
   error.Format("Cannot get a %s as a %s datatype.",type,getas);
-  throw new StdException(error);
+  throw StdException(error);
 }
 
 // End of namespace

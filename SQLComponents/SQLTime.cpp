@@ -141,7 +141,7 @@ SQLTime::SetTime()
     // Reset the time to NULL
     SetNull();
     // Then throw the error
-    throw new StdException(error);
+    throw StdException(error);
   }
 }
 
@@ -339,24 +339,24 @@ SQLTime::ParseTime(const CString& p_string)
                     ,&m_theTime.m_second);
     if(n < 2)
     {
-      throw new StdException("Wrong format for conversion to time. Must be in the format: hh:mm[:ss]");
+      throw StdException("Wrong format for conversion to time. Must be in the format: hh:mm[:ss]");
     }
   }
 
   // Check for correct values
   if (m_theTime.m_hour < 0 || m_theTime.m_hour > 23)
   {
-    throw new StdException("Incorrect time format: the value of the hour must be between 0 and 23 (inclusive)");
+    throw StdException("Incorrect time format: the value of the hour must be between 0 and 23 (inclusive)");
   }
 
   if (m_theTime.m_minute < 0 || m_theTime.m_minute > 59)
   {
-    throw new StdException("Incorrect time format: the value of minutes must be between 0 and 59 (inclusive)");
+    throw StdException("Incorrect time format: the value of minutes must be between 0 and 59 (inclusive)");
   }
 
   if (m_theTime.m_second < 0 || m_theTime.m_second > 59)
   {
-    throw new StdException("Incorrect time format: the value of the seconds must be between 0 and 59 (inclusive)");
+    throw StdException("Incorrect time format: the value of the seconds must be between 0 and 59 (inclusive)");
   }
   SetTime();
 }
@@ -596,7 +596,7 @@ SQLTime::operator+(const SQLInterval& p_interval) const
   }
   if(!p_interval.GetIsTimeType())
   {
-    throw new StdException("Cannot add incompatible interval to time type");
+    throw StdException("Cannot add incompatible interval to time type");
   }
   TimeValue value = m_seconds + p_interval.GetSeconds();
   SQLTime time((__int64) value);
@@ -615,7 +615,7 @@ SQLTime::operator-(const SQLInterval& p_interval) const
   }
   if(!p_interval.GetIsTimeType())
   {
-    throw new StdException("Cannot add incompatible interval to time type");
+    throw StdException("Cannot add incompatible interval to time type");
   }
   TimeValue value = m_seconds - p_interval.GetSeconds();
   SQLTime time((__int64)value);

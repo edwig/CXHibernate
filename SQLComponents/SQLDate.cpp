@@ -514,7 +514,7 @@ SQLDate::CalculateDate(const CString& p_datum)
     if(!ParseDate(datum,&jaar,&maand,&dag))
     {
       // Wrong formatted date
-      throw new StdException("Date has a wrong format");
+      throw StdException("Date has a wrong format");
     }
     // Speciaal geval: Pronto doet dit
     // 00-00-00 -> wordt vandaag
@@ -1148,7 +1148,7 @@ SQLDate::operator+(const SQLInterval& p_interval) const
   // Check if interval is the correct type
   if(p_interval.GetIsYearMonthType())
   {
-    throw new StdException("Incompatible interval to add to a date");
+    throw StdException("Incompatible interval to add to a date");
   }
   // Do the calculation
   SQLDate date(*this);
@@ -1181,7 +1181,7 @@ SQLDate::operator-(const SQLInterval& p_interval) const
   // Check if interval is the correct type
   if(p_interval.GetIsYearMonthType())
   {
-    throw new StdException("Incompatible interval to add to a date");
+    throw StdException("Incompatible interval to add to a date");
   }
   // Do the calculation
   SQLDate date(*this);

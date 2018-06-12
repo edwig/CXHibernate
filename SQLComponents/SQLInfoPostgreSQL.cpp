@@ -1901,7 +1901,7 @@ SQLInfoPostgreSQL::DoSQLCall(SQLQuery* p_query,CString& p_schema,CString& p_proc
         SQLVariant* target = p_query->GetParameter(++setIndex);
         if(target == nullptr)
         {
-          throw new StdException("Wrong number of output parameters for procedure call");
+          throw StdException("Wrong number of output parameters for procedure call");
         }
         type = target->GetParameterType();
         dataType = target->GetDataType();

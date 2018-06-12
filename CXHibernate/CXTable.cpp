@@ -414,6 +414,9 @@ CXTable::UpdateObjectInDatabase(SQLDatabase* p_database,CXObject* p_object,int p
   SQLRecord* record = p_object->GetDatabaseRecord();
   GetDataSet();
 
+  WordList list = GetAttributesAsList();
+  m_dataSet->SetUpdateColumns(list);
+
   // Connect our database
   m_dataSet->SetDatabase(p_database);
 
@@ -447,6 +450,20 @@ CXTable::DeleteObjectInDatabase(SQLDatabase* p_database,CXObject* p_object,int p
   return m_dataSet->Synchronize(p_mutation);
 }
 
+// Temporary replace the data set
+SQLDataSet* 
+CXTable::TempReplaceDataSet(SQLDataSet* p_dataset, bool p_destroy /*= false*/)
+{
+  SQLDataSet* temp = m_dataSet;
+  m_dataSet = p_dataset;
+  if(p_destroy)
+  {
+    delete temp;
+    return nullptr;
+  }
+  return temp;
+}
+
 //////////////////////////////////////////////////////////////////////////
 //
 // PRIVATE
@@ -462,7 +479,7 @@ CXTable::GetTableInfo(SQLInfoDB* p_info)
   // Find table info
   if(!p_info->MakeInfoTableTable(tables,errors,m_table.m_schema,m_table.m_table))
   {
-    throw new StdException("Cannot find table: " + GetFullQualifiedTableName() + " : " + errors);
+    throw StdException("Cannot find table: " + GetFullQualifiedTableName() + " : " + errors);
   }
 
   // Some engines get a synonym AND a table/view record
@@ -482,7 +499,7 @@ CXTable::GetColumnInfo(SQLInfoDB* p_info)
   m_columns.clear();
   if(!p_info->MakeInfoTableColumns(m_columns,errors,m_table.m_schema,m_table.m_table))
   {
-    throw new StdException("Cannot find columns for table: " + GetFullQualifiedTableName() + " : " + errors);
+    throw StdException("Cannot find columns for table: " + GetFullQualifiedTableName() + " : " + errors);
   }
 }
 
@@ -496,7 +513,7 @@ CXTable::GetPrimaryKeyInfo(SQLInfoDB* p_info)
   p_info->MakeInfoTablePrimary(m_primary,errors,m_table.m_schema,m_table.m_table);
   if(!errors.IsEmpty())
   {
-    throw new StdException("Cannot find the primary key for table: " + GetFullQualifiedTableName() + " : " + errors);
+    throw StdException("Cannot find the primary key for table: " + GetFullQualifiedTableName() + " : " + errors);
   }
 }
 
@@ -510,7 +527,7 @@ CXTable::GetForeignKeyInfo(SQLInfoDB* p_info)
   p_info->MakeInfoTableForeign(m_foreigns,errors,m_table.m_schema,m_table.m_table);
   if (!errors.IsEmpty())
   {
-    throw new StdException("Cannot find the foreign keys for table: " + GetFullQualifiedTableName() + " : " + errors);
+    throw StdException("Cannot find the foreign keys for table: " + GetFullQualifiedTableName() + " : " + errors);
   }
 }
 
@@ -524,7 +541,7 @@ CXTable::GetIndexInfo(SQLInfoDB* p_info)
   p_info->MakeInfoTableStatistics(m_indices,errors,m_table.m_schema,m_table.m_table,nullptr);
   if (!errors.IsEmpty())
   {
-    throw new StdException("Cannot find indices for table: " + GetFullQualifiedTableName() + " : " + errors);
+    throw StdException("Cannot find indices for table: " + GetFullQualifiedTableName() + " : " + errors);
   }
 }
 
@@ -538,7 +555,7 @@ CXTable::GetPrivilegeInfo(SQLInfoDB* p_info)
   p_info->MakeInfoTablePrivileges(m_privileges,errors,m_table.m_schema,m_table.m_table);
   if(!errors.IsEmpty())
   {
-    throw new StdException("Cannot find the privileges for table: " + GetFullQualifiedTableName() + " : " + errors);
+    throw StdException("Cannot find the privileges for table: " + GetFullQualifiedTableName() + " : " + errors);
   }
 }
 

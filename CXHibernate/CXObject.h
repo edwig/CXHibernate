@@ -73,18 +73,19 @@ public:
   void            ResetPrimaryKey();
 
   // Object status
-  bool         IsTransient();
-  bool         IsPersistent();
-  void         MakeTransient();
+  bool            IsTransient();
+  bool            IsPersistent();
+  void            MakeTransient();
 
   // Getting the class of this object
-  CXClass*     GetClass();
+  CXClass*        GetClass();
 
   // Defined by the underlying database record
-  SQLRecord*   GetDatabaseRecord();
+  SQLRecord*      GetDatabaseRecord();
+  SQLRecord*      TempReplaceRecord(SQLRecord* p_record);
 
   // Getting the complete primary key
-  VariantSet&  GetPrimaryKey();
+  VariantSet&     GetPrimaryKey();
 
 protected:
 
@@ -127,3 +128,23 @@ using CXResultSet = std::vector<CXObject*>;
 
 #include "CXObjectFactory.h"
 
+//////////////////////////////////////////////////////////////////////////
+//
+// Auto class to reset the record in the object
+//
+class AutoObjectRecord
+{
+public:
+  AutoObjectRecord(CXObject* p_object,SQLRecord* p_record)
+  {
+    m_object = p_object;
+    m_record = p_object->TempReplaceRecord(p_record);
+  }
+  ~AutoObjectRecord()
+  {
+    m_object->TempReplaceRecord(m_record);
+  }
+private:
+  CXObject*  m_object;
+  SQLRecord* m_record;
+};

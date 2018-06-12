@@ -173,7 +173,7 @@ CXClass::AddAttribute(CXAttribute* p_attribute)
   {
     CString error;
     error.Format("Duplicate attribute [%s] cannot be added to class: %s",name.GetString(),m_name.GetString());
-    throw new StdException(error);
+    throw StdException(error);
   }
   // Just to be sure
   p_attribute->SetClass(this);
@@ -416,11 +416,11 @@ CXClass::BuildPrimaryKeyFilter(SOAPMessage& p_message,XMLElement* p_entity,Varia
   // Check number of primaries against VariantSet
   if(m_identity.m_attributes.size() != p_primary.size())
   {
-    throw new StdException("Primary key size mismatches the load key");
+    throw StdException("Primary key size mismatches the load key");
   }
   if(p_primary.empty())
   {
-    throw new StdException("Cannot select an object without a filter");
+    throw StdException("Cannot select an object without a filter");
   }
 
   // All filters under this node
@@ -455,7 +455,7 @@ CXClass::BuildFilter(CXAttribMap& p_attributes,VariantSet& p_values,SQLFilterSet
 {
   if(p_attributes.size() != p_values.size())
   {
-    throw new StdException("Attributes / values mismatch in building an SQL Filter set");
+    throw StdException("Attributes / values mismatch in building an SQL Filter set");
   }
   CXAttribMap::iterator att = p_attributes.begin();
   VariantSet::iterator  val = p_values.begin();
@@ -510,7 +510,7 @@ SQLRecord*
 CXClass::SelectObjectInDatabase(SQLDatabase* p_database,VariantSet& p_set)
 {
   // Make sure we have a dataset
-  SQLDataSet* dset = m_table->GetDataSet();
+  SQLDataSet* dset = GetTable()->GetDataSet();
 
   // Connect our database
   dset->SetDatabase(p_database);
@@ -552,7 +552,7 @@ CXClass::InsertObjectInDatabase(SQLDatabase* p_database,CXObject* p_object,int p
       return GetRootClass()->InsertObjectInDatabase(p_database,p_object,p_mutation);
     }
     // No legal table definition found
-    throw new StdException("No table while inserting object into class: " + m_name);
+    throw StdException("No table while inserting object into class: " + m_name);
   }
 
   // Default status for stand alone / single-table classes
@@ -584,22 +584,34 @@ CXClass::UpdateObjectInDatabase(SQLDatabase* p_database,CXObject* p_object,int p
       return GetRootClass()->UpdateObjectInDatabase(p_database,p_object,p_mutation);
     }
     // No legal table definition found
-    throw new StdException("No table while updating an object of class: " + m_name);
+    throw StdException("No table while updating an object of class: " + m_name);
   }
 
   // Default status for stand alone / single-table classes
   bool updated = true;
 
   // Update in superclass tables first (recursively!)
-  if(m_super && ((hibernate.GetStrategy() == MapStrategy::Strategy_sub_table) ||
-                 (hibernate.GetStrategy() == MapStrategy::Strategy_classtable)))
+  if(m_super && (hibernate.GetStrategy() == MapStrategy::Strategy_sub_table))
   {
-    if(hibernate.GetStrategy() == MapStrategy::Strategy_sub_table)
+    // Select from that table first, so we can do a partial update
+    AutoTableDataSet dset(m_super->GetTable(),nullptr);
+    SQLRecord* record = m_super->SelectObjectInDatabase(p_database,p_object->GetPrimaryKey());
+    if(record)
     {
-      // Select from that table first, so we can do a partial update
-      SelectObjectInDatabase(p_database,p_object->GetPrimaryKey());
+      // Tell this record that what mutations we have
+      AutoObjectRecord temprecord(p_object, record);
+      p_object->Serialize(*record,p_mutation);
+      try
+      {
+        updated = m_super->UpdateObjectInDatabase(p_database,p_object,p_mutation);
+      }
+      catch(StdException& ex)
+      {
+        hibernate.Log(LOGLEVEL_ERROR,true,"Error updating in super table: %s. Error: %s"
+                      ,m_super->GetName().GetString()
+                      ,ex.GetErrorMessage().GetString());
+      }
     }
-    updated = m_super->UpdateObjectInDatabase(p_database,p_object,p_mutation);
   }
 
   // If succeeded, update into our table
@@ -621,17 +633,34 @@ CXClass::DeleteObjectInDatabase(SQLDatabase* p_database,CXObject* p_object,int p
       return GetRootClass()->DeleteObjectInDatabase(p_database,p_object,p_mutation);
     }
     // No legal table definition found
-    throw new StdException("No table while deleting an object of class: " + m_name);
+    throw StdException("No table while deleting an object of class: " + m_name);
   }
 
   // Default status for stand alone / single-table classes
   bool deleted = true;
 
   // Delete in superclass tables first (recursively!)
-  if(m_super && ((hibernate.GetStrategy() == MapStrategy::Strategy_sub_table) ||
-                 (hibernate.GetStrategy() == MapStrategy::Strategy_classtable)))
+  if(m_super && (hibernate.GetStrategy() == MapStrategy::Strategy_sub_table))
   {
-    deleted = m_super->DeleteObjectInDatabase(p_database,p_object,p_mutation);
+    // Select from that table first, so we can do a partial update
+    AutoTableDataSet dset(m_super->GetTable(),nullptr);
+    SQLRecord* record = m_super->SelectObjectInDatabase(p_database,p_object->GetPrimaryKey());
+    if(record)
+    {
+      // Tell this record that what mutations we have
+      AutoObjectRecord temprecord(p_object, record);
+      p_object->Serialize(*record,p_mutation);
+      try
+      {
+        deleted = m_super->DeleteObjectInDatabase(p_database,p_object,p_mutation);
+      }
+      catch(StdException& ex)
+      {
+        hibernate.Log(LOGLEVEL_ERROR,true,"Error deleting in super table: %s. Error: %s"
+                      ,m_super->GetName().GetString()
+                      ,ex.GetErrorMessage().GetString());
+      }
+    }
   }
 
   // If succeeded, delete from our table
@@ -670,7 +699,7 @@ CXClass::CreateFilterSet(VariantSet& p_primary,SQLFilterSet&  p_filters)
   }
 
   // Check if number of columns of the primary key matches the number of values
-  WordList list = m_table->GetPrimaryKeyAsList();
+  WordList list = GetTable()->GetPrimaryKeyAsList();
   if (list.size() != p_primary.size())
   {
     return false;

@@ -66,7 +66,7 @@ CXHReadResourceData(int p_resId,CString type)
   {
     CString error;
     error.Format("Cannot find the resource [%d] of type [%s]", p_resId, type);
-    throw new StdException(error);
+    throw StdException(error);
   }
 
   // Load the resource

@@ -1188,7 +1188,7 @@ SQLInfo::GetStatement(bool p_metadataID /*= true*/)
   {
     CString errorText = "Error in ODBC statement: ";
     errorText += m_database->GetErrorString(m_hstmt);
-    throw new StdException(errorText);
+    throw StdException(errorText);
   }
   SQLUINTEGER meta = p_metadataID ? SQL_TRUE : SQL_FALSE;
   // On Various ODBC databases metadata is or is not case-sensitive. To work around
@@ -2592,7 +2592,7 @@ SQLInfo::NativeSQL(HDBC hdbc,CString& sqlCommand)
   }
   if(!hdbc)
   {
-    throw new StdException("NativeSQL called without an opened database!");
+    throw StdException("NativeSQL called without an opened database!");
   }
 
   // Perform the conversion call

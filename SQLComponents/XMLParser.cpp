@@ -302,7 +302,7 @@ XMLParser::SetError(XmlError p_error,const uchar* p_text,bool p_throw /*=true*/)
   // Passing it on
   if(p_throw)
   {
-    throw new StdException((int)p_error);
+    throw StdException((int)p_error);
   }
 }
 

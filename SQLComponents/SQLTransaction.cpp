@@ -101,7 +101,7 @@ SQLTransaction::Start(CString p_name, bool p_startSubtransaction)
   {
     CString message;
     message.Format("Error in start-transaction [%s] : Already started a transaction",m_name.GetString());
-    throw new StdException(message);
+    throw StdException(message);
   }
 
   // Try to start the transaction
@@ -114,7 +114,7 @@ SQLTransaction::Start(CString p_name, bool p_startSubtransaction)
     SQLRETURN ret = SqlSetConnectAttr(m_hdbc,SQL_ATTR_AUTOCOMMIT,(SQLPOINTER)SQL_AUTOCOMMIT_OFF,SQL_IS_UINTEGER);
     if(!SQL_SUCCEEDED(ret))
     {
-      throw new StdException("Error setting autocommit mode to 'off', starting transaction: " + m_name);
+      throw StdException("Error setting autocommit mode to 'off', starting transaction: " + m_name);
     }
   }
   // We are alive!
@@ -130,7 +130,7 @@ SQLTransaction::Commit()
   {
     CString message;
     message.Format("Error in commit of [%s] : transaction object is not opened",m_name.GetString());
-    throw new StdException(message);
+    throw StdException(message);
   }
 
   // We are no longer started/active, so we do nothing else after destruction
@@ -151,7 +151,7 @@ SQLTransaction::Commit()
     if(!SQL_SUCCEEDED(ret))
     {
       // Throw something, so we reach the catch block
-      throw new StdException("Error commiting transaction: " + m_name);
+      throw StdException("Error commiting transaction: " + m_name);
     }
     ret = SqlSetConnectAttr(m_hdbc,SQL_ATTR_AUTOCOMMIT,(SQLPOINTER)SQL_AUTOCOMMIT_ON,SQL_IS_UINTEGER);
     if(!SQL_SUCCEEDED(ret))
@@ -189,7 +189,7 @@ SQLTransaction::Rollback()
     if(!SQL_SUCCEEDED(ret))
     {
       // Throw something, so we reach the catch block
-      throw new StdException("Error commiting transaction: " + m_name);
+      throw StdException("Error commiting transaction: " + m_name);
     }
     ret = SqlSetConnectAttr(m_hdbc,SQL_ATTR_AUTOCOMMIT,(SQLPOINTER)SQL_AUTOCOMMIT_ON,SQL_IS_UINTEGER);
     if(!SQL_SUCCEEDED(ret))

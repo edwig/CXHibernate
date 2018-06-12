@@ -63,7 +63,7 @@ namespace SQLComponents
   {
     if(g_SQLComponentsInitialized == false)
     {
-      throw new StdException("Call InitSQLComponents() before you use the 'SQLComponents' library.");
+      throw StdException("Call InitSQLComponents() before you use the 'SQLComponents' library.");
     }
   }
 }

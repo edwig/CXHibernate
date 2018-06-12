@@ -198,7 +198,7 @@ SQLTimestamp::RecalculateValue()
     SetNull();
     CString error;
     error.Format("Day of the month must be between 1 and %d inclusive.",daysInMonth);
-    throw new StdException(error);
+    throw StdException(error);
   }
   // Calculate the Astronomical Julian Day Number (JD)
   // Method P.D-Smith: Practical Astronomy
@@ -285,32 +285,32 @@ SQLTimestamp::Validate()
   if (m_timestamp.m_year <= 0 || m_timestamp.m_year >= 10000)
   {
     SetNull();
-    throw new StdException("Year must be between 1 and 9999 inclusive.");
+    throw StdException("Year must be between 1 and 9999 inclusive.");
   }
   if (m_timestamp.m_month <= 0 || m_timestamp.m_month >= 13)
   {
     SetNull();
-    throw new StdException("Month must be between 1 and 12 inclusive.");
+    throw StdException("Month must be between 1 and 12 inclusive.");
   }
   if (m_timestamp.m_hour < 0 || m_timestamp.m_hour >= 24)
   {
     SetNull();
-    throw new StdException("Hour must be between 0 and 23 inclusive.");
+    throw StdException("Hour must be between 0 and 23 inclusive.");
   }
   if (m_timestamp.m_minute < 0 || m_timestamp.m_minute >= 60)
   {
     SetNull();
-    throw new StdException("Minute must be between 0 and 59 inclusive.");
+    throw StdException("Minute must be between 0 and 59 inclusive.");
   }
   if (m_timestamp.m_second < 0 || m_timestamp.m_second >= 62)
   {
     SetNull();
-    throw new StdException("Number of seconds must be between 0 and 61 inclusive.");
+    throw StdException("Number of seconds must be between 0 and 61 inclusive.");
   }
   if (m_fraction < 0 || m_fraction > NANOSECONDS_PER_SEC)
   {
     SetNull();
-    throw new StdException("Fraction of seconds must be between 0 and 999,999,999");
+    throw StdException("Fraction of seconds must be between 0 and 999,999,999");
   }
 }
 
@@ -526,7 +526,7 @@ SQLTimestamp::AddYears(int p_number) const
         return SQLTimestamp(Year() + p_number, Month(), Day() - 1, Hour(), Minute(), Second());
       }
       // Throw on our error (something else went wrong)
-      throw new StdException(er.GetErrorMessage());
+      throw StdException(er.GetErrorMessage());
     }
   }
   return *this;
@@ -1111,7 +1111,7 @@ SQLTimestamp::operator+(const SQLInterval& p_interval) const
   // Check on correct ordinal interval type
   if(p_interval.GetIsYearMonthType())
   {
-    throw new StdException("Cannot add a year-month interval to a timestamp");
+    throw StdException("Cannot add a year-month interval to a timestamp");
   }
   // Do the calculation
   int sign = p_interval.GetIsNegative() ? -1 : 1;
@@ -1133,7 +1133,7 @@ SQLTimestamp::operator-(const SQLInterval& p_interval) const
   // Check on correct ordinal interval type
   if(p_interval.GetIsYearMonthType())
   {
-    throw new StdException("Cannot subtract a year-month interval from a timestamp");
+    throw StdException("Cannot subtract a year-month interval from a timestamp");
   }
   // Do the calculation
   int sign = p_interval.GetIsNegative() ? -1 : 1;

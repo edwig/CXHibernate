@@ -1625,7 +1625,7 @@ SQLVariant::operator%(SQLVariant& p_right)
   // Check whether there is something to modulo by!
   if(p_right.IsEmpty())
   {
-    throw new StdException("Cannot do a modulo by zero/empty");
+    throw StdException("Cannot do a modulo by zero/empty");
   }
 
   // Find our comparison function
@@ -1640,7 +1640,7 @@ SQLVariant::operator%(SQLVariant& p_right)
   CString rightType = FindDatatype(p_right.m_datatype);
   CString error;
   error.Format("Cannot do the modulo operator on (%s % %s)",leftType.GetString(),rightType.GetString());
-  throw new StdException(error);
+  throw StdException(error);
 }
 
 // End of namespace

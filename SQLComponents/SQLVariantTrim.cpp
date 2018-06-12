@@ -51,7 +51,7 @@ void SQL_ThrowErrorTruncate(int p_from,int p_to)
   char* from = SQLVariant::FindDatatype(p_from);
   char* to   = SQLVariant::FindDatatype(p_to);
   error.Format("Cannot truncate %s to %s",from,to);
-  throw new StdException(error);
+  throw StdException(error);
 }
 
 //////////////////////////////////////////////////////////////////////////

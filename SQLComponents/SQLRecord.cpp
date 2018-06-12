@@ -572,7 +572,7 @@ SQLRecord::XMLLoad(XMLMessage* p_msg,XMLElement* p_base)
     int id   = p_msg->GetAttributeInteger(field,idName);
     if(id != ind)
     {
-      throw new StdException("Invalid field sequence in in record of: " + m_dataSet->GetName());
+      throw StdException("Invalid field sequence in in record of: " + m_dataSet->GetName());
     }
     SQLVariant value;
     value.SetData(type,field->GetValue());

@@ -202,6 +202,17 @@ CXObject::GetDatabaseRecord()
   return m_record;
 }
 
+// TEMPORARY replace our database record
+// E.G. For updating a record in a different table
+// ALWAYS CALL TWICE TO RESTORE THE ORIGINAL RECORD!!!
+SQLRecord*
+CXObject::TempReplaceRecord(SQLRecord* p_record)
+{
+  SQLRecord* old = m_record;
+  m_record = p_record;
+  return old;
+}
+
 void
 CXObject::MakeTransient()
 {
@@ -238,7 +249,10 @@ CXObject::PostSerialize(SOAPMessage& p_message,XMLElement* p_entity)
 void
 CXObject::PostSerialize(SQLRecord& p_record)
 {
-  m_record = &p_record;
+  if(m_record == nullptr)
+  {
+    m_record = &p_record;
+  }
   FillPrimaryKey(p_record);
 }
 
@@ -257,7 +271,10 @@ CXObject::PostDeSerialize(SOAPMessage& p_msg,XMLElement* p_entity)
 void
 CXObject::PreDeSerialize(SQLRecord& p_record)
 {
-  m_record = &p_record;
+  if(m_record == nullptr)
+  {
+    m_record = &p_record;
+  }
   FillPrimaryKey(p_record);
 }
 

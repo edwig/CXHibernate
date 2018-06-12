@@ -331,7 +331,7 @@ CXSession::LoadConfiguration(XMLMessage& p_config)
     else
     {
       delete newclass;
-      throw new StdException("Cannot load class: " + name);
+      throw StdException("Cannot load class: " + name);
     }
     // Find next class
     theclass = p_config.GetElementSibling(theclass);
@@ -408,7 +408,7 @@ CXSession::CommitTransaction()
   }
   else
   {
-    throw new StdException("Not in transaction at Commit()");
+    throw StdException("Not in transaction at Commit()");
   }
   hibernate.Log(CXH_LOG_ACTIONS,true,"Commit of transaction [%d] for session [%s] ",m_mutation,m_sessionKey);
 }
@@ -419,7 +419,7 @@ CXSession::RollbackTransaction()
   // See if we have a transaction
   if(m_transaction == nullptr)
   {
-    throw new StdException("Not in transaction at Rollback()");
+    throw StdException("Not in transaction at Rollback()");
   }
 
   m_transaction->Rollback();
@@ -846,7 +846,7 @@ CXSession::FollowAssociation(CString p_fromClass,CString p_toClass,VariantSet& p
 
   if(assoc == nullptr)
   {
-    throw new StdException("Association not found to class: " + p_toClass);
+    throw StdException("Association not found to class: " + p_toClass);
   }
   switch(assoc->m_assocType)
   {
@@ -858,10 +858,10 @@ CXSession::FollowAssociation(CString p_fromClass,CString p_toClass,VariantSet& p
                             return set;
     case ASSOC_ONE_TO_MANY: fromClass->BuildFilter(assoc->m_attributes,p_value,filters);
                             return Load(p_toClass,filters);
-    case ASSOC_MANY_TO_MANY:throw new StdException("Association type many-to-many not yet implemented!");
+    case ASSOC_MANY_TO_MANY:throw StdException("Association type many-to-many not yet implemented!");
     default:                break;
   }
-  throw new StdException("Association type not found for association: " + assoc->m_constraintName);
+  throw StdException("Association type not found for association: " + assoc->m_constraintName);
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -1005,7 +1005,7 @@ CXSession::AddObjectInCache(CXObject* p_object, VariantSet& p_primary)
     // Object already in the cache. Do not cache again!
     return false;
   }
-  throw new StdException("Cache not found for class: " + className);
+  throw StdException("Cache not found for class: " + className);
 }
 
 // And remove again from the cache
@@ -1058,7 +1058,6 @@ CXSession::FindObjectInDatabase(CString p_className,VariantSet& p_primary)
 {
   // Find the class of the object
   CXClass* theClass = FindClass(p_className);
-
 
   SQLRecord* record = theClass->SelectObjectInDatabase(GetDatabase(),p_primary);
   if(record)
@@ -1142,7 +1141,7 @@ CXSession::FindObjectOnInternet(CString p_className,VariantSet& p_primary)
                 ,msg.GetFault());
   GetHTTPClient()->GetError(&httpError);
   error += httpError;
-  throw new StdException(error);
+  throw StdException(error);
 }
 
 CXObject*
@@ -1253,7 +1252,7 @@ CXSession::SelectObjectsFromDatabase(CString p_className,SQLFilterSet& p_filters
 CXResultSet
 CXSession::SelectObjectsFromFilestore(CString p_className,SQLFilterSet& p_filters)
 {
-  throw new StdException("Cannot select multiple objects from the filestore");
+  throw StdException("Cannot select multiple objects from the filestore");
 }
 
 CXResultSet
@@ -1313,7 +1312,7 @@ CXSession::SelectObjectsFromInternet(CString p_className,SQLFilterSet& p_filters
                 ,msg.GetFault());
   GetHTTPClient()->GetError(&httpError);
   error += httpError;
-  throw new StdException(error);
+  throw StdException(error);
 }
 
 bool
@@ -1322,7 +1321,7 @@ CXSession::UpdateObjectInDatabase(CXObject* p_object)
   CXClass* theClass = p_object->GetClass();
   if(theClass == nullptr)
   {
-    throw new StdException("Missing class on UPDATE of an object. Did you tinkle with the PrimaryKey?");
+    throw StdException("Missing class on UPDATE of an object. Did you tinkle with the PrimaryKey?");
   }
 
   // New mutation ID for this update action
@@ -1368,7 +1367,7 @@ CXSession::UpdateObjectInInternet(CXObject* p_object)
                ,msg.GetFault());
   GetHTTPClient()->GetError(&httpError);
   error += httpError;
-  throw new StdException(error);
+  throw StdException(error);
 }
 
 // Insert a new object in the database
@@ -1379,7 +1378,7 @@ CXSession::InsertObjectInDatabase(CXObject* p_object)
   CXClass* theClass = p_object->GetClass();
   if(theClass == nullptr)
   {
-    throw new StdException("Object without a connected class. Did you call CXSession::CreateObject(<classname>)??");
+    throw StdException("Object without a connected class. Did you call CXSession::CreateObject(<classname>)??");
   }
 
   // New mutation ID for this update action
@@ -1429,7 +1428,7 @@ CXSession::InsertObjectInInternet(CXObject* p_object)
                ,msg.GetFault());
   GetHTTPClient()->GetError(&httpError);
   error += httpError;
-  throw new StdException(error);
+  throw StdException(error);
 }
 
 bool
@@ -1439,7 +1438,7 @@ CXSession::DeleteObjectInDatabase(CXObject* p_object)
   CXClass* theClass = p_object->GetClass();
   if(theClass == nullptr)
   {
-    throw new StdException("No class definition while deleting an object");
+    throw StdException("No class definition while deleting an object");
   }
   // If object was **NOT** in the database, removal did work out OK!
   if(p_object->IsPersistent() == false)
@@ -1592,7 +1591,7 @@ CXSession::DeleteObjectInInternet(CXObject* p_object)
               ,msg.GetFault());
   GetHTTPClient()->GetError(&httpError);
   error += httpError;
-  throw new StdException(error);
+  throw StdException(error);
 }
 
 //////////////////////////////////////////////////////////////////////////  

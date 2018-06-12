@@ -216,10 +216,15 @@ SQLDataSetXLS::Commit()
         return true;
       }
     }
-    catch(CException* er)
+    catch(StdException& er)
     {
-      m_lastError = MessageFromException(er);
-      er->Delete();
+      m_lastError = er.GetErrorMessage();
+    }
+    catch(CException& er)
+    {
+      char buffer[_MAX_PATH];
+      er.GetErrorMessage(buffer,_MAX_PATH);
+      m_lastError = buffer;
     }
     m_lastError += "Error writing file\n";
     return false;

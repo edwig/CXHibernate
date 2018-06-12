@@ -144,7 +144,7 @@ SQLQuery::Close()
     if(!SQL_SUCCEEDED(m_retCode))
     {
       GetLastError("Freeing the cursor: ");
-      throw new StdException(m_lastError);
+      throw StdException(m_lastError);
     }
   }
   // Clear number map
@@ -195,27 +195,27 @@ SQLQuery::Open()
     if(!SQL_SUCCEEDED(m_retCode))
     {
       GetLastError("Getting statement handle: ");
-      throw new StdException(m_lastError);
+      throw StdException(m_lastError);
     }
   }
   else
   {
     if(m_connection == SQL_NULL_HANDLE)
     {
-      throw new StdException("No database handle. Are you logged in to a database?");
+      throw StdException("No database handle. Are you logged in to a database?");
     }
     // Create the statement handle
     SQLRETURN res = SqlAllocHandle(SQL_HANDLE_STMT,m_connection,&m_hstmt);
     if(!SQL_SUCCEEDED(res))
     {
       GetLastError("Error creating a statement handle: ");
-      throw new StdException(m_lastError);
+      throw StdException(m_lastError);
     }
   }
 
   if(m_hstmt == NULL)
   {
-    throw new StdException("No database connection at SQLQUery::Open function");
+    throw StdException("No database connection at SQLQUery::Open function");
   }
   // DISABLED!!
   // Without escape scanning other things will go wrong.
@@ -226,7 +226,7 @@ SQLQuery::Open()
   //   if (!SQL_SUCCEEDED(m_retCode))
   //   {
   //     GetLastError("Cannot set NOSCAN attribute: ");
-  //     throw new StdException(m_lastError);
+  //     throw StdException(m_lastError);
   //   }
 
   // Change cursor type to the cheapest qua performance
@@ -234,7 +234,7 @@ SQLQuery::Open()
   if(!SQL_SUCCEEDED(m_retCode))
   {
     GetLastError("Cannot set CURSOR-FORWARD-ONLY attribute: ");
-    throw new StdException(m_lastError);
+    throw StdException(m_lastError);
   }
 
   // Set max-rows if our database DOES support it (Oracle!)
@@ -244,7 +244,7 @@ SQLQuery::Open()
     if(!SQL_SUCCEEDED(m_retCode))
     {
       GetLastError("Cannot set MAX_ROWS attribute: ");
-      throw new StdException(m_lastError);
+      throw StdException(m_lastError);
     }
   }
 
@@ -255,7 +255,7 @@ SQLQuery::Open()
     if(!SQL_SUCCEEDED(m_retCode))
     {
       GetLastError("Cannot set CONCURRENCY attribute: ");
-      throw new StdException(m_lastError);
+      throw StdException(m_lastError);
     }
   }
 
@@ -563,7 +563,7 @@ SQLQuery::DoSQLStatement(const CString& p_statement)
   if(p_statement.IsEmpty())
   {
     m_lastError = "Error in SQL statement: Empty statement.";
-    throw new StdException(m_lastError);
+    throw StdException(m_lastError);
   }
   // Begin of query clock
   LARGE_INTEGER start;
@@ -631,7 +631,7 @@ SQLQuery::DoSQLStatement(const CString& p_statement)
       CString fout;
       fout.Format("Error [%d] in getting the number of columns from a query: ",m_retCode);
       GetLastError(fout);
-      throw new StdException(m_lastError);
+      throw StdException(m_lastError);
     }
     FetchCursorName();
   }
@@ -640,7 +640,7 @@ SQLQuery::DoSQLStatement(const CString& p_statement)
     // rcExec == SQL_ERROR
     // rcExec == SQL_INVALID_HANDLE
     GetLastError("Error in SQL statement: ");
-    throw new StdException(m_lastError);
+    throw StdException(m_lastError);
   }
   else
   {
@@ -727,7 +727,7 @@ SQLQuery::DoSQLStatementNonQuery(const CString& p_statement)
 {
   if(p_statement.Left(6).CompareNoCase("select") == 0)
   {
-    throw new StdException("SQL Non-query cannot contain a 'SELECT' statement");
+    throw StdException("SQL Non-query cannot contain a 'SELECT' statement");
   }
   DoSQLStatement(p_statement);
   return GetNumberOfRows();
@@ -779,7 +779,7 @@ SQLQuery::DoSQLPrepare(const CString& p_statement)
   if(p_statement.IsEmpty())
   {
     m_lastError = "Error in SQL statement: Empty statement.";
-    throw new StdException(m_lastError);
+    throw StdException(m_lastError);
   }
   // close last m_hstmt if still open
   Close();
@@ -834,7 +834,7 @@ SQLQuery::DoSQLPrepare(const CString& p_statement)
     // rcExec == SQL_ERROR
     // rcExec == SQL_INVALID_HANDLE
     GetLastError("Error in SQL statement: ");
-    throw new StdException(m_lastError);
+    throw StdException(m_lastError);
   }
 }
 
@@ -846,7 +846,7 @@ SQLQuery::DoSQLExecute(bool p_rebind /*=false*/)
   if(!m_prepareDone)
   {
     m_lastError = "Internal error: SQLExecute without SQLPrepare.";
-    throw new StdException(m_lastError);
+    throw StdException(m_lastError);
   }
   
   if(!m_boundDone || p_rebind)
@@ -880,7 +880,7 @@ SQLQuery::DoSQLExecute(bool p_rebind /*=false*/)
       CString fout;
       fout.Format("Error [%d] in determining the number of columns in the query: ",m_retCode);
       GetLastError(fout);
-      throw new StdException(m_lastError);
+      throw StdException(m_lastError);
     }
     FetchCursorName();
   }
@@ -889,7 +889,7 @@ SQLQuery::DoSQLExecute(bool p_rebind /*=false*/)
     // rcExec == SQL_ERROR
     // rcExec == SQL_INVALID_HANDLE
     GetLastError("Error in SQL statement: ");
-    throw new StdException(m_lastError);
+    throw StdException(m_lastError);
   }
   else
   {
@@ -968,7 +968,7 @@ SQLQuery::BindParameters()
     {
       GetLastError("Cannot bind parameter. Error: ");
       m_lastError.AppendFormat(" Parameter: %d",icol);
-      throw new StdException(m_lastError);
+      throw StdException(m_lastError);
     }
 
     // Bind NUMERIC/DECIMAL precision and scale
@@ -1068,7 +1068,7 @@ SQLQuery::BindColumns()
       CString fout;
       fout.Format("Error [%d] at the determining of the attributes of column [%d] : ",m_retCode,icol);
       GetLastError(fout);
-      throw new StdException(m_lastError);
+      throw StdException(m_lastError);
     }
 
     int type = SQLType2CType(dataType);
@@ -1159,7 +1159,7 @@ SQLQuery::BindColumns()
       {
         GetLastError("Cannot bind to column. Error: ");
         m_lastError.AppendFormat(" Column number: %d",icol);
-        throw new StdException(m_lastError);
+        throw StdException(m_lastError);
       }
 
       // Now do the SQL_NUMERIC precision/scale binding
@@ -1223,7 +1223,7 @@ SQLQuery::BindColumnNumeric(SQLSMALLINT p_column,SQLVariant* p_var,int p_type)
   }
   CString error;
   error.Format("Cannot bind NUMERIC attributes PRECISION/SCALE for column: %d",p_column);
-  throw new StdException(error);
+  throw StdException(error);
 }
 
 int 
@@ -1375,7 +1375,7 @@ SQLQuery::GetRecord()
     return false;
   }
   GetLastError("Error in fetch-next-record: ");
-  throw new StdException(m_lastError);
+  throw StdException(m_lastError);
 }
 
 // Retrieve the piece-by-piece data at exec time of the SQLFetch
@@ -1467,7 +1467,7 @@ SQLQuery::DoCancelQuery()
     if(SQL_SUCCEEDED(m_retCode))
     {
       GetLastError("Parallel cancel SQL statement: ");
-      throw new StdException(m_lastError);
+      throw StdException(m_lastError);
     }
   }
 }
@@ -1698,7 +1698,7 @@ SQLQuery::GetColumnLength(int p_column)
     if (!SQL_SUCCEEDED(m_retCode))
     {
       GetLastError();
-      throw new StdException(m_lastError);
+      throw StdException(m_lastError);
     }
   }
   return (int)integerValue;
@@ -1724,7 +1724,7 @@ SQLQuery::GetColumnDisplaySize(int p_column)
     if (!SQL_SUCCEEDED(m_retCode))
     {
       GetLastError();
-      throw new StdException(m_lastError);
+      throw StdException(m_lastError);
     }
   }
   return (int)integerValue;
@@ -1764,7 +1764,7 @@ SQLQuery::DescribeColumn(int           p_col
   if(!SQL_SUCCEEDED(m_retCode))
   {
     GetLastError();
-    throw new StdException(m_lastError);
+    throw StdException(m_lastError);
   }
   // Explicit 2.x call (SQLColAttributes instead of SQLColAttribute)
   m_retCode = SqlColAttributes(m_hstmt
@@ -1777,7 +1777,7 @@ SQLQuery::DescribeColumn(int           p_col
   if(!SQL_SUCCEEDED(m_retCode))
   {
     GetLastError();
-    throw new StdException(m_lastError);
+    throw StdException(m_lastError);
   }
   // Explicit 2.x call (SQLColAttributes instead of SQLColAttribute)
   m_retCode = SqlColAttributes(m_hstmt
@@ -1790,7 +1790,7 @@ SQLQuery::DescribeColumn(int           p_col
   if(!SQL_SUCCEEDED(m_retCode))
   {
     GetLastError();
-    throw new StdException(m_lastError);
+    throw StdException(m_lastError);
   }
   // Rebinding
   sqlType = SQLType2CType(sqlType);
@@ -1847,7 +1847,7 @@ SQLQuery::DoSQLCall(CString p_schema,CString p_procedure,bool p_hasReturn /*=fal
   // Check we have a database object and not a isolated HDBC
   if(m_database == nullptr)
   {
-    throw new StdException("Cannot do a function/procedure call without a database object");
+    throw StdException("Cannot do a function/procedure call without a database object");
   }
 
   // Make sure we have a minimal output parameter (SQL_SLONG !!)

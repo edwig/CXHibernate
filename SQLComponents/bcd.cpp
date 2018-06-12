@@ -829,7 +829,7 @@ bcd::SquareRoot() const
   number = *this; // Number to get the root from
   if(number.GetSign() == -1)
   {
-    throw new StdException("Cannot get a square root from a negative number.");
+    throw StdException("Cannot get a square root from a negative number.");
   }
   // Reduction by dividing through square of a whole number
   // for speed a power of two
@@ -923,7 +923,7 @@ bcd::Log() const
 
   if(*this <= bcd(0L)) 
   { 
-    throw new StdException("Cannot calculate a natural logarithme of a number <= 0");
+    throw StdException("Cannot calculate a natural logarithme of a number <= 0");
   }
   // Bring number under 10 and save exponent
   number = *this;
@@ -1047,7 +1047,7 @@ bcd::Log10() const
 
   if(GetSign() <= 0) 
   { 
-    throw new StdException("Cannot get a 10-logarithme of a number <= 0");
+    throw StdException("Cannot get a 10-logarithme of a number <= 0");
   }
   res = *this;
   res = res.Log() / LN10();
@@ -1269,7 +1269,7 @@ bcd::Tangent() const
   bcd oneandhalf = three * halfpi;
   if( number == halfpi || number == oneandhalf)
   { 
-    throw new StdException("Cannot calculate a tangent from a angle of 1/2 pi or 3/2 pi");
+    throw StdException("Cannot calculate a tangent from a angle of 1/2 pi or 3/2 pi");
   }
   // Sin(x)/Sqrt(1-Sin(x)^2)
   result     = number.Sine(); 
@@ -1304,7 +1304,7 @@ bcd::ArcSine() const
   number = *this;
   if(number > c1 || number < -c1)
   {
-    throw new StdException("Cannot calculate an arcsine from a number > 1 or < -1");
+    throw StdException("Cannot calculate an arcsine from a number > 1 or < -1");
   }
 
   // Save the sign
@@ -1546,14 +1546,14 @@ bcd::AsShort() const
   {
     if(result > SHORT_MAX)
     {
-      throw new StdException("BCD: Overflow in conversion to short number.");
+      throw StdException("BCD: Overflow in conversion to short number.");
     }
   }
   else
   {
     if(result < SHORT_MIN)
     {
-      throw new StdException("BCD: Underflow in conversion to short number.");
+      throw StdException("BCD: Underflow in conversion to short number.");
     }
   }
   return (short) result;
@@ -1567,7 +1567,7 @@ bcd::AsUShort() const
   // Check for unsigned
   if(m_sign == Negative)
   {
-    throw new StdException("BCD: Cannot convert a negative number to an unsigned short number.");
+    throw StdException("BCD: Cannot convert a negative number to an unsigned short number.");
   }
   // Quick check for zero
   if(m_exponent < 0)
@@ -1588,7 +1588,7 @@ bcd::AsUShort() const
   // Take care of overflow
   if(result > USHORT_MAX)
   {
-    throw new StdException("BCD: Overflow in conversion to unsigned short number.");
+    throw StdException("BCD: Overflow in conversion to unsigned short number.");
   }
 
   return (short)result;
@@ -1620,14 +1620,14 @@ bcd::AsLong() const
   {
     if(result > LONG_MAX)
     {
-      throw new StdException("BCD: Overflow in conversion to integer number.");
+      throw StdException("BCD: Overflow in conversion to integer number.");
     }
   }
   else
   {
     if(result < LONG_MIN)
     {
-      throw new StdException("BCD: Underflow in conversion to integer number.");
+      throw StdException("BCD: Underflow in conversion to integer number.");
     }
     result = -result;
   }
@@ -1642,7 +1642,7 @@ bcd::AsULong() const
   // Check for unsigned
   if(m_sign == Negative)
   {
-    throw new StdException("BCD: Cannot convert a negative number to an unsigned long.");
+    throw StdException("BCD: Cannot convert a negative number to an unsigned long.");
   }
 
   // Quick optimization for really small numbers
@@ -1664,7 +1664,7 @@ bcd::AsULong() const
   // Take care of overflow
   if(result > ULONG_MAX)
   {
-    throw new StdException("BCD: Overflow in conversion to unsigned long integer.");
+    throw StdException("BCD: Overflow in conversion to unsigned long integer.");
   }
   return (long)result;
 }
@@ -1703,7 +1703,7 @@ bcd::AsInt64() const
   // Take care of overflow
   if(result1 > (LLONG_MAX / base2))
   {
-    throw new StdException("BCD: Overflow in conversion to 64 bits integer number.");
+    throw StdException("BCD: Overflow in conversion to 64 bits integer number.");
   }
   result2 += (result1 * base2);
 
@@ -1722,7 +1722,7 @@ bcd::AsUInt64() const
   // Check for negative
   if(m_sign == Negative)
   {
-    throw new StdException("BCD: Cannot convert a negative number to an unsigned 64 bits integer");
+    throw StdException("BCD: Cannot convert a negative number to an unsigned 64 bits integer");
   }
   // Quick optimization for really small numbers
   if(m_exponent < 0)
@@ -1752,7 +1752,7 @@ bcd::AsUInt64() const
   // Take care of overflow
   if(result1 > (ULLONG_MAX / base2))
   {
-    throw new StdException("BCD: Overflow in conversion to 64 bits unsigned integer number.");
+    throw StdException("BCD: Overflow in conversion to 64 bits unsigned integer number.");
   }
   result2 += (result1 * base2);
 
@@ -1896,7 +1896,7 @@ bcd::AsNumeric(SQL_NUMERIC_STRUCT* p_numeric) const
   // Check for overflow. Cannot be greater than 9.999999999E+37
   if(m_exponent >= SQLNUM_MAX_PREC)
   {
-    throw new StdException("Overflow in converting bcd to SQL NUMERIC/DECIMAL");
+    throw StdException("Overflow in converting bcd to SQL NUMERIC/DECIMAL");
   }
 
   // Calculate the scale of the number
@@ -2107,9 +2107,9 @@ bcd::GetFitsInLong() const
   {
     AsLong();
   }
-  catch(CException* e)
+  catch(StdException& e)
   {
-    e->Delete();
+    UNREFERENCED_PARAMETER(e);
     return false;
   }
   return true;
@@ -2125,9 +2125,9 @@ bcd::GetFitsInInt64() const
   {
     AsInt64();
   }
-  catch(CException* e)
+  catch(StdException& e)
   {
-    e->Delete();
+    UNREFERENCED_PARAMETER(e);
     return false;
   }
   return true;
@@ -2473,7 +2473,7 @@ bcd::SetValueString(const CString& p_string,bool /*p_fromDB*/)
       default:  // Now must be a digit. No other chars allowed
                 if(isdigit(c) == false)
                 {
-                  throw new StdException("BCD: Conversion from string. Bad format in decimal number");
+                  throw StdException("BCD: Conversion from string. Bad format in decimal number");
                 }
                 break;
     }
@@ -2919,7 +2919,7 @@ bcd::Div(const bcd& p_number) const
   // If divisor is zero -> ERROR
   if (p_number.IsNull())
   {
-    throw new StdException("BCD: Division by zero.");
+    throw StdException("BCD: Division by zero.");
   }
   // Shortcut: result is zero if this is zero
   if(IsNull())

@@ -103,6 +103,9 @@ public:
   bool      UpdateObjectInDatabase(SQLDatabase* p_database,CXObject* p_object,int p_mutation);
   bool      DeleteObjectInDatabase(SQLDatabase* p_database,CXObject* p_object,int p_mutation);
 
+  // Temporary replace the data set
+  SQLDataSet* TempReplaceDataSet(SQLDataSet* p_dataset,bool p_destroy = false);
+
 private:
   void      SerializeDiscriminator(CXObject* p_object,SQLRecord* p_record,int p_mutation);
 
@@ -138,4 +141,28 @@ private:
   MPrivilegeMap m_privileges;
   // Standard data set in a master connection
   SQLDataSet*   m_dataSet { nullptr };
+};
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Auto class to temporary replace the dataset
+//
+
+class AutoTableDataSet
+{
+public:
+  AutoTableDataSet(CXTable* p_table,SQLDataSet* p_set)
+  {
+    m_table    = p_table;
+    m_original = p_table->TempReplaceDataSet(p_set);
+  }
+  ~AutoTableDataSet()
+  {
+    m_table->TempReplaceDataSet(m_original,true);
+  }
+
+private:
+  CXTable*    m_table;
+  SQLDataSet* m_original;
 };

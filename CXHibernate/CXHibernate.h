@@ -30,8 +30,8 @@
 #include <vector>
 #include <map>
 
-#define HIBERNATE_VERSION "0.8.0"
-#define HIBERNATE_DATE    "06-06-2018"
+#define HIBERNATE_VERSION "0.9.0"
+#define HIBERNATE_DATE    "13-06-2018"
 
 #define CXH_LOG_NOTHING       0   // Logging is OFF
 #define CXH_LOG_ERRORS        1   // Only error logging
@@ -45,7 +45,7 @@ typedef enum _map_strategy
 {
    Strategy_standalone   // No sub/super classes. 1 table = 1 class
   ,Strategy_one_table    // 1 table for super    + all sub-classes
-  ,Strategy_sub_table   // 1 table for super    + 1 table per sub-class
+  ,Strategy_sub_table    // 1 table for super    + 1 table per sub-class
   ,Strategy_classtable   // 1 table for subclass + all its supers
 }
 MapStrategy;

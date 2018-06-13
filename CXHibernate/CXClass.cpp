@@ -90,6 +90,13 @@ CXClass::~CXClass()
   {
     delete index;
   }
+
+  // Destroy our dataset
+  if(m_dataSet)
+  {
+    delete m_dataSet;
+    m_dataSet = nullptr;
+  }
 }
 
 // The name of the game
@@ -162,6 +169,18 @@ bool
 CXClass::GetIsRootClass()
 {
   return m_super == nullptr;
+}
+
+SQLDataSet*
+CXClass::GetDataSet()
+{
+  if (m_dataSet == nullptr)
+  {
+    m_dataSet = new SQLDataSet();
+
+    InitDataSet(m_dataSet);
+  }
+  return m_dataSet;
 }
 
 // Add an attribute to the class
@@ -263,7 +282,6 @@ CXClass::FindAllDBSAttributes(bool p_superIncluded)
   return list;
 }
 
-
 // Find the generator (if any)
 CXAttribute* 
 CXClass::FindGenerator()
@@ -352,7 +370,6 @@ CXClass::SaveMetaInfo(XMLMessage& p_message,XMLElement* p_elem)
   return true;
 }
 
-
 // DeSerialize from a XML configuration file
 bool
 CXClass::LoadMetaInfo(CXSession* p_session,XMLMessage& p_message,XMLElement* p_elem)
@@ -382,8 +399,8 @@ CXClass::LoadMetaInfo(CXSession* p_session,XMLMessage& p_message,XMLElement* p_e
 }
 
 // Build default SELECT query
-bool
-CXClass::BuildDefaultSelectQuery(SQLInfoDB* p_info)
+void
+CXClass::BuildDefaultSelectQuery(SQLDataSet* p_dataset,SQLInfoDB* p_info)
 {
   CString query;
 
@@ -397,16 +414,7 @@ CXClass::BuildDefaultSelectQuery(SQLInfoDB* p_info)
   }
 
   // Set query on the dataset
-  if(GetTable())
-  {
-    SQLDataSet* set = GetTable()->GetDataSet();
-    if(set)
-    {
-      set->SetQuery(query);
-      return true;
-    }
-  }
-  return false;
+  p_dataset->SetQuery(query);
 }
 
 // Load filters in message for an internet selection
@@ -507,49 +515,57 @@ CXClass::BuildClassTable(CXSession* p_session)
 // DATABASE INTERFACE
 
 SQLRecord*
-CXClass::SelectObjectInDatabase(SQLDatabase* p_database,VariantSet& p_set)
+CXClass::SelectObjectInDatabase(SQLDatabase* p_database,SQLDataSet* p_dataset,VariantSet& p_set)
 {
   // Make sure we have a dataset
-  SQLDataSet* dset = GetTable()->GetDataSet();
-
+  if(p_dataset == nullptr)
+  {
+    p_dataset = GetDataSet();
+  }
   // Connect our database
-  dset->SetDatabase(p_database);
+  p_dataset->SetDatabase(p_database);
 
   // Create correct query
-  BuildDefaultSelectQuery(p_database->GetSQLInfoDB());
+  BuildDefaultSelectQuery(p_dataset,p_database->GetSQLInfoDB());
 
   // Open dataset by the filter of the primary key
   SQLFilterSet fset;
   if(CreateFilterSet(p_set,fset))
   {
-    dset->SetFilters(&fset);
+    p_dataset->SetFilters(&fset);
 
     // Open our dataset (and search)
-    if(dset->IsOpen() == false)
+    if(p_dataset->IsOpen() == false)
     {
-      dset->Open();
+      p_dataset->Open();
     }
     else
     {
-      dset->Append();
+      p_dataset->Append();
     }
-    dset->SetFilters(nullptr);
+    p_dataset->SetFilters(nullptr);
   }
   else return nullptr;
 
   // See if we have a record
-  return dset->FindObjectRecord(p_set);
+  return p_dataset->FindObjectRecord(p_set);
 }
 
 bool
-CXClass::InsertObjectInDatabase(SQLDatabase* p_database,CXObject* p_object,int p_mutation)
+CXClass::InsertObjectInDatabase(SQLDatabase* p_database,SQLDataSet* p_dataset,CXObject* p_object,int p_mutation)
 {
+  // Make sure we have a dataset
+  if(p_dataset == nullptr)
+  {
+    p_dataset = GetDataSet();
+  }
+
   // Check for a table definition
   if(m_table == nullptr)
   {
     if(hibernate.GetStrategy() == MapStrategy::Strategy_one_table && m_super)
     {
-      return GetRootClass()->InsertObjectInDatabase(p_database,p_object,p_mutation);
+      return GetRootClass()->REALInsertObjectInDatabase(p_database,p_dataset,p_object,p_mutation,true);
     }
     // No legal table definition found
     throw StdException("No table while inserting object into class: " + m_name);
@@ -559,29 +575,94 @@ CXClass::InsertObjectInDatabase(SQLDatabase* p_database,CXObject* p_object,int p
   bool inserted = true;
 
   // Insert into superclass tables first (recursively!)
-  if(m_super && ((hibernate.GetStrategy() == MapStrategy::Strategy_sub_table) ||
-                 (hibernate.GetStrategy() == MapStrategy::Strategy_classtable)))
+  if(m_super && (hibernate.GetStrategy() == MapStrategy::Strategy_sub_table))
   {
-    inserted = m_super->InsertObjectInDatabase(p_database,p_object,p_mutation);
+    inserted = m_super->InsertObjectInDatabase(p_database,nullptr,p_object,p_mutation);
   }
 
   // If succeeded, insert into our table
   if(inserted)
   {
-    return m_table->InsertObjectInDatabase(p_database,p_object,p_mutation,GetIsRootClass());
+    return REALInsertObjectInDatabase(p_database,p_dataset,p_object,p_mutation,GetIsRootClass());
   }
   return false;
 }
 
 bool
-CXClass::UpdateObjectInDatabase(SQLDatabase* p_database,CXObject* p_object,int p_mutation)
+CXClass::REALInsertObjectInDatabase(SQLDatabase* p_database,SQLDataSet* p_dataset,CXObject* p_object,int p_mutation,bool p_root)
 {
+  SQLRecord* record = p_dataset->InsertRecord();
+  SQLVariant zero;
+
+  // Connect our database
+  p_dataset->SetDatabase(p_database);
+
+  // See if dataset is empty
+  MColumnMap& columns = GetTable()->GetColumnInfo();
+  if (p_dataset->GetNumberOfRecords() == 1 && p_dataset->GetNumberOfFields() == 0)
+  {
+    for (auto& column : columns)
+    {
+      p_dataset->InsertField(column.m_column, &zero);
+    }
+  }
+
+  // Set the values on the record
+  for (int ind = 0; ind < p_dataset->GetNumberOfFields(); ++ind)
+  {
+    record->AddField(&zero, true);
+  }
+
+  // For a root-class object, set the discriminator and generator
+  if (p_root)
+  {
+    // Now serialize our object with the correct discriminator
+    SerializeDiscriminator(p_object, record, p_mutation);
+
+    // Check if we must generate our primary key
+    CXAttribute* gen = p_object->GetClass()->GetRootClass()->FindGenerator();
+    if (gen && p_object->IsTransient())
+    {
+      // -1: not found, 0 -> (n-1) is the field number of the generator
+      int generator = p_dataset->GetFieldNumber(gen->GetName());
+      record->SetGenerator(generator);
+    }
+  }
+
+  // Now serialize our object with the 'real' values
+  p_object->Serialize(*record, p_mutation);
+  // Set the record to 'insert-only'
+  record->Inserted();
+
+  // Go save the record
+  bool saved = p_dataset->Synchronize(p_mutation);
+
+  // Getting the generated value in the primary key
+  if (saved && p_root)
+  {
+    // Re-sync the primary key
+    p_object->ResetPrimaryKey();
+    // Re-sync the class object
+    p_object->DeSerializeGenerator(*record);
+  }
+  return saved;
+}
+
+bool
+CXClass::UpdateObjectInDatabase(SQLDatabase* p_database,SQLDataSet* p_dataset,CXObject* p_object,int p_mutation)
+{
+  // Check that we have a dataset
+  if(p_dataset == nullptr)
+  {
+    p_dataset = GetDataSet();
+  }
+
   // Check for a table definition
   if(m_table == nullptr)
   {
     if(hibernate.GetStrategy() == MapStrategy::Strategy_one_table && m_super)
     {
-      return GetRootClass()->UpdateObjectInDatabase(p_database,p_object,p_mutation);
+      return GetRootClass()->REALUpdateObjectInDatabase(p_database,p_dataset,p_object,p_mutation);
     }
     // No legal table definition found
     throw StdException("No table while updating an object of class: " + m_name);
@@ -594,16 +675,16 @@ CXClass::UpdateObjectInDatabase(SQLDatabase* p_database,CXObject* p_object,int p
   if(m_super && (hibernate.GetStrategy() == MapStrategy::Strategy_sub_table))
   {
     // Select from that table first, so we can do a partial update
-    AutoTableDataSet dset(m_super->GetTable(),nullptr);
-    SQLRecord* record = m_super->SelectObjectInDatabase(p_database,p_object->GetPrimaryKey());
+    SQLDataSet dataset;
+    InitDataSet(&dataset);
+    SQLRecord* record = m_super->SelectObjectInDatabase(p_database,&dataset,p_object->GetPrimaryKey());
     if(record)
     {
-      // Tell this record that what mutations we have
-      AutoObjectRecord temprecord(p_object, record);
-      p_object->Serialize(*record,p_mutation);
       try
       {
-        updated = m_super->UpdateObjectInDatabase(p_database,p_object,p_mutation);
+        // Tell this record that what mutations we have and update it
+        AutoObjectRecord temprecord(p_object, record);
+        updated = m_super->UpdateObjectInDatabase(p_database,&dataset,p_object,p_mutation);
       }
       catch(StdException& ex)
       {
@@ -617,20 +698,44 @@ CXClass::UpdateObjectInDatabase(SQLDatabase* p_database,CXObject* p_object,int p
   // If succeeded, update into our table
   if(updated)
   {
-    return m_table->UpdateObjectInDatabase(p_database,p_object,p_mutation);
+    return REALUpdateObjectInDatabase(p_database,p_dataset,p_object,p_mutation);
   }
   return false;
 }
 
 bool
-CXClass::DeleteObjectInDatabase(SQLDatabase* p_database,CXObject* p_object,int p_mutation)
+CXClass::REALUpdateObjectInDatabase(SQLDatabase* p_database,SQLDataSet* p_dataset,CXObject* p_object,int p_mutation)
 {
+  // Get the record
+  SQLRecord* record = p_object->GetDatabaseRecord();
+
+  // Setting allowed updatable columns
+  WordList list = GetTable()->GetAttributesAsList();
+  p_dataset->SetUpdateColumns(list);
+
+  // Connect our database
+  p_dataset->SetDatabase(p_database);
+
+  // Serialize object to database record
+  p_object->Serialize(*record, p_mutation);
+  return p_dataset->Synchronize(p_mutation);
+}
+
+bool
+CXClass::DeleteObjectInDatabase(SQLDatabase* p_database,SQLDataSet* p_dataset,CXObject* p_object,int p_mutation)
+{
+  // Be sure we have a dataset
+  if(p_dataset == nullptr)
+  {
+    p_dataset = GetDataSet();
+  }
+
   // Check for a table definition
   if(m_table == nullptr)
   {
     if(hibernate.GetStrategy() == MapStrategy::Strategy_one_table && m_super)
     {
-      return GetRootClass()->DeleteObjectInDatabase(p_database,p_object,p_mutation);
+      return GetRootClass()->REALDeleteObjectInDatabase(p_database,p_dataset,p_object,p_mutation);
     }
     // No legal table definition found
     throw StdException("No table while deleting an object of class: " + m_name);
@@ -643,22 +748,23 @@ CXClass::DeleteObjectInDatabase(SQLDatabase* p_database,CXObject* p_object,int p
   if(m_super && (hibernate.GetStrategy() == MapStrategy::Strategy_sub_table))
   {
     // Select from that table first, so we can do a partial update
-    AutoTableDataSet dset(m_super->GetTable(),nullptr);
-    SQLRecord* record = m_super->SelectObjectInDatabase(p_database,p_object->GetPrimaryKey());
+    SQLDataSet dataset;
+    InitDataSet(&dataset);
+    SQLRecord* record = m_super->SelectObjectInDatabase(p_database,&dataset,p_object->GetPrimaryKey());
     if(record)
     {
-      // Tell this record that what mutations we have
-      AutoObjectRecord temprecord(p_object, record);
-      p_object->Serialize(*record,p_mutation);
       try
       {
-        deleted = m_super->DeleteObjectInDatabase(p_database,p_object,p_mutation);
+        // Delete this record from the database
+        AutoObjectRecord temprecord(p_object, record);
+        deleted = m_super->DeleteObjectInDatabase(p_database,&dataset,p_object,p_mutation);
       }
       catch(StdException& ex)
       {
         hibernate.Log(LOGLEVEL_ERROR,true,"Error deleting in super table: %s. Error: %s"
-                      ,m_super->GetName().GetString()
-                      ,ex.GetErrorMessage().GetString());
+                     ,m_super->GetName().GetString()
+                     ,ex.GetErrorMessage().GetString());
+        throw;
       }
     }
   }
@@ -666,9 +772,31 @@ CXClass::DeleteObjectInDatabase(SQLDatabase* p_database,CXObject* p_object,int p
   // If succeeded, delete from our table
   if(deleted)
   {
-    return m_table->DeleteObjectInDatabase(p_database,p_object,p_mutation);
+    return REALDeleteObjectInDatabase(p_database,p_dataset,p_object,p_mutation);
   }
   return false;
+}
+
+bool
+CXClass::REALDeleteObjectInDatabase(SQLDatabase* p_database,SQLDataSet* p_dataSet,CXObject* p_object,int p_mutation)
+{
+  SQLRecord* record = p_object->GetDatabaseRecord();
+
+  // Connect our database
+  p_dataSet->SetDatabase(p_database);
+  if(record == nullptr || p_dataSet == nullptr)
+  {
+    return false;
+  }
+
+  // Set the record to the delete status
+  record->Delete();
+
+  // BEWARE: We need not "Serialize" our object
+  // We take the assumption that the primary key is "immutable"
+
+  // Go delete the record
+  return p_dataSet->Synchronize(p_mutation);
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -754,7 +882,16 @@ CXClass::AddDiscriminatorToFilters(SQLFilterSet& p_filters)
   }
 }
 
-
+// Serialize the discriminator value to the database record for this object
+void
+CXClass::SerializeDiscriminator(CXObject* p_object,SQLRecord* p_record,int p_mutation)
+{
+  if(hibernate.GetStrategy() != MapStrategy::Strategy_standalone)
+  {
+    SQLVariant disc(p_object->GetDiscriminator());
+    p_record->SetField("discriminator", &disc, p_mutation);
+  }
+}
 
 // SAVING THE CONFIGURATION
 
@@ -1298,4 +1435,15 @@ CXClass::BuildSelectQuerySubTableRecursive(SQLInfoDB* p_info,CString& p_columns,
     }
     p_frompart += ")";
   }
+}
+
+// Initialize a dataset for the class/table
+void
+CXClass::InitDataSet(SQLDataSet* p_dataSet)
+{
+  // Fill in the dataset
+  CXTable* table = GetTable();
+  p_dataSet->SetPrimaryTable(table->GetSchemaName(),table->GetTableName());
+  WordList list = table->GetPrimaryKeyAsList();
+  p_dataSet->SetPrimaryKeyColumn(list);
 }

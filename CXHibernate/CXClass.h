@@ -58,8 +58,10 @@ public:
   CXIdentity& GetIdentity();
   // Getting our discriminator value
   CString     GetDiscriminator();
-  // Are we the rootclass of an hierarchy?
+  // Are we the root class of an hierarchy?
   bool        GetIsRootClass();
+  // Primary data set
+  SQLDataSet* GetDataSet();
 
   // Add attributes to the class
   void        AddAttribute  (CXAttribute*   p_attribute);
@@ -88,7 +90,7 @@ public:
   void        BuildClassTable(CXSession* p_session);
 
   // Build default SELECT query
-  bool        BuildDefaultSelectQuery(SQLInfoDB* p_info);
+  void        BuildDefaultSelectQuery(SQLDataSet* p_dataset,SQLInfoDB* p_info);
   // Load filters in message for an internet selection
   void        BuildPrimaryKeyFilter(SOAPMessage& p_message,XMLElement* p_entity,VariantSet& p_primary);
   // Build filter for primary key or association selection
@@ -96,16 +98,25 @@ public:
 
   // THE DATABASE INTERFACE
 
-  SQLRecord*  SelectObjectInDatabase(SQLDatabase* p_database,VariantSet& p_set);
-  bool        InsertObjectInDatabase(SQLDatabase* p_database,CXObject* p_object,int p_mutation);
-  bool        UpdateObjectInDatabase(SQLDatabase* p_database,CXObject* p_object,int p_mutation);
-  bool        DeleteObjectInDatabase(SQLDatabase* p_database,CXObject* p_object,int p_mutation);
+  // First level operations
+  SQLRecord*  SelectObjectInDatabase(SQLDatabase* p_database,SQLDataSet* p_dataset,VariantSet& p_set);
+  bool        InsertObjectInDatabase(SQLDatabase* p_database,SQLDataSet* p_dataset,CXObject* p_object,int p_mutation);
+  bool        UpdateObjectInDatabase(SQLDatabase* p_database,SQLDataSet* p_dataset,CXObject* p_object,int p_mutation);
+  bool        DeleteObjectInDatabase(SQLDatabase* p_database,SQLDataSet* p_dataset,CXObject* p_object,int p_mutation);
+  // Second level operations
+  bool        REALInsertObjectInDatabase(SQLDatabase* p_database,SQLDataSet* p_dataset,CXObject* p_object,int p_mutation,bool p_root);
+  bool        REALUpdateObjectInDatabase(SQLDatabase* p_database,SQLDataSet* p_dataset,CXObject* p_object,int p_mutation);
+  bool        REALDeleteObjectInDatabase(SQLDatabase* p_database,SQLDataSet* p_dataSet,CXObject* p_object,int p_mutation);
 
 protected:
   // Adding a sub-class
   void        AddSubClass(CXClass* p_subclass);
   // Fill in our underlying table
   void        FillTableInfoFromClassInfo();
+  // Initialize a dataset for the class/table
+  void        InitDataSet(SQLDataSet* p_dataSet);
+  // Serialize the discriminator value to the database record for this object
+  void        SerializeDiscriminator(CXObject* p_object,SQLRecord* p_record,int p_mutation);
 
   // SAVING CONFIGURATION INFO
   void SaveMetaInfoSubClasses  (XMLMessage& p_message,XMLElement* p_theClass);
@@ -146,14 +157,16 @@ private:
   WordList        m_subNames;
   // Our CXObject factory function
   CreateCXO       m_create { nullptr };
-  // Underlying database table (in current mapping strategy)
+  // Underlying database table (in current mapping strategy!!)
   CXTable*        m_table;
+  // Standard data set for selected objects
+  SQLDataSet*     m_dataSet { nullptr };
   // All attributes of this class
-  CXAttribMap     m_attributes;   // Column attributes
-  CXIdentity      m_identity;     // Our candidate primary key
-  CXAssociations  m_associations; // Associations to other classes
-  CXIndices       m_indices;      // Constraints and performance speed-ups
-  CString         m_generator;    // Generator name
-  int             m_gen_value;    // Initial generator value
-  CXPrivileges    m_privileges;   // All access rights
+  CXAttribMap     m_attributes;       // Column attributes
+  CXIdentity      m_identity;         // Our candidate primary key
+  CXAssociations  m_associations;     // Associations to other classes
+  CXIndices       m_indices;          // Constraints and performance speed-ups
+  CString         m_generator;        // Generator name
+  int             m_gen_value { 0 };  // Initial generator value
+  CXPrivileges    m_privileges;       // All access rights
 };

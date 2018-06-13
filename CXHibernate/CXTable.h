@@ -49,8 +49,6 @@ public:
   void      SetSchema(CString p_schema);
   // Setting the schema/table/type info
   void      SetSchemaTableType(CString p_schema,CString p_table,CString p_type);
-  // Master side must apply a SQLDataSet
-  void      SetDataSet(SQLDataSet* p_dataset);
 
   // GETTERS
 
@@ -65,8 +63,6 @@ public:
   bool        GetIsView();
   bool        GetIsTemporary();
   bool        GetIsSynonym();
-  // Primary data set
-  SQLDataSet* GetDataSet();
 
   // Getting the table info in an immutable way
   MetaTable&      GetTableInfo()   const;
@@ -97,18 +93,7 @@ public:
   bool      SaveMetaInfo(CXSession* p_session,CString p_filename = "");
   bool      LoadMetaInfo(CXSession* p_session,CString p_filename = "");
 
-  // THE DATABASE INTERFACE
-
-  bool      InsertObjectInDatabase(SQLDatabase* p_database,CXObject* p_object,int p_mutation,bool p_root);
-  bool      UpdateObjectInDatabase(SQLDatabase* p_database,CXObject* p_object,int p_mutation);
-  bool      DeleteObjectInDatabase(SQLDatabase* p_database,CXObject* p_object,int p_mutation);
-
-  // Temporary replace the data set
-  SQLDataSet* TempReplaceDataSet(SQLDataSet* p_dataset,bool p_destroy = false);
-
 private:
-  void      SerializeDiscriminator(CXObject* p_object,SQLRecord* p_record,int p_mutation);
-
   // Getting table info from the ODBC database
   void GetTableInfo     (SQLInfoDB* p_info);
   void GetColumnInfo    (SQLInfoDB* p_info);
@@ -139,30 +124,4 @@ private:
   MIndicesMap   m_indices;
   MetaSequence  m_sequence;
   MPrivilegeMap m_privileges;
-  // Standard data set in a master connection
-  SQLDataSet*   m_dataSet { nullptr };
-};
-
-
-//////////////////////////////////////////////////////////////////////////
-//
-// Auto class to temporary replace the dataset
-//
-
-class AutoTableDataSet
-{
-public:
-  AutoTableDataSet(CXTable* p_table,SQLDataSet* p_set)
-  {
-    m_table    = p_table;
-    m_original = p_table->TempReplaceDataSet(p_set);
-  }
-  ~AutoTableDataSet()
-  {
-    m_table->TempReplaceDataSet(m_original,true);
-  }
-
-private:
-  CXTable*    m_table;
-  SQLDataSet* m_original;
 };

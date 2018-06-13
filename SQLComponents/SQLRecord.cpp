@@ -142,7 +142,11 @@ SQLRecord::GetField(int p_num)
 SQLVariant* 
 SQLRecord::GetField(CString p_name)
 {
-  return GetField(m_dataSet->GetFieldNumber(p_name));
+  if(m_dataSet)
+  {
+    return GetField(m_dataSet->GetFieldNumber(p_name));
+  }
+  return nullptr;
 }
 
 

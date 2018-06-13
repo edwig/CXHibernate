@@ -50,11 +50,6 @@ CXTable::CXTable(CString p_table)
 // DTOR: Destruct table
 CXTable::~CXTable()
 {
-  if(m_dataSet)
-  {
-    delete m_dataSet;
-    m_dataSet = nullptr;
-  }
 }
 
 // Setting a different schema only
@@ -71,28 +66,6 @@ CXTable::SetSchemaTableType(CString p_schema,CString p_table,CString p_type)
   m_table.m_schema     = p_schema;
   m_table.m_table      = p_table;
   m_table.m_objectType = p_type;
-}
-
-// Master side must apply a SQLDataSet
-void
-CXTable::SetDataSet(SQLDataSet* p_dataset)
-{
-  m_dataSet = p_dataset;
-}
-
-SQLDataSet*
-CXTable::GetDataSet()
-{
-  if(m_dataSet == nullptr)
-  {
-    m_dataSet = new SQLDataSet();
-
-    // Fill in the dataset
-    m_dataSet->SetPrimaryTable(GetSchemaName(),GetTableName());
-    WordList list = GetPrimaryKeyAsList();
-    m_dataSet->SetPrimaryKeyColumn(list);
-  }
-  return m_dataSet;
 }
 
 CString
@@ -344,125 +317,6 @@ CXTable::LoadMetaInfo(CXSession* p_session,CString p_filename)
   return true;
 }
 
-// DATABASE INTERFACE
-
-bool
-CXTable::InsertObjectInDatabase(SQLDatabase* p_database,CXObject* p_object,int p_mutation,bool p_root)
-{
-  // Be sure we have a data set
-  GetDataSet();
-
-  SQLRecord* record = m_dataSet->InsertRecord();
-  SQLVariant zero;
-
-  // Connect our database
-  m_dataSet->SetDatabase(p_database);
-
-  // See if dataset is empty
-  if(m_dataSet->GetNumberOfRecords() == 1 && m_dataSet->GetNumberOfFields() == 0)
-  {
-    for(auto& column : m_columns)
-    {
-      m_dataSet->InsertField(column.m_column,&zero);
-    }
-  }
-
-  // Set the values on the record
-  for(int ind = 0;ind < m_dataSet->GetNumberOfFields();++ind)
-  {
-    record->AddField(&zero,true);
-  }
-
-  // For a root-class object, set the discriminator and generator
-  if(p_root)
-  {
-    // Now serialize our object with the correct discriminator
-    SerializeDiscriminator(p_object,record,p_mutation);
-
-    // Check if we must generate our primary key
-    CXAttribute* gen = p_object->GetClass()->GetRootClass()->FindGenerator();
-    if(gen && p_object->IsTransient())
-    {
-      // -1: not found, 0 -> (n-1) is the field number of the generator
-      int generator = m_dataSet->GetFieldNumber(gen->GetName());
-      record->SetGenerator(generator);
-    }
-  }
-
-  // Now serialize our object with the 'real' values
-  p_object->Serialize(*record, p_mutation);
-  // Set the record to 'insert-only'
-  record->Inserted();
-
-  // Go save the record
-  bool saved = m_dataSet->Synchronize(p_mutation);
-
-  // Getting the generated value in the primary key
-  if(saved && p_root)
-  {
-    // Re-sync the primary key
-    p_object->ResetPrimaryKey();
-    // Re-sync the class object
-    p_object->DeSerializeGenerator(*record);
-  }
-  return saved;
-}
-
-bool
-CXTable::UpdateObjectInDatabase(SQLDatabase* p_database,CXObject* p_object,int p_mutation)
-{
-  SQLRecord* record = p_object->GetDatabaseRecord();
-  GetDataSet();
-
-  WordList list = GetAttributesAsList();
-  m_dataSet->SetUpdateColumns(list);
-
-  // Connect our database
-  m_dataSet->SetDatabase(p_database);
-
-  // Serialize object to database record
-  p_object->Serialize(*record,p_mutation);
-  return m_dataSet->Synchronize(p_mutation);
-}
-
-bool
-CXTable::DeleteObjectInDatabase(SQLDatabase* p_database,CXObject* p_object,int p_mutation)
-{
-  // Be sure we have a dataset
-  GetDataSet();
-
-  SQLRecord* record = p_object->GetDatabaseRecord();
-
-  // Connect our database
-  m_dataSet->SetDatabase(p_database);
-  if (record == nullptr || m_dataSet == nullptr)
-  {
-    return false;
-  }
-
-  // Set the record to the delete status
-  record->Delete();
-
-  // BEWARE: We need not "Serialize" our object
-  // We take the assumption that the primary key is "immutable"
-
-  // Go delete the record
-  return m_dataSet->Synchronize(p_mutation);
-}
-
-// Temporary replace the data set
-SQLDataSet* 
-CXTable::TempReplaceDataSet(SQLDataSet* p_dataset, bool p_destroy /*= false*/)
-{
-  SQLDataSet* temp = m_dataSet;
-  m_dataSet = p_dataset;
-  if(p_destroy)
-  {
-    delete temp;
-    return nullptr;
-  }
-  return temp;
-}
 
 //////////////////////////////////////////////////////////////////////////
 //
@@ -621,18 +475,7 @@ CXTable::GetAttributesAsList()
   return list;
 }
 
-
 //////////////////////////////////////////////////////////////////////////
-
-void
-CXTable::SerializeDiscriminator(CXObject* p_object,SQLRecord* p_record,int p_mutation)
-{
-  if(hibernate.GetStrategy() != MapStrategy::Strategy_standalone)
-  {
-    SQLVariant disc(p_object->GetDiscriminator());
-    p_record->SetField("discriminator",&disc,p_mutation);
-  }
-}
 
 void 
 CXTable::SaveTableInfo(SOAPMessage& p_msg)

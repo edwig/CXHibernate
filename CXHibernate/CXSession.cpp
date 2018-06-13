@@ -1059,7 +1059,7 @@ CXSession::FindObjectInDatabase(CString p_className,VariantSet& p_primary)
   // Find the class of the object
   CXClass* theClass = FindClass(p_className);
 
-  SQLRecord* record = theClass->SelectObjectInDatabase(GetDatabase(),p_primary);
+  SQLRecord* record = theClass->SelectObjectInDatabase(GetDatabase(),nullptr,p_primary);
   if(record)
   {
     // Create our object by the creation factory
@@ -1179,7 +1179,7 @@ CXSession::SelectObjectsFromDatabase(CString p_className,SQLFilterSet& p_filters
   CXTable* table = theClass->GetTable();
 
   // See if we have a data set
-  SQLDataSet* dset = table->GetDataSet();
+  SQLDataSet* dset = theClass->GetDataSet();
   if (dset == nullptr)
   {
     return set;
@@ -1192,7 +1192,7 @@ CXSession::SelectObjectsFromDatabase(CString p_className,SQLFilterSet& p_filters
   dset->SetFilters(&p_filters);
 
   // Create correct query
-  theClass->BuildDefaultSelectQuery(GetDatabase()->GetSQLInfoDB());
+  theClass->BuildDefaultSelectQuery(dset,GetDatabase()->GetSQLInfoDB());
 
   // NOW GO OPEN our dataset
   bool selected = false;
@@ -1327,7 +1327,7 @@ CXSession::UpdateObjectInDatabase(CXObject* p_object)
   // New mutation ID for this update action
   CXTransaction trans(this);
 
-  bool result = theClass->UpdateObjectInDatabase(GetDatabase(),p_object,m_mutation);
+  bool result = theClass->UpdateObjectInDatabase(GetDatabase(),nullptr,p_object,m_mutation);
   if(result)
   {
     // Commit our transaction in the database
@@ -1384,7 +1384,7 @@ CXSession::InsertObjectInDatabase(CXObject* p_object)
   // New mutation ID for this update action
   CXTransaction trans(this);
 
-  bool saved = theClass->InsertObjectInDatabase(GetDatabase(),p_object,m_mutation);
+  bool saved = theClass->InsertObjectInDatabase(GetDatabase(),nullptr,p_object,m_mutation);
   if(saved)
   {
     // Commit in the database
@@ -1450,7 +1450,7 @@ CXSession::DeleteObjectInDatabase(CXObject* p_object)
   CXTransaction trans(this);
 
   // Go delete the record
-  bool deleted = theClass->DeleteObjectInDatabase(GetDatabase(),p_object,m_mutation);
+  bool deleted = theClass->DeleteObjectInDatabase(GetDatabase(),nullptr,p_object,m_mutation);
   if(deleted)
   {
     // Commit in the database first

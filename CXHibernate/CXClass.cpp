@@ -1215,11 +1215,11 @@ CXClass::LinkClasses(CXSession* p_session)
     CXClass* subclass = p_session->FindClass(sub);
     if(subclass)
     {
-      m_subClasses.push_back(subclass);
+      AddSubClass(subclass);
     }
+    else throw StdException("Declared subclass not found: " + sub);
   }
 }
-
 
 // Fill in our underlying table
 void

@@ -21,8 +21,8 @@
 // WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION 
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
-// Last Revision:   27-05-2018
-// Version number:  0.5.0
+// Last Revision:   17-06-2018
+// Version number:  0.9.0
 //
 #pragma once
 #include "CXTable.h"

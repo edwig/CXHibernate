@@ -11,9 +11,6 @@ Version 0.9: Derived classes in their own table
 
 Still to do:
 ------------
-cxh2cpp: Generate the "deserialize_generator"
-cxh2cpp: Generate the "Setters"
-
 Version 1.0: First stable version + Documentation
 
 
@@ -21,7 +18,7 @@ Features that will not go into 1.0
 But will be implemented in a later version
 ------------------------------------------
 - Naming the discriminator attribute other than "Discriminator"
-- Setting the size of the discriminator other than "3"
+- Setting the size of the discriminator other than a maximum of "5"
 - Other generators than a native database "SEQUENCE"
 - Other generator names than "<classname>_seq"
 - Greater cache control. Especially on the second line cache

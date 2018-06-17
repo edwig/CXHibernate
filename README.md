@@ -25,7 +25,7 @@ The following functions are already working:
 * Derived classes in a one-table strategy
 * Derived tables in their own tables
 
-The following are not yet working:
+The following are not yet working / done
 
 * Documentation
 

@@ -21,8 +21,8 @@
 // WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION 
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
-// Last Revision:   27-05-2018
-// Version number:  0.5.0
+// Last Revision:   17-06-2018
+// Version number:  0.9.0
 //
 #pragma once
 #include "CXObjectFactory.h"
@@ -31,7 +31,7 @@
 #include <map>
 
 #define HIBERNATE_VERSION "0.9.0"
-#define HIBERNATE_DATE    "13-06-2018"
+#define HIBERNATE_DATE    "17-06-2018"
 
 #define CXH_LOG_NOTHING       0   // Logging is OFF
 #define CXH_LOG_ERRORS        1   // Only error logging
@@ -121,7 +121,7 @@ private:
   void          CloseLogfile();
 
   // Relational-Object-Mapping strategy
-  MapStrategy   m_strategy{ Strategy_standalone };
+  MapStrategy   m_strategy { Strategy_standalone };
   // Mapping to all open sessions
   MapSessions   m_sessions;
   // Mapping with all create object functions
@@ -129,15 +129,15 @@ private:
   // Configuration file
   CString       m_configFile;
   // Current session key
-  int           m_key{ 1 };
+  int           m_key { 1 };
   // Logging for Hibernate
-  int           m_loglevel = { CXH_LOG_NOTHING };
-  LogAnalysis*  m_logfile    { nullptr };
+  int           m_loglevel { CXH_LOG_NOTHING };
+  LogAnalysis*  m_logfile  { nullptr };
   // DEFAULTS
   CString       m_default_catalog;      // Default catalog
   CString       m_default_schema;       // Default schema of all tables
   // Incomplete mode: Only for tools and partly running models
-  bool          m_incomplete{ false };
+  bool          m_incomplete { false };
 };
 
 // Singleton pointer to the library

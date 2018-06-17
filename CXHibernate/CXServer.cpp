@@ -214,7 +214,7 @@ CXServer::OnCXUpdate(int p_code,SOAPMessage* p_message)
         {
           // Creating a temporary object to discover our primary key
           CreateCXO creating = theClass->GetCreateCXO();
-          std::auto_ptr<CXObject> object((*creating)());
+          std::unique_ptr<CXObject> object((*creating)());
           object->SetClass(theClass);
           object->DeSerialize(*p_message,entity);
           // Create copy on the stack of the primary key
@@ -278,7 +278,7 @@ CXServer::OnCXDelete(int p_code,SOAPMessage* p_message)
         {
           // Creating a temporary object to discover our primary key
           CreateCXO creating = theClass->GetCreateCXO();
-          std::auto_ptr<CXObject> object((*creating)());
+          std::unique_ptr<CXObject> object((*creating)());
           object->SetClass(theClass);
           object->DeSerialize(*p_message,entity);
           // Create copy on the stack of the primary key

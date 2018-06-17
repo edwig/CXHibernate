@@ -335,6 +335,23 @@ CXClass::FindAssociation(int index)
   return nullptr;
 }
 
+// Register a CalcHashcode function (Can only be called once)
+void
+CXClass::RegisterCalcHash(CalcHash p_calcHashcode)
+{
+  if(m_calcHashcode == nullptr)
+  {
+    m_calcHashcode = p_calcHashcode;
+  }
+}
+
+// Our function to calculate an override of a hash code for an object
+CalcHash
+CXClass::GetCalcHashcode()
+{
+  return m_calcHashcode;
+}
+
 // Serialize to a configuration XML file
 bool
 CXClass::SaveMetaInfo(XMLMessage& p_message,XMLElement* p_elem)
@@ -614,7 +631,7 @@ CXClass::REALInsertObjectInDatabase(SQLDatabase* p_database,SQLDataSet* p_datase
   }
 
   // For a root-class object, set the discriminator and generator
-  if (p_root)
+  if(p_root)
   {
     // Now serialize our object with the correct discriminator
     SerializeDiscriminator(p_object, record, p_mutation);

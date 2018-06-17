@@ -31,7 +31,11 @@
 #include "CXObject.h"
 #include <vector>
 
+// A vector with all our subclasses
 using SubClasses = std::vector<CXClass*>;
+// Override functon to create a hashcode for an object in this class;
+typedef CString (*CalcHash)(VariantSet& p_primary);
+
 
 class CXClass
 {
@@ -62,6 +66,8 @@ public:
   bool        GetIsRootClass();
   // Primary data set
   SQLDataSet* GetDataSet();
+  // Our function to calculate an override of a hash code for an object
+  CalcHash    GetCalcHashcode();
 
   // Add attributes to the class
   void        AddAttribute  (CXAttribute*   p_attribute);
@@ -70,6 +76,8 @@ public:
   void        AddIndex      (CXIndex*       p_index);
   void        AddGenerator  (CString        p_generator,int p_start);
   void        AddPrivilege  (CXAccess&      p_access);
+  // Register a CalcHashcode function
+  void        RegisterCalcHash(CalcHash p_calcHashcode);
   // Find an attribute
   CXAttribute*   FindAttribute(CString p_name);
   CXAttribute*   FindAttribute(int     p_index);
@@ -157,6 +165,8 @@ private:
   WordList        m_subNames;
   // Our CXObject factory function
   CreateCXO       m_create { nullptr };
+  // Our Hashcode function
+  CalcHash        m_calcHashcode { nullptr };
   // Underlying database table (in current mapping strategy!!)
   CXTable*        m_table;
   // Standard data set for selected objects

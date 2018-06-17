@@ -511,11 +511,15 @@ CXSession::Load(CString p_className,VariantSet& p_primary)
   // Place in cache
   if(object && object->IsPersistent())
   {
-    if(AddObjectInCache(object,p_primary))
+    if(AddObjectInCache(object))
     {
+      // Almost done. Call the trigger (if any)
+      // Always called after loading the object. Cannot abort the 'load' action
+      CallOnLoad(object);
+
       if(hibernate.GetLogLevel())
       {
-        hibernate.Log(CXH_LOG_ACTIONS,true,"Loading object [%s:%s]",p_className,CXPrimaryHash(p_primary));
+        hibernate.Log(CXH_LOG_ACTIONS,true,"Loading object [%s:%s]",p_className,object->Hashcode());
         if(hibernate.GetLogLevel() >= CXH_LOG_DEBUG)
         {
           object->LogObject();
@@ -563,12 +567,19 @@ CXSession::Load(CString p_className,SQLFilterSet& p_filters)
     set = SelectObjectsFromFilestore(p_className,p_filters);
   }
 
+  // Call OnLoad for all objects in the set
+  // Always called after loading the entire set. Cannot abort the 'load' action
+  for(auto& object : set)
+  {
+    CallOnLoad(object);
+  }
+
   // Log the object as one of the set
   if(hibernate.GetLogLevel())
   {
     for(auto& object : set)
     {
-      hibernate.Log(CXH_LOG_ACTIONS,true,"Loading object [%s:%s]",p_className,CXPrimaryHash(object->GetPrimaryKey()));
+      hibernate.Log(CXH_LOG_ACTIONS,true,"Loading object [%s:%s]",p_className,object->Hashcode());
       if(hibernate.GetLogLevel() >= CXH_LOG_DEBUG)
       {
         object->LogObject();
@@ -597,23 +608,31 @@ CXSession::Update(CXObject* p_object)
 {
   bool result = false;
 
-  if(m_role == CXH_Database_role)
+  // Call OnUpdate trigger for the object
+  bool canUpdate = CallOnUpdate(p_object);
+
+  // Only update if trigger allows so
+  if(canUpdate)
   {
-    result = UpdateObjectInDatabase(p_object);
-  }
-  else if(m_role == CXH_Internet_role)
-  {
-    result = UpdateObjectInInternet(p_object);
-  }
-  else // CXH_Filestore_role
-  {
-    result = UpdateObjectInFilestore(p_object);
+    if(m_role == CXH_Database_role)
+    {
+      result = UpdateObjectInDatabase(p_object);
+    }
+    else if(m_role == CXH_Internet_role)
+    {
+      result = UpdateObjectInInternet(p_object);
+    }
+    else // CXH_Filestore_role
+    {
+      result = UpdateObjectInFilestore(p_object);
+    }
   }
 
   // Log the object as updated
   if(result && hibernate.GetLogLevel())
   {
-    hibernate.Log(CXH_LOG_ACTIONS, true, "Updated object [%s:%s]",p_object->ClassName(),CXPrimaryHash(p_object->GetPrimaryKey()));
+    CString action = canUpdate ? "Update object" : "CANNOT UPDATE";
+    hibernate.Log(CXH_LOG_ACTIONS, true, "%s [%s:%s]",action,p_object->ClassName(),p_object->Hashcode());
     if (hibernate.GetLogLevel() >= CXH_LOG_DEBUG)
     {
       p_object->LogObject();
@@ -627,28 +646,37 @@ CXSession::Insert(CXObject* p_object)
 {
   bool result = false;
 
-  if(m_role == CXH_Database_role)
+  // Call the OnInsert trigger
+  bool canInsert = CallOnInsert(p_object);
+
+  // Only insert if triggers allows us so
+  if(canInsert)
   {
-    result = InsertObjectInDatabase(p_object);
+    if(m_role == CXH_Database_role)
+    {
+      result = InsertObjectInDatabase(p_object);
+    }
+    else if(m_role == CXH_Internet_role)
+    {
+      // Insert as a SOAP Message
+      result = InsertObjectInInternet(p_object);
+    }
+    else // CXH_Filestore_role
+    {
+      result = InsertObjectInFilestore(p_object);
+    }
   }
-  else if(m_role == CXH_Internet_role)
-  {
-    // Insert as a SOAP Message
-    result = InsertObjectInInternet(p_object);
-  }
-  else // CXH_Filestore_role
-  {
-    result = InsertObjectInFilestore(p_object);
-  }
+
   // Add object to the cache
   if(result && p_object->IsPersistent())
   {
-    result = AddObjectInCache(p_object,p_object->GetPrimaryKey());
+    result = AddObjectInCache(p_object);
 
     // Log the object as inserted
     if(hibernate.GetLogLevel())
     {
-      hibernate.Log(CXH_LOG_ACTIONS,true,"Inserted object [%s:%s]",p_object->ClassName(),CXPrimaryHash(p_object->GetPrimaryKey()));
+      CString action = canInsert ? "Inserted object" : "CANNOT INSERT object";
+      hibernate.Log(CXH_LOG_ACTIONS,true,"%s [%s:%s]",action,p_object->ClassName(),p_object->Hashcode());
       if(hibernate.GetLogLevel() >= CXH_LOG_DEBUG)
       {
         p_object->LogObject();
@@ -663,30 +691,37 @@ CXSession::Delete(CXObject* p_object)
 {
   bool result = false;
 
-  // Log the object as deleted
+  // Call OnDelete trigger
+  bool canDelete = CallOnDelete(p_object);
+
+  // Log the object as deleted, before it's gone
   if(hibernate.GetLogLevel())
   {
-    hibernate.Log(CXH_LOG_ACTIONS,true,"Object to delete [%s:%s]",p_object->ClassName(),CXPrimaryHash(p_object->GetPrimaryKey()));
+    CString action = canDelete ? "Object to delete" : "CANNOT DELETE object";
+    hibernate.Log(CXH_LOG_ACTIONS,true,"%s [%s:%s]",action,p_object->ClassName(),p_object->Hashcode());
     if(hibernate.GetLogLevel() >= CXH_LOG_DEBUG)
     {
       p_object->LogObject();
     }
   }
 
-  if(m_role == CXH_Database_role)
+  // Only delete if trigger allows us to
+  if(canDelete)
   {
-    result = DeleteObjectInDatabase(p_object);
+    if(m_role == CXH_Database_role)
+    {
+      result = DeleteObjectInDatabase(p_object);
+    }
+    else if(m_role == CXH_Internet_role)
+    {
+      result = DeleteObjectInInternet(p_object);
+    }
+    else // CXH_Filestore_role
+    {
+      result = DeleteObjectInFilestore(p_object);
+    }
+    hibernate.Log(CXH_LOG_ACTIONS,true,"Delete succeeded: %s",result ? "yes" : "no");
   }
-  else if(m_role == CXH_Internet_role)
-  {
-    result = DeleteObjectInInternet(p_object);
-  }
-  else // CXH_Filestore_role
-  {
-    result = DeleteObjectInFilestore(p_object);
-  }
-
-  hibernate.Log(CXH_LOG_ACTIONS,true,"Delete succeeded: %s",result ? "yes" : "no");
   return result;
 }
 
@@ -694,7 +729,7 @@ CXSession::Delete(CXObject* p_object)
 bool
 CXSession::RemoveObject(CXObject* p_object)
 {
-  return RemoveObjectFromCache(p_object,p_object->GetPrimaryKey());
+  return RemoveObjectFromCache(p_object);
 }
 
 // Complete cache synchronize with the database, saving all results
@@ -987,9 +1022,9 @@ CXSession::GetHTTPClient()
 // false : Failure: object was already present in the cache
 // throw : Failure: Cache for the class of this object not found!!
 bool
-CXSession::AddObjectInCache(CXObject* p_object, VariantSet& p_primary)
+CXSession::AddObjectInCache(CXObject* p_object)
 {
-  CString hash = CXPrimaryHash(p_primary);
+  CString hash = p_object->Hashcode();
   CString className = p_object->GetClass()->GetName();
   className.MakeLower();
 
@@ -1010,9 +1045,9 @@ CXSession::AddObjectInCache(CXObject* p_object, VariantSet& p_primary)
 
 // And remove again from the cache
 bool
-CXSession::RemoveObjectFromCache(CXObject* p_object, VariantSet& p_primary)
+CXSession::RemoveObjectFromCache(CXObject* p_object)
 {
-  CString hash = CXPrimaryHash(p_primary);
+  CString hash = p_object->Hashcode();
   CString tableName = p_object->GetClass()->GetTable()->GetTableName();
   tableName.MakeLower();
 
@@ -1037,12 +1072,21 @@ CXSession::RemoveObjectFromCache(CXObject* p_object, VariantSet& p_primary)
 CXObject*
 CXSession::FindObjectInCache(CString p_className,VariantSet& p_primary)
 {
-  CString hash = CXPrimaryHash(p_primary);
   p_className.MakeLower();
-
   CXCache::iterator it = m_cache.find(p_className);
   if (it != m_cache.end())
   {
+    CString  hash;
+    CXClass* theClass = FindClass(p_className);
+    if(theClass && theClass->GetCalcHashcode())
+    {
+      hash = (*theClass->GetCalcHashcode())(p_primary);
+    }
+    else
+    {
+      hash = CXPrimaryHash(p_primary);
+    }
+
     ObjectCache::iterator tit = it->second->find(hash);
     if (tit != it->second->end())
     {
@@ -1224,9 +1268,9 @@ CXSession::SelectObjectsFromDatabase(CString p_className,SQLFilterSet& p_filters
       object->DeSerialize(*record);
 
       // Add object to the cache
-      if (object->IsPersistent())
+      if(object->IsPersistent())
       {
-        if(AddObjectInCache(object, object->GetPrimaryKey()) == false)
+        if(AddObjectInCache(object) == false)
         {
           // LOG!
           delete object;
@@ -1284,7 +1328,7 @@ CXSession::SelectObjectsFromInternet(CString p_className,SQLFilterSet& p_filters
       // Add object to the cache
       if(object->IsPersistent())
       {
-        if(AddObjectInCache(object,object->GetPrimaryKey()) == false)
+        if(AddObjectInCache(object) == false)
         {
           // LOG!
           delete object;
@@ -1457,7 +1501,7 @@ CXSession::DeleteObjectInDatabase(CXObject* p_object)
     trans.Commit();
 
     // Remove the object from the cache, and make it transient
-    if(RemoveObjectFromCache(p_object, p_object->GetPrimaryKey()) == false)
+    if(RemoveObjectFromCache(p_object) == false)
     {
       // Could not be removed / deleted: so make it transient
       p_object->MakeTransient();
@@ -1552,8 +1596,7 @@ CXSession::DeleteObjectInFilestore(CXObject* p_object)
     // Try to delete it
     if(DeleteFile(filename))
     {
-      RemoveObjectFromCache(p_object,p_object->GetPrimaryKey());
-      return true;
+      return RemoveObjectFromCache(p_object);
     }
   }
   return false;
@@ -1637,6 +1680,74 @@ CXSession::SerializeDiscriminator(CXObject* p_object,SOAPMessage& p_message,XMLE
   {
     p_message.AddElement(p_entity,"discriminator",XDT_String|XDT_Type,p_object->GetDiscriminator());
   }
+}
+
+//////////////////////////////////////////////////////////////////////////
+//
+// FIRING TRIGGERS
+//
+//////////////////////////////////////////////////////////////////////////
+
+void
+CXSession::CallOnLoad(CXObject* p_object)
+{
+  try
+  {
+    p_object->OnLoad();
+  }
+  catch(StdException& ex)
+  {
+  	hibernate.Log(LOGLEVEL_ERROR,false,"Error while calling OnLoad trigger for object");
+    throw ex;
+  }
+}
+
+bool
+CXSession::CallOnInsert(CXObject* p_object)
+{
+  bool result = false;
+  try
+  {
+    result = p_object->OnInsert();
+  }
+  catch(StdException& ex)
+  {
+    hibernate.Log(LOGLEVEL_ERROR,false,"Error while calling OnInsert trigger for object");
+    throw ex;
+  }
+  return result;
+}
+
+bool
+CXSession::CallOnUpdate(CXObject* p_object)
+{
+  bool result = false;
+  try
+  {
+    result = p_object->OnUpdate();
+  }
+  catch(StdException& ex)
+  {
+    hibernate.Log(LOGLEVEL_ERROR,false,"Error while calling OnUpdate trigger for object");
+    throw ex;
+  }
+  return result;
+}
+
+bool
+CXSession::CallOnDelete(CXObject* p_object)
+{
+  bool result = false;
+  try
+  {
+    result = p_object->OnDelete();
+  }
+  catch(StdException& ex)
+  {
+    hibernate.Log(LOGLEVEL_ERROR,false,"Error while calling OnDelete trigger for object");
+    throw ex;
+  }
+  return result;
 }
 
 //////////////////////////////////////////////////////////////////////////

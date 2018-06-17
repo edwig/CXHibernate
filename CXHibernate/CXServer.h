@@ -31,6 +31,7 @@
 class CXSession;
 class CXObject;
 class SOAPMessage;
+using SQLComponents::SQLFilterSet;
 
 // Ordinals for the services
 #define CXSELECT 1

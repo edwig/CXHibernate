@@ -67,6 +67,12 @@ public:
   virtual int     Compare(CXObject* p_other);
   virtual CString Hashcode();
 
+  // Override for your own trigger
+  virtual void    OnLoad();     // Fires after the load
+  virtual bool    OnInsert();   // Fires before the insert. Stops on returning false
+  virtual bool    OnUpdate();   // Fires before the update. Stops on returning false
+  virtual bool    OnDelete();   // Fires before the delete. Stops on returning false
+
   // Getting or setting the Primary key of the object
   void            SetPrimaryKey(SQLVariant* p_keyValue,int p_part);
   SQLVariant*     GetPrimaryKey(int p_part);

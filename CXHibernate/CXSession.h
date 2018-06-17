@@ -132,9 +132,9 @@ private:
   void          ClearCache  (CString p_className = "");
   void          ClearClasses(CString p_className = "");
   // Add an object to the cache
-  bool          AddObjectInCache(CXObject* p_object,VariantSet& p_primary);
+  bool          AddObjectInCache(CXObject* p_object);
   // And remove again from the cache
-  bool          RemoveObjectFromCache(CXObject* p_object, VariantSet& p_primary);
+  bool          RemoveObjectFromCache(CXObject* p_object);
   // Create a filters set for a DataSet
   void          BuildFilter(SOAPMessage& p_message,XMLElement* p_entity,SQLFilterSet& p_filters);
 
@@ -170,6 +170,11 @@ private:
   void          SerializeDiscriminator(CXObject* p_object,SQLRecord*   p_record);
   void          SerializeDiscriminator(CXObject* p_object,SOAPMessage& p_message,XMLElement* p_entity);
 
+  // Firing triggers for objects
+  void          CallOnLoad  (CXObject* p_object);
+  bool          CallOnInsert(CXObject* p_object);
+  bool          CallOnUpdate(CXObject* p_object);
+  bool          CallOnDelete(CXObject* p_object);
 
   CString       m_sessionKey;                  // As known by CXHibernate
   CXHRole       m_role { CXH_Database_role};   // Master/Slave role of the session

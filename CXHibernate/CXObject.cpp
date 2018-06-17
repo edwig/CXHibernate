@@ -99,6 +99,8 @@ CXObject::Compare(CXObject* p_other)
 }
 
 // The standard hash-code for object caches
+// You can override this method,
+// BUT DO NOT FORGET TO IMPLEMENT A RegisterCalcHash !!
 CString 
 CXObject::Hashcode()
 {
@@ -319,6 +321,40 @@ CXObject::LogObject()
   {
     LogClassAttributes(cl);
   }
+}
+
+// Override for your own trigger
+// Fires AFTER the load
+void 
+CXObject::OnLoad()
+{
+}
+
+// Override for your own trigger
+// Fires before the Insert, after the generator.
+// Return false in your override to stop the insert
+bool 
+CXObject::OnInsert()
+{
+  return true;
+}
+
+// Override for your own trigger
+// Fires before the update.
+// Return false in your override to stop the update
+bool
+CXObject::OnUpdate()
+{
+  return true;
+}
+
+// Override for your own trigger
+// Fires before the delete
+// Return false in your override to stop the delete
+bool
+CXObject::OnDelete()
+{
+  return true;
 }
 
 //////////////////////////////////////////////////////////////////////////

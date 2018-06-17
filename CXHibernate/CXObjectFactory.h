@@ -120,6 +120,14 @@ CXOReg##classname _register##classname;
 #include <SQLDate.h>
 #include <SQLGuid.h>
 
+using SQLComponents::bcd;
+using SQLComponents::SQLGuid;
+using SQLComponents::SQLDate;
+using SQLComponents::SQLTime; 
+using SQLComponents::SQLTimestamp;
+using SQLComponents::SQLInterval;
+using SQLComponents::SQLVariant;
+
 inline SQLVariant GetElementSQLVariant(SOAPMessage& p_message,XMLElement* p_entity,CString p_column)
 {
   return SQLVariant(p_message.GetElement(p_entity,p_column));

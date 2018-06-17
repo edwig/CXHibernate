@@ -1,0 +1,22 @@
+<hibernate>
+  <strategy>standalone</strategy>
+  <logfile>C:\TMP\My_hibernate_logfile.txt</logfile>
+  <loglevel>6</loglevel>
+  <database_use>use</database_use>
+  <class>
+    <name>country</name>
+    <schema>data</schema>
+    <table>country</table>
+    <discriminator>cty</discriminator>
+    <attributes>
+      <attribute name="id"          datatype="int"     generator="true"  isprimary="true" />
+      <attribute name="name"        datatype="string"  maxlength="100" />
+      <attribute name="inhabitants" datatype="int" />
+      <attribute name="continent"   datatype="string"  maxlength="20" />
+    </attributes>
+    <identity name="pk_country">
+      <attribute name="id" />
+    </identity>
+    <generator name="country_seq" start="1" />
+  </class>
+</hibernate>

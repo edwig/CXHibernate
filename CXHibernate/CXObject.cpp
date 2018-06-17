@@ -324,7 +324,7 @@ CXObject::LogObject()
 }
 
 // Override for your own trigger
-// Fires AFTER the load
+// Fires AFTER the load, but CANNOT stop the load
 void 
 CXObject::OnLoad()
 {

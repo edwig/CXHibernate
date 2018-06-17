@@ -11,6 +11,9 @@ Version 0.9: Derived classes in their own table
 
 Still to do:
 ------------
+cxh2cpp: Generate the "deserialize_generator"
+cxh2cpp: Generate the "Setters"
+
 Version 1.0: First stable version + Documentation
 
 

@@ -466,11 +466,21 @@ CXSession::CreateObject(CString p_className)
 CXObject*
 CXSession::Load(CString p_className,int p_primary)
 {
-  SQLVariant prim = (long)p_primary;
+  SQLVariant prim(p_primary);
   VariantSet set;
   set.push_back(&prim);
 
   return Load(p_className,set);
+}
+
+CXObject*
+CXSession::Load(CString p_className,CString p_primary)
+{
+  SQLVariant prim(p_primary);
+  VariantSet set;
+  set.push_back(&prim);
+
+  return Load(p_className, set);
 }
 
 CXObject*

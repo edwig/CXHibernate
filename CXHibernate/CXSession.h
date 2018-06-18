@@ -102,6 +102,7 @@ public:
   CXObject*     CreateObject(CString p_className);
   // Primary operations
   CXObject*     Load  (CString p_className,int           p_primary);    // One primary type integer
+  CXObject*     Load  (CString p_className,CString       p_primary);    // One primary type string
   CXObject*     Load  (CString p_className,SQLVariant*   p_primary);    // One primary of other type than integer
   CXObject*     Load  (CString p_className,VariantSet&   p_primary);    // One primary of other type than integer
   CXResultSet   Load  (CString p_className,SQLFilter*    p_filter);     // Multiple objects from one filter

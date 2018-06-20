@@ -1066,7 +1066,7 @@ CXSession::RemoveObjectFromCache(CXObject* p_object)
   {
     ObjectCache* tcache = it->second;
     ObjectCache::iterator tit = tcache->find(hash);
-    if (tit != tcache->end())
+    if(tit != tcache->end())
     {
       // Destroy the CXObject derived object
       delete tit->second;

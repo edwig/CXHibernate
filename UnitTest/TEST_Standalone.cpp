@@ -279,7 +279,8 @@ namespace HibernateTest
 
      // The following two lines are identical
      // CXResultSet set = m_session->FollowAssociation(Master::ClassName(),Detail::ClassName(),master->GetID());
-        CXResultSet set = master->GetDetailsOfMaster(m_session);
+     // CXResultSet set = master->GetDetailsOfMaster(m_session);
+        CXResultSet set = master->FollowAssociation(m_session,Detail::ClassName(),master->GetID());
         for(auto& object : set)
         {
           Detail* detail = (Detail*)object;

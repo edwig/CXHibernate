@@ -73,6 +73,11 @@ public:
   virtual bool    OnUpdate();   // Fires before the update. Stops on returning false
   virtual bool    OnDelete();   // Fires before the delete. Stops on returning false
 
+  // Follow an assocation of the object
+  CXResultSet     FollowAssociation(CXSession* p_session,CString p_toClass,int         p_value,CString p_associationName = "");
+  CXResultSet     FollowAssociation(CXSession* p_session,CString p_toClass,SQLVariant* p_value,CString p_associationName = "");
+  CXResultSet     FollowAssociation(CXSession* p_session,CString p_toClass,VariantSet& p_value,CString p_associationName = "");
+
   // Getting or setting the Primary key of the object
   void            SetPrimaryKey(SQLVariant* p_keyValue,int p_part);
   SQLVariant*     GetPrimaryKey(int p_part);
@@ -94,18 +99,17 @@ public:
   VariantSet&     GetPrimaryKey();
 
 protected:
-
   // Bring the contents of the class to a SOAPMessage or a SQLRecord
-  virtual void PreSerialize (SOAPMessage& p_msg,XMLElement* p_entity);
-  virtual void PreSerialize (SQLRecord&   p_rec);
-  virtual void PostSerialize(SOAPMessage& p_msg,XMLElement* p_entity);
-  virtual void PostSerialize(SQLRecord&   p_rec);
+  virtual void    PreSerialize (SOAPMessage& p_msg,XMLElement* p_entity);
+  virtual void    PreSerialize (SQLRecord&   p_rec);
+  virtual void    PostSerialize(SOAPMessage& p_msg,XMLElement* p_entity);
+  virtual void    PostSerialize(SQLRecord&   p_rec);
 
   // Read the contents of an object from a SOAPMessage or a SQLRecord
-  virtual void PreDeSerialize (SOAPMessage& p_msg,XMLElement* p_entity);
-  virtual void PreDeSerialize (SQLRecord&   p_rec);
-  virtual void PostDeSerialize(SOAPMessage& p_msg,XMLElement* p_entity);
-  virtual void PostDeSerialize(SQLRecord&   p_rec);
+  virtual void    PreDeSerialize (SOAPMessage& p_msg,XMLElement* p_entity);
+  virtual void    PreDeSerialize (SQLRecord&   p_rec);
+  virtual void    PostDeSerialize(SOAPMessage& p_msg,XMLElement* p_entity);
+  virtual void    PostDeSerialize(SQLRecord&   p_rec);
 
   // Table where this object belongs to
   CXClass*   m_class  { nullptr };

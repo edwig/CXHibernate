@@ -224,25 +224,6 @@ CXObject::MakeTransient()
   ResetPrimaryKey();
 }
 
-// Follow an assocation of the object
-CXResultSet
-CXObject::FollowAssociation(CXSession* p_session,CString p_toClass,int p_value,CString p_associationName /*= ""*/)
-{
-  return p_session->FollowAssociation(ClassName(),p_toClass,p_value,p_associationName);
-}
-
-CXResultSet
-CXObject::FollowAssociation(CXSession* p_session,CString p_toClass,SQLVariant* p_value,CString p_associationName /*= ""*/)
-{
-  return p_session->FollowAssociation(ClassName(),p_toClass,p_value,p_associationName);
-}
-
-CXResultSet
-CXObject::FollowAssociation(CXSession* p_session,CString p_toClass,VariantSet& p_value,CString p_associationName /*= ""*/)
-{
-  return p_session->FollowAssociation(ClassName(),p_toClass,p_value,p_associationName);
-}
-
 //////////////////////////////////////////////////////////////////////////
 //
 // PROTECTED INTERFACE

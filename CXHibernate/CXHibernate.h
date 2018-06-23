@@ -53,6 +53,7 @@ MapStrategy;
 #define HIBERNATE_CONFIG_FILE "hibernate.cfg.xml"
 
 // Maximum number of classes that can be initialized
+// by the object factories. De- or increase at your own leisure.
 const unsigned int MAX_CLASSES = 1000;
 
 class CXSession;
@@ -138,6 +139,8 @@ private:
   CString       m_default_schema;       // Default schema of all tables
   // Incomplete mode: Only for tools and partly running models
   bool          m_incomplete { false };
+  // Multi-threaded session lock
+  CRITICAL_SECTION m_lock;
 };
 
 // Singleton pointer to the library

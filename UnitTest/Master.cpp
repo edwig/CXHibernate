@@ -50,7 +50,7 @@ Master::~Master()
 CXResultSet 
 Master::GetDetailsOfMaster(CXSession* p_session)
 {
-  return p_session->FollowAssociation(ClassName(),Detail::ClassName(),m_id);
+  return p_session->FollowAssociation(this,Detail::ClassName(),m_id);
 }
 
 //////////////////////////////////////////////////////////////////////////

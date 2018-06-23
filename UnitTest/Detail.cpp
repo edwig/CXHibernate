@@ -50,7 +50,7 @@ Detail::~Detail()
 Master*
 Detail::GetMasterOfDetail(CXSession* p_session)
 {
-  CXResultSet set = p_session->FollowAssociation(Detail::ClassName(),Master::ClassName(),m_mast_id);
+  CXResultSet set = p_session->FollowAssociation(this,Master::ClassName(),m_mast_id);
   if(set.size() == 1)
   {
     return (Master*) set.front();

@@ -53,6 +53,7 @@ FilterName sqfilter[] =
   ,{ "LikeMiddle",    OP_LikeMiddle   }
   ,{ "IN",            OP_IN           }
   ,{ "IsNULL",        OP_IsNULL       }
+  ,{ "IsNotNULL",     OP_IsNotNULL    }
   ,{ "Greater",       OP_Greater      }
   ,{ "GreaterEqual",  OP_GreaterEqual }
   ,{ "Smaller",       OP_Smaller      }
@@ -162,17 +163,18 @@ SQLFilter::GetSQLFilter(SQLQuery& p_query)
   // Add the operator
   switch(m_operator)
   {
-    case OP_Equal:        sql += " = ";      break;
-    case OP_NotEqual:     sql += " <> ";     break;
-    case OP_Greater:      sql += " > ";      break;
-    case OP_GreaterEqual: sql += " >= ";     break;
-    case OP_Smaller:      sql += " < ";      break;
-    case OP_SmallerEqual: sql += " <= ";     break;
-    case OP_LikeBegin:    sql += " LIKE '";  break;
-    case OP_LikeMiddle:   sql += " LIKE '%"; break;
-    case OP_IsNULL:       sql += " IS NULL"; break;
-    case OP_IN:           sql += " IN (";    break;
-    case OP_Between:      sql += " BETWEEN ";break;
+    case OP_Equal:        sql += " = ";         break;
+    case OP_NotEqual:     sql += " <> ";        break;
+    case OP_Greater:      sql += " > ";         break;
+    case OP_GreaterEqual: sql += " >= ";        break;
+    case OP_Smaller:      sql += " < ";         break;
+    case OP_SmallerEqual: sql += " <= ";        break;
+    case OP_LikeBegin:    sql += " LIKE '";     break;
+    case OP_LikeMiddle:   sql += " LIKE '%";    break;
+    case OP_IsNULL:       sql += " IS NULL";    break;
+    case OP_IsNotNULL:    sql += " IS NOT NULL";break;
+    case OP_IN:           sql += " IN (";       break;
+    case OP_Between:      sql += " BETWEEN ";   break;
     case OP_NOP:          // Fall through
     default:              throw StdException("SQLFilter without an operator!");
   }
@@ -190,7 +192,7 @@ SQLFilter::GetSQLFilter(SQLQuery& p_query)
   {
     ConstructBetween(sql,p_query);
   }
-  else if(m_operator != OP_IsNULL)
+  else if(m_operator != OP_IsNULL && m_operator != OP_IsNotNULL)
   {
     // For all other operators, getting the argument
     // Getting the value as an SQL expression string (with ODBC escapes)
@@ -237,6 +239,7 @@ SQLFilter::MatchRecord(SQLRecord* p_record)
     case OP_LikeBegin:    result = MatchLikeBegin   (field); break;
     case OP_LikeMiddle:   result = MatchLikeMiddle  (field); break;
     case OP_IsNULL:       result = MatchIsNULL      (field); break;
+    case OP_IsNotNULL:    result = MatchIsNotNull   (field); break;
     case OP_IN:           result = MatchIN          (field); break;
     case OP_Between:      result = MatchBetween     (field); break;
     default:              throw StdException("SQLFilter with unknown operator!");
@@ -313,7 +316,7 @@ SQLFilter::ConstructLike(CString& p_sql)
 void
 SQLFilter::ConstructIN(CString& p_sql,SQLQuery& p_query)
 {
-  // Getting a series of values, comma seperated
+  // Getting a series of values, comma separated
   for(auto& var : m_values)
   {
     p_sql += "?,";
@@ -323,7 +326,7 @@ SQLFilter::ConstructIN(CString& p_sql,SQLQuery& p_query)
   p_sql += ")";
 }
 
-// Constructiong the BETWEEN clause
+// Constructing the BETWEEN clause
 void
 SQLFilter::ConstructBetween(CString& p_sql,SQLQuery& p_query)
 {
@@ -413,6 +416,12 @@ SQLFilter::MatchIsNULL(SQLVariant* p_field)
 {
   // Relies on the ODBC NULL indicator field!
   return p_field->IsNULL();
+}
+
+bool
+SQLFilter::MatchIsNotNull(SQLVariant* p_field)
+{
+  return !p_field->IsNULL();
 }
 
 bool
@@ -528,8 +537,6 @@ SQLFilterSet::ParseFiltersToCondition(SQLQuery& p_query)
   }
   return query;
 }
-
-
 
 }
 

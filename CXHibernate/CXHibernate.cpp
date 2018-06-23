@@ -28,6 +28,7 @@
 #include "CXHibernate.h"
 #include "CXSession.h"
 #include "CXResourceFile.h"
+#include <AutoCritical.h>
 #include <WebConfig.h>
 
 #ifdef _DEBUG
@@ -53,6 +54,10 @@ CXHibernate::CXHibernate()
   {
     cxhibernate = this;
   }
+
+  // Start our critical section lock
+  InitializeCriticalSection(&m_lock);
+
   // Initialize application class factories
   CXOInitializeClasses();
 }
@@ -60,17 +65,23 @@ CXHibernate::CXHibernate()
 // DTOR
 CXHibernate::~CXHibernate()
 {
+  // Stop everything
   CloseAllSessions();
   CloseLogfile();
   CXODestroyClasses();
+
+  // Remove our lock
+  DeleteCriticalSection(&m_lock);
 }
 
 // Getting a (possibly existing) session
 CXSession*
 CXHibernate::GetSession(CString p_sessionKey /*= ""*/)
 {
-  p_sessionKey.MakeLower();
+  // Lock the session mapping
+  AutoCritSec lock(&m_lock);
 
+  p_sessionKey.MakeLower();
   // Return a session with this key
   MapSessions::iterator it = m_sessions.find(p_sessionKey);
   if(it != m_sessions.end())
@@ -88,7 +99,7 @@ CXHibernate::CreateSession(CString p_sessionKey /*=""*/,CString p_configFile /*=
   CXSession* session = nullptr;
 
   // Init in the correct language
-  InitSQLComponents(LN_ENGLISH);
+  InitSQLComponents(SQLComponents::LN_ENGLISH);
 
   // Try to load the default configuration (if any)
   if(m_sessions.empty())
@@ -120,11 +131,17 @@ CXHibernate::CreateSession(CString p_sessionKey /*=""*/,CString p_configFile /*=
 void
 CXHibernate::AddSession(CXSession* p_session,CString p_sessionKey)
 {
+  // Lock the session mapping
+  AutoCritSec lock(&m_lock);
+
+  p_sessionKey.MakeLower();
   MapSessions::iterator it = m_sessions.find(p_sessionKey);
   if(it == m_sessions.end())
   {
     m_sessions.insert(std::make_pair(p_sessionKey,p_session));
+    return;
   }
+  throw StdException("Double registration of session: " + p_sessionKey);
 }
 
 // Removing a session, deleting it
@@ -132,6 +149,9 @@ CXHibernate::AddSession(CXSession* p_session,CString p_sessionKey)
 void
 CXHibernate::RemoveSession(CXSession* p_session)
 {
+  // Lock the session mapping
+  AutoCritSec lock(&m_lock);
+
   // Find the session in the session map
   MapSessions::iterator it = m_sessions.begin();
   while(it != m_sessions.end())
@@ -149,6 +169,9 @@ CXHibernate::RemoveSession(CXSession* p_session)
 void
 CXHibernate::CloseAllSessions()
 {
+  // Lock the session mapping
+  AutoCritSec lock(&m_lock);
+
   while(!m_sessions.empty())
   {
     // Synchronize and remove session
@@ -238,6 +261,9 @@ CXHibernate::GetConfiguration()
 void
 CXHibernate::RegisterCreateCXO(CString p_name,CreateCXO p_create)
 {
+  // Lock the factory mapping
+  AutoCritSec lock(&m_lock);
+
   // Does not need to check on duplicates
   // Code could otherwise not compile !!!
   p_name.MakeLower();
@@ -248,12 +274,18 @@ CXHibernate::RegisterCreateCXO(CString p_name,CreateCXO p_create)
 CreateCXO
 CXHibernate::FindCreateCXO(CString p_name)
 {
+  // Lock the factory mapping
+  AutoCritSec lock(&m_lock);
+
   p_name.MakeLower();
   MapCreate::iterator it = m_createCXO.find(p_name);
   if(it != m_createCXO.end())
   {
     return it->second;
   }
+  // If we are not a tool with an incomplete class system
+  // we must check that we find a creation factory
+  // otherwise the programmer must implement a new class!!
   if(!m_incomplete)
   {
     throw StdException("Class definition error: CreateCXO Function not found for class: " + p_name);
@@ -357,8 +389,9 @@ CXHibernate::LoadConfiguration(CString p_sessionKey,CString p_configFile /*= ""*
   // Create a session and load from there
   CXSession* session = new CXSession(p_sessionKey);
   session->LoadConfiguration(config);
-  m_sessions.insert(std::make_pair(p_sessionKey,session));
 
+  // Add our session in the session map
+  AddSession(session,p_sessionKey);
   return session;
 }
 
@@ -422,6 +455,7 @@ CXHibernate::MapStrategyToString(MapStrategy p_strategy)
 CString
 CXHibernate::CreateSessionKey()
 {
+  // Beware: Session keys MUST be lowercase at all times
   CString key;
   key.Format("cxs%d",m_key++);
   return key;

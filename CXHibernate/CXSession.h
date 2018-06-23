@@ -117,9 +117,9 @@ public:
   bool          Synchronize();
 
   // Getting the result of an association
-  CXResultSet   FollowAssociation(CString p_fromClass,CString p_toClass,int         p_value,CString p_associationName = "");
-  CXResultSet   FollowAssociation(CString p_fromClass,CString p_toClass,SQLVariant* p_value,CString p_associationName = "");
-  CXResultSet   FollowAssociation(CString p_fromClass,CString p_toClass,VariantSet& p_value,CString p_associationName = "");
+  CXResultSet   FollowAssociation(CXObject* p_object,CString p_toClass,int         p_value,CString p_associationName = "");
+  CXResultSet   FollowAssociation(CXObject* p_object,CString p_toClass,SQLVariant* p_value,CString p_associationName = "");
+  CXResultSet   FollowAssociation(CXObject* p_object,CString p_toClass,VariantSet& p_value,CString p_associationName = "");
 
 private:
   // Getting meta-session info from our database
@@ -191,7 +191,8 @@ private:
   CXCache       m_cache;                       // All cached objects of all known tables
   int           m_mutation      { 0       };   // Mutation id
   MetaSession   m_metaInfo;                    // Database meta-session info
-  SQLTransaction* m_transaction { nullptr };   // Enveloping transaction for all updates
-  int             m_subtrans    { 0       };   // Sub-transaction
-  HTTPClient*     m_client      { nullptr };   // Client for internet role
+  SQLTransaction*  m_transaction{ nullptr };   // Enveloping transaction for all updates
+  int              m_subtrans   { 0       };   // Sub-transaction
+  HTTPClient*      m_client     { nullptr };   // Client for internet role
+  CRITICAL_SECTION m_lock;                     // Lock for the caches and mappings
 };

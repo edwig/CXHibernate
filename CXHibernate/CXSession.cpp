@@ -30,6 +30,7 @@
 #include "CXPrimaryHash.h"
 #include "CXRole.h"
 #include "CXTransaction.h"
+#include <AutoCritical.h>
 #include <SQLQuery.h>
 #include <SQLTransaction.h>
 #include <EnsureFile.h>
@@ -68,6 +69,8 @@ CXSession::CXSession(CString p_sessionKey)
           :m_sessionKey(p_sessionKey)
           ,m_role(CXH_Internet_role)
 {
+  // Create the cache lock
+  InitializeCriticalSection(&m_lock);
 }
 
 // CTOR Filestore session
@@ -76,6 +79,8 @@ CXSession::CXSession(CString p_sessionKey,CString p_directory)
           ,m_baseDirectory(p_directory)
           ,m_role(CXH_Filestore_role)
 {
+  // Create the cache lock
+  InitializeCriticalSection(&m_lock);
 }
 
 // CTOR Master session
@@ -83,6 +88,9 @@ CXSession::CXSession(CString p_sessionKey,CString p_database,CString p_user,CStr
           :m_sessionKey(p_sessionKey)
           ,m_role(CXH_Database_role)
 {
+  // Create the cache lock
+  InitializeCriticalSection(&m_lock);
+
   m_database = new SQLDatabase();
   if(m_database->Open(p_database,p_user,p_password))
   {
@@ -119,6 +127,9 @@ CXSession::~CXSession()
     delete m_client;
     m_client = nullptr;
   }
+
+  // Remove our cache lock
+  DeleteCriticalSection(&m_lock);
 }
 
 // And closing it again
@@ -168,6 +179,8 @@ CXSession::GetDatabaseIsOpen()
 void 
 CXSession::SetDatabase(SQLDatabase* p_database)
 {
+  AutoCritSec lock(&m_lock);
+
   if(m_database && m_ownDatabase)
   {
     delete m_database;
@@ -184,6 +197,8 @@ CXSession::SetDatabase(SQLDatabase* p_database)
 SQLDatabase*
 CXSession::GetDatabase()
 {
+  AutoCritSec lock(&m_lock);
+
   if(m_database)
   {
     return m_database;
@@ -259,6 +274,9 @@ CXSession::SetInternet(CString p_url)
 bool
 CXSession::AddClass(CXClass* p_class)
 {
+  // Lock the caches
+  AutoCritSec lock(&m_lock);
+
   // Getting the table name
   CString name = p_class->GetName();
   name.MakeLower();
@@ -285,6 +303,9 @@ CXSession::AddClass(CXClass* p_class)
 CXClass*
 CXSession::FindClass(CString p_name)
 {
+  // Lock the caches
+  AutoCritSec lock(&m_lock);
+
   p_name.MakeLower();
   ClassMap::iterator it = m_classes.find(p_name);
   if(it != m_classes.end())
@@ -298,6 +319,9 @@ CXSession::FindClass(CString p_name)
 void
 CXSession::LoadConfiguration(XMLMessage& p_config)
 {
+  // Lock the caches
+  AutoCritSec lock(&m_lock);
+
   // Load session parameters
   CString role = p_config.GetElement("session_role");
   m_role = CXStringToRole(role);
@@ -369,6 +393,9 @@ CXSession::SaveConfiguration(XMLMessage& p_config)
 int
 CXSession::StartTransaction()
 {
+  // Lock the caches
+  AutoCritSec lock(&m_lock);
+
   // On re-entry, and still in transaction
   if(m_transaction)
   {
@@ -392,6 +419,9 @@ CXSession::StartTransaction()
 void
 CXSession::CommitTransaction()
 {
+  // Lock the caches
+  AutoCritSec lock(&m_lock);
+
   // Commit of sub-transaction
   if(m_subtrans)
   {
@@ -416,6 +446,9 @@ CXSession::CommitTransaction()
 void
 CXSession::RollbackTransaction()
 {
+  // Lock the caches
+  AutoCritSec lock(&m_lock);
+
   // See if we have a transaction
   if(m_transaction == nullptr)
   {
@@ -862,31 +895,31 @@ CXSession::SaveSOAPMessage(SOAPMessage& p_message, CString p_fileName)
 
 // Getting the result of an association
 CXResultSet
-CXSession::FollowAssociation(CString p_fromClass,CString p_toClass,int p_value,CString p_associationName /*= ""*/)
+CXSession::FollowAssociation(CXObject* p_object,CString p_toClass,int p_value,CString p_associationName /*= ""*/)
 {
   SQLVariant prim(p_value);
   VariantSet primary;
   primary.push_back(&prim);
 
-  return FollowAssociation(p_fromClass,p_toClass,primary,p_associationName);
+  return FollowAssociation(p_object,p_toClass,primary,p_associationName);
 }
 
 CXResultSet
-CXSession::FollowAssociation(CString p_fromClass,CString p_toClass,SQLVariant* p_value,CString p_associationName /*= ""*/)
+CXSession::FollowAssociation(CXObject* p_object,CString p_toClass,SQLVariant* p_value,CString p_associationName /*= ""*/)
 {
   VariantSet primary;
   primary.push_back(p_value);
 
-  return FollowAssociation(p_fromClass, p_toClass, primary, p_associationName);
+  return FollowAssociation(p_object,p_toClass,primary,p_associationName);
 }
 
 CXResultSet
-CXSession::FollowAssociation(CString p_fromClass,CString p_toClass,VariantSet& p_value,CString p_associationName /*= ""*/)
+CXSession::FollowAssociation(CXObject* p_object,CString p_toClass,VariantSet& p_value,CString p_associationName /*= ""*/)
 {
   CXResultSet  set;
   SQLFilterSet filters;
   CXObject*     object = nullptr;
-  CXClass*   fromClass = FindClass(p_fromClass);
+  CXClass*   fromClass = p_object->GetClass();
   CXAssociation* assoc = fromClass->FindAssociation(p_toClass,p_associationName);
 
   if(assoc == nullptr)
@@ -927,6 +960,9 @@ CXSession::ClearCache(CString p_className /*= ""*/)
     return;
   }
 
+  // Lock the caches
+  AutoCritSec lock(&m_lock);
+
   CXCache::iterator it = m_cache.begin();
   while (it != m_cache.end())
   {
@@ -952,6 +988,9 @@ void
 CXSession::ClearClasses(CString p_className /*= ""*/)
 {
   hibernate.Log(CXH_LOG_ACTIONS,true,"Clear class definition cache of session: %s",m_sessionKey);
+
+  // Lock the caches
+  AutoCritSec lock(&m_lock);
 
   ClassMap::iterator it = m_classes.begin();
   while(it != m_classes.end())
@@ -1034,6 +1073,9 @@ CXSession::GetHTTPClient()
 bool
 CXSession::AddObjectInCache(CXObject* p_object)
 {
+  // Lock the caches
+  AutoCritSec lock(&m_lock);
+
   CString hash = p_object->Hashcode();
   CString className = p_object->GetClass()->GetName();
   className.MakeLower();
@@ -1057,6 +1099,9 @@ CXSession::AddObjectInCache(CXObject* p_object)
 bool
 CXSession::RemoveObjectFromCache(CXObject* p_object)
 {
+  // Lock the caches
+  AutoCritSec lock(&m_lock);
+
   CString hash = p_object->Hashcode();
   CString tableName = p_object->GetClass()->GetTable()->GetTableName();
   tableName.MakeLower();
@@ -1082,6 +1127,9 @@ CXSession::RemoveObjectFromCache(CXObject* p_object)
 CXObject*
 CXSession::FindObjectInCache(CString p_className,VariantSet& p_primary)
 {
+  // Lock the caches
+  AutoCritSec lock(&m_lock);
+
   p_className.MakeLower();
   CXCache::iterator it = m_cache.find(p_className);
   if (it != m_cache.end())

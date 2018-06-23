@@ -43,6 +43,7 @@ typedef enum _sqlOperator
   ,OP_Smaller
   ,OP_SmallerEqual
   ,OP_IsNULL
+  ,OP_IsNotNULL
   ,OP_LikeBegin
   ,OP_LikeMiddle
   ,OP_IN
@@ -112,17 +113,18 @@ private:
   void        ConstructBetween(CString& p_sql,SQLQuery& p_query);
 
   // Internal matching
-  bool        MatchEqual(SQLVariant* p_field);
-  bool        MatchNotEqual(SQLVariant* p_field);
-  bool        MatchGreater(SQLVariant* p_field);
+  bool        MatchEqual       (SQLVariant* p_field);
+  bool        MatchNotEqual    (SQLVariant* p_field);
+  bool        MatchGreater     (SQLVariant* p_field);
   bool        MatchGreaterEqual(SQLVariant* p_field);
-  bool        MatchSmaller(SQLVariant* p_field);
+  bool        MatchSmaller     (SQLVariant* p_field);
   bool        MatchSmallerEqual(SQLVariant* p_field);
-  bool        MatchLikeBegin(SQLVariant* p_field);
-  bool        MatchLikeMiddle(SQLVariant* p_field);
-  bool        MatchIsNULL(SQLVariant* p_field);
-  bool        MatchIN(SQLVariant* p_field);
-  bool        MatchBetween(SQLVariant* p_field);
+  bool        MatchLikeBegin   (SQLVariant* p_field);
+  bool        MatchLikeMiddle  (SQLVariant* p_field);
+  bool        MatchIsNULL      (SQLVariant* p_field);
+  bool        MatchIsNotNull   (SQLVariant* p_field);
+  bool        MatchIN          (SQLVariant* p_field);
+  bool        MatchBetween     (SQLVariant* p_field);
 
   // Data for the filter
   CString     m_field;              // Name of the field to act upon

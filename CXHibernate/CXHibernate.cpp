@@ -421,6 +421,13 @@ CXHibernate::SaveConfiguration(CXSession* p_session,CString p_configFile /*= ""*
   return config.SaveFile(filename);
 }
 
+// Returing an ever increasing transaction mutation number
+int
+CXHibernate::GetNewMutation()
+{
+  return _InterlockedIncrement(&m_mutation);
+}
+
 //////////////////////////////////////////////////////////////////////////
 //
 // PRIVATE

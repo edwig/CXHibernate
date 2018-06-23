@@ -410,7 +410,7 @@ CXSession::StartTransaction()
   // Reset the sub-transaction
   m_subtrans = 0;
   // This is our mutation ID
-  ++m_mutation;
+  m_mutation = hibernate.GetNewMutation();
 
   hibernate.Log(CXH_LOG_ACTIONS,true,"Started transaction [%d] for session [%s] ",m_mutation,m_sessionKey);
   return m_mutation;
@@ -455,9 +455,13 @@ CXSession::RollbackTransaction()
     throw StdException("Not in transaction at Rollback()");
   }
 
+  // Perform the rollback
   m_transaction->Rollback();
   delete m_transaction;
   m_transaction = nullptr;
+
+  // Sub-transactions also rolled back
+  m_subtrans = 0;
 
   hibernate.Log(CXH_LOG_ACTIONS,true,"Rollback transaction [%d] for session [%s] ",m_mutation,m_sessionKey);
 }

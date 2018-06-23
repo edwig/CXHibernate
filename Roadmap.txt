@@ -25,10 +25,13 @@ But will be implemented in a later version
 - many-to-many associations
 - mapping strategy not global but in each super-class of it's one
   (also kwown as union-classes)
+- Start / Commit / Rollback transactions on an internet store
 
 
 Features from (N)Hibernate that will NEVER be implemented:
 ----------------------------------------------------------
 - Lazy loading: too many runtime problems at customer sites
+- HQL (Hibernate Query Language) : The payback is to small,
+  and the confusion is too great.
 - Automatic reflection: cannot be done in C++, but pending 
   requests on the ISO C++ commities exist.

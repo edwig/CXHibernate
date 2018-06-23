@@ -110,6 +110,7 @@ public:
   int           GetLogLevel();
   LogAnalysis*  GetLogAnalysis();
   CString       GetConfiguration();
+  int           GetNewMutation();
 
 private:
   // Translate strategy names
@@ -130,7 +131,9 @@ private:
   // Configuration file
   CString       m_configFile;
   // Current session key
-  int           m_key { 1 };
+  int           m_key      { 1 };
+  // Current transaction
+  long          m_mutation { 0 };
   // Logging for Hibernate
   int           m_loglevel { CXH_LOG_NOTHING };
   LogAnalysis*  m_logfile  { nullptr };

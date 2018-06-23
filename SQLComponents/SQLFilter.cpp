@@ -60,6 +60,7 @@ FilterName sqfilter[] =
   ,{ "GreaterEqual",  OP_GreaterEqual }
   ,{ "NotEqual",      OP_NotEqual     }
   ,{ "Between",       OP_Between      }
+  ,{ "Exists",        OP_Exists       }
   ,{ "NOP",           OP_NOP          }
 };
 
@@ -102,34 +103,22 @@ SQLFilter::SQLFilter(CString p_field,SQLOperator p_operator,CString p_value)
   m_values.push_back(val);
 }
 
+// XTOR from a single operator
+SQLFilter::SQLFilter(SQLOperator p_operator)
+          :m_operator(p_operator)
+{
+}
+
 // XTOR from another filter
 SQLFilter::SQLFilter(SQLFilter* p_other)
 {
-  m_field      = p_other->m_field;
-  m_operator   = p_other->m_operator;
-  m_expression = p_other->m_expression;
-  m_negate     = p_other->m_negate;
-
-  for(auto& variant : p_other->m_values)
-  {
-    var* value = new SQLVariant(variant);
-    m_values.push_back(value);
-  }
+  *this = *p_other;
 }
 
 // XTOR from another filter
 SQLFilter::SQLFilter(SQLFilter& p_other)
 {
-  m_field      = p_other.m_field;
-  m_operator   = p_other.m_operator;
-  m_expression = p_other.m_expression;
-  m_negate     = p_other.m_negate;
-
-  for(auto& variant : p_other.m_values)
-  {
-    var* value = new SQLVariant(variant);
-    m_values.push_back(value);
-  }
+  *this = p_other;
 }
 
 // DTOR: Remove all variant values
@@ -141,6 +130,32 @@ SQLFilter::~SQLFilter()
   }
   m_values.clear();
 }
+
+// Copy a SQLFilter
+SQLFilter&
+SQLFilter::operator=(const SQLFilter& p_other)
+{
+  // Check if we are not copying ourselves
+  if(this == &p_other)
+  {
+    return *this;
+  }
+  // Copy all values
+  m_field            = p_other.m_field;
+  m_operator         = p_other.m_operator;
+  m_expression       = p_other.m_expression;
+  m_negate           = p_other.m_negate;
+  m_openParenthesis  = p_other.m_openParenthesis;
+  m_closeParenthesis = p_other.m_closeParenthesis;
+
+  for(auto& variant : p_other.m_values)
+  {
+    var* value = new SQLVariant(variant);
+    m_values.push_back(value);
+  }
+  return *this;
+}
+
 
 // Getting one of the values of the filter
 SQLVariant* 
@@ -157,8 +172,19 @@ SQLFilter::GetValue(int p_number)
 CString
 SQLFilter::GetSQLFilter(SQLQuery& p_query)
 {
+  CString sql;
+
+  // Add an extra parenthesis level
+  if(m_openParenthesis)
+  {
+    sql = "(";
+  }
+
   // Add the field
-  CString sql(m_field);
+  if(!m_field.IsEmpty())
+  {
+    sql += m_field;
+  }
 
   // Add the operator
   switch(m_operator)
@@ -175,6 +201,7 @@ SQLFilter::GetSQLFilter(SQLQuery& p_query)
     case OP_IsNotNULL:    sql += " IS NOT NULL";break;
     case OP_IN:           sql += " IN (";       break;
     case OP_Between:      sql += " BETWEEN ";   break;
+    case OP_Exists:       sql += " EXISTS ";    break;
     case OP_NOP:          // Fall through
     default:              throw StdException("SQLFilter without an operator!");
   }
@@ -200,9 +227,16 @@ SQLFilter::GetSQLFilter(SQLQuery& p_query)
   }
 
   // See if we must NEGATE the condition
+  // Beware that it is OUTSIDE the parenthesis
   if(m_negate)
   {
     sql = "NOT " + sql;
+  }
+
+  // End an extra parenthesis level
+  if(m_closeParenthesis)
+  {
+    sql = ")";
   }
 
   return sql;
@@ -505,7 +539,6 @@ SQLFilterSet::ParseFiltersToCondition(SQLQuery& p_query)
 {
   CString query;
   bool first = true;
-  int closing = 0;
 
   // Add all filters
   for(auto& filt : m_filters)
@@ -514,26 +547,13 @@ SQLFilterSet::ParseFiltersToCondition(SQLQuery& p_query)
     {
       first = false;
     }
-    else
+    else if(filt->GetOperator() == SQLOperator::OP_OR)
     {
-      if(filt->GetOperator() == SQLOperator::OP_OR)
-      {
-        query = "(" + query + ")\n"
-                "    OR (";
-        ++closing;
-      }
-      else
-      {
-        query += "\n   AND ";
-      }
+      query += "\n    OR ";
+      continue;
     }
+    query += "\n   AND ";
     query += filt->GetSQLFilter(p_query);
-  }
-
-  // Do the closing of all 'OR' groups
-  while(closing--)
-  {
-    query += ")";
   }
   return query;
 }

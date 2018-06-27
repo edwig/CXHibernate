@@ -315,6 +315,13 @@ CXSession::FindClass(CString p_name)
   return nullptr;
 }
 
+// Get a map to all classes
+ClassMap&
+CXSession::GetClasses()
+{
+  return m_classes;
+}
+
 // Loading the general configuration XML
 void
 CXSession::LoadConfiguration(XMLMessage& p_config)

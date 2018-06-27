@@ -68,7 +68,6 @@ DDLCreateTable::GetTableStatements(CString p_tableName)
   }
   catch(StdException& error)
   {
-    m_ddl.Empty();
     m_statements.clear();
     throw error;
   }
@@ -156,12 +155,13 @@ void
 DDLCreateTable::GetTableInfo()
 {
   // Get primary table info
-  m_tables.clear();
   CString errors;
+  CString ddl;
 
   if(!m_hasTable)
   {
     // Find table info
+    m_tables.clear();
     if(!m_info->MakeInfoTableTable(m_tables,errors,"",m_tableName) || m_tables.empty())
     {
       throw StdException(CString("Cannot find table: ") + m_tableName + " : " + errors);
@@ -182,17 +182,19 @@ DDLCreateTable::GetTableInfo()
   // Optional remarks to begin with
   if(!table.m_remarks.IsEmpty())
   {
-    m_ddl = "-- " + table.m_remarks;
+    ddl = "-- " + table.m_remarks;
   }
 
   // Do our DDL part
-  m_ddl += "CREATE " + table.m_objectType + " ";
+  ddl += "CREATE " + table.m_objectType + " ";
   if(!m_schema.IsEmpty())
   {
-    m_ddl += m_schema + ".";
+    ddl += m_schema + ".";
   }
-  m_ddl += m_tableName;
-  m_ddl += "\n(\n";
+  ddl += m_tableName;
+  ddl += "\n(\n";
+
+  m_createDDL = ddl;
 }
 
 void   
@@ -261,13 +263,12 @@ DDLCreateTable::GetColumnInfo()
     }
 
     // Stash the line
-    StashTheLine(line);
+    m_createDDL += line + "\n";
     first = false;
   }
-  m_ddl += ")\n";
-
-  StashTheLine(m_ddl);
-  m_ddl.Empty();
+  m_createDDL += ")";
+  StashTheLine(m_createDDL);
+  m_createDDL.Empty();
 }
 
 void

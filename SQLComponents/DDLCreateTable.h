@@ -78,8 +78,8 @@ private:
   SQLInfoDB* m_info;
   CString    m_schema;
   CString    m_tableName;
-  CString    m_ddl;
   DDLS       m_statements;
+  CString    m_createDDL;
 
   // Mappings
   MTableMap       m_tables;

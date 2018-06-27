@@ -58,29 +58,39 @@ public:
   void          CloseSession();
   // Changing our role (database, filestore, internet)
   void          ChangeRole(CXHRole p_role);
-  // Specifiy a database connection
+  // Loading the general configuration XML.
+  void          LoadConfiguration(XMLMessage& p_config);
+  // Saving the general configuration XML.
+  void          SaveConfiguration(XMLMessage& p_config);
+  // Add a class to the session
+  bool          AddClass(CXClass* p_table);
+
+  // SETTERS
+
+  // Specify a database connection
   void          SetDatabaseCatalog(CString p_datasource);
   void          SetDatabaseUsername(CString p_user);
   void          SetDatabasePassword(CString p_password);
   void          SetDatabaseConnection(CString p_datasource,CString p_user,CString p_password);
   // Alternate database 
   void          SetDatabase(SQLDatabase* p_database);
-  // Getting our database
-  SQLDatabase*  GetDatabase();
   // Setting an alternate filestore location
   void          SetFilestore(CString p_directory);
   // Setting an alternate internet location
   void          SetInternet(CString p_url);
-  // Add a class to the session
-  bool          AddClass(CXClass* p_table);
-  // Finding a class
-  CXClass*      FindClass(CString p_name);
+
+  // GETTERS
+
+  // Getting our database
+  SQLDatabase*  GetDatabase();
   // Find if the database is correctly opened
   bool          GetDatabaseIsOpen();
-  // Loading the general configuration XML.
-  void          LoadConfiguration(XMLMessage& p_config);
-  // Saving the general configuration XML.
-  void          SaveConfiguration(XMLMessage& p_config);
+  // Get a map to all classes
+  ClassMap&     GetClasses();
+  // Finding a class
+  CXClass*      FindClass(CString p_name);
+
+  // TRANSACTIONS
 
   // Get a master mutation ID, to put actions into one (1) commit
   int           StartTransaction();
@@ -88,7 +98,8 @@ public:
   void          RollbackTransaction();
   bool          HasTransaction();
 
-  // Filestore & SOAP interface
+  // FILESTORE & SOAP interface
+
   // Create a filestore name for a table
   CString       CreateFilestoreName(CXTable* p_table);
   // Create a filestore name for an object

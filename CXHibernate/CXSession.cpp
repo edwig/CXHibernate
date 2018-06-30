@@ -222,7 +222,7 @@ CXSession::GetDatabase()
       return m_database;
     }
   }
-  return nullptr;
+  throw StdException("Connect a database to your CX-Hibernate session!");
 }
 
 // Specify a database connection

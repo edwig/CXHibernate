@@ -505,7 +505,7 @@ CXClass::BuildClassTable(CXSession* p_session)
     if(m_super == nullptr)
     {
       CXAttribute* attrib = new CXAttribute("string","discriminator",3);
-      m_attributes.push_back(attrib);
+      AddAttribute(attrib);
     }
   }
 
@@ -1244,8 +1244,9 @@ CXClass::FillTableInfoFromClassInfo()
 {
   int position = 1;
 
-  if(hibernate.GetStrategy() == MapStrategy::Strategy_sub_table ||
-     hibernate.GetStrategy() == MapStrategy::Strategy_classtable)
+  if((hibernate.GetStrategy() == MapStrategy::Strategy_sub_table ||
+      hibernate.GetStrategy() == MapStrategy::Strategy_classtable) &&
+      m_super != nullptr)
   {
     // Add primary key attributes as columns
     for(auto& attrib : m_identity.m_attributes)

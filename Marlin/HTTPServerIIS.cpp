@@ -547,12 +547,12 @@ HTTPServerIIS::GetHTTPMessageFromRequest(IHttpContext* p_context
   }
   else
   {
-     // Chunks already read by IIS, so just copy them in the message
-     // No more are coming, we already have everything for a HTTPMessage
-     if(p_request->EntityChunkCount)
-     {
-       ReadEntityChunks(message,p_request);
-     }
+    // Chunks already read by IIS, so just copy them in the message
+    // No more are coming, we already have everything for a HTTPMessage
+    if(p_request->EntityChunkCount)
+    {
+      ReadEntityChunks(message,p_request);
+    }
   }
   // This is the result
   return message;

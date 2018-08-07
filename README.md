@@ -3,7 +3,7 @@
 C++ Hibernate Framework after the example of the Java Hibernate
 and the C# .NET NHibernate projects.
 
-#### Early version 0.9.0
+#### Version 1.0.0
 
 This project is in it early beginnings. The version number is below 1.0
 to project the notion that it is not yet fully functional.
@@ -24,9 +24,6 @@ The following functions are already working:
 * Following of associations
 * Derived classes in a one-table strategy
 * Derived tables in their own tables
-
-The following are not yet working / done
-
 * Documentation
 
 For more features, see the file "Roadmap.txt"

@@ -26,12 +26,13 @@ The following functions are already working:
 * Derived tables in their own tables
 
 ### Documentation
-There is an [extensive manual in the documentation sub-directory](https://github.com/edwig/cxhibernate/blob/master/documentation/CXHibernate.docx)
+There is an [extensive manual in the documentation sub-directory](https://github.com/edwig/CXHibernate/blob/master/Documentation/CXHibernate.docx)
 This manual contains backgrounds, examples and full documentation
 of all features of the current CXHibernate library.
+Look for "CXHibernate.docx"
 
 ### Roadmap
-For more features to come, see the file [Roadmap.txt](https://github.com/edwig/CXHibernate/blob/master/roadmap.txt)
+For more features to come, see the file [Roadmap.txt](https://github.com/edwig/CXHibernate/blob/master/Roadmap.txt) in the root of the project
 
 ### Friends
 The CXHibernate Framework relies heave(n)ly on the following libraries:

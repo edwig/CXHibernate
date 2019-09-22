@@ -7,8 +7,10 @@ and the C# .NET NHibernate projects.
 (Also see the 'Releasenotes.txt' file)
 Higher versions of the Marlin and SQLComponents framework and a 
 testserver for Microsoft IIS.
+Also late binding for the definitions of assications and full
+unit testing of the library's main functions.
 
-#### Version 1.0.0
+### Version 1.0.0
 The following functions are already working:
 
 * Serialization and de-serialization of objects
@@ -24,9 +26,18 @@ The following functions are already working:
 * Derived tables in their own tables
 
 ### Documentation
-There is an extensive documentation file "CXHibernate.dox" in the
-'Documentation' subdirectory with explanations, code examples and
-walk throughs.
+There is an [extensive manual in the documentation sub-directory](https://github.com/edwig/cxhibernate/documentation/CXHibernate.docx)
+This manual contains backgrounds, examples and full documentation
+of all features of the current CXHibernate library.
 
-## Roadmap
-For more features to come, see the file "Roadmap.txt"
+### Roadmap
+For more features to come, see the file [Roadmap.txt](https://github.com/edwig/CXHibernate/roadmap.txt)
+
+### Friends
+The CXHibernate Framework relies heave(n)ly on the following libraries:
+
+* [The Marlin Webserver Framework](https://github.com/edwig/Marlin)
+* [SQLComponents for database access](https://github.com/edwig/SQLComponents)
+
+
+

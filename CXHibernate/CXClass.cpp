@@ -21,8 +21,8 @@
 // WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION 
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
-// Last Revision:   17-06-2018
-// Version number:  0.9.0
+// Last version date: See CXHibernate.h
+// Version number:    See CXHibernate.h
 //
 #include "stdafx.h"
 #include "CXHibernate.h"
@@ -402,9 +402,9 @@ CXClass::LoadMetaInfo(CXSession* p_session,XMLMessage& p_message,XMLElement* p_e
   LoadMetaInfoSubClasses(p_message,p_elem);
 
   // Load all other meta info
+  // Except for associations which are only done as late binding
   LoadMetaInfoAttributes  (p_message,p_elem);
   LoadMetaInfoIdentity    (p_message,p_elem);
-  LoadMetaInfoAssociations(p_message,p_elem,p_session);
   LoadMetaInfoIndices     (p_message,p_elem);
   LoadMetaInfoGenerator   (p_message,p_elem);
   LoadMetaInfoPrivileges  (p_message,p_elem);
@@ -1136,11 +1136,15 @@ CXClass::LoadMetaInfoAssociations(XMLMessage& p_message,XMLElement* p_theClass,C
         }
         else
         {
+          // [EH] MUST BUILD LATE-BINDING !!
           CXClass* related = p_session->FindClass(ass->m_primaryTable);
-          attrib = related->FindAttribute(name);
-          if (attrib)
+          if (related)
           {
-            ass->m_attributes.push_back(attrib);
+            attrib = related->FindAttribute(name);
+            if(attrib)
+            {
+              ass->m_attributes.push_back(attrib);
+            }
           }
         }
         column = p_message.GetElementSibling(column);

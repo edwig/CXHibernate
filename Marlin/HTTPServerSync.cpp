@@ -32,8 +32,10 @@
 #include "WebServiceServer.h"
 #include "HTTPURLGroup.h"
 #include "HTTPError.h"
+#include "HTTPTime.h"
 #include "GetLastErrorAsString.h"
 #include "ConvertWideString.h"
+#include "WebSocketServerSync.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -406,6 +408,7 @@ HTTPServerSync::RunHTTPServer()
     CString   authorize      = request->Headers.KnownHeaders[HttpHeaderAuthorization  ].pRawValue;
     CString   modified       = request->Headers.KnownHeaders[HttpHeaderIfModifiedSince].pRawValue;
     CString   referrer       = request->Headers.KnownHeaders[HttpHeaderReferer        ].pRawValue;
+    CString   contentLength  = request->Headers.KnownHeaders[HttpHeaderContentLength  ].pRawValue;
     CString   rawUrl         = CW2A(request->CookedUrl.pFullUrl);
     PSOCKADDR sender         = request->Address.pRemoteAddress;
     int       remDesktop     = FindRemoteDesktop(request->Headers.UnknownHeaderCount
@@ -446,9 +449,13 @@ HTTPServerSync::RunHTTPServer()
         callback    = site->GetCallback();
         eventStream = site->GetIsEventStream();
       }
+      else
+      {
+        ERRORLOG(404,"Site not found by context: " + rawUrl);
+      }
 
       // See if we must substitute for a sub-site
-      if(m_hasSubsites)
+      if(site && m_hasSubsites)
       {
         CString absPath = CW2A(request->CookedUrl.pAbsPath);
         site = FindHTTPSite(site,absPath);
@@ -541,12 +548,13 @@ HTTPServerSync::RunHTTPServer()
       message->SetAuthorization(authorize);
       message->SetRequestHandle(request->RequestId);
       message->SetConnectionID(request->ConnectionId);
-      message->SetContentType(contentType);
       message->SetAccessToken(accessToken);
       message->SetRemoteDesktop(remDesktop);
       message->SetSender((PSOCKADDR_IN6)sender);
       message->SetCookiePairs(cookie);
       message->SetAcceptEncoding(acceptEncoding);
+      message->SetContentType(contentType);
+      message->SetContentLength((size_t)atoll(contentLength));
       if(site->GetAllHeaders())
       {
         // If requested so, copy all headers to the message
@@ -571,6 +579,9 @@ HTTPServerSync::RunHTTPServer()
           continue;
         }
       }
+
+      // Find routing information within the site
+      CalculateRouting(site,message);
 
       // Find X-HTTP-Method VERB Tunneling
       if(type == HTTPCommand::http_post && site->GetVerbTunneling())
@@ -738,6 +749,13 @@ HTTPServerSync::StopServer()
   Cleanup();
 }
 
+// Create a new WebSocket in the subclass of our server
+WebSocket*
+HTTPServerSync::CreateWebSocket(CString p_uri)
+{
+  return new WebSocketServerSync(p_uri);
+}
+
 void
 HTTPServerSync::InitializeHttpResponse(HTTP_RESPONSE* p_response,USHORT p_status,PSTR p_reason)
 {
@@ -770,7 +788,10 @@ bool
 HTTPServerSync::ReceiveIncomingRequest(HTTPMessage* p_message)
 {
   bool   retval    = true;
+  bool   reading   = true;
   ULONG  bytesRead = 0;
+  size_t totalRead = 0;
+  size_t mustRead  = p_message->GetContentLength();
   ULONG  entityBufferLength = INIT_HTTP_BUFFERSIZE;
 
   // Create a buffer + 1 extra byte for the closing 0
@@ -781,12 +802,20 @@ HTTPServerSync::ReceiveIncomingRequest(HTTPMessage* p_message)
     return false;
   }
 
-  // Reading loop
-  bool reading = true;
-  do 
+  // Check that we read accordingly to Content-Length or to EOF
+  if(mustRead == 0L)
   {
-    bytesRead = 0; 
-    DWORD result = HttpReceiveRequestEntityBody(m_requestQueue
+#if defined _M_IX86
+    mustRead = ULONG_MAX;
+#else
+    mustRead = ULLONG_MAX;
+#endif
+  }
+
+  // Reading loop
+  while(reading && totalRead < mustRead)
+  {
+    ULONG result = HttpReceiveRequestEntityBody(m_requestQueue
                                                 ,p_message->GetRequestHandle()
                                                 ,HTTP_RECEIVE_REQUEST_ENTITY_BODY_FLAG_FILL_BUFFER
                                                 ,entityBuffer
@@ -799,6 +828,7 @@ HTTPServerSync::ReceiveIncomingRequest(HTTPMessage* p_message)
                               entityBuffer[bytesRead] = 0;
                               p_message->AddBody(entityBuffer,bytesRead);
                               DETAILLOGV("ReceiveRequestEntityBody [%d] bytes",bytesRead);
+                              totalRead += bytesRead;
                               break;
       case ERROR_HANDLE_EOF:  // Very last incoming body part
                               if(bytesRead)
@@ -806,17 +836,17 @@ HTTPServerSync::ReceiveIncomingRequest(HTTPMessage* p_message)
                                 entityBuffer[bytesRead] = 0;
                                 p_message->AddBody(entityBuffer,bytesRead);
                                 DETAILLOGV("ReceiveRequestEntityBody [%d] bytes",bytesRead);
+                                totalRead += bytesRead;
                               }
                               reading = false;
                               break;
-      default:                ERRORLOG(result,"ReceiveRequestEntityBody");
+      default:                ERRORLOG(result,"HTTP Receive-request (entity body)");
                               reading = false;
                               retval  = false;
                               break;
                               
     }
   } 
-  while(reading);
 
   // Clean up buffer after reading
   delete [] entityBuffer;
@@ -902,6 +932,7 @@ HTTPServerSync::SendResponse(HTTPMessage* p_message)
 
   // Respond to general HTTP status
   int status = p_message->GetStatus();
+  CString date = HTTPGetSystemTime();
 
   // Initialize the HTTP response structure.
   InitializeHttpResponse(&response,(USHORT)status,(PSTR) GetHTTPStatusText(status));
@@ -926,6 +957,7 @@ HTTPServerSync::SendResponse(HTTPMessage* p_message)
                                               ,site->GetAuthenticationRealm());
     }
     AddKnownHeader(response,HttpHeaderWwwAuthenticate,challenge);
+    AddKnownHeader(response,HttpHeaderDate,date);
   }
 
   // Add the server header or suppress it
@@ -969,7 +1001,7 @@ HTTPServerSync::SendResponse(HTTPMessage* p_message)
   }
 
   // Possible zip the contents, and add content-encoding header
-  if(p_message->GetHTTPSite()->GetHTTPCompression() && buffer)
+  if(p_message->GetHTTPSite() && p_message->GetHTTPSite()->GetHTTPCompression() && buffer)
   {
     // But only if the client side requested it
     if(p_message->GetAcceptEncoding().Find("gzip") >= 0)
@@ -999,11 +1031,11 @@ HTTPServerSync::SendResponse(HTTPMessage* p_message)
 
   // Dependent on the filling of FileBuffer
   // Send 1 or more buffers or the file
-  if(buffer->GetHasBufferParts())
+  if(buffer && buffer->GetHasBufferParts())
   {
     SendResponseBufferParts(&response,requestID,buffer,totalLength);
   }
-  else if(buffer->GetFileName().IsEmpty())
+  else if(buffer && buffer->GetFileName().IsEmpty())
   {
     SendResponseBuffer(&response,requestID,buffer,totalLength);
   }
@@ -1230,7 +1262,7 @@ HTTPServerSync::SendResponseFileHandle(PHTTP_RESPONSE p_response
   // Send entity body from a file handle.
   dataChunk.DataChunkType = HttpDataChunkFromFileHandle;
   dataChunk.FromFileHandle.ByteRange.StartingOffset.QuadPart = 0;
-  dataChunk.FromFileHandle.ByteRange.Length.QuadPart = fileSize; // HTTP_BYTE_RANGE_TO_EOF;
+  dataChunk.FromFileHandle.ByteRange.Length.QuadPart = fileSize; // HTTP_BYTE_RANGE_TO_EOF
   dataChunk.FromFileHandle.FileHandle = file;
 
   result = HttpSendResponseEntityBody(m_requestQueue,
@@ -1334,10 +1366,11 @@ HTTPServerSync::InitEventStream(EventStream& p_stream)
     p_stream.m_site->AddSiteOptionalHeaders(ukheaders);
   }
 
-  // Now add all unknown headers to the response
-  PHTTP_UNKNOWN_HEADER unknown = AddUnknownHeaders(ukheaders);
-  p_stream.m_response.Headers.UnknownHeaderCount = (USHORT)ukheaders.size();
-  p_stream.m_response.Headers.pUnknownHeaders    = unknown;
+//   COMMENTED OUT: Leaks memory at logoff
+//   // Now add all unknown headers to the response
+//   PHTTP_UNKNOWN_HEADER unknown = AddUnknownHeaders(ukheaders);
+//   p_stream.m_response.Headers.UnknownHeaderCount = (USHORT)ukheaders.size();
+//   p_stream.m_response.Headers.pUnknownHeaders    = unknown;
 
   // Add an entity chunk.
   HTTP_DATA_CHUNK dataChunk;

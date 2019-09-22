@@ -2,7 +2,7 @@
 //
 // File: SQLWrappers.h
 //
-// Copyright (c) 1998-2018 ir. W.E. Huisman
+// Copyright (c) 1998-2019 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy of 
@@ -21,17 +21,19 @@
 // WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION 
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
-// Last Revision:   28-05-2018
-// Version number:  1.5.0
+// Version number: See SQLComponents.h
 //
 #pragma once
 #include "SQLComponents.h"
+#include <sqltypes.h>
 
 //////////////////////////////////////////////////////////////////////////
 //
 // This files contains wrappers for all SQLXxxxx functions to circumvent
 // access violations and other exceptions from ODBC drivers by catching them all
 //
+
+#define sql_catch(ex)    catch(StdException& ex) { ReThrowSafeException(ex); return SQL_ERROR; }
 
 namespace SQLComponents
 {
@@ -42,11 +44,7 @@ inline SQLRETURN SqlDriverConnect(SQLHDBC hdbc, SQLHWND hwnd, SQLCHAR *szConnStr
   {
     return ::SQLDriverConnect(hdbc, hwnd, szConnStrIn, cbConnStrIn, szConnStrOut, cbConnStrOutMax, pcbConnStrOut, fDriverCompletion);
   }
-  catch(StdException& er)
-  {
-    UNREFERENCED_PARAMETER(er);
-    return SQL_ERROR;
-  }
+  sql_catch(ex)
 }
 
 inline SQLRETURN SqlDisconnect(SQLHDBC ConnectionHandle)
@@ -55,11 +53,7 @@ inline SQLRETURN SqlDisconnect(SQLHDBC ConnectionHandle)
   {
     return ::SQLDisconnect(ConnectionHandle);
   }
-  catch (StdException& er)
-  {
-    UNREFERENCED_PARAMETER(er);
-    return SQL_ERROR;
-  }
+  sql_catch(ex)
 }
 
 inline SQLRETURN SqlFreeHandle(SQLSMALLINT HandleType, SQLHANDLE Handle)
@@ -68,11 +62,7 @@ inline SQLRETURN SqlFreeHandle(SQLSMALLINT HandleType, SQLHANDLE Handle)
   {
     return SQLFreeHandle(HandleType, Handle);
   }
-  catch (StdException& er)
-  {
-    UNREFERENCED_PARAMETER(er);
-    return SQL_ERROR;
-  }
+  sql_catch(ex)
 }
 
 inline SQLRETURN SqlFreeStmt(HSTMT stmt,SQLUSMALLINT option)
@@ -81,11 +71,7 @@ inline SQLRETURN SqlFreeStmt(HSTMT stmt,SQLUSMALLINT option)
   {
     return SQLFreeStmt(stmt,option);
   }
-  catch (StdException& er)
-  {
-    UNREFERENCED_PARAMETER(er);
-    return SQL_ERROR;
-  }
+  sql_catch(ex)
 }
 
 inline SQLRETURN SqlGetInfo(SQLHDBC hdbc, SQLUSMALLINT fInfoType, SQLPOINTER rgbInfoValue, SQLSMALLINT cbInfoValueMax, SQLSMALLINT* pcbInfoValue)
@@ -94,11 +80,7 @@ inline SQLRETURN SqlGetInfo(SQLHDBC hdbc, SQLUSMALLINT fInfoType, SQLPOINTER rgb
   {
     return SQLGetInfo(hdbc, fInfoType, rgbInfoValue, cbInfoValueMax, pcbInfoValue);
   }
-  catch (StdException& er)
-  {
-    UNREFERENCED_PARAMETER(er);
-    return SQL_ERROR;
-  }
+  sql_catch(ex)
 }
 
 inline SQLRETURN SqlAllocHandle(SQLSMALLINT HandleType, SQLHANDLE InputHandle, SQLHANDLE *OutputHandle)
@@ -107,11 +89,7 @@ inline SQLRETURN SqlAllocHandle(SQLSMALLINT HandleType, SQLHANDLE InputHandle, S
   {
     return SQLAllocHandle(HandleType, InputHandle, OutputHandle);
   }
-  catch (StdException& er)
-  {
-    UNREFERENCED_PARAMETER(er);
-    return SQL_ERROR;
-  }
+  sql_catch(ex)
 }
 
 inline SQLRETURN SqlAllocEnv(SQLHENV *EnvironmentHandle)
@@ -120,11 +98,7 @@ inline SQLRETURN SqlAllocEnv(SQLHENV *EnvironmentHandle)
   {
     return SQLAllocEnv(EnvironmentHandle);
   }
-  catch (StdException& er)
-  {
-    UNREFERENCED_PARAMETER(er);
-    return SQL_ERROR;
-  }
+  sql_catch(ex)
 }
 
 inline SQLRETURN SqlAllocConnect(SQLHENV EnvironmentHandle, SQLHDBC *ConnectionHandle)
@@ -133,11 +107,7 @@ inline SQLRETURN SqlAllocConnect(SQLHENV EnvironmentHandle, SQLHDBC *ConnectionH
   {
     return SQLAllocConnect(EnvironmentHandle, ConnectionHandle);
   }
-  catch (StdException& er)
-  {
-    UNREFERENCED_PARAMETER(er);
-    return SQL_ERROR;
-  }
+  sql_catch(ex)
 }
 
 inline SQLRETURN SqlAllocStmt(SQLHDBC ConnectionHandle, SQLHSTMT *StatementHandle)
@@ -146,11 +116,7 @@ inline SQLRETURN SqlAllocStmt(SQLHDBC ConnectionHandle, SQLHSTMT *StatementHandl
   {
     return SQLAllocStmt(ConnectionHandle, StatementHandle);
   }
-  catch (StdException& er)
-  {
-    UNREFERENCED_PARAMETER(er);
-    return SQL_ERROR;
-  }
+  sql_catch(ex)
 }
 
 inline SQLRETURN SqlGetDiagRec(SQLSMALLINT fHandleType, SQLHANDLE handle, SQLSMALLINT iRecord, SQLCHAR *szSqlState, SQLINTEGER *pfNativeError, SQLCHAR *szErrorMsg, SQLSMALLINT cbErrorMsgMax, SQLSMALLINT *pcbErrorMsg)
@@ -159,11 +125,7 @@ inline SQLRETURN SqlGetDiagRec(SQLSMALLINT fHandleType, SQLHANDLE handle, SQLSMA
   {
     return SQLGetDiagRec(fHandleType, handle, iRecord, szSqlState, pfNativeError, szErrorMsg, cbErrorMsgMax, pcbErrorMsg);
   }
-  catch(StdException& er)
-  {
-    UNREFERENCED_PARAMETER(er);
-    return SQL_ERROR;
-  }
+  sql_catch(ex)
 }
 
 inline SQLRETURN SqlEndTran(SQLSMALLINT HandleType, SQLHANDLE Handle, SQLSMALLINT CompletionType)
@@ -172,11 +134,7 @@ inline SQLRETURN SqlEndTran(SQLSMALLINT HandleType, SQLHANDLE Handle, SQLSMALLIN
   {
     return SQLEndTran(HandleType, Handle, CompletionType);
   }
-  catch(StdException& er)
-  {
-    UNREFERENCED_PARAMETER(er);
-    return SQL_ERROR;
-  }
+  sql_catch(ex)
 }
 
 inline SQLRETURN SqlSetConnectAttr(SQLHDBC hdbc, SQLINTEGER fAttribute, SQLPOINTER rgbValue, SQLINTEGER cbValue)
@@ -185,11 +143,7 @@ inline SQLRETURN SqlSetConnectAttr(SQLHDBC hdbc, SQLINTEGER fAttribute, SQLPOINT
   {
     return SQLSetConnectAttr(hdbc, fAttribute, rgbValue, cbValue);
   }
-  catch(StdException& er)
-  {
-    UNREFERENCED_PARAMETER(er);
-    return SQL_ERROR;
-  }
+  sql_catch(ex)
 }
 
 inline SQLRETURN SqlCloseCursor(SQLHSTMT StatementHandle)
@@ -198,11 +152,7 @@ inline SQLRETURN SqlCloseCursor(SQLHSTMT StatementHandle)
   {
     return SQLCloseCursor(StatementHandle);
   }
-  catch(StdException& er)
-  {
-    UNREFERENCED_PARAMETER(er);
-    return SQL_ERROR;
-  }
+  sql_catch(ex)
 }
 
 inline SQLRETURN SqlPrepare(SQLHSTMT hstmt, SQLCHAR *szSqlStr, SQLINTEGER cbSqlStr)
@@ -211,11 +161,7 @@ inline SQLRETURN SqlPrepare(SQLHSTMT hstmt, SQLCHAR *szSqlStr, SQLINTEGER cbSqlS
   {
     return SQLPrepare(hstmt, szSqlStr, cbSqlStr);
   }
-  catch(StdException& er)
-  {
-    UNREFERENCED_PARAMETER(er);
-    return SQL_ERROR;
-  }
+  sql_catch(ex)
 }
 
 inline SQLRETURN SqlNumParams(SQLHSTMT hstmt, SQLSMALLINT *pcpar)
@@ -224,11 +170,7 @@ inline SQLRETURN SqlNumParams(SQLHSTMT hstmt, SQLSMALLINT *pcpar)
   {
     return SQLNumParams(hstmt, pcpar);
   }
-  catch(StdException& er)
-  {
-    UNREFERENCED_PARAMETER(er);
-    return SQL_ERROR;
-  }
+  sql_catch(ex)
 }
 
 inline SQLRETURN SqlExecute(SQLHSTMT StatementHandle)
@@ -237,11 +179,7 @@ inline SQLRETURN SqlExecute(SQLHSTMT StatementHandle)
   {
     return SQLExecute(StatementHandle);
   }
-  catch(StdException& er)
-  {
-    UNREFERENCED_PARAMETER(er);
-    return SQL_ERROR;
-  }
+  sql_catch(ex)
 }
 
 inline SQLRETURN SqlExecDirect(SQLHSTMT hstmt, SQLCHAR *szSqlStr, SQLINTEGER cbSqlStr)
@@ -250,11 +188,7 @@ inline SQLRETURN SqlExecDirect(SQLHSTMT hstmt, SQLCHAR *szSqlStr, SQLINTEGER cbS
   {
     return SQLExecDirect(hstmt, szSqlStr, cbSqlStr);
   }
-  catch(StdException& er)
-  {
-    UNREFERENCED_PARAMETER(er);
-    return SQL_ERROR;
-  }
+  sql_catch(ex)
 }
 
 inline SQLRETURN SqlRowCount(SQLHSTMT StatementHandle, SQLLEN* RowCount)
@@ -263,11 +197,7 @@ inline SQLRETURN SqlRowCount(SQLHSTMT StatementHandle, SQLLEN* RowCount)
   {
     return SQLRowCount(StatementHandle, RowCount);
   }
-  catch(StdException& er)
-  {
-    UNREFERENCED_PARAMETER(er);
-    return SQL_ERROR;
-  }
+  sql_catch(ex)
 }
 
 inline SQLRETURN SqlFetch(SQLHSTMT StatementHandle)
@@ -276,11 +206,7 @@ inline SQLRETURN SqlFetch(SQLHSTMT StatementHandle)
   {
     return SQLFetch(StatementHandle);
   }
-  catch(StdException& er)
-  {
-    UNREFERENCED_PARAMETER(er);
-    return SQL_ERROR;
-  }
+  sql_catch(ex)
 }
 
 inline SQLRETURN SqlNumResultCols(SQLHSTMT StatementHandle, SQLSMALLINT *ColumnCount)
@@ -289,11 +215,7 @@ inline SQLRETURN SqlNumResultCols(SQLHSTMT StatementHandle, SQLSMALLINT *ColumnC
   {
     return SQLNumResultCols(StatementHandle, ColumnCount);
   }
-  catch(StdException& er)
-  {
-    UNREFERENCED_PARAMETER(er);
-    return SQL_ERROR;
-  }
+  sql_catch(ex)
 }
 
 inline SQLRETURN SqlDescribeCol(SQLHSTMT hstmt, SQLUSMALLINT icol, SQLCHAR *szColName, SQLSMALLINT cbColNameMax, SQLSMALLINT *pcbColName, SQLSMALLINT *pfSqlType, SQLULEN* pcbColDef, SQLSMALLINT *pibScale, SQLSMALLINT *pfNullable)
@@ -302,11 +224,7 @@ inline SQLRETURN SqlDescribeCol(SQLHSTMT hstmt, SQLUSMALLINT icol, SQLCHAR *szCo
   {
     return SQLDescribeCol(hstmt, icol, szColName, cbColNameMax, pcbColName, pfSqlType, pcbColDef, pibScale, pfNullable);
   }
-  catch(StdException& er)
-  {
-    UNREFERENCED_PARAMETER(er);
-    return SQL_ERROR;
-  }
+  sql_catch(ex)
 }
 
 inline SQLRETURN SqlBindCol(SQLHSTMT StatementHandle, SQLUSMALLINT ColumnNumber, SQLSMALLINT TargetType, SQLPOINTER TargetValue, SQLLEN BufferLength, SQLLEN *StrLen_or_Ind)
@@ -315,11 +233,7 @@ inline SQLRETURN SqlBindCol(SQLHSTMT StatementHandle, SQLUSMALLINT ColumnNumber,
   {
     return ::SQLBindCol(StatementHandle, ColumnNumber, TargetType, TargetValue, BufferLength, StrLen_or_Ind);
   }
-  catch(StdException& er)
-  {
-    UNREFERENCED_PARAMETER(er);
-    return SQL_ERROR;
-  }
+  sql_catch(ex)
 }
 
 inline SQLRETURN SqlBindParameter(SQLHSTMT hstmt, SQLUSMALLINT ipar, SQLSMALLINT fParamType, SQLSMALLINT fCType, SQLSMALLINT fSqlType, SQLULEN cbColDef, SQLSMALLINT ibScale, SQLPOINTER rgbValue, SQLLEN cbValueMax, SQLLEN *pcbValue)
@@ -328,11 +242,7 @@ inline SQLRETURN SqlBindParameter(SQLHSTMT hstmt, SQLUSMALLINT ipar, SQLSMALLINT
   {
     return ::SQLBindParameter(hstmt, ipar, fParamType, fCType, fSqlType, cbColDef, ibScale, rgbValue, cbValueMax, pcbValue);
   }
-  catch(StdException& er)
-  {
-    UNREFERENCED_PARAMETER(er);
-    return SQL_ERROR;
-  }
+  sql_catch(ex)
 }
 
 inline SQLRETURN SqlCancel(SQLHSTMT hstmt)
@@ -341,11 +251,7 @@ inline SQLRETURN SqlCancel(SQLHSTMT hstmt)
   {
     return ::SQLCancel(hstmt);
   }
-  catch(StdException& er)
-  {
-    UNREFERENCED_PARAMETER(er);
-    return SQL_ERROR;
-  }
+  sql_catch(ex)
 }
 
 inline SQLRETURN SqlNativeSql(HDBC hdbc,SQLCHAR* stmt,SQLINTEGER len,SQLCHAR* sql,SQLINTEGER max,SQLINTEGER* reslen)
@@ -354,11 +260,7 @@ inline SQLRETURN SqlNativeSql(HDBC hdbc,SQLCHAR* stmt,SQLINTEGER len,SQLCHAR* sq
   {
     return ::SQLNativeSql(hdbc,stmt,len,sql,max,reslen);
   }
-  catch(StdException& er)
-  {
-    UNREFERENCED_PARAMETER(er);
-    return SQL_ERROR;
-  }
+  sql_catch(ex)
 }
 
 inline SQLRETURN SqlDataSources(SQLHENV       EnvironmentHandle
@@ -374,11 +276,7 @@ inline SQLRETURN SqlDataSources(SQLHENV       EnvironmentHandle
   {
     return SQLDataSources(EnvironmentHandle,Direction,ServerName,BufferLength1,NameLength1Ptr,Description,BufferLength2,NameLength2Ptr);
   }
-  catch(StdException& er)
-  {
-    UNREFERENCED_PARAMETER(er);
-    return SQL_ERROR;
-  }
+  sql_catch(ex)
 }
 
 inline SQLRETURN SqlColAttribute(SQLHSTMT     p_hstmt
@@ -393,11 +291,7 @@ inline SQLRETURN SqlColAttribute(SQLHSTMT     p_hstmt
   {
     return SQLColAttribute(p_hstmt,p_column,p_field,p_attribute,p_buflen,p_strlen,p_numattrib);
   }
-  catch(StdException& er)
-  {
-    UNREFERENCED_PARAMETER(er);
-    return SQL_ERROR;
-  }
+  sql_catch(ex)
 }
 
 inline SQLRETURN SqlGetData(SQLHSTMT     p_hstmt
@@ -411,11 +305,7 @@ inline SQLRETURN SqlGetData(SQLHSTMT     p_hstmt
   {
     return SQLGetData(p_hstmt,p_column,p_type,p_value,p_bufferlen,p_strlen_or_ind);
   }
-  catch (StdException& er)
-  {
-    UNREFERENCED_PARAMETER(er);
-    return SQL_ERROR;
-  }
+  sql_catch(ex)
 }
 
 inline SQLRETURN SqlDrivers(SQLHENV      EnvironmentHandle
@@ -438,11 +328,7 @@ inline SQLRETURN SqlDrivers(SQLHENV      EnvironmentHandle
                        ,BufferLength2
                        ,AttributesLengthPtr);
   }
-  catch(StdException& er)
-  {
-    UNREFERENCED_PARAMETER(er);
-    return SQL_ERROR;
-  }
+  sql_catch(ex)
 }
 
 inline SQLRETURN SqlPutData(SQLHSTMT   p_hstmt
@@ -453,11 +339,7 @@ inline SQLRETURN SqlPutData(SQLHSTMT   p_hstmt
   {
     return SQLPutData(p_hstmt,p_data,p_strlen_or_ind);
   }
-  catch(StdException& er)
-  {
-    UNREFERENCED_PARAMETER(er);
-    return SQL_ERROR;
-  }
+  sql_catch(ex)
 }
 
 inline SQLRETURN SqlGetStmtAttr(SQLHSTMT    p_hstmt
@@ -470,11 +352,7 @@ inline SQLRETURN SqlGetStmtAttr(SQLHSTMT    p_hstmt
   {
     return SQLGetStmtAttr(p_hstmt,p_attribute,p_value,p_buflen,p_strlen);
   }
-  catch(StdException& er)
-  {
-    UNREFERENCED_PARAMETER(er);
-    return SQL_ERROR;
-  }
+  sql_catch(ex)
 }
 
 inline SQLRETURN SqlSetDescField(SQLHDESC    p_handle
@@ -487,11 +365,7 @@ inline SQLRETURN SqlSetDescField(SQLHDESC    p_handle
   {
     return ::SQLSetDescField(p_handle,p_record,p_field,p_value,p_bufLength);
   }
-  catch(StdException& er)
-  {
-    UNREFERENCED_PARAMETER(er);
-    return SQL_ERROR;
-  }
+  sql_catch(ex)
 }
 
 inline SQLRETURN SqlError(SQLHENV      p_henv
@@ -507,11 +381,7 @@ inline SQLRETURN SqlError(SQLHENV      p_henv
   {
     return SQLError(p_henv,p_hdbc,p_hstmt,p_state,p_native,p_text,p_buflen,p_txtlen);
   }
-  catch(StdException& er)
-  {
-    UNREFERENCED_PARAMETER(er);
-    return SQL_ERROR;
-  }
+  sql_catch(ex)
 }
 
 inline SQLRETURN SqlGetFunctions(SQLHDBC       p_hdbc
@@ -522,11 +392,7 @@ inline SQLRETURN SqlGetFunctions(SQLHDBC       p_hdbc
   {
     return SQLGetFunctions(p_hdbc,p_id,p_supported);
   }
-  catch(StdException& er)
-  {
-    UNREFERENCED_PARAMETER(er);
-    return SQL_ERROR;
-  }
+  sql_catch(ex)
 }
 
 inline SQLRETURN SqlGetTypeInfo(SQLHSTMT p_hstmt,SQLSMALLINT p_type)
@@ -535,11 +401,7 @@ inline SQLRETURN SqlGetTypeInfo(SQLHSTMT p_hstmt,SQLSMALLINT p_type)
   {
     return SQLGetTypeInfo(p_hstmt,p_type);
   }
-  catch(StdException& er)
-  {
-    UNREFERENCED_PARAMETER(er);
-    return SQL_ERROR;
-  }
+  sql_catch(ex)
 }
 
 inline SQLRETURN SqlSetStmtAttr(SQLHSTMT   p_hstmt
@@ -551,11 +413,7 @@ inline SQLRETURN SqlSetStmtAttr(SQLHSTMT   p_hstmt
   {
     return SQLSetStmtAttr(p_hstmt,p_attribute,p_value,p_strlen);
   }
-  catch(StdException& er)
-  {
-    UNREFERENCED_PARAMETER(er);
-    return SQL_ERROR;
-  }
+  sql_catch(ex)
 }
 
 inline SQLRETURN SqlParamData(SQLHSTMT p_hstmt,SQLPOINTER* p_value)
@@ -564,11 +422,7 @@ inline SQLRETURN SqlParamData(SQLHSTMT p_hstmt,SQLPOINTER* p_value)
   {
     return ::SQLParamData(p_hstmt,p_value);
   }
-  catch(StdException& er)
-  {
-    UNREFERENCED_PARAMETER(er);
-    return SQL_ERROR;
-  }
+  sql_catch(ex)
 }
 
 inline SQLRETURN SqlMoreResults(SQLHSTMT p_hstmt)
@@ -577,11 +431,7 @@ inline SQLRETURN SqlMoreResults(SQLHSTMT p_hstmt)
   {
     return ::SQLMoreResults(p_hstmt);
   }
-  catch(StdException& er)
-  {
-    UNREFERENCED_PARAMETER(er);
-    return SQL_ERROR;
-  }
+  sql_catch(ex)
 }
 
 inline SQLRETURN SqlGetCursorName(SQLHSTMT p_hstmt,SQLCHAR* p_buffer,SQLSMALLINT p_buflen,SQLSMALLINT* p_resultLength)
@@ -590,11 +440,7 @@ inline SQLRETURN SqlGetCursorName(SQLHSTMT p_hstmt,SQLCHAR* p_buffer,SQLSMALLINT
   {
     return ::SQLGetCursorName(p_hstmt,p_buffer,p_buflen,p_resultLength);
   }
-  catch(StdException& er)
-  {
-    UNREFERENCED_PARAMETER(er);
-    return SQL_ERROR;
-  }
+  sql_catch(ex)
 }
 
 // OLD STYLE ODBC 1.x / 2.x call. Do only use if absolutely necessary!!
@@ -610,11 +456,7 @@ inline SQLRETURN SqlColAttributes(SQLHSTMT     p_hstmt
   {
     return SQLColAttributes(p_hstmt,p_icol,p_descType,p_rgbDesc,p_cbDescMax,p_pcbDesc,p_pfDesc);
   }
-  catch(StdException& er)
-  {
-    UNREFERENCED_PARAMETER(er);
-    return SQL_ERROR;
-  }
+  sql_catch(ex)
 }
 
 // End of namespace

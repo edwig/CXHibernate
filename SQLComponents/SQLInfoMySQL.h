@@ -21,8 +21,7 @@
 // WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION 
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
-// Last Revision:   28-05-2018
-// Version number:  1.5.0
+// Version number: See SQLComponents.h
 //
 #pragma once
 #include "SQLInfoDB.h"
@@ -151,6 +150,9 @@ public:
   // Get query to optimize the table statistics
   CString GetSQLOptimizeTable(CString p_schema, CString p_tablename) const;
 
+  // Transform query to select top <n> rows
+  CString GetSQLTopNRows(CString p_sql,int p_top,int p_skip = 0) const;
+
   //////////////////////////////////////////////////////////////////////////
   // SQL STRINGS
 
@@ -197,6 +199,8 @@ public:
   //
   //////////////////////////////////////////////////////////////////////////
 
+  // Meta info about meta types
+  CString GetCATALOGMetaTypes(int p_type) const;
   // All table functions
   CString GetCATALOGTableExists    (CString p_schema,CString p_tablename) const;
   CString GetCATALOGTablesList     (CString p_schema,CString p_pattern) const;

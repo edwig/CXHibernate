@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="utf-8"?>
+<hibernate>
+  <default_catalog />
+  <default_schema>sysdba</default_schema>
+  <strategy>sub_table</strategy>
+  <logfile>C:\WWW\Hibernate_log.txt</logfile>
+  <loglevel>6</loglevel>
+  <session_role>database_role</session_role>
+  <database_use>use</database_use>
+  <class>
+    <name>Animal</name>
+	  <schema>sysdba</schema>
+    <table>animal</table>
+    <discriminator>ani</discriminator>
+    <subclasses>
+      <subclass>Cat</subclass>
+      <subclass>Dog</subclass>
+    </subclasses>
+    <attributes>
+      <attribute name="id" datatype="int" isprimary="true" generator="true"/>
+      <attribute name="animalName" datatype="string" maxlength="200" />
+      <attribute name="has_claws" datatype="bool" />
+      <attribute name="has_hair"  datatype="bool" />
+      <attribute name="has_wings"  datatype="bool" />
+      <attribute name="numberOfLegs" datatype="int"/>
+    </attributes>
+  	<identity name="pk_animal">
+	    <attribute name="id" />
+	  </identity>
+    <generator name="animal_seq" start="1" />
+  </class>
+  <class>
+    <name>Cat</name>
+    <table>cat</table>
+    <super>Animal</super>
+    <subclasses>
+      <subclass>Kitten</subclass>
+    </subclasses>
+    <discriminator>cat</discriminator>
+    <attributes>
+      <attribute name="color"     datatype="string" maxlength="50" />
+      <attribute name="catdoor"       datatype="bool"/>
+      <attribute name="likesWhiskas"  datatype="bool" />
+    </attributes>
+  </class>
+  <class>
+    <name>Dog</name>
+    <table>dog</table>
+    <discriminator>dog</discriminator>
+    <super>Animal</super>
+    <attributes>
+      <attribute name="subrace"       datatype="string" maxlength="200" />
+      <attribute name="walksPerDay"   datatype="int" />
+      <attribute name="hunting"       datatype="bool" />
+      <attribute name="waterdog"      datatype="bool"/>
+    </attributes>
+  </class>
+  <class>
+    <name>Kitten</name>
+    <table>kitten</table>
+    <discriminator>kit</discriminator>
+    <super>Cat</super>
+    <attributes>
+      <attribute name="kit_color"     datatype="string" maxlength="50" />
+      <attribute name="immuun"        datatype="bool" />
+      <attribute name="inLitter"      datatype="bool" />
+    </attributes>
+  </class>
+</hibernate>

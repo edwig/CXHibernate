@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////
 //
-// Copyright (c) 1998-2018 ir. W.E. Huisman
+// Copyright (c) 1998-2019 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy of 
@@ -23,8 +23,7 @@
 // Loosely based on the article by: Yap Chun Wei
 // http://www.codeproject.com/Articles/1636/CSpreadSheet-A-Class-to-Read-and-Write-to-Excel-an
 // 
-// Last Revision:   28-05-2018
-// Version number:  1.5.0
+// Version number: See SQLComponents.h
 //
 #pragma once
 
@@ -33,7 +32,8 @@
 #include "BasicXmlExcel.h"
 #include <list>
 
-using namespace ExcelFormat;
+using YExcel::BasicExcel;
+using YExcel::BasicExcelWorksheet;
 
 namespace SQLComponents
 {

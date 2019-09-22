@@ -167,8 +167,14 @@ enum DECOLOR
 #include <fstream>
 #include <map>
 #include <vector>
-#include <string>	//MF
-using namespace std;
+#include <string>	
+using std::vector;
+using std::map;
+using std::string;
+using std::wstring;
+using std::iostream;
+using std::ios_base;
+using std::ostream;
 
  // get facet from locale for GCC
 #ifndef _USE
@@ -904,11 +910,7 @@ struct CellFormat;
 
 namespace YExcel
 {
-using namespace YCompoundFiles;
-
-#ifdef _WIN32
-using namespace WinCompFiles;
-#endif
+using WinCompFiles::CompoundFile;
 
 struct CODE
 {
@@ -1298,8 +1300,8 @@ struct EXCEPTION_YEOF
   ULONG _bytesRead;
 };
 
-//MF
-using namespace RefCount;
+using RefCount::RefCnt;
+using RefCount::SmartPtr;
 
 class Worksheet
 {

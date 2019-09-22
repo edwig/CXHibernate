@@ -352,7 +352,7 @@ WSDLCache::GenerateParameterTypes(CString&       p_wsdlcontent
     p_wsdlcontent += temp;
 
     // Do data type
-    switch(param->GetType() & XDT_MaskTypes & ~XDT_Type)
+    switch(param->GetType() & XDT_Mask)
     {
       case XDT_CDATA:             [[fallthrough]];
       case (XDT_String|XDT_CDATA):[[fallthrough]];
@@ -727,13 +727,14 @@ WSDLCache::CheckParameters(XMLElement*  p_orgBase
   XmlDataType type = 0;
   XMLElement* orgParam   = p_orig->GetElementFirstChild(p_orgBase);
   XMLElement* checkParam = p_check->GetElementFirstChild(p_checkBase);
+  bool        scanning   = false;
   while(orgParam)
   {
     // Name of node to find in the message to check
     CString orgName = orgParam->GetName();
     type = orgParam->GetType();
     // If the ordering is choice, instead of sequence: do a free search
-    if(!(type & WSDL_Sequence))
+    if(!(type & WSDL_Sequence) && !scanning)
     {
       checkParam = p_check->FindElement(p_checkBase,orgName,false);
     }
@@ -779,10 +780,12 @@ WSDLCache::CheckParameters(XMLElement*  p_orgBase
         if(next && next->GetName().Compare(orgName) == 0)
         {
           checkParam = next;
+          scanning = true;
           continue;
         }
       }
       // Get next parameter in sequence list
+      scanning   = false;
       checkParam = p_check->GetElementSibling(checkParam);
     }
     // Next parameter in the template
@@ -1183,13 +1186,15 @@ WSDLCache::ReadWSDLFile(LPCTSTR p_filename)
   {
     return ReadWSDLFileSafe(p_filename);
   }
-  catch(StdException& er)
+  catch(StdException& ex)
   {
+    if(ex.GetSafeExceptionCode())
+    {
     // We need to detect the fact that a second exception can occur,
     // so we do **not** call the error report method again
     // Otherwise we would end into an infinite loop
-    m_exception = true,
-    m_exception = ErrorReport::Report(er.GetSafeExceptionCode(),er.GetExceptionPointers());
+      m_exception = true;
+      m_exception = ErrorReport::Report(ex.GetSafeExceptionCode(),ex.GetExceptionPointers());
 
     if(m_exception)
     {
@@ -1201,6 +1206,13 @@ WSDLCache::ReadWSDLFile(LPCTSTR p_filename)
     else
     {
       CRASHLOG(WER_S_REPORT_UPLOADED,"CRASH: Errorreport while reading WSDL has been made");
+    }
+  }
+    else
+    {
+      // 'Normale' C++ exception: Maar we hebben hem vergeten af te vangen
+      CString empty;
+      ErrorReport::Report(ex.GetErrorMessage(),0,m_webroot,empty);
     }
   }
   return false;
@@ -1230,7 +1242,7 @@ WSDLCache::ReadWSDLFileSafe(LPCTSTR p_filename)
     // Remember the filename/URL
     m_filename = p_filename;
   }
-  return true;
+  return result;
 }
 
 bool

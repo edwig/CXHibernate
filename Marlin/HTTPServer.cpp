@@ -107,7 +107,7 @@ unsigned long g_compress_limit  = COMPRESS_LIMIT;
 #define HTTPERROR(code,text)      HTTPError(__FUNCTION__,code,text)
 
 // Media types are here
-MediaTypes g_media;
+MediaTypes* g_media = nullptr;
 
 //////////////////////////////////////////////////////////////////////////
 //
@@ -152,6 +152,13 @@ HTTPServer::~HTTPServer()
     m_webConfig = nullptr;
   }
 
+  // Clean out the media types
+  if(g_media)
+  {
+    delete g_media;
+    g_media = nullptr;
+  }
+
   // Free CS to the OS
   DeleteCriticalSection(&m_eventLock);
   DeleteCriticalSection(&m_sitesLock);
@@ -177,6 +184,7 @@ HTTPServer::InitLogging()
   bool timing     = m_log->GetDoTiming();
   bool events     = m_log->GetDoEvents();
   bool doLogging  = m_log->GetDoLogging();
+  int  keepfiles  = m_log->GetKeepfiles();
 
   // Get parameters from web.config
   file      = m_webConfig->GetParameterString ("Logging","Logfile",  file);
@@ -185,6 +193,7 @@ HTTPServer::InitLogging()
   timing    = m_webConfig->GetParameterBoolean("Logging","DoTiming", timing);
   events    = m_webConfig->GetParameterBoolean("Logging","DoEvents", events);
   cache     = m_webConfig->GetParameterInteger("Logging","Cache",    cache);
+  keepfiles = m_webConfig->GetParameterInteger("Logging","Keep",     keepfiles);
 
   // Use if overridden in web.config
   if(!file.IsEmpty())
@@ -195,6 +204,7 @@ HTTPServer::InitLogging()
   m_log->SetLogLevel(m_logLevel = logging);
   m_log->SetDoTiming(timing);
   m_log->SetDoEvents(events);
+  m_log->SetKeepfiles(keepfiles);
 }
 
 // Initialise the ThreadPool
@@ -600,6 +610,36 @@ HTTPServer::FindHTTPSite(int p_port,CString& p_url)
   return nullptr;
 }
 
+// Find routing information within the site
+void
+HTTPServer::CalculateRouting(HTTPSite* p_site,HTTPMessage* p_message)
+{
+  CString url = p_message->GetCrackedURL().AbsoluteResource();
+  CString known(p_site->GetSite());
+
+  CString route = url.Mid(known.GetLength());
+  route = route.Trim('/');
+  route = route.Trim('\\');
+
+  while(route.GetLength())
+  {
+    int pos = route.Find('/');
+    if (pos < 0) pos = route.Find('\\');
+
+    if(pos > 0)
+    {
+      p_message->AddRoute(route.Left(pos));
+      route = route.Mid(pos + 1);
+    }
+    else
+    {
+      // Last route part to add
+      p_message->AddRoute(route);
+      route.Empty();
+    }
+  }
+}
+
 // Find our extra header for RemoteDesktop (Citrix!) support
 int
 HTTPServer::FindRemoteDesktop(USHORT p_count,PHTTP_UNKNOWN_HEADER p_headers)
@@ -777,10 +817,26 @@ HTTPServer::SendResponse(SOAPMessage* p_message)
 
   // Convert to a HTTP response
   HTTPMessage* answer = new HTTPMessage(HTTPCommand::http_response,p_message);
-  if(answer->GetContentType().Find("soap") < 0)
+
+  // Check if Content-type was correctly set
+  if(answer->GetContentType().IsEmpty())
   {
-    answer->SetContentType("application/soap+xml");
+    switch(p_message->GetSoapVersion())
+    {
+      case SoapVersion::SOAP_10: // Fall Through
+      case SoapVersion::SOAP_11: answer->SetContentType("text/xml");             break;
+      case SoapVersion::SOAP_12: answer->SetContentType("application/soap+xml"); break;
   }
+  }
+
+  // Check if we have a SOAPAction header for SOAP 1.1 situations
+  if(p_message->GetSoapVersion() == SoapVersion::SOAP_11 &&
+    !p_message->GetSoapAction().IsEmpty() &&
+     answer->GetHeader("SOAPAction").IsEmpty())
+  {
+    answer->AddHeader("SOAPAction", "\"" + p_message->GetNamespace() + p_message->GetSoapAction() + "\"", false);
+  }
+
   // Set status in case of an error
   if(p_message->GetErrorState())
   {

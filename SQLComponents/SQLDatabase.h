@@ -2,7 +2,7 @@
 //
 // File: Database.h
 //
-// Copyright (c) 1998-2018 ir. W.E. Huisman
+// Copyright (c) 1998-2019 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy of 
@@ -21,8 +21,7 @@
 // WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION 
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
-// Last Revision:   28-05-2018
-// Version number:  1.5.0
+// Version number: See SQLComponents.h
 //
 #pragma once
 #include "SQLComponents.h"
@@ -157,6 +156,8 @@ public:
 
   // DATABASE POOL METHODS
   void           SetDatasource(CString p_dsn);
+  void           SetConnectionName(CString p_connectionName);
+  void           SetUserName(CString p_user);
   void           SetLastActionTime();
   bool           PastWaitingTime();
 
@@ -164,6 +165,7 @@ public:
   CString        GetUserName();
   CString        GetPassword();
   CString        GetDatasource();
+  CString        GetConnectionName();
   CString        GetDatabaseTypeName();
   CString        GetDatabaseName();         // Real database name
   DatabaseType   GetDatabaseType();
@@ -230,9 +232,10 @@ public:
 
   // Support of logging functions 
   void           RegisterLogContext(int p_level,LOGLEVEL p_loglevel,LOGPRINT p_logprinter,void* p_logContext);
-  void           LogPrint(int p_level,const char* p_text);
+  void           LogPrint(const char* p_text);
   int            LogLevel();
-  bool           WilLog(int p_loglevel);
+  bool           WilLog();
+  void           SetLoggingActivation(int p_loglevel);
   
   // SCHEMA HANDLING
   void           SetSchema(CString p_schema);
@@ -276,11 +279,12 @@ protected:
   CString           m_password;    // System's password
 
   // Info about the database
-  DatabaseType      m_rdbmsType    = { RDBMS_UNKNOWN };  // Which RDBMS engine
-  SQLInfoDB*        m_info         = { nullptr       };  // The SQLInfo object
-  int               m_loginTimeout = { LOGIN_TIMEOUT };  // Timeout before login fails
-  bool              m_mars         = { true          };  // Multiple Active Record Sets
-  bool              m_readOnly     = { false         };  // ReadOnly connection
+  DatabaseType      m_rdbmsType    { RDBMS_UNKNOWN };  // Which RDBMS engine
+  SQLInfoDB*        m_info         { nullptr       };  // The SQLInfo object
+  int               m_loginTimeout { LOGIN_TIMEOUT };  // Timeout before login fails
+  bool              m_mars         { true          };  // Multiple Active Record Sets
+  bool              m_readOnly     { false         };  // ReadOnly connection
+  CString           m_connectionName;                    // Can differ from m_datasource !!
   CString	          m_DBName;
   CString	          m_DBVersion;
   CString	          m_DriverName;
@@ -289,33 +293,34 @@ protected:
   CString           m_namingMethod;
   CString           m_originalConnect;
   CString           m_completeConnect;
-  SQLUINTEGER       m_async_possible      = { 0     };
-  SQLUSMALLINT      m_canDoTransactions   = { 0     };
+  SQLUINTEGER       m_async_possible      { 0     };
+  SQLUSMALLINT      m_canDoTransactions   { 0     };
   CString           m_odbcVersionComplete;
-  int               m_odbcVersion         = { 0     };
-  int               m_driverMainVersion   = { 0     };   
-  bool              m_needLongDataLen     = { false };
-  bool              m_autoCommitMode      = { true  };
-  DWORD             m_lastAction          = { 0     };  // Last moment of usage (for database pool)
+  int               m_odbcVersion         { 0     };
+  int               m_driverMainVersion   { 0     };   
+  bool              m_needLongDataLen     { false };
+  bool              m_autoCommitMode      { true  };
+  DWORD             m_lastAction          { 0     };  // Last moment of usage (for database pool)
   RebindMap         m_rebindParameters;                 // Rebinding of parameters for SQLBindParam
   RebindMap         m_rebindColumns;                    // Rebinding of result columns for SQLBindCol
   CString           m_sqlState;                         // Last SQLSTATE
   CString           m_schemaName;
-  SchemaAction      m_schemaAction = { SCHEMA_NO_ACTION };
+  SchemaAction      m_schemaAction { SCHEMA_NO_ACTION };
   Macros            m_macros;                      // Macro replacements for SQL
 
   // Derived identifier names for various systems
   CString           m_dbIdent;                     // Database   identifier (6 chars name, 2 chars main-version)
   CString           m_dataIdent;                   // Datasource identifier (10 chars at most = DS_IDENT_LEN)
   // Handles
-  HENV              m_henv = { SQL_NULL_HANDLE };
-  HDBC              m_hdbc = { SQL_NULL_HANDLE };
+  HENV              m_henv { SQL_NULL_HANDLE };
+  HDBC              m_hdbc { SQL_NULL_HANDLE };
 
   // Generic logging
-  LOGPRINT          m_logPrinter   = { nullptr };  // Printing a line to the logger
-  LOGLEVEL          m_logLevel     = { nullptr };  // Getting the log level
-  void*             m_logContext   = { nullptr };  // Logging context (e.g. and object)
-  int               m_loggingLevel = { 0       };  // Current level
+  LOGPRINT          m_logPrinter   { nullptr };       // Printing a line to the logger
+  LOGLEVEL          m_logLevel     { nullptr };       // Getting the log level
+  void*             m_logContext   { nullptr };       // Logging context (e.g. and object)
+  int               m_loggingLevel { 0       };       // Current logging level
+  int               m_logActive    { LOGLEVEL_MAX };  // Threshold: Log only above this loglevel
   
   // Login options for connect string
   ODBCOptions       m_options;
@@ -360,6 +365,12 @@ inline CString
 SQLDatabase::GetDatasource()
 {
   return m_datasource;
+}
+
+inline CString
+SQLDatabase::GetConnectionName()
+{
+  return m_connectionName;
 }
 
 inline int
@@ -496,6 +507,12 @@ inline bool
 SQLDatabase::GetAutoCommitMode()
 {
   return m_autoCommitMode;
+}
+
+inline void
+SQLDatabase::SetLoggingActivation(int p_loglevel)
+{
+  m_logActive = p_loglevel;
 }
 
 // End of namespace

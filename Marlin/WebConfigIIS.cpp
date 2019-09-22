@@ -50,34 +50,47 @@ WebConfigIIS::~WebConfigIIS()
 bool
 WebConfigIIS::ReadConfig()
 {
-  // Reads the central IIS appliction host configuration file first
+  // Reads the central IIS application host configuration file first
   // this file contains the defaults for IIS.
-  bool result = ReadConfig("%windir%\\system32\\inetsrv\\config\\ApplicationHost.Config");
-  if(!m_application.IsEmpty())
+  return ReadConfig("%windir%\\system32\\inetsrv\\config\\ApplicationHost.Config", nullptr);
+}
+
+bool
+WebConfigIIS::ReadConfig(CString p_baseWebConfig)
   {
+  // Standard web.config file
+  m_webconfig = p_baseWebConfig;
+
+  // Reads the central IIS application host configuration file first
+  // this file contains the defaults for IIS.
+  bool result = ReadConfig("%windir%\\system32\\inetsrv\\config\\ApplicationHost.Config",nullptr);
     SetApplication(m_application);
-  }
   return result;
 }
 
 void
 WebConfigIIS::SetApplication(CString p_application)
 {
-  // Store the appliation
-  m_application = p_application;
-
   // Try reading applications web.config
-  if(!m_application.IsEmpty())
+  if(p_application.IsEmpty())
   {
-    IISSite* site = GetSite(m_application);
+    ReadConfig(m_webconfig,nullptr);
+  }
+  else
+  {
+    IISSite* site = GetSite(p_application);
     if(site)
     {
-      CString virtualDir;
-      // Get virtual dir
+      // Get virtual directory: can be outside "inetpub\wwwroot"
       CString config = site->m_path + "\\Web.Config";
       // Read the web.config of the application site, if any requested
       ReadConfig(config,site);
     }
+  }
+  // Store the application
+  if(m_application.IsEmpty())
+  {
+    m_application = p_application;
   }
 }
 
@@ -90,6 +103,12 @@ WebConfigIIS::GetSiteName(CString p_site)
     return site->m_name;
   }
   return "";
+}
+
+CString
+WebConfigIIS::GetSetting(CString p_key)
+{
+  return m_settings[p_key];
 }
 
 CString
@@ -202,6 +221,17 @@ WebConfigIIS::GetSiteNTLMCache(CString p_site,bool p_default)
   return p_default;
 }
 
+IISError
+WebConfigIIS::GetSiteError(CString p_site)
+{
+  IISSite* site = GetSite(p_site);
+  if (site)
+  {
+    return site->m_error;
+  }
+  return IISER_NoError;
+}
+
 //////////////////////////////////////////////////////////////////////////
 //
 // PRIVATE METHODS
@@ -257,19 +287,32 @@ WebConfigIIS::ReadConfig(CString p_configFile,IISSite* p_site /*=nullptr*/)
     return false;
   }
 
+  // See if we did already read this file earlier
+  p_configFile.MakeLower();
+  WCFiles::iterator it = m_files.find(p_configFile);
+  if(it != m_files.end())
+  {
+    return true;
+  }
+
   // Parse the incoming file
   XMLMessage msg;
   msg.LoadFile(p_configFile);
 
   ReadLogPath(msg);
   ReadSites(msg);
+  ReadSettings(msg);
 
   // Read web.config overrides for application
   if(p_site)
   {
-    ReadStreamingLimit(*p_site,msg,nullptr);
+    ReadStreamingLimit(msg,nullptr);
     ReadAuthentication(*p_site,msg);
+    ReadHandlerMapping(*p_site,msg);
   }
+
+  // Remember we did read this file
+  m_files.insert(std::make_pair(p_configFile,1));
 
   return true;
 }
@@ -311,6 +354,7 @@ WebConfigIIS::ReadSites(XMLMessage& p_msg)
       theSite.m_ntlmCache  = true;
       theSite.m_secure     = false;
       theSite.m_authScheme = 0;
+      theSite.m_error      = IISER_NoError;
       CString name = p_msg.GetAttribute(site,"name");
       theSite.m_name = name;
 
@@ -340,7 +384,7 @@ WebConfigIIS::ReadSites(XMLMessage& p_msg)
         theSite.m_secure = true;
       }
 
-      ReadStreamingLimit(theSite,p_msg,site);
+      ReadStreamingLimit(p_msg,site);
       ReadAuthentication(theSite,p_msg);
 
       // Add to sites
@@ -353,7 +397,27 @@ WebConfigIIS::ReadSites(XMLMessage& p_msg)
 }
 
 void 
-WebConfigIIS::ReadStreamingLimit(IISSite& /*p_site*/,XMLMessage& p_msg,XMLElement* p_elem)
+WebConfigIIS::ReadSettings(XMLMessage& p_msg)
+{
+  XMLElement* settings = p_msg.FindElement("appSettings");
+  if(settings)
+  {
+    XMLElement* add = p_msg.FindElement(settings,"add");
+    while(add)
+    {
+      CString key   = p_msg.GetAttribute(add,"key");
+      CString value = p_msg.GetAttribute(add,"value");
+
+      m_settings[key] = value;
+
+      // Next setting
+      add = p_msg.GetElementSibling(add);
+    }
+  }
+}
+
+void 
+WebConfigIIS::ReadStreamingLimit(XMLMessage& p_msg,XMLElement* p_elem)
 {
   XMLElement* webserv = p_msg.FindElement(p_elem,"system.webServer");
   if(webserv)
@@ -392,8 +456,25 @@ WebConfigIIS::ReadAuthentication(IISSite& p_site,XMLMessage& p_msg)
 void
 WebConfigIIS::ReadAuthentication(IISSite& p_site,XMLMessage& p_msg,XMLElement* p_elem)
 {
+  bool anonymousFound = false;
+
   XMLElement* auth = p_msg.FindElement(p_elem,"authentication");
   if(!auth) return;
+
+  // Check anonymous authentication
+  XMLElement* anonymous = p_msg.FindElement(auth,"anonymousAuthentication");
+  if(anonymous)
+  {
+    CString enable = p_msg.GetAttribute(anonymous,"enabled");
+    if(enable.CompareNoCase("true") == 0)
+    {
+      // Anonymous authentication IS enabled
+      // No other authentication will EVER BE DONE
+      // Do not read all the other authentications
+      p_site.m_authScheme = 0;
+      anonymousFound = true;
+    }
+  }
 
   // Check basic authentication
   XMLElement* basic = p_msg.FindElement(auth,"basicAuthentication");
@@ -475,6 +556,86 @@ WebConfigIIS::ReadAuthentication(IISSite& p_site,XMLMessage& p_msg,XMLElement* p
       }
     }
   }
+
+  if(p_site.m_authScheme && anonymousFound)
+  {
+    // ERROR on this site. Authentication will **NOT** work
+    // Both anonymous and some other authentication found!!
+    p_site.m_error = IISER_AuthenticationConflict;
+  }
+}
+
+void
+WebConfigIIS::ReadHandlerMapping(IISSite& p_site, XMLMessage& p_msg)
+{
+  XMLElement* location = p_msg.FindElement("location");
+
+  while(location)
+  {
+    CString path = p_msg.GetAttribute(location, "path");
+    if (path.CompareNoCase(p_site.m_name) == 0)
+    {
+      ReadHandlerMapping(p_site,p_msg,location);
+      return;
+    }
+    // Next location
+    location = p_msg.GetElementSibling(location);
+  }
+}
+
+// Getting the handler mappings from IIS
+// (through ReadConfig/ReadSites)
+//
+void
+WebConfigIIS::ReadHandlerMapping(IISSite& p_site,XMLMessage& p_msg,XMLElement* p_elem)
+{
+  XMLElement* sws = p_msg.FindElement(p_elem,"system.webServer");
+  if (!sws) return;
+  XMLElement* handlers = p_msg.FindElement(sws,"handlers");
+  if (!handlers) return;
+  XMLElement* add = p_msg.FindElement(handlers,"add");
+  while (add)
+  {
+    IISHandler handler;
+
+    CString name           = p_msg.GetAttribute(add,"name");
+    handler.m_path         = p_msg.GetAttribute(add,"path");
+    handler.m_verb         = p_msg.GetAttribute(add,"verb");
+    handler.m_modules      = p_msg.GetAttribute(add,"modules");
+    handler.m_resourceType = p_msg.GetAttribute(add,"resourceType");
+    handler.m_precondition = p_msg.GetAttribute(add,"preCondition");
+
+    p_site.m_handlers.insert(std::make_pair(name,handler));
+
+    // Next handler mapping
+    add = p_msg.GetElementSibling(add);
+  }
+}
+
+IISHandlers*
+WebConfigIIS::GetAllHandlers(CString p_site)
+{
+  IISSite* site = GetSite(p_site);
+  if(site)
+  {
+    return &(site->m_handlers);
+  }
+  return nullptr;
+}
+
+IISHandler*
+WebConfigIIS::GetHandler(CString p_site,CString p_handler)
+{
+  IISSite* site = GetSite(p_site);
+  if(site)
+  {
+    IISHandlers::iterator it = site->m_handlers.find(p_handler);
+    if(it != site->m_handlers.end())
+    {
+      return &(it->second);
+    }
+  }
+  return nullptr;
 }
 
 // Finding a site registration

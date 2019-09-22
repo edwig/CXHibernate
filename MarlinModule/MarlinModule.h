@@ -30,6 +30,8 @@
 #pragma warning (disable:4091)
 #include <httpserv.h>
 #pragma warning (error:4091)
+
+#include "ServerApp.h"
 #include <map>
 
 #define SERVERNAME_BUFFERSIZE 256
@@ -38,23 +40,32 @@
 class ServerApp;
 class LogAnalysis;
 class HTTPServerIIS;
-class WebConfigIIS;
 class ErrorReport;
 
+// Helper class with a web application
+class APP
+{
+public:
+  ~APP()
+  {
+    if(m_application)
+    {
+      delete m_application;
+    }
+  }
+  WebConfigIIS        m_config;
+  CString             m_marlinDLL;
+  ServerApp*          m_application  { nullptr };
+  LogAnalysis*        m_analysisLog  { nullptr };
+  HMODULE             m_module       { NULL    };
+  CreateServerAppFunc m_createServer { nullptr };
+};
+
 // All applications in the application pool
-using AppPool = std::map<int, ServerApp*>;
+using AppPool = std::map<int,APP*>;
 
 // Global objects: The one and only IIS Server application pool
-extern AppPool        g_IISApplicationPool;
-extern LogAnalysis*   g_analysisLog;
-extern IHttpServer*   g_iisServer;
-extern CString        g_poolName;
-extern WebConfigIIS   g_config;
-extern ErrorReport*   g_report;
-
-// Get the base name of the module DLL
-CString GetDLLBaseName();
-CString GetDLLName();
+extern AppPool g_IISApplicationPool;
 
 // Create the module class
 // Hooking into the 'integrated pipeline' of IIS
@@ -115,5 +126,11 @@ public:
   // Stopping the global factory
   virtual void Terminate();
 private:
+  bool    ModuleInHandlers(const CString& p_configPath);
+  CString ConstructDLLLocation(CString p_rootpath,CString p_dllPath);
+  bool    AlreadyLoaded(APP* p_app, CString p_path_to_dll);
+  bool    StillUsed(const HMODULE& p_module);
+  GLOBAL_NOTIFICATION_STATUS Unhealthy(CString p_error,HRESULT p_code);
+
   CRITICAL_SECTION m_lock;
 };

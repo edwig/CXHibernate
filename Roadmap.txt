@@ -21,6 +21,7 @@ Features from (N)Hibernate that will NEVER be implemented:
   and the confusion is too great.
 - Automatic reflection: Sadly this cannot be done in C++,
   but pending requests on the ISO C++ commities exist.
+  Most likely to turn up in C++ 20 or 23 (2020 or 2023)
 
 Features under consideration
 ----------------------------

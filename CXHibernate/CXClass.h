@@ -21,8 +21,8 @@
 // WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION 
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
-// Last Revision:   17-06-2018
-// Version number:  0.9.0
+// Last version date: See CXHibernate.h
+// Version number:    See CXHibernate.h
 //
 #pragma once
 #include "CXHibernate.h"
@@ -116,6 +116,9 @@ public:
   bool        REALUpdateObjectInDatabase(SQLDatabase* p_database,SQLDataSet* p_dataset,CXObject* p_object,int p_mutation);
   bool        REALDeleteObjectInDatabase(SQLDatabase* p_database,SQLDataSet* p_dataSet,CXObject* p_object,int p_mutation);
 
+  // Late binding of associations
+  void        LoadMetaInfoAssociations(XMLMessage& p_message,XMLElement* p_theClass,CXSession* p_session);
+
 protected:
   // Adding a sub-class
   void        AddSubClass(CXClass* p_subclass);
@@ -139,7 +142,6 @@ protected:
   void LoadMetaInfoSubClasses  (XMLMessage& p_message,XMLElement* p_theClass);
   void LoadMetaInfoAttributes  (XMLMessage& p_message,XMLElement* p_theClass);
   void LoadMetaInfoIdentity    (XMLMessage& p_message,XMLElement* p_theClass);
-  void LoadMetaInfoAssociations(XMLMessage& p_message,XMLElement* p_theClass,CXSession* p_session);
   void LoadMetaInfoIndices     (XMLMessage& p_message,XMLElement* p_theClass);
   void LoadMetaInfoGenerator   (XMLMessage& p_message,XMLElement* p_theClass);
   void LoadMetaInfoPrivileges  (XMLMessage& p_message,XMLElement* p_theClass);

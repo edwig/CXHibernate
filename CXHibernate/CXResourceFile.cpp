@@ -21,8 +21,8 @@
 // WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION 
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
-// Last Revision:   17-06-2018
-// Version number:  0.9.0
+// Last version date: See CXHibernate.h
+// Version number:    See CXHibernate.h
 //
 #include "stdafx.h"
 #include "CXResourceFile.h"
@@ -65,7 +65,7 @@ CXHReadResourceData(int p_resId,CString type)
   if (list == 0)
   {
     CString error;
-    error.Format("Cannot find the resource [%d] of type [%s]", p_resId, type);
+    error.Format("Cannot find the resource [%d] of type [%s]", p_resId, type.GetString());
     throw StdException(error);
   }
 
@@ -74,7 +74,7 @@ CXHReadResourceData(int p_resId,CString type)
   if (glist == 0)
   {
     CString error;
-    error.Format("Cannot load the resource [%d] of type [%s]", p_resId, type);
+    error.Format("Cannot load the resource [%d] of type [%s]",p_resId,type.GetString());
     throw error;
   }
 

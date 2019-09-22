@@ -2,7 +2,7 @@
 //
 // File: SQLVariantFormat.cpp
 //
-// Copyright (c) 1998-2018 ir. W.E. Huisman
+// Copyright (c) 1998-2019 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy of 
@@ -21,8 +21,7 @@
 // WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION 
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
-// Last Revision:   28-05-2018
-// Version number:  1.5.0
+// Version number: See SQLComponents.h
 //
 #include "stdafx.h"
 #include "SQLComponents.h"
@@ -45,28 +44,28 @@ namespace SQLComponents
 #define SEP_LEN 10
 
 // string format number and money format functions
-static bool ValutaInit = false;
-static char DecimalSep [SEP_LEN + 1];
-static char ThousandSep[SEP_LEN + 1];
-static char strCurrency[SEP_LEN + 1];
-static int  DecimalSepLen;
-static int  ThousandSepLen;
-static int  strCurrencyLen;
+bool g_locale_valutaInit = false;
+char g_locale_decimalSep [SEP_LEN + 1];
+char g_locale_thousandSep[SEP_LEN + 1];
+char g_locale_strCurrency[SEP_LEN + 1];
+int  g_locale_decimalSepLen   = 0;
+int  g_locale_thousandSepLen  = 0;
+int  g_locale_strCurrencyLen  = 0;
 
-static void 
+void 
 InitValutaString()
 {
-  if(ValutaInit == false)
+  if(g_locale_valutaInit == false)
   {
-    GetLocaleInfo(LOCALE_USER_DEFAULT, LOCALE_SDECIMAL,  DecimalSep, SEP_LEN);
-    GetLocaleInfo(LOCALE_USER_DEFAULT, LOCALE_STHOUSAND, ThousandSep,SEP_LEN);
-    GetLocaleInfo(LOCALE_USER_DEFAULT, LOCALE_SCURRENCY, strCurrency,SEP_LEN);
-    DecimalSepLen  = (int)strlen(DecimalSep);
-    ThousandSepLen = (int)strlen(ThousandSep);
-    strCurrencyLen = (int)strlen(strCurrency);
+    GetLocaleInfo(LOCALE_USER_DEFAULT, LOCALE_SDECIMAL,  g_locale_decimalSep, SEP_LEN);
+    GetLocaleInfo(LOCALE_USER_DEFAULT, LOCALE_STHOUSAND, g_locale_thousandSep,SEP_LEN);
+    GetLocaleInfo(LOCALE_USER_DEFAULT, LOCALE_SCURRENCY, g_locale_strCurrency,SEP_LEN);
+    g_locale_decimalSepLen  = (int)strlen(g_locale_decimalSep);
+    g_locale_thousandSepLen = (int)strlen(g_locale_thousandSep);
+    g_locale_strCurrencyLen = (int)strlen(g_locale_strCurrency);
 
     setlocale(LC_NUMERIC, "C");
-    ValutaInit = true;
+    g_locale_valutaInit = true;
   }
 }
 
@@ -129,14 +128,23 @@ SQLVariantFormat::ReFormat()
 
 // All words get a initial capital
 // The rest of the words become lower case
+// Diacritic letters within words will be left alone
 void
 SQLVariantFormat::StringInitCapital()
 {
   bool doCapital = true;
-  for(int ind = 0;ind < m_format.GetLength(); ++ind)
+  int  length = m_format.GetLength();
+  unsigned char* buffer = (unsigned char*)m_format.GetBuffer();
+
+  for(int ind = 0; ind < length; ++ind)
   {
-    int ch = m_format.GetAt(ind);
-    if(ch > 0 && ch <= 127)
+    int ch = buffer[ind];
+
+    if(isblank(ch))
+    {
+      doCapital = true;
+    }
+    else
     {
       if(isalpha(ch))
       {
@@ -150,38 +158,33 @@ SQLVariantFormat::StringInitCapital()
           m_format.SetAt(ind,(unsigned char)tolower(ch));
         }
       }
-      else
-      {
-        doCapital = true;
+      doCapital = false;
       }
     }
   }
-}
 
-// First letter of the string becomes a capital
+// First character of the string becomes a capital
 // The rest becomes all lower case
+// But only if the first character is NOT a diacritic character
 void
 SQLVariantFormat::StringStartCapital()
 {
   bool doCapital = true;
-  for(int ind = 0;ind < m_format.GetLength(); ++ind)
+  int  length = m_format.GetLength();
+  unsigned char* buffer = (unsigned char*)m_format.GetBuffer();
+
+  for(int ind = 0;ind < length; ++ind)
   {
-    int ch = m_format.GetAt(ind);
-    if(ch > 0 && ch <= 127)
+    int ch = buffer[ind];
+
+    if(isblank(ch) == false)
     {
       if(isalpha(ch))
       {
-        if(doCapital)
-        {
-          m_format.SetAt(ind,(char)toupper(ch));
+        m_format.SetAt(ind,doCapital ? (unsigned char)toupper(ch) : (unsigned char) tolower(ch));
+      }
           doCapital = false;
         }
-        else
-        {
-          m_format.SetAt(ind,(char)tolower(ch));
-        }
-      }
-    }
   }
 }
 
@@ -409,7 +412,7 @@ SQLVariantFormat::StringDoubleValue()
     else
     {
       CString newGetal;
-      if(IsWinNumber(waarde,DecimalSep,ThousandSep,strCurrency,&newGetal))
+      if(IsWinNumber(waarde,g_locale_decimalSep,g_locale_thousandSep,g_locale_strCurrency,&newGetal))
       {
         result = atof(newGetal);
       }
@@ -417,19 +420,19 @@ SQLVariantFormat::StringDoubleValue()
       {
         CString newWaarde = waarde;
         StrValutaNLOmzetten(newWaarde,true);
-        if(IsWinNumber(newWaarde,DecimalSep,ThousandSep,strCurrency,&newGetal))
+        if(IsWinNumber(newWaarde,g_locale_decimalSep,g_locale_thousandSep,g_locale_strCurrency,&newGetal))
         {
           result = atof(newGetal);
         }
         else
         {
-          if(IsWinNumber(newWaarde,",",".",strCurrency,&newGetal))
+          if(IsWinNumber(newWaarde,",",".",g_locale_strCurrency,&newGetal))
           {
             result = atof(newGetal);
           }
           else
           {
-            if(IsWinNumber(newWaarde,".",",",strCurrency,&newGetal))
+            if(IsWinNumber(newWaarde,".",",",g_locale_strCurrency,&newGetal))
             {
               result = atof(newGetal);
             }
@@ -531,9 +534,9 @@ SQLVariantFormat::GetDateFromStringVariant(SQLVariant* p_variant,CString p_forma
       lang.AsDateStruct(p_date);
       return true;
     }
-    catch(StdException& e)
+    catch(StdException& er)
     {
-      UNREFERENCED_PARAMETER(e);
+      ReThrowSafeException(er);
     }
     return false;
   }
@@ -849,14 +852,28 @@ SQLVariantFormat::DateCalculate(char p_operator,CString p_argument)
   {
     try
     {
+      int days = 0;
       SQLDate other(p_argument);
-      SQLInterval intval = other - date;
-      m_format.Format("%d",intval.GetDays());
+      if(other.Valid())
+      {
+        SQLInterval intval = date - other;
+        days = intval.GetDays();
     }
-    catch(StdException& e)
+      else
+      {
+        SQLTimestamp other2(p_argument);
+        if(other2.Valid())
+        {
+          SQLInterval intval2 = date - other2.AsSQLDate();
+          days = intval2.GetDays();
+        }
+      }
+      m_format.Format("%d",days);
+    }
+    catch(StdException& ex)
     {
+      ReThrowSafeException(ex);
       // Does nothing. Underlying date is unchanged
-      UNREFERENCED_PARAMETER(e);
     }
   }
   return OK;
@@ -1120,8 +1137,8 @@ SQLVariantFormat::FormatNumberTemplate(char *Getal,const char *strNumFormat,int 
       {
         switch (*pFormat)
         {
-          case '^': strcpy_s(&RestString[RestPos],10, strCurrency);
-                    RestPos += (int)strlen(strCurrency);
+          case '^': strcpy_s(&RestString[RestPos],10, g_locale_strCurrency);
+                    RestPos += (int)strlen(g_locale_strCurrency);
                     break;
           case '+': RestString[RestPos++] = 1;
                     break;
@@ -1436,8 +1453,8 @@ SQLVariantFormat::FormatNumberTemplate(char *Getal,const char *strNumFormat,int 
                   break;
       case ',' :  if (bNummer)
                   {
-                    strcpy_s(&Buffer[Pos], NUMBER_BUFFER_SIZE, ThousandSep);
-                    Pos += (int)strlen(ThousandSep);
+                    strcpy_s(&Buffer[Pos], NUMBER_BUFFER_SIZE, g_locale_thousandSep);
+                    Pos += (int)strlen(g_locale_thousandSep);
                   }
                   else
                   {
@@ -1456,8 +1473,8 @@ SQLVariantFormat::FormatNumberTemplate(char *Getal,const char *strNumFormat,int 
                   }
                   if (iTrailingDigits > 0)
                   {
-                    strcpy_s(&Buffer[Pos], NUMBER_BUFFER_SIZE, DecimalSep);
-                    Pos += (int)strlen(DecimalSep);
+                    strcpy_s(&Buffer[Pos], NUMBER_BUFFER_SIZE, g_locale_decimalSep);
+                    Pos += (int)strlen(g_locale_decimalSep);
                   }
                   if (*pFormat == ':')
                   {

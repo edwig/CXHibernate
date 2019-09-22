@@ -2,7 +2,7 @@
 //
 // File: SQLDate.h
 //
-// Copyright (c) 1998-2018 ir. W.E. Huisman
+// Copyright (c) 1998-2019 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy of 
@@ -21,8 +21,7 @@
 // WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION 
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
-// Last Revision:   28-05-2018
-// Version number:  1.5.0
+// Version number: See SQLComponents.h
 //
 #include "Stdafx.h"
 #include "SQLComponents.h"
@@ -212,7 +211,7 @@ SQLDate::MJDtoDate()
   // See alsoo Robin M. Green: Spherical Astronomy, page 250 and next
 
   // Correction factor is MJD (2,400,000.5) + 0.5 (17 nov 1858 instead of 16 nov 12:00 hours)
-  double JD = m_mjd + 2400001;
+  double JD = m_mjd + JULIAN_DAY_MODIFIED;
   if(JD > 2299160)
   {
     long gregorianA = 0;
@@ -258,7 +257,7 @@ SQLDate::AsString() const
   CString buffer;
   if(IsNull() == false)
   {
-    buffer.Format("%02d-%02d-%04d", Day(), Month(), Year());
+    buffer.Format("%02ld-%02ld-%04ld", Day(), Month(), Year());
   }
   return buffer;
 }
@@ -271,6 +270,14 @@ SQLDate::AsSQLString(SQLDatabase* p_database)
     return "NULL";
   }
   return p_database->GetSQLDateString(Day(),Month(),Year()); 
+}
+
+CString
+SQLDate::AsStrippedSQLString(SQLDatabase* /*p_database*/)
+{
+  CString string;
+  string.Format("%04d-%02d-%02d",Year(),Month(),Day());
+  return string;
 }
 
 void
@@ -352,7 +359,7 @@ SQLDate::FullDate(Language p_lang /*=LN_DEFAULT*/) const
     }
     if(p_lang >= LN_DUTCH && p_lang <= LN_FRENCH)
     {
-      fullName.Format("%s %d %s %d",WeekDayName(p_lang).GetString(),Day(),MonthName(p_lang).GetString(),Year());
+      fullName.Format("%s %ld %s %ld",WeekDayName(p_lang).GetString(),Day(),MonthName(p_lang).GetString(),Year());
     }
   }
   return fullName;

@@ -31,7 +31,8 @@
 #include "HTTPServer.h"
 #include "HTTPSite.h"
 #include "HTTPError.h"
-#include "WebSocket.h"
+#include "HTTPTime.h"
+#include "WebSocketServer.h"
 #include "AutoCritical.h"
 #include "ConvertWideString.h"
 #include <WebSocket.h>
@@ -392,6 +393,7 @@ HTTPRequest::ReceivedRequest()
   m_message->SetAuthorization(authorize);
   m_message->SetConnectionID(m_request->ConnectionId);
   m_message->SetContentType(contentType);
+  m_message->SetContentLength((size_t)atoll(contentLength));
   m_message->SetAccessToken(accessToken);
   m_message->SetRemoteDesktop(remDesktop);
   m_message->SetSender  ((PSOCKADDR_IN6)sender);
@@ -421,6 +423,9 @@ HTTPRequest::ReceivedRequest()
       return;
     }
   }
+
+  // Find routing information within the site
+  m_server->CalculateRouting(m_site,m_message);
 
   // Find X-HTTP-Method VERB Tunneling
   if(type == HTTPCommand::http_post && m_site->GetVerbTunneling())
@@ -495,7 +500,12 @@ HTTPRequest::ReceivedBodyPart()
       m_readBuffer[bytes] = 0;
       m_message->GetFileBuffer()->AddBuffer(m_readBuffer,bytes);
     }
-    if(result == NO_ERROR)
+
+    // See how far we have come, so we do not read past EOF
+    size_t readSofar = m_message->GetFileBuffer()->GetLength();
+    size_t mustRead  = m_message->GetContentLength();
+
+    if(result == NO_ERROR && readSofar < mustRead)
     {
       // (Re)start the next read request
       StartReceiveRequest();
@@ -557,8 +567,7 @@ HTTPRequest::StartSendResponse()
   if(m_response->StatusCode == HTTP_STATUS_SWITCH_PROTOCOLS)
   {
     m_writing.m_action = IO_Nothing;
-//     m_ws = new HTTPWebSocket(this);
-//     m_ws->BeginServerHandshake(m_request->Headers.UnknownHeaderCount,m_request->Headers.pUnknownHeaders);
+    flags  |= HTTP_SEND_RESPONSE_FLAG_OPAQUE;
   }
 
   // Prepare our cache-policy
@@ -1228,6 +1237,7 @@ HTTPRequest::FillResponse(int p_status,bool p_responseOnly /*=false*/)
     RtlZeroMemory(m_response,sizeof(HTTP_RESPONSE));
   }
   const char* text = GetHTTPStatusText(p_status);
+  CString date = HTTPGetSystemTime();
 
   m_response->Version.MajorVersion = 1;
   m_response->Version.MinorVersion = 1;
@@ -1264,6 +1274,8 @@ HTTPRequest::FillResponse(int p_status,bool p_responseOnly /*=false*/)
                                                         ,m_site->GetAuthenticationRealm());
     }
     AddKnownHeader(HttpHeaderWwwAuthenticate,challenge);
+    AddKnownHeader(HttpHeaderDate,date);
+
   }
 
   // Add the server header or suppress it
@@ -1327,7 +1339,7 @@ HTTPRequest::FillResponse(int p_status,bool p_responseOnly /*=false*/)
   // See if this request must send a file as part of a 'GET'
   // Or if the content comes from the buffer
   size_t totalLength = 0;
-  if(!buffer->GetFileName().IsEmpty())
+  if(buffer && !buffer->GetFileName().IsEmpty())
   {
     // FILE BUFFER CONTAINS A FILE REFERENCE TO SENT
     // Send file in form of a file-handle to transmit

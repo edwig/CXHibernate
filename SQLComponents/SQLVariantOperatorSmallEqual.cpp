@@ -2,7 +2,7 @@
 //
 // File: SQLVariantOperatorSmallEQ.cpp
 //
-// Copyright (c) 1998-2018 ir. W.E. Huisman
+// Copyright (c) 1998-2019 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy of 
@@ -21,8 +21,7 @@
 // WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION 
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
-// Last Revision:   28-05-2018
-// Version number:  1.5.0
+// Version number: See SQLComponents.h
 //
 #include "stdafx.h"
 #include "SQLComponents.h"
@@ -409,7 +408,7 @@ static SQL_OperDoubleSmallEQFloat(SQLVariant& p_left,SQLVariant& p_right)
 bool
 static SQL_OperBitSmallEQFloat(SQLVariant& /*p_left*/,SQLVariant& p_right)
 {
-  return p_right.GetAsFloat() != 0.0;
+  return p_right.GetAsFloat() < -FLT_EPSILON || FLT_EPSILON < p_right.GetAsFloat();
 }
 
 bool
@@ -483,7 +482,7 @@ static SQL_OperDoubleSmallEQDouble(SQLVariant& p_left,SQLVariant& p_right)
 bool
 static SQL_OperBitSmallEQDouble(SQLVariant& /*p_left*/,SQLVariant& p_right)
 {
-  return p_right.GetAsDouble() != 0.0;
+  return p_right.GetAsDouble() < -DBL_EPSILON || DBL_EPSILON < p_right.GetAsDouble();
 }
 
 bool

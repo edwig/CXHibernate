@@ -29,6 +29,7 @@
 #include "FileBuffer.h"
 #include "CrackURL.h"
 #include "Cookie.h"
+#include "Routing.h"
 #include <http.h>
 #include <winhttp.h>
 #include <map>
@@ -144,6 +145,7 @@ public:
   void SetAccessToken(HANDLE p_token)           { m_token              = p_token;     };
   void SetRemoteDesktop(UINT p_desktop)         { m_desktop            = p_desktop;   };
   void SetContentType(CString p_type)           { m_contentType        = p_type;      };
+  void SetContentLength(size_t p_length)        { m_contentLength      = p_length;    };
   void SetUseIfModified(bool p_ifmodified)      { m_ifmodified         = p_ifmodified;};
   void SetSendBOM(bool p_bom)                   { m_sendBOM            = p_bom;       };
   void SetVerbTunneling(bool p_tunnel)          { m_verbTunnel         = p_tunnel;    };
@@ -194,6 +196,7 @@ public:
   HTTP_CONNECTION_ID  GetConnectionID()         { return m_connectID;                 };
   CString             GetAcceptEncoding()       { return m_acceptEncoding;            };
   Cookies&            GetCookies()              { return m_cookies;                   };
+  Routing&            GetRouting()              { return m_routing;                   };
   CString             GetBody();
   size_t              GetBodyLength();
   CString             GetVerb();
@@ -202,6 +205,7 @@ public:
   Cookie*             GetCookie(unsigned p_ind);
   CString             GetCookieValue(unsigned p_ind = 0,CString p_metadata = "");
   CString             GetCookieValue(CString p_name,    CString p_metadata = "");
+  CString             GetRoute(int p_index);
   bool                GetHasBeenAnswered();
 
   // EXTRA FUNCTIONS
@@ -218,6 +222,8 @@ public:
   void    AddHeader(HTTP_HEADER_ID p_id,CString p_value);
   // Delete a header by name
   void    DelHeader(CString p_name);
+  // Add a routing part
+  void    AddRoute(CString p_route);
   // Convert system time to HTTP time string
   CString HTTPTimeFormat(PSYSTEMTIME p_systime = NULL);
   // Convert HTTP time string to system time
@@ -267,6 +273,7 @@ private:
   UINT                m_desktop       { 0       };                    // Remote desktop number
   CrackedURL          m_cracked;                                      // Cracked down URL
   HeaderMap           m_headers;                                      // All/Known headers
+  Routing             m_routing;                                      // Routing information within a site
   bool                m_ifmodified    { false   };                    // Use "if-modified-since"
   SYSTEMTIME          m_systemtime;                                   // System time for m_modified
   long                m_references    { 1       };                    // Referencing system
@@ -337,4 +344,10 @@ inline bool
 HTTPMessage::GetHasBeenAnswered()
 {
   return m_request == NULL;
+}
+
+inline void
+HTTPMessage::AddRoute(CString p_route)
+{
+  m_routing.push_back(p_route);
 }

@@ -67,7 +67,7 @@ JSONParser::ParseMessage(CString& p_message,bool& p_whitespace,JsonEncoding p_en
   // Initializing the parser
   m_pointer    = (uchar*) p_message.GetString();
   m_valPointer = m_message->m_value;
-  m_lines      = 0;
+  m_lines      = 1;
   m_objects    = 0;
   m_utf8       = p_encoding == JsonEncoding::JENC_UTF8;
 
@@ -286,7 +286,7 @@ JSONParser::UnicodeChar()
     ch *= 16; // Always radix 16 for JSON
     ch += XDigitToValue(*m_pointer);
     // Next char
-    ++ind;
+    --ind;
     ++m_pointer;
   }
   if(ind)
@@ -583,6 +583,13 @@ JSONParserSOAP::ParseLevel(JSONvalue& p_valPointer,XMLElement& p_element)
 bool 
 JSONParserSOAP::ScanForArray(XMLElement& p_element,CString& p_arrayName)
 {
+  // If the WSDL type tells us that there is an array af same elements
+  // Under this element, we will convert to an array in JSON
+  if(p_element.GetType() & XDT_Array)
+  {
+    return true;
+  }
+
   // See if we must scan
   if(p_element.GetChildren().size() < 2)
   {

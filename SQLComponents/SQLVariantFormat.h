@@ -2,7 +2,7 @@
 //
 // File: SQLVariantFormat.h
 //
-// Copyright (c) 1998-2018 ir. W.E. Huisman
+// Copyright (c) 1998-2019 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy of 
@@ -21,8 +21,7 @@
 // WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION 
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
-// Last Revision:   28-05-2018
-// Version number:  1.5.0
+// Version number: See SQLComponents.h
 //
 #pragma once
 #include "SQLVariant.h"
@@ -34,6 +33,18 @@ namespace SQLComponents
 // User status
 #define USER_DISPLAY		   1
 #define NUMBER_BUFFER_SIZE 100
+
+// string format number and money format functions
+extern bool g_locale_valutaInit;
+extern char g_locale_decimalSep [];
+extern char g_locale_thousandSep[];
+extern char g_locale_strCurrency[];
+extern int  g_locale_decimalSepLen;
+extern int  g_locale_thousandSepLen;
+extern int  g_locale_strCurrencyLen;
+
+// Initialize the above global locale variables!
+void InitValutaString();
 
 class SQLVariantFormat
 {

@@ -101,6 +101,9 @@ SOAPMessage::SOAPMessage(HTTPMessage* p_msg)
   memcpy(&m_sender,p_msg->GetSender(),sizeof(SOCKADDR_IN6));
   m_desktop = p_msg->GetRemoteDesktop();
 
+  // Copy routing information
+  m_routing = p_msg->GetRouting();
+
   // Parse the body as a posted message
   CString message;
   CString charset = FindCharsetInContentType(m_contentType);
@@ -167,6 +170,9 @@ SOAPMessage::SOAPMessage(JSONMessage* p_msg)
 
   // Duplicate all cookies
   m_cookies = p_msg->GetCookies();
+
+  // Duplicate routing
+  m_routing = p_msg->GetRouting();
 
   // Copy all headers from the HTTPmessage
   HeaderMap* map = p_msg->GetHeaderMap();
@@ -319,6 +325,9 @@ SOAPMessage::SOAPMessage(SOAPMessage* p_orig)
 
   // Duplicate cookies
   m_cookies = p_orig->m_cookies;
+  // Duplicate routing
+  m_routing = p_orig->m_routing;
+
   // Duplicate the HTTP token for ourselves
   if(DuplicateTokenEx(p_orig->m_token
                      ,TOKEN_DUPLICATE|TOKEN_IMPERSONATE|TOKEN_ALL_ACCESS|TOKEN_READ|TOKEN_WRITE
@@ -449,6 +458,7 @@ SOAPMessage::Reset(ResponseType p_responseType  /* = ResponseType::RESP_ACTION_N
   // Leave encryption     untouched !!
   // Leave cookies        untouched !!
   // Leave server handle  untouched !!
+  // Leave routing        untouched !!
 }
 
 void
@@ -500,8 +510,6 @@ CString
 SOAPMessage::GetHeader(CString p_name)
 {
   p_name.MakeLower();
-  // This does not work: creates illegal entries
-  // return m_headers[p_name];
   for(auto& header : m_headers)
   {
     if(header.first.Compare(p_name) == 0)
@@ -724,6 +732,16 @@ SOAPMessage::GetJSON_URL()
   return url;
 }
 
+CString
+SOAPMessage::GetRoute(int p_index)
+{
+  if(p_index >= 0 && p_index < m_routing.size())
+  {
+    return m_routing[p_index];
+  }
+  return "";
+}
+
 // TO do after we set parts of the URL in setters
 void
 SOAPMessage::ReparseURL()
@@ -742,8 +760,8 @@ SOAPMessage::SetSigningMethod(unsigned p_method)
 {
   // Record only if it yields a valid signing method
   // by the signing standard: "http://www.w3.org/2000/09/xmldsig#" + p_method
-  Crypto crypt(p_method);
-  if(!crypt.GetHashMethod(p_method).IsEmpty())
+  Crypto crypted(p_method);
+  if(!crypted.GetHashMethod(p_method).IsEmpty())
   {
     m_signingMethod = p_method;
     return true;
@@ -1299,9 +1317,7 @@ SOAPMessage::AddToHeaderAcknowledgement()
 void
 SOAPMessage::AddToHeaderMessageNumber()
 {
-  if(m_clientMessageNumber)
-  {
-    if(FindElement(m_header,"rm:Sequence") == NULL)
+  if(m_clientMessageNumber && FindElement(m_header,"rm:Sequence") == NULL)
     {
       XMLElement* seq = SetHeaderParameter("rm:Sequence","");
       SetAttribute(seq,"s:mustUnderstand",1);
@@ -1313,7 +1329,6 @@ SOAPMessage::AddToHeaderMessageNumber()
       }
     }
   }
-}
 
 void
 SOAPMessage::AddToHeaderMessageID()
@@ -1734,7 +1749,6 @@ SOAPMessage::CheckHeaderHasSequence()
 void
 SOAPMessage::CheckHeaderHasAcknowledgement()
 {
-  CString error;
   XMLElement* acknow = FindElement(m_header,"SequenceAcknowledgement");
   if(acknow == NULL)
   {
@@ -1754,7 +1768,7 @@ SOAPMessage::CheckHeaderHasAcknowledgement()
 
     // Range incomplete -> Retransmit
     m_ranges.push_back(relrange);
-    // CheckMessageRange(lower,upper);
+    // CheckMessageRange(lower,upper)
     // Next sibling of AckRange.
     // Skip past Microsoft extensions ("netrm" buffering)
     do 
@@ -1820,7 +1834,6 @@ SOAPMessage::CheckHeaderAction()
       // Not what we expected. See if it is a fault
       int pos = response.ReverseFind('/');
       CString fault = response.Mid(pos + 1);
-      CString responseNS = response.Left(pos);
       if(fault.CompareNoCase("fault") == 0)
       {
         // Some sort of a SOAP Fault response is ok
@@ -1890,7 +1903,7 @@ SOAPMessage::HandleSoapFault(XMLElement* p_fault)
     XMLElement* fmess  = FindElement(p_fault,"faultstring");
     XMLElement* detail = FindElement(p_fault,"detail");
 
-    m_soapFaultCode   = fcode  ? fcode ->GetValue() : "";
+    m_soapFaultCode   =          fcode ->GetValue();
     m_soapFaultActor  = actor  ? actor ->GetValue() : "";
     m_soapFaultString = fmess  ? fmess ->GetValue() : "";
     m_soapFaultDetail = detail ? detail->GetValue() : "";
@@ -2071,8 +2084,8 @@ void
 SOAPMessage::EncryptNode(CString& p_node)
 {
   // Encrypt
-  Crypto crypt(m_signingMethod);
-  p_node = crypt.Encryptie(p_node,m_enc_password);
+  Crypto crypted(m_signingMethod);
+  p_node = crypted.Encryption(p_node,m_enc_password);
 }
 
 // Encrypt the body: yielding a new body

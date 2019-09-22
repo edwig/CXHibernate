@@ -2,7 +2,7 @@
 //
 // File: SQLTimestamp.cpp
 //
-// Copyright (c) 1998-2018 ir. W.E. Huisman
+// Copyright (c) 1998-2019 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy of 
@@ -21,8 +21,7 @@
 // WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION 
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
-// Last Revision:   28-05-2018
-// Version number:  1.5.0
+// Version number: See SQLComponents.h
 //
 #include "StdAfx.h"
 #include "SQLComponents.h"
@@ -197,7 +196,7 @@ SQLTimestamp::RecalculateValue()
   {
     SetNull();
     CString error;
-    error.Format("Day of the month must be between 1 and %d inclusive.",daysInMonth);
+    error.Format("Day of the month must be between 1 and %ld inclusive.",daysInMonth);
     throw StdException(error);
   }
   // Calculate the Astronomical Julian Day Number (JD)
@@ -520,6 +519,7 @@ SQLTimestamp::AddYears(int p_number) const
     }
     catch(StdException& er)
     {
+      ReThrowSafeException(er);
       if (Month() == 2 && Day() == 29) // Correction for leap year
       {
         // 29-2-1968 plus 1 year becomes 28-2-1969

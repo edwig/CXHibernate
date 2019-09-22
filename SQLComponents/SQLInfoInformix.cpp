@@ -2,7 +2,7 @@
 //
 // File: SQLInfoInformix.cpp
 //
-// Copyright (c) 1998-2018 ir. W.E. Huisman
+// Copyright (c) 1998-2019 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy of 
@@ -21,8 +21,7 @@
 // WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION 
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
-// Last Revision:   28-05-2018
-// Version number:  1.5.0
+// Version number: See SQLComponents.h
 //
 #include "stdafx.h"
 #include "SQLComponents.h"
@@ -343,6 +342,25 @@ SQLInfoInformix::GetSQLOptimizeTable(CString /*p_schema*/,CString p_tablename) c
   return optim;
 }
 
+// Transform query to select top <n> rows
+CString
+SQLInfoInformix::GetSQLTopNRows(CString p_sql,int p_top,int p_skip /*= 0*/) const
+{
+  if(p_top > 0 && p_sql.Find("SELECT ") == 0)
+  {
+    // INFORMIX: "SELECT [SKIP <skip>] FIRST <top> ....
+    CString selectFirst("SELECT ");
+    if(p_skip)
+    {
+      selectFirst.AppendFormat("SKIP %d ",p_skip);
+    }
+    selectFirst.AppendFormat("FIRST %d ",p_top);
+
+    p_sql.Replace("SELECT ",selectFirst);
+  }
+  return p_sql;
+}
+
 //////////////////////////////////////////////////////////////////////////
 //
 // SQL STRINGS
@@ -434,6 +452,15 @@ SQLInfoInformix::GetSQLDateTimeStrippedString(int p_year,int p_month,int p_day,i
 //   - Drop
 //
 //////////////////////////////////////////////////////////////////////////
+
+// Meta info about meta types
+// Standard ODBC functions are good enough
+CString
+SQLInfoInformix::GetCATALOGMetaTypes(int p_type) const
+{
+  UNREFERENCED_PARAMETER(p_type);
+  return "";
+}
 
 // Get SQL to check if a table already exists in the database
 CString
@@ -591,7 +618,7 @@ SQLInfoInformix::GetCATALOGColumnAttributes(CString /*p_schema*/,CString p_table
 CString 
 SQLInfoInformix::GetCATALOGColumnCreate(MetaColumn& p_column) const
 {
-  CString sql = "ALTER TABLE "  + p_column.m_table  + "\n";
+  CString sql = "ALTER TABLE "  + p_column.m_table  + "\n"
                 "  ADD COLUMN " + p_column.m_column + " " + p_column.m_typename;
   p_column.GetPrecisionAndScale(sql);
   p_column.GetNullable(sql);
@@ -606,7 +633,7 @@ CString
 SQLInfoInformix::GetCATALOGColumnAlter(MetaColumn& p_column) const
 {
   // The MODIFY keyword is a-typical
-  CString sql = "ALTER  TABLE  " + p_column.m_table  + "\n";
+  CString sql = "ALTER  TABLE  " + p_column.m_table  + "\n"
                 "MODIFY COLUMN " + p_column.m_column + " " + p_column.m_typename;
   p_column.GetPrecisionAndScale(sql);
   p_column.GetNullable(sql);

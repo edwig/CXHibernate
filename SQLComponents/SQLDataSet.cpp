@@ -2,7 +2,7 @@
 //
 // File: SQLDataSet.cpp
 //
-// Copyright (c) 1998-2018 ir. W.E. Huisman
+// Copyright (c) 1998-2019 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy of 
@@ -21,8 +21,7 @@
 // WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION 
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
-// Last Revision:   28-05-2018
-// Version number:  1.5.0
+// Version number: See SQLComponents.h
 //
 #include "stdafx.h"
 #include "SQLComponents.h"
@@ -31,6 +30,8 @@
 #include "SQLVariantFormat.h"
 #include "SQLInfoDB.h"
 #include <algorithm>
+#include <sstream>
+#include <set>
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -90,20 +91,12 @@ const char* dataset_names[LN_NUMLANG][NUM_DATASET_NAMES] =
 
 SQLDataSet::SQLDataSet()
            :m_database(NULL)
-           ,m_status(SQL_Empty)
-           ,m_current(-1)
-           ,m_open(false)
-           ,m_filters(nullptr)
 {
 }
 
 SQLDataSet::SQLDataSet(CString p_name,SQLDatabase* p_database /*=NULL*/)
            :m_name(p_name)
            ,m_database(p_database)
-           ,m_status(SQL_Empty)
-           ,m_current(-1)
-           ,m_open(false)
-           ,m_filters(nullptr)
 {
 }
 
@@ -303,6 +296,17 @@ SQLDataSet::SetFilters(SQLFilterSet* p_filters)
   m_filters = p_filters;
 }
 
+// Set top <n> records selection
+void
+SQLDataSet::SetTopNRecords(int p_top,int p_skip /*=0*/)
+{
+  if(p_top > 0)
+  {
+    m_topRecords  = p_top;
+    m_skipRecords = p_skip;
+  }
+}
+
 void         
 SQLDataSet::SetPrimaryKeyColumn(WordList& p_list)
 {
@@ -342,6 +346,64 @@ SQLDataSet::GetSequenceName()
   }
   // Give up :-(
   return "";
+}
+
+void
+SQLDataSet::SetQuery(CString& p_query)
+{
+  // Setting the total query supersedes these
+  m_selection.Empty();
+  m_whereCondition.Empty();
+  m_groupby.Empty();
+  m_orderby.Empty();
+  m_apply.Empty();
+  m_filters = nullptr;
+  m_havings = nullptr;
+
+  // Setting the query at once
+  m_query = p_query;
+}
+
+void
+SQLDataSet::SetSelection(CString p_selection)
+{
+  m_query.Empty();
+  m_selection = p_selection;
+}
+
+void
+SQLDataSet::SetWhereCondition(CString p_condition)
+{
+  m_query.Empty();
+  m_whereCondition = p_condition;
+}
+
+void
+SQLDataSet::SetGroupBy(CString p_groupby)
+{
+  m_query.Empty();
+  m_groupby = p_groupby;
+}
+
+void
+SQLDataSet::SetOrderBy(CString p_orderby)
+{
+  m_query.Empty();
+  m_orderby = p_orderby;
+}
+
+void
+SQLDataSet::SetHavings(SQLFilterSet* p_havings)
+{
+  m_query.Empty();
+  m_havings = p_havings;
+}
+
+void
+SQLDataSet::SetApply(CString p_apply)
+{
+  m_query.Empty();
+  m_apply = p_apply;
 }
 
 // Replace $name for the value of a parameter
@@ -406,7 +468,16 @@ CString
 SQLDataSet::ParseSelection(SQLQuery& p_query)
 {
   CString sql("SELECT ");
+  
+  if(!m_apply.IsEmpty())
+  {
+    ParseApply(sql);
+  }
+  else
+  {
+    CheckDuplicateColumns();
   sql += m_selection.IsEmpty() ? "*" : m_selection;
+  }
   sql += "\n  FROM ";
 
   if(!m_primarySchema.IsEmpty())
@@ -434,17 +505,93 @@ SQLDataSet::ParseSelection(SQLQuery& p_query)
   return sql;
 }
 
-// Parse the fitlers (m_filters must be non-null)
-CString
-SQLDataSet::ParseFilters(SQLQuery& p_query)
+// Parse the apply part
+void
+SQLDataSet::ParseApply(CString& sql)
 {
-  CString query(m_query);
+  m_apply.TrimLeft();
+  m_apply.MakeLower();
+  if (m_apply.GetLength() > 10 && m_apply.Mid(0, 9) == "aggregate")
+  {
+    int from = 0;
+    int upto = 0;
+    CString action = "";
+    CString column = "";
+
+    // Remove double spaces
+    while (m_apply.Find("  ") >= 0)
+    {
+      m_apply.Replace("  ", " ");
+    }
+    // Remove space behind parenthesis
+    m_apply.Replace("( ", "(");
+
+    from = m_apply.Find("(", 0) + 1;
+    upto = m_apply.Find(" ", from);
+    column = m_apply.Mid(from, (upto - from));
+
+    if (m_apply.Find("with sum ") > 0)
+    {
+      action = "SUM(" + column + ")";
+    }
+    else if (m_apply.Find("with min ") > 0)
+    {
+      action = "MIN(" + column + ")";
+    }
+    else if (m_apply.Find("with max ") > 0)
+    {
+      action = "MAX(" + column + ")";
+    }
+    else if (m_apply.Find("with average ") > 0)
+    {
+      action = "AVG(" + column + ")";
+    }
+    else if (m_apply.Find("with countdistinct ") > 0)
+    {
+      action = "COUNT(DISTINCT(" + column + "))";
+    }
+    else if (m_apply.Find("with count ") > 0)
+    {
+      action = "COUNT(" + column + ")";
+    }
+    else
+    {
+      // Error as a MIN with just one record
+      throw StdException("Invalid apply aggregate option");
+    }
+
+    if(action.GetLength() > 1)
+    {
+      if(!m_selection.IsEmpty() && m_selection.Compare("*"))
+      {
+        sql += m_selection;
+        sql += ",";
+      }
+
+      sql += action;
+      if (m_apply.Find(" as ") > 0)
+      {
+        from = m_apply.Find(" as ") + 4;
+        upto = m_apply.Find(")", from);
+        sql += " AS " + m_apply.Mid(from, upto - from);
+      }
+    }
+  }
+  else
+  {
+    // Error as a MIN with just one record
+    throw StdException("Missing aggregate");
+  }
+}
+
+// Parse the filters (m_filters must be non-null)
+CString
+SQLDataSet::ParseFilters(SQLQuery& p_query,CString p_sql)
+{
+  CString query(p_sql);
   query.MakeUpper();
   query.Replace("\t"," ");
   bool whereFound = m_query.Find("WHERE ") > 0;
-
-  // Restart with original query
-  query = m_query;
 
   // Offset in the WHERE clause
   query += whereFound ? "\n   AND " : "\n WHERE ";
@@ -455,12 +602,69 @@ SQLDataSet::ParseFilters(SQLQuery& p_query)
   return query;
 }
 
+// Construct the selection SQL for opening the dataset
+// Getting the total query in effect
+CString
+SQLDataSet::GetSelectionSQL(SQLQuery& p_qry)
+{
+  CString sql(m_query);
+
+  // If parameters, parse them
+  if(!m_query.IsEmpty())
+  {
+    if(m_parameters.size())
+    {
+      sql = ParseQuery();
+    }
+  }
+  else
+  {
+    // Replace empty query from selection columns
+    // If no selection columns: does a "SELECT *"
+    sql = ParseSelection(p_qry);
+  }
+
+  // Apply all the filters
+  if (m_filters && !m_filters->Empty())
+  {
+    sql = ParseFilters(p_qry, sql);
+  }
+  else if(!m_whereCondition.IsEmpty())
+  {
+    if(m_parameters.size())
+    {
+      sql += "\n   AND " + m_whereCondition;
+    }
+    else
+    {
+      sql += "\n WHERE " + m_whereCondition;
+    }
+  }
+
+  if(!m_groupby.IsEmpty())
+  {
+    sql += "\n GROUP BY " + m_groupby;
+  }
+
+  if(m_havings && !m_havings->Empty())
+  {
+    sql += "\n HAVING ";
+    sql += m_havings->ParseFiltersToCondition(p_qry);
+  }
+
+  if(!m_orderby.IsEmpty())
+  {
+    sql += "\n ORDER BY " + m_orderby;
+  }
+
+  return sql;
+}
 
 bool
 SQLDataSet::Open(bool p_stopIfNoColumns /*=false*/)
 {
   bool   result = false;
-  CString query = m_query;
+  CString query;
 
   if(m_query.IsEmpty() && m_selection.IsEmpty())
   {
@@ -481,22 +685,14 @@ SQLDataSet::Open(bool p_stopIfNoColumns /*=false*/)
     SQLQuery qry(m_database);
     SQLTransaction trans(m_database,m_name);
 
-    // If parameters, parse them
-    if(!m_query.IsEmpty())
+    // Get the select query
+    query = GetSelectionSQL(qry);
+
+    // Apply top <N> records selection
+    if(m_topRecords)
     {
-      if(m_parameters.size())
-      {
-        query = ParseQuery();
+      query = m_database->GetSQLInfoDB()->GetSQLTopNRows(query,m_topRecords,m_skipRecords);
       }
-      else if(m_filters && !m_filters->Empty())
-      {
-        query = ParseFilters(qry);
-      }
-    }
-    else
-    {
-      query = ParseSelection(qry);
-    }
 
     // Do the SELECT query
     qry.DoSQLStatement(query);
@@ -562,24 +758,15 @@ SQLDataSet::Append()
   {
     SQLQuery qry(m_database);
     SQLTransaction trans(m_database,m_name);
-    CString query(m_query);
 
-    // Fill in the query with parameters / filters
-    if(!m_query.IsEmpty())
+    // Get the select query
+    CString query = GetSelectionSQL(qry);
+
+    // Apply top <N> records selection
+    if(m_topRecords)
     {
-      if(m_parameters.size())
-      {
-        query = ParseQuery();
+      query = m_database->GetSQLInfoDB()->GetSQLTopNRows(query,m_topRecords,m_skipRecords);
       }
-      else if(m_filters && !m_filters->Empty())
-      {
-        query = ParseFilters(qry);
-      }
-    }
-    else
-    {
-      query = ParseSelection(qry);
-    }
 
     // Do the SELECT query
     qry.DoSQLStatement(query);
@@ -598,6 +785,7 @@ SQLDataSet::Append()
   }
   catch(StdException& er)
   {
+    ReThrowSafeException(er);
     Close();
     throw StdException(er.GetErrorMessage());
   }
@@ -714,6 +902,43 @@ SQLDataSet::ReadTypes(SQLQuery& qr)
   {
     type = qr.GetColumnType(ind);
     m_types.push_back(type);
+  }
+}
+
+void
+SQLDataSet::CheckDuplicateColumns()
+{
+  // Check whether m_selection has duplicate column names. 
+  // Remove double spaces
+  m_selection.TrimLeft();
+  while (m_selection.Find("  ") >= 0)
+  {
+    m_selection.Replace("  ", " ");
+  }
+  while (m_selection.Find(", ") >= 0)
+  {
+    m_selection.Replace(", ", ",");
+  }
+  while (m_selection.Find(" ,") >= 0)
+  {
+    m_selection.Replace(" ,", ",");
+  }
+  std::set<std::string>kolommen;
+  std::stringstream selectie(m_selection.MakeLower().GetString());
+  // Seperate the selection in columns
+  while (selectie.good())
+  {
+    std::string kolom;
+    std::getline(selectie, kolom, ',');
+    // if the column already exists throw error.
+    if (kolommen.find(kolom) != kolommen.end()) // count(kolom))
+    {
+      throw StdException("Duplicate columns in select");
+    }
+    else
+    {
+      kolommen.insert(kolom);
+    }
   }
 }
 
@@ -1126,8 +1351,9 @@ SQLDataSet::Synchronize(int p_mutationID /*=0*/)
   }
   catch(StdException& er)
   {
+    ReThrowSafeException(er);
     // Automatic rollback will be done now
-    m_database->LogPrint(1,"Database synchronization stopped: " + er.GetErrorMessage());
+    m_database->LogPrint("Database synchronization stopped: " + er.GetErrorMessage());
     // Restore original status of the dataset, reduce never done
     m_status = oldStatus;
     return false;
@@ -1579,7 +1805,7 @@ SQLDataSet::XMLLoad(XMLMessage* p_msg,XMLElement* p_dataset)
   while(field)
   {
     // Remember the name of the field
-    CString name = field->GetName();
+    CString name = field->GetValue();
     m_names.push_back(name);
     // Datatype of the field
     int type = p_msg->GetAttributeInteger(field,dataset_names[g_defaultLanguage][DATASET_TYPE]);

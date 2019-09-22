@@ -447,12 +447,7 @@ const uLong *get_crc_table    (void);
 
 
 typedef unsigned char  uch;
-typedef uch uchf;
 typedef unsigned short ush;
-typedef ush ushf;
-typedef unsigned long  ulg;
-
-
 
 const char * const z_errmsg[10] = { // indexed by 2-zlib_error
 "need dictionary",     // Z_NEED_DICT       2
@@ -1787,12 +1782,19 @@ uInt *v)               // working area: values in order of bit length
 
       // fill code-like entries with r
       f = 1 << (k - w);
+      if(q)
+      {
       for (j = i >> w; j < z; j += f)
+        {
         q[j] = r;
+        }
+      } 
 
       // backwards increment the k-bit code i 
       for (j = 1 << (k - 1); i & j; j >>= 1)
+      {
         i ^= j;
+      }
       i ^= j;
 
       // backup over finished tables 
@@ -2275,14 +2277,14 @@ const char * zError(int err)
 
 voidpf zcalloc (voidpf opaque, unsigned items, unsigned size)
 {
-    if (opaque) items += size - size; // make compiler happy
+  UNREFERENCED_PARAMETER(opaque);
     return (voidpf)calloc(items, size);
 }
 
 void  zcfree (voidpf opaque, voidpf ptr)
 {
+  UNREFERENCED_PARAMETER(opaque);
     zfree(ptr);
-    if (opaque) return; // make compiler happy
 }
 
 
@@ -2876,7 +2878,8 @@ uLong unzlocal_SearchCentralDir(LUFILE *fin)
 
   uLong uBackRead = 4;
   while (uBackRead<uMaxBack)
-  { uLong uReadSize,uReadPos ;
+  {
+    uLong uReadSize,uReadPos ;
     int i;
     if (uBackRead+BUFREADCOMMENT>uMaxBack) uBackRead = uMaxBack;
     else uBackRead+=BUFREADCOMMENT;
@@ -2885,13 +2888,14 @@ uLong unzlocal_SearchCentralDir(LUFILE *fin)
     if (lufseek(fin,uReadPos,SEEK_SET)!=0) break;
     if (lufread(buf,(uInt)uReadSize,1,fin)!=1) break;
     for (i=(int)uReadSize-3; (i--)>=0;)
-    { if (((*(buf+i))==0x50) && ((*(buf+i+1))==0x4b) &&	((*(buf+i+2))==0x05) && ((*(buf+i+3))==0x06))
+    {
+      if (((*(buf+i))==0x50) && ((*(buf+i+1))==0x4b) &&	((*(buf+i+2))==0x05) && ((*(buf+i+3))==0x06))
       { uPosFound = uReadPos+i;	break;
       }
     }
     if (uPosFound!=0) break;
   }
-  if (buf) zfree(buf);
+  zfree(buf);
   return uPosFound;
 }
 

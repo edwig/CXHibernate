@@ -2,7 +2,7 @@
 //
 // File: SQLDataSet.h
 //
-// Copyright (c) 1998-2018 ir. W.E. Huisman
+// Copyright (c) 1998-2019 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy of 
@@ -21,8 +21,7 @@
 // WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION 
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
-// Last Revision:   28-05-2018
-// Version number:  1.5.0
+// Version number: See SQLComponents.h
 //
 #pragma once
 #include "SQLDatabase.h"
@@ -145,7 +144,15 @@ public:
   void         SetDatabase(SQLDatabase* p_database);
   // Set one or more columns to select
   void         SetSelection(CString p_selection);
-  // Set a new full query (Superseeds 'SetSelection'!!)
+  // Set the where condition by hand
+  void         SetWhereCondition(CString p_condition);
+  // Set the group-by 
+  void         SetGroupBy(CString p_groupby);
+  // Set the ordering by explicitly
+  void         SetOrderBy(CString p_orderby);
+  // Set the apply
+  void         SetApply(CString p_having);
+  // Set a new full query (Supersedes SetSelection, -Where, -groupby, -orderby and -having)
   void         SetQuery(CString& p_query);
   // Set primary table (for updates)
   void         SetPrimaryTable(CString p_schema,CString p_tableName);
@@ -159,6 +166,10 @@ public:
   void         SetParameter(CString p_naam,SQLVariant p_waarde);
   // Set filters for a query
   void         SetFilters(SQLFilterSet* p_filters);
+  // Set the having filters
+  void         SetHavings(SQLFilterSet* p_havings);
+  // Set top <n> records selection
+  void         SetTopNRecords(int p_top,int p_skip = 0);
   // Set columns that can be updated
   void         SetUpdateColumns(WordList p_list);
   // Set the status to modified/saved
@@ -172,6 +183,8 @@ public:
 
   // Get the name of the dataset
   CString      GetName();
+  // Getting the database used
+  SQLDatabase* GetDatabase();
   // Get the number of records
   int          GetNumberOfRecords();
   // Get number of fields
@@ -195,6 +208,12 @@ public:
   CString      GetPrimaryTableName();
   // Getting the sequence name
   CString      GetSequenceName();
+  // Getting the query settings
+  CString      GetSelection();
+  CString      GetWhereCondition();
+  CString      GetGroupBy();
+  CString      GetOrderBy();
+  SQLFilterSet* GetHavings();
 
   // XML Saving and loading
   bool         XMLSave(CString p_filename,CString p_name,XMLEncoding p_encoding = XMLEncoding::ENC_UTF8);
@@ -204,16 +223,22 @@ public:
 private:
   // Set parameters in the query
   CString      ParseQuery();
+  // Construct the selection SQL for opening the dataset
+  CString      GetSelectionSQL(SQLQuery& p_qry);
   // Parse the selection
   CString      ParseSelection(SQLQuery& p_query);
-  // Parse the fitlers
-  CString      ParseFilters(SQLQuery& p_query);
+  // Parse the apply
+  void         ParseApply(CString& p_sql);
+  // Parse the filters
+  CString      ParseFilters(SQLQuery& p_query,CString p_sql);
   // Get the variant of a parameter
   SQLVariant*  GetParameter(CString& p_name);
   // Get all the columns of the record
   void         ReadNames(SQLQuery& qr);
   // Get all the datatypes of the columns
   void         ReadTypes(SQLQuery& qr);
+  // Check that column names are unique
+  void         CheckDuplicateColumns();
   // Check that all names are the same
   void         CheckNames(SQLQuery& p_query);
     // Check that all the types are the same
@@ -227,7 +252,7 @@ private:
   // Make a primary key record
   CString      MakePrimaryKey(SQLRecord*  p_record);
   CString      MakePrimaryKey(VariantSet& p_primary);
-  // Forget about a record in the recordset
+  // Forget about a record
   bool         ForgetRecord(SQLRecord* p_record,bool p_force);
   void         ForgetPrimaryObject(SQLRecord* p_record);
 
@@ -247,19 +272,30 @@ private:
 
   CString      m_name;
   SQLDatabase* m_database;
-  bool         m_open;
+  bool         m_open { false };
+  // The query to run
   CString      m_query;
   CString      m_selection;
+  CString      m_apply;
+  CString      m_whereCondition;
+  CString      m_orderby;
+  CString      m_groupby;
+  // Parts of the query
   CString      m_primarySchema;
   CString      m_primaryTableName;
   CString      m_sequenceName;
   ParameterSet m_parameters;
   NamenMap     m_primaryKey;
-  SQLFilterSet* m_filters;
   WordList     m_updateColumns;
+  int          m_topRecords  { 0 };
+  int          m_skipRecords { 0 };
+  // Filter sets
+  SQLFilterSet* m_filters { nullptr };
+  SQLFilterSet* m_havings { nullptr };
+
 protected:
-  int          m_status;
-  int          m_current;
+  int          m_status      { SQL_Empty };
+  int          m_current     { -1 };
   NamenMap     m_names;
   TypenMap     m_types;
   RecordSet    m_records;
@@ -272,6 +308,12 @@ SQLDataSet::SetDatabase(SQLDatabase* p_database)
   m_database = p_database;
 }
 
+inline SQLDatabase*
+SQLDataSet::GetDatabase()
+{
+  return m_database;
+}
+
 inline bool
 SQLDataSet::IsOpen()
 {
@@ -279,20 +321,6 @@ SQLDataSet::IsOpen()
 }
 
 inline void 
-SQLDataSet::SetQuery(CString& p_query)
-{
-  m_selection.Empty();
-  m_query = p_query;
-}
-
-inline void
-SQLDataSet::SetSelection(CString p_selection)
-{
-  m_query.Empty();
-  m_selection = p_selection;
-}
-
-inline void
 SQLDataSet::SetPrimaryTable(CString p_schema,CString p_tableName)
 {
   m_primarySchema    = p_schema;
@@ -363,6 +391,36 @@ inline void
 SQLDataSet::SetUpdateColumns(WordList p_list)
 {
   m_updateColumns = p_list;
+}
+
+inline CString
+SQLDataSet::GetSelection()
+{
+  return m_selection;
+}
+
+inline CString
+SQLDataSet::GetWhereCondition()
+{
+  return m_whereCondition;
+}
+
+inline CString
+SQLDataSet::GetGroupBy()
+{
+  return m_groupby;
+}
+
+inline CString
+SQLDataSet::GetOrderBy()
+{
+  return m_orderby;
+}
+
+inline SQLFilterSet*
+SQLDataSet::GetHavings()
+{
+  return m_havings;
 }
 
 inline void

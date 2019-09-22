@@ -21,8 +21,8 @@
 // WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION 
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
-// Last Revision:   17-06-2018
-// Version number:  0.9.0
+// Last version date: See CXHibernate.h
+// Version number:    See CXHibernate.h
 //
 #pragma once
 #include "CXTable.h"
@@ -190,7 +190,7 @@ private:
 
   CString       m_sessionKey;                  // As known by CXHibernate
   CXHRole       m_role { CXH_Database_role};   // Master/Slave role of the session
-  CXHSessionUse m_use;                         // How to use our database
+  CXHSessionUse m_use  { SESS_Use         };   // How to use our database
   CString       m_baseDirectory;               // Base directory for filestore role
   CString       m_url;                         // Internet URL where we get our data
   bool          m_ownDatabase   { false   };   // We own / destroy this database

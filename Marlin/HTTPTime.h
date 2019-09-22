@@ -39,3 +39,4 @@
 
 bool HTTPTimeFromSystemTime(const SYSTEMTIME* p_systemTime,CString& p_string);
 bool HTTPTimeToSystemTime  (const CString p_string,SYSTEMTIME* p_systemtime);
+CString HTTPGetSystemTime();

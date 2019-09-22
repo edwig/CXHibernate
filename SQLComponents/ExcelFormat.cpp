@@ -28,8 +28,8 @@ static char THIS_FILE[] = __FILE__;
 #pragma error ("COMPILE-TIME-ERROR: ExcelFormat cannot be compiled in the AFX context")
 #endif
 
-using namespace ExcelFormat;
-
+namespace ExcelFormat
+{
 
 XLSFormatManager::XLSFormatManager(BasicExcel& xls)
                  :_xls(xls)
@@ -207,4 +207,6 @@ int XLSFormatManager::get_xf_idx(const CellFormat& fmt)
 //	xf.usedAttributes_ = (unsigned char)(0x3F << 2);	// XF_USED_ATTRIB: use attributes from parent style: font (0x02), ...
 
 	return xf_idx;
+}
+
 }

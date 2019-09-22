@@ -30,6 +30,25 @@
 #include "FileBuffer.h"
 #include <map>
 
+typedef enum _iisConfigError
+{
+  IISER_NoError = 0
+ ,IISER_AuthenticationConflict
+}
+IISError;
+
+typedef struct _iisHandler
+{
+  CString   m_path;
+  CString   m_verb;
+  CString   m_modules;
+  CString   m_resourceType;
+  CString   m_precondition;
+}
+IISHandler;
+
+using IISHandlers = std::map<CString,IISHandler>;
+
 // What we want to remember about an IIS HTTP site
 typedef struct _iisSite
 {
@@ -43,10 +62,14 @@ typedef struct _iisSite
   CString m_realm;
   CString m_domain;
   bool    m_ntlmCache;
+  IISError    m_error;
+  IISHandlers m_handlers;
 }
 IISSite;
 
 using IISSites = std::map<CString,IISSite>;
+using WCFiles     = std::map<CString,int>;
+using AppSettings = std::map<CString,CString>;
 
 class WebConfigIIS
 {
@@ -56,6 +79,7 @@ public:
 
   // Read total config
   bool ReadConfig();
+  bool ReadConfig(CString p_baseWebConfig);
   // Set a different application before re-reading the config
   void SetApplication(CString p_app);
 
@@ -68,6 +92,7 @@ public:
 
   // Getting information of a site
   CString     GetSiteName     (CString p_site);
+  CString     GetSetting      (CString p_key);
   CString     GetSiteBinding  (CString p_site,CString p_default);
   CString     GetSiteProtocol (CString p_site,CString p_default);
   int         GetSitePort     (CString p_site,int     p_default);
@@ -78,10 +103,14 @@ public:
   CString     GetSiteRealm    (CString p_site,CString p_default);
   CString     GetSiteDomain   (CString p_site,CString p_default);
   bool        GetSiteNTLMCache(CString p_site,bool    p_default);
+  IISError    GetSiteError    (CString p_site);
+
+  IISHandlers* GetAllHandlers (CString p_site);
+  IISHandler*  GetHandler     (CString p_site,CString p_handler);
 
 private:
   // Read one config file
-  bool        ReadConfig(CString p_configFile,IISSite* p_site = nullptr);
+  bool        ReadConfig(CString p_configFile,IISSite* p_site);
   // Replace environment variables in a string
   static bool ReplaceEnvironVars(CString& p_string);
   // Site registration
@@ -89,13 +118,21 @@ private:
   // Reading of the internal structures of a config file
   void        ReadLogPath(XMLMessage& p_msg);
   void        ReadSites  (XMLMessage& p_msg);
-  void        ReadStreamingLimit(IISSite& p_site,XMLMessage& p_msg,XMLElement* p_elem);
+  void        ReadSettings(XMLMessage& p_msg);
+  void        ReadStreamingLimit(XMLMessage& p_msg, XMLElement* p_elem);
   void        ReadAuthentication(IISSite& p_site,XMLMessage& p_msg,XMLElement* p_elem);
   void        ReadAuthentication(IISSite& p_site,XMLMessage& p_msg);
+  void        ReadHandlerMapping(IISSite& p_site,XMLMessage& p_msg);
+  void        ReadHandlerMapping(IISSite& p_site,XMLMessage& p_msg,XMLElement* p_elem);
 
   // For specific web application, or just defaults
   CString   m_application;
+  // Base web.config file
+  CString     m_webconfig;
+  // Files already read in
+  WCFiles     m_files;
 
+  AppSettings m_settings;
   IISSites  m_sites;
   CString   m_logpath;
   bool      m_logging        { false };

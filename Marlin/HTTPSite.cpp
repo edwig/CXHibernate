@@ -175,7 +175,11 @@ HTTPSite::GetContentType(CString p_extension)
   }
 
   // STEP 2: Finding the general default content type
-  return g_media.FindContentTypeByExtension(p_extension);
+  if(g_media == nullptr)
+  {
+    g_media = new MediaTypes();
+  }
+  return g_media->FindContentTypeByExtension(p_extension);
 }
 
 // Finding the registered content type from the full resource name
@@ -282,7 +286,10 @@ HTTPSite::SetHandler(HTTPCommand p_command,SiteHandler* p_handler,bool p_owner /
     {
       handler = handler->GetNextHandler();
     }
+    if(handler)
+    {
     handler->SetNextHandler(p_handler,p_owner);
+  }
   }
   else
   {
@@ -331,6 +338,13 @@ HTTPSite::GetWebroot()
   return m_webroot;
 }
 
+// Standalone servers have a NULL for a token in a message
+bool
+HTTPSite::GetHasAnonymousAuthentication(HANDLE p_token)
+{
+  return p_token == NULL;
+}
+
 bool
 HTTPSite::CheckReliable()
 {
@@ -339,14 +353,11 @@ HTTPSite::CheckReliable()
     ERRORLOG(ERROR_INVALID_PARAMETER,"Asynchrone modus en reliable-messaging gaan niet samen");
     return false;
   }
-  if(m_reliable)
+  if(m_reliable && m_scheme.IsEmpty())
   {
-    if(m_scheme.IsEmpty())
-    {
       // Not strictly an error, but issue a serious warning against using RM without authorization
       WARNINGLOG("ReliableMessaging protocol used without an authorization scheme.");
     }
-  }
   return true;
 }
 
@@ -589,16 +600,13 @@ HTTPSite::HandleHTTPMessage(HTTPMessage* p_message)
     // Try to read the body / rest of the message
     // This is now done by the threadpool thread, so the central
     // server has more time to handle the incoming requests.
-    if(p_message->GetReadBuffer())
-    {
-      if(m_server->ReceiveIncomingRequest(p_message) == false)
+    if(p_message->GetReadBuffer() && m_server->ReceiveIncomingRequest(p_message) == false)
       {
         // Error already report to log, EOF or stream not read
         p_message->Reset();
         p_message->SetStatus(HTTP_STATUS_GONE);
         SendResponse(p_message);
       }
-    }
 
     // If site in asynchronous SOAP/XML mode
     if(m_async)
@@ -610,12 +618,15 @@ HTTPSite::HandleHTTPMessage(HTTPMessage* p_message)
 
     // Call all site filters first, in priority order
     // But only if we do have filters
+    bool doPerformHandlers = true;
     if(!m_filters.empty())
     {
-      CallFilters(p_message);
+      doPerformHandlers = CallFilters(p_message);
     }
 
     // Call the correct handler for this site
+    if(doPerformHandlers)
+    {
     handler = GetSiteHandler(p_message->GetCommand());
     if(handler)
     {
@@ -625,6 +636,12 @@ HTTPSite::HandleHTTPMessage(HTTPMessage* p_message)
     {
       HandleHTTPMessageDefault(p_message);
     }
+    }
+    else
+    {
+      // Post the results of the filters
+      PostHandle(p_message,false);
+    }
 
     // Remove the throttling lock!
     if(m_throttling)
@@ -632,13 +649,15 @@ HTTPSite::HandleHTTPMessage(HTTPMessage* p_message)
       EndThrottling(g_throttle);
     }
   }
-  catch(StdException& er)
+  catch(StdException& ex)
   {
+    if(ex.GetSafeExceptionCode())
+    {
     // We need to detect the fact that a second exception can occur,
     // so we do **not** call the error report method again
     // Otherwise we would end into an infinite loop
-    g_exception = true,
-    g_exception = ErrorReport::Report(er.GetSafeExceptionCode(),er.GetExceptionPointers(),m_webroot,m_site);
+      g_exception = true;
+      g_exception = ErrorReport::Report(ex.GetSafeExceptionCode(),ex.GetExceptionPointers(),m_webroot,m_site);
 
     if(g_exception)
     {
@@ -651,6 +670,12 @@ HTTPSite::HandleHTTPMessage(HTTPMessage* p_message)
     {
       CRASHLOG(WER_S_REPORT_UPLOADED,"CRASH: Errorreport has been made");
     }
+    }
+    else
+    {
+      // 'Normale' C++ exception: Maar we hebben hem vergeten af te vangen
+      ErrorReport::Report(ex.GetErrorMessage(),0,m_webroot,m_site);
+    }
     didError = true;
   }  
 
@@ -658,7 +683,7 @@ HTTPSite::HandleHTTPMessage(HTTPMessage* p_message)
   // But do that after the _except catching
   ::RevertToSelf();
 
-  // After the SEH: See if we need to post-Handle the error
+  // After the filters or the SEH: See if we need to post-Handle the error
   if(didError)
   {
     PostHandle(p_message);
@@ -671,7 +696,7 @@ HTTPSite::HandleHTTPMessage(HTTPMessage* p_message)
 
 // Handle the error after an error report
 void
-HTTPSite::PostHandle(HTTPMessage* p_message)
+HTTPSite::PostHandle(HTTPMessage* p_message,bool p_reset /*=true*/)
 {
   try
   {
@@ -683,10 +708,13 @@ HTTPSite::PostHandle(HTTPMessage* p_message)
 
     // Respond to the client with a server error in all cases. 
     // Do NOT send the error report to the client. No need to show the error-stack!!
+    if(p_reset)
+    {
     p_message->Reset();
     p_message->GetFileBuffer()->Reset();
     p_message->GetFileBuffer()->ResetFilename();
     p_message->SetStatus(HTTP_STATUS_SERVER_ERROR);
+    }
     m_server->SendResponse(p_message);
 
     // See if we need to cleanup after the call for the site handler
@@ -695,13 +723,15 @@ HTTPSite::PostHandle(HTTPMessage* p_message)
       g_cleanup->CleanUp(p_message);
     }
   }
-  catch(StdException& er)
+  catch(StdException& ex)
   {
+    if(ex.GetSafeExceptionCode())
+    {
     // We need to detect the fact that a second exception can occur,
     // so we do **not** call the error report method again
     // Otherwise we would end into an infinite loop
-    g_exception = true,
-    g_exception = ErrorReport::Report(er.GetSafeExceptionCode(),er.GetExceptionPointers(),m_webroot,m_site);
+      g_exception = true;
+      g_exception = ErrorReport::Report(ex.GetSafeExceptionCode(),ex.GetExceptionPointers(),m_webroot,m_site);
 
     if(g_exception)
     {
@@ -715,10 +745,16 @@ HTTPSite::PostHandle(HTTPMessage* p_message)
       CRASHLOG(WER_S_REPORT_UPLOADED,"CRASH: Errorreport has been made");
     }
   }
+    else
+    {
+      // 'Normale' C++ exception: Maar we hebben hem vergeten af te vangen
+      ErrorReport::Report(ex.GetErrorMessage(),0,m_webroot,m_site);
+    }
+  }
 }
 
 // Call the filters in priority order
-void
+bool
 HTTPSite::CallFilters(HTTPMessage* p_message)
 {
   FilterMap filters;
@@ -729,11 +765,16 @@ HTTPSite::CallFilters(HTTPMessage* p_message)
     filters = m_filters;
   }
 
-  // Now call all filters
+  // Now call all filters, stopping at first false reaction
+  bool result = true;
   for(FilterMap::iterator it = filters.begin(); it != filters.end();++it)
   {
-    it->second->Handle(p_message);
+    if(false == (result = it->second->Handle(p_message)))
+    {
+      break;
+    }
   }
+  return result;
 }
 
 // Direct asynchronous response
@@ -1117,7 +1158,7 @@ HTTPSite::RM_HandleMessage(SessionAddress& p_address,SOAPMessage* p_message)
   p_message->SetClientMessageNumber(sequence->m_serverMessageID);
   p_message->SetServerMessageNumber(sequence->m_clientMessageID);
   // DO NOT FILL IN THE NONCE, WE ARE RESPONDING ON THIS ID!!
-  // p_message->SetMessageNonce(m_messageGuidID);
+  // p_message->SetMessageNonce(m_messageGuidID)
   p_message->SetAddressing(true);
 
   // Server yet to handle real message content
@@ -1270,22 +1311,22 @@ HTTPSite::RM_HandleTerminateSequence(SessionAddress& p_address,SOAPMessage* p_me
   return true;
 }
 
-// void
-// HTTPSite::DebugPrintSessionAddress(CString p_prefix,SessionAddress& p_address)
-// {
-//   CString address;
-//   for(unsigned ind = 0;ind < sizeof(SOCKADDR_IN6); ++ind)
-//   {
-//     BYTE byte = ((BYTE*)&p_address.m_address)[ind];
-//     address.AppendFormat("%2.2X",byte);
-//   }
-//   
-//   DETAILLOGV("DEBUG ADDRESS AT   : %s",p_prefix.GetString());
-//   DETAILLOGV("Session address    : %s",address .GetString());
-//   DETAILLOGV("Session address SID: %s",p_address.m_userSID.GetString());
-//   DETAILLOGV("Session desktop    : %d",p_address.m_desktop);
-//   DETAILLOGV("Session abs. path  : %s",p_address.m_absPath.GetString());
-// }
+void
+HTTPSite::DebugPrintSessionAddress(CString p_prefix,SessionAddress& p_address)
+{
+  CString address;
+  for(unsigned ind = 0;ind < sizeof(SOCKADDR_IN6); ++ind)
+  {
+    BYTE byte = ((BYTE*)&p_address.m_address)[ind];
+    address.AppendFormat("%2.2X",byte);
+  }
+  
+  DETAILLOGV("DEBUG ADDRESS AT   : %s",p_prefix.GetString());
+  DETAILLOGV("Session address    : %s",address .GetString());
+  DETAILLOGV("Session address SID: %s",p_address.m_userSID.GetString());
+  DETAILLOGV("Session desktop    : %d",p_address.m_desktop);
+  DETAILLOGV("Session abs. path  : %s",p_address.m_absPath.GetString());
+}
 
 SessionSequence*
 HTTPSite::FindSequence(SessionAddress& p_address)
@@ -1294,7 +1335,7 @@ HTTPSite::FindSequence(SessionAddress& p_address)
   AutoCritSec lock(&m_sessionLock);
 
 // #ifdef _DEBUG
-//   DebugPrintSessionAddress("Find sequence",p_address);
+//   DebugPrintSessionAddress("Find sequence",p_address)
 // #endif
 
   ReliableMap::iterator it = m_sequences.find(p_address);
@@ -1312,7 +1353,7 @@ HTTPSite::CreateSequence(SessionAddress& p_address)
   AutoCritSec lock(&m_sessionLock);
 
 // #ifdef _DEBUG
-//   DebugPrintSessionAddress("CreateSequence",p_address);
+//   DebugPrintSessionAddress("CreateSequence",p_address)
 // #endif
 
   SessionSequence sequence;
@@ -1337,7 +1378,7 @@ HTTPSite::RemoveSequence(SessionAddress& p_address)
   AutoCritSec lock(&m_sessionLock);
 
 // #ifdef _DEBUG
-//   DebugPrintSessionAddress("RemoveSequence",p_address);
+//   DebugPrintSessionAddress("RemoveSequence",p_address)
 // #endif
 
   ReliableMap::iterator it = m_sequences.find(p_address);
@@ -1379,7 +1420,7 @@ HTTPSite::ReliableResponse(SessionSequence* p_sequence,SOAPMessage* p_message)
   p_message->SetClientMessageNumber(p_sequence->m_serverMessageID);
   p_message->SetServerMessageNumber(p_sequence->m_clientMessageID);
   // DO NOT FILL IN THE NONCE, WE ARE RESPONDING ON THIS ID!!
-  // p_message->SetMessageNonce(m_messageGuidID);
+  // p_message->SetMessageNonce(m_messageGuidID)
   p_message->SetAddressing(true);
 
   // Adding Encryption 
@@ -1563,7 +1604,7 @@ HTTPSite::CheckBodyEncryption(SessionAddress& p_address
 
   // Decrypt
   Crypto crypting;
-  CString newBody = crypting.Decryptie(crypt,m_enc_password);
+  CString newBody = crypting.Decryption(crypt,m_enc_password);
 
   int beginPos = p_body.Find("Body>");
   int endPos   = p_body.Find("Body>",beginPos + 5);
@@ -1630,7 +1671,7 @@ HTTPSite::CheckMesgEncryption(SessionAddress& p_address
 
   // Decrypt
   Crypto crypting;
-  CString newBody = crypting.Decryptie(crypt,m_enc_password);
+  CString newBody = crypting.Decryption(crypt,m_enc_password);
 
   int beginPos = p_body.Find("Envelope>");
   int endPos   = p_body.Find("Envelope>",beginPos + 2);

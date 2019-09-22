@@ -44,6 +44,7 @@ public:
   bool   ReadConfig(CString p_filename);
   bool   WriteConfig();
   static CString GetExePath();
+  static CString GetExeModule();
   static CString GetSiteConfig(CString p_prefixURL);
   static CString GetURLConfig(CString p_url);
 
@@ -80,6 +81,7 @@ public:
   bool    HasParameter(CString p_section,CString p_parameter);
   bool    HasAttribute(CString p_section,CString p_parameter,CString p_attribute);
   bool    IsChanged();
+  void    ForgetChanges(); // Thread with care!
 
 private:
   // Find section with this name

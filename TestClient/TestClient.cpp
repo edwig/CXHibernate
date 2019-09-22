@@ -12,7 +12,8 @@
 
 CXSession*  g_session = nullptr;
 ErrorReport g_errorReport;
-CString url("http://localhost:1959/CXServer/");
+int         g_port = 1959;
+CString     g_url;
 
 // Start a hibernate session for our default model
 void StartSession()
@@ -29,7 +30,7 @@ void StartSession()
       g_session->SetFilestore("C:\\WWW\\Testing");
 
       // Set our internet role
-      g_session->SetInternet(url);
+      g_session->SetInternet(g_url);
     }
     else
     {
@@ -189,7 +190,7 @@ WaitForKey()
   _cgets_s(buffer, 256, &readIn);
 }
 
-int main()
+int main(int argc,char* argv[])
 {
   // initialize MFC and print and error on failure
   if(!AfxWinInit(::GetModuleHandle(NULL),NULL,::GetCommandLine(), 0))
@@ -199,6 +200,16 @@ int main()
     fprintf(stderr, message + "\n");
     return -3;
   }
+
+  // Test if we should connect to an IIS installation
+  if(argc == 2)
+  {
+    if(_stricmp(argv[1], "/iis") == 0)
+    {
+      ++g_port;
+    }
+  }
+  g_url.Format("http://localhost:%d/CXServer/",g_port);
 
   // Print who we are
   printf("CXHibernate test client program\n");

@@ -24,8 +24,7 @@
 // WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION 
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
-// Last Revision:   28-05-2018
-// Version number:  1.5.0
+// Version number: See SQLComponents.h
 //
 #include "ExcelFormat.h"
 
@@ -2482,11 +2481,8 @@ void CompoundFile::DecreasePropertyReferences(CompoundFile::PropertyTree* parent
 
 namespace YExcel
 {
-using namespace YCompoundFiles;
 
-#ifdef _WIN32
-using namespace WinCompFiles;
-#endif
+using YCompoundFiles::LittleEndian;
 
 /************************************************************************************************************/
 Record::Record() : dataSize_(0), recordSize_(4), code_(0) {}
@@ -4461,14 +4457,19 @@ ULONG Worksheet::CellTable::RowBlock::CellBlock::Formula::String::Read(const cha
   wstr_ = new wchar_t[stringSize+1];
   ULONG bytesRead = 7;
 
-  if (flag_ == 0) { // compressed UTF16LE string?
-    char* str = (char*) alloca(stringSize+1);
+  if (flag_ == 0) 
+  {
+    // compressed UTF16LE string?
+	char* str = new char[stringSize + 1];
     LittleEndian::ReadString(data_, str, 3, stringSize);
     str[stringSize] = 0;
     mbstowcs(wstr_, str, stringSize);
     wstr_[stringSize] = 0;
     bytesRead += stringSize;
-  } else {
+	delete [] str;
+  } 
+  else 
+  {
     LittleEndian::ReadString(data_, wstr_, 3, stringSize);
     wstr_[stringSize] = 0;
     bytesRead += stringSize*2;
@@ -4484,11 +4485,16 @@ ULONG Worksheet::CellTable::RowBlock::CellBlock::Formula::String::Write(char* da
   LittleEndian::Write(data_, stringSize, 0, 2);
   LittleEndian::Write(data_, flag_, 2, 1);
 
-  if (flag_ == 0) { // compressed UTF16LE string?
-    char* str = (char*) alloca(stringSize);
+  if (flag_ == 0) 
+  {
+	  // compressed UTF16LE string?
+	  char* str = new char[stringSize + 1];
     wcstombs(str, wstr_, stringSize);
     LittleEndian::WriteString(data_, str, 3, stringSize);
-  } else {
+	  delete [] str;
+  }
+  else 
+  {
     LittleEndian::WriteString(data_, wstr_, 3, stringSize);
   }
 
@@ -5382,7 +5388,7 @@ bool BasicExcel::Save()
     vector<char> data(minBytes, 0);
     Write(&*(data).begin());
 
-    if (file_.WriteFile("Workbook", data, (ULONG)data.size()) != SUCCESS)
+    if (file_.WriteFile("Workbook", data, (ULONG)data.size()) != WinCompFiles::SUCCESS)
       return false;
     else
       return true;
@@ -5399,7 +5405,7 @@ bool BasicExcel::SaveAs(const char* filename)
   if (!file_.Create(filename))
     return false;
 
-  if (file_.MakeFile("Workbook") != SUCCESS)
+  if (file_.MakeFile("Workbook") != WinCompFiles::SUCCESS)
     return false;
 
   return Save();
@@ -5414,7 +5420,7 @@ bool BasicExcel::SaveAs(const wchar_t* filename)
   if (!file_.Create(filename))
     return false;
 
-  if (file_.MakeFile("Workbook") != SUCCESS)
+  if (file_.MakeFile("Workbook") != WinCompFiles::SUCCESS)
     return false;
 
   return Save();
@@ -6455,7 +6461,7 @@ void BasicExcelWorksheet::Print(ostream& os, char delimiter, char textQualifier)
           break;
 
         case BasicExcelCell::DOUBLE:
-          os << setprecision(15) << cell->GetDouble();
+          os << std::setprecision(15) << cell->GetDouble();
           break;
 
         case BasicExcelCell::STRING:
@@ -6491,7 +6497,7 @@ void BasicExcelWorksheet::Print(ostream& os, char delimiter, char textQualifier)
         os << delimiter;
     }
     }
-    os << endl;
+    os << std::endl;
   }
 }
 

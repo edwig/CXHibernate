@@ -112,6 +112,54 @@ void XMLElement::DropReference()
   }
 }
 
+bool
+XMLElement::IsValidName(const CString& p_name)
+{
+  if (p_name.IsEmpty() ||
+      p_name.Left(3).CompareNoCase("XML") == 0)
+  {
+    return false;
+  }
+
+  for (int i = p_name.GetLength() - 1; i >= 0; --i)
+  {
+    char c = p_name[i];
+    if (c == '_' ||
+     // c == ':' || formeel geldig maar geeft ongewenste resultaten 
+       (c >= 'A' && c <= 'Z') ||
+       (c >= 'a' && c <= 'z'))
+    {
+      continue;
+    }
+    if (i == 0 || (c != '-' &&
+                   c != '.' &&
+                 !(c >= '0' && c <= '9')))
+    {
+      return false;
+    }
+  }
+  return true;
+}
+
+CString
+XMLElement::InvalidNameMessage(const CString& p_name)
+{
+  CString message;
+  message.Format("Invalid XML element name: %s\n"
+                 "Names must start with a letter or underscore followed by more or hyphen, digit or dot.", p_name.GetString());
+  return message;
+}
+
+void
+XMLElement::SetName(CString p_name)
+{
+  if (!p_name.IsEmpty() && !IsValidName(p_name))
+  {
+    throw StdException(InvalidNameMessage(p_name));
+  }
+  m_name = p_name; 
+}
+
 #pragma endregion XMLElement
 
 #pragma region XMLMessage_XTOR
@@ -226,12 +274,18 @@ XMLMessage::LoadFile(const CString& p_fileName,XMLEncoding p_encoding)
 
 // Save to file
 bool
-XMLMessage::SaveFile(const CString& p_fileName)
+XMLMessage::SaveFile(const CString& p_fileName,bool p_withBom /*= false*/)
 {
   bool result = false;
   FILE* file = nullptr;
   if(fopen_s(&file,p_fileName,"w") == 0 && file)
   {
+    if(p_withBom)
+    {
+      CString bom = ConstructBOM(m_encoding);
+      fwrite(bom.GetString(),bom.GetLength(),1,file);
+    }
+
     CString inhoud = Print();
     if(fwrite(inhoud.GetString(),inhoud.GetLength(),1,file) == 1)
     {
@@ -245,10 +299,10 @@ XMLMessage::SaveFile(const CString& p_fileName)
 
 // Save to file in pre-known encoding
 bool
-XMLMessage::SaveFile(const CString& p_fileName,XMLEncoding p_encoding)
+XMLMessage::SaveFile(const CString& p_fileName,XMLEncoding p_encoding,bool p_withBom /*= false*/)
 {
   m_encoding = p_encoding;
-  return SaveFile(p_fileName);
+  return SaveFile(p_fileName,p_withBom);
 }
 
 #pragma endregion File_Load_Save
@@ -972,7 +1026,10 @@ XMLMessage::FindElement(XMLElement* p_base, CString p_name,bool p_recurse /*=tru
 
   if(base->GetName().Compare(elementName) == 0)
   {
+    if(namesp.IsEmpty() || base->GetNamespace().Compare(namesp) == 0)
+    {
     return base;
+    }
   }
 
   for(auto& element : base->GetChildren())

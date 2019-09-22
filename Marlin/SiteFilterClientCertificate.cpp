@@ -60,7 +60,7 @@ SiteFilterClientCertificate::FreeCertificate()
       CloseHandle(g_certificate->Token);
     }
     // Free the certificate itself
-    delete g_certificate;
+    delete [] g_certificate;
     g_certificate = nullptr;
   }
 }
@@ -91,7 +91,7 @@ SiteFilterClientCertificate::SetSite(HTTPSite* p_site)
 }
 
 // Override from SiteFilter::Handle
-void 
+bool 
 SiteFilterClientCertificate::Handle(HTTPMessage* p_message)
 {
   DWORD status = ReceiveClientCertificate(p_message);
@@ -102,7 +102,7 @@ SiteFilterClientCertificate::Handle(HTTPMessage* p_message)
       if(CheckClientCertificate())
       {
         FreeCertificate();
-        return;
+        return true;
       }
     }
   }
@@ -114,11 +114,11 @@ SiteFilterClientCertificate::Handle(HTTPMessage* p_message)
   p_message->SetStatus(HTTP_STATUS_DENIED);
   m_site->SendResponse(p_message);
   
-  // Do NOT process this message again
-  p_message->SetCommand(HTTPCommand::http_no_command);
-  
   // Free our certificate (if any)
   FreeCertificate();
+
+  // Do not execute the handlers 
+  return false;
 }
 
 DWORD    
@@ -129,6 +129,7 @@ SiteFilterClientCertificate::ReceiveClientCertificate(HTTPMessage* p_message)
   HANDLE requestQueue = m_site->GetHTTPServer()->GetRequestQueue();
   HTTP_CONNECTION_ID id = p_message->GetConnectionID();
   g_certificate = new HTTP_SSL_CLIENT_CERT_INFO[1];
+  ZeroMemory(g_certificate,sizeof(HTTP_SSL_CLIENT_CERT_INFO));
 
   // Find the needed size of the client certificate
   answer = HttpReceiveClientCertificate(requestQueue
@@ -145,6 +146,7 @@ SiteFilterClientCertificate::ReceiveClientCertificate(HTTPMessage* p_message)
     DWORD size = sizeof(HTTP_SSL_CLIENT_CERT_INFO) + g_certificate->CertEncodedSize;
     delete [] g_certificate;
     g_certificate = (PHTTP_SSL_CLIENT_CERT_INFO) new uchar[size];
+    ZeroMemory(g_certificate,size);
     // Requery the client certificate. Now for real!!
     answer = HttpReceiveClientCertificate(requestQueue
                                          ,id

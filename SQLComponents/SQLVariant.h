@@ -2,7 +2,7 @@
 //
 // File: SQLVariant.h
 //
-// Copyright (c) 1998-2018 ir. W.E. Huisman
+// Copyright (c) 1998-2019 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy of 
@@ -21,8 +21,7 @@
 // WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION 
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
-// Last Revision:   28-05-2018
-// Version number:  1.5.0
+// Version number: See SQLComponents.h
 //
 #pragma  once
 #include <sqlext.h>
@@ -112,15 +111,6 @@ public:
    bool    IsIntervalType();
    bool    IsDateTimeType();
 
-   // INFO about type names/values
-   static  int     FindDatatype   (char* p_type);
-   static  char*   FindDatatype   (int   p_type);
-   static  int     FindParamtype  (char* p_type);
-   static  char*   FindParamtype  (int   p_type);
-   static  int     FindSQLDatatype(char* p_type);
-   static  char*   FindSQLDatatype(int   p_type);
-           int     FindDataTypeFromSQLType();
-
    // GETTERS
    int     GetDataType();
    int     GetDataSize();
@@ -153,6 +143,9 @@ public:
    bool                 SetData(int p_type,const char* p_data);
    void*                GetDataPointer();
    void                 SetFromRawDataPointer(void* p_pointer,int p_size = 0);
+   // BLOB Functions
+   void                 AttachBinary(void* p_pointer,unsigned long p_size = 0);
+   void                 DetachBinary();
 
    // Access per type
    const char*          GetAsChar();
@@ -186,6 +179,15 @@ public:
    SQLGuid              GetAsSQLGuid();
    bcd                  GetAsBCD();
    
+   // INFO about type names/values
+   static  int          FindDatatype   (char* p_type);
+   static  char*        FindDatatype   (int   p_type);
+   static  int          FindParamtype  (char* p_type);
+   static  char*        FindParamtype  (int   p_type);
+   static  int          FindSQLDatatype(char* p_type);
+   static  char*        FindSQLDatatype(int   p_type);
+           int          FindDataTypeFromSQLType();
+
    // Assignment operator
    SQLVariant& operator  =(const SQLVariant& p_original);
    // Assignment operator from original data

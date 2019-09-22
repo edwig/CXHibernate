@@ -2,7 +2,7 @@
 //
 // File: SQLVariantOperatorGreater.cpp
 //
-// Copyright (c) 1998-2018 ir. W.E. Huisman
+// Copyright (c) 1998-2019 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy of 
@@ -21,8 +21,7 @@
 // WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION 
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
-// Last Revision:   28-05-2018
-// Version number:  1.5.0
+// Version number: See SQLComponents.h
 //
 #include "stdafx.h"
 #include "SQLComponents.h"
@@ -410,7 +409,8 @@ static SQL_OperDoubleGreaterFloat(SQLVariant& p_left,SQLVariant& p_right)
 bool
 static SQL_OperBitGreaterFloat(SQLVariant& p_left,SQLVariant& p_right)
 {
-  return p_left.GetAsBit() != 0 && p_right.GetAsFloat() == 0.0;
+  float right = p_right.GetAsFloat();
+  return p_left.GetAsBit() != 0 && (-FLT_EPSILON < right && right < FLT_EPSILON);
 }
 
 bool
@@ -484,7 +484,8 @@ static SQL_OperDoubleGreaterDouble(SQLVariant& p_left,SQLVariant& p_right)
 bool
 static SQL_OperBitGreaterDouble(SQLVariant& p_left,SQLVariant& p_right)
 {
-  return p_left.GetAsBit() != 0 && p_right.GetAsDouble() == 0.0;
+  double right = p_right.GetAsDouble();
+  return p_left.GetAsBit() != 0 && (-DBL_EPSILON < right && right < DBL_EPSILON);
 }
 
 bool

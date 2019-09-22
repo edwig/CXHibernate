@@ -2,7 +2,7 @@
 //
 // File: SQLInfoPostgreSQL.cpp
 //
-// Copyright (c) 1998-2018 ir. W.E. Huisman
+// Copyright (c) 1998-2019 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy of 
@@ -21,8 +21,7 @@
 // WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION 
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
-// Last Revision:   28-05-2018
-// Version number:  1.5.0
+// Version number: See SQLComponents.h
 //
 #include "stdafx.h"
 #include "SQLComponents.h"
@@ -340,6 +339,21 @@ SQLInfoPostgreSQL::GetSQLOptimizeTable(CString p_schema, CString p_tablename) co
   return optim;
 }
 
+// Transform query to select top <n> rows
+CString
+SQLInfoPostgreSQL::GetSQLTopNRows(CString p_sql,int p_top,int p_skip /*= 0*/) const
+{
+  if(p_top > 0)
+  {
+    p_sql.AppendFormat("\nSELECT LIMIT %d ",p_top);
+    if(p_skip > 0)
+    {
+      p_sql.AppendFormat(" OFFSET %d",p_skip);
+    }
+  }
+  return p_sql;
+}
+
 //////////////////////////////////////////////////////////////////////////
 //
 // SQL STRINGS
@@ -420,6 +434,15 @@ SQLInfoPostgreSQL::GetSQLDateTimeStrippedString(int p_year,int p_month,int p_day
 //   - Drop
 //
 //////////////////////////////////////////////////////////////////////////
+
+// Meta info about meta types
+// Standard ODBC functions are good enough
+CString
+SQLInfoPostgreSQL::GetCATALOGMetaTypes(int p_type) const
+{
+  UNREFERENCED_PARAMETER(p_type);
+  return "";
+}
 
 // Get SQL to check if a table already exists in the database
 CString
@@ -590,7 +613,7 @@ SQLInfoPostgreSQL::GetCATALOGColumnExists(CString p_schema,CString p_tablename,C
                  "      ,pg_namespaces sch\n"
                  "      ,pg_attribute  att\n"
                  " WHERE tab.relname = '" + p_tablename  + "'\n"
-                 "   AND sch.name    = '" + p_schema     + "'\n";
+                 "   AND sch.name    = '" + p_schema     + "'\n"
                  "   AND att.attname = '" + p_columnname + "'\n"
                  "   AND tab.oid     = att.attrelid\n"
                  "   AND sch.oid     = tab.relnamespace\n";
@@ -688,7 +711,7 @@ SQLInfoPostgreSQL::GetCATALOGColumnAttributes(CString p_schema,CString p_tablena
 CString 
 SQLInfoPostgreSQL::GetCATALOGColumnCreate(MetaColumn& p_column) const
 {
-  CString sql = "ALTER TABLE "  + p_column.m_schema + "." + p_column.m_table  + "\n";
+  CString sql = "ALTER TABLE "  + p_column.m_schema + "." + p_column.m_table  + "\n"
                 "  ADD COLUMN " + p_column.m_column + " " + p_column.m_typename;
   if(p_column.m_columnSize)
   {

@@ -213,6 +213,9 @@ HTTPMessage::HTTPMessage(HTTPCommand p_command,SOAPMessage* p_msg)
     m_headers[it->first] = it->second;
   }
 
+  // Copy routing information
+  m_routing = p_msg->GetRouting();
+
   // Take care of character encoding
   XMLEncoding encoding = p_msg->GetEncoding();
   CString charset = FindCharsetInContentType(m_contentType);
@@ -311,6 +314,9 @@ HTTPMessage::HTTPMessage(HTTPCommand p_command,JSONMessage* p_msg)
     m_headers[it->first] = it->second;
   }
 
+  // Copy all routing
+  m_routing = p_msg->GetRouting();
+
   // Setting the payload of the message
   SetBody(p_msg->GetJsonMessage());
 
@@ -406,6 +412,7 @@ HTTPMessage::Reset()
   m_url.Empty();
   m_buffer.Reset();
   m_headers.clear();
+  m_routing.clear();
 
   // Leave access token untouched!
   // Leave cookie cache untouched!
@@ -594,6 +601,16 @@ HTTPMessage::SetFile(CString& p_fileName)
 {
   m_buffer.Reset();
   m_buffer.SetFileName(p_fileName);
+}
+
+CString
+HTTPMessage::GetRoute(int p_index)
+{
+  if(p_index >= 0 && p_index < m_routing.size())
+  {
+    return m_routing[p_index];
+  }
+  return "";
 }
 
 void 
@@ -790,11 +807,11 @@ HTTPMessage::SetUnknownHeaders(PHTTP_REQUEST_HEADERS p_headers)
 void    
 HTTPMessage::AddHeader(HTTP_HEADER_ID p_id,CString p_value)
 {
-  int maximum = m_command == HTTPCommand::http_response ? HttpHeaderResponseMaximum : HttpHeaderMaximum;
+  int maximum = HttpHeaderMaximum;
 
   if(p_id >= 0 && p_id < maximum)
   {
-    CString name(header_fields[p_id]);
+    CString name = p_id < HttpHeaderAcceptRanges ? header_fields[p_id] : header_response[p_id - HttpHeaderAcceptRanges];
     AddHeader(name,p_value);
   }
 }

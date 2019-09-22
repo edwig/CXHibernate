@@ -2,7 +2,7 @@
 //
 // File: SQLInfoOracle.cpp
 //
-// Copyright (c) 1998-2018 ir. W.E. Huisman
+// Copyright (c) 1998-2019 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy of 
@@ -21,8 +21,7 @@
 // WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION 
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
-// Last Revision:   28-05-2018
-// Version number:  1.5.0
+// Version number: See SQLComponents.h
 //
 #include "stdafx.h"
 #include "SQLComponents.h"
@@ -347,6 +346,30 @@ SQLInfoOracle::GetSQLOptimizeTable(CString p_schema, CString p_tablename) const
   return optim;
 }
 
+// Transform query to select top <n> rows:
+// Works from Oracle 12c and upward!!!
+CString
+SQLInfoOracle::GetSQLTopNRows(CString p_sql,int p_top,int p_skip /*= 0*/) const
+{
+  if(p_top > 0)
+  {
+    CString limit;
+    if(p_skip > 0)
+    {
+      limit.Format("\n OFFSET %d ROWS"
+                   "\n FETCH NEXT %d ROWS ONLY"
+                   ,p_skip
+                   ,p_top);
+    }
+    else
+    {
+      limit.Format("\n FETCH FIRST %d ROWS ONLY",p_top);
+    }
+    p_sql += limit;
+  }
+  return p_sql;
+}
+
 //////////////////////////////////////////////////////////////////////////
 //
 // SQL STRINGS
@@ -443,6 +466,41 @@ SQLInfoOracle::GetSQLDateTimeStrippedString(int p_year,int p_month,int p_day,int
 //   - Drop
 //
 //////////////////////////////////////////////////////////////////////////
+
+// Meta info about meta types
+// Standard ODBC functions are ***NOT*** good enough (6 seconds per connect)
+// So we provide our own queries for these functions
+CString
+SQLInfoOracle::GetCATALOGMetaTypes(int p_type) const
+{
+  CString sql;
+
+  switch(p_type)
+  {
+    case META_CATALOGS: sql = "SELECT UPPER(Value) AS catalog\n"
+                              "      ,''           AS remarks\n"
+                              "  FROM v$parameter\n"
+                              " WHERE name = 'db_name'\n"
+                              "UNION\n"
+                              "SELECT db_link\n"
+                              "      ,''\n"
+                              "  FROM dba_db_links";
+                        break;
+    case META_SCHEMAS:  sql = "SELECT DISTINCT username\n"
+                              "      ,'' AS remarks\n"
+                              "  FROM all_users";
+                        break;
+    case META_TABLES:   sql = "SELECT 'TABLE' AS table_type\n"
+                              "      ,''      AS remarks\n"
+                              "  FROM dual\n"
+                              "UNION\n"
+                              "SELECT 'VIEW'\n"
+                              "      ,''\n"
+                              "  FROM dual";
+                        break;
+  }
+  return sql;
+}
 
 // Get SQL to check if a table already exists in the database
 CString
@@ -702,7 +760,7 @@ SQLInfoOracle::GetCATALOGColumnAttributes(CString p_schema,CString p_tablename,C
 CString 
 SQLInfoOracle::GetCATALOGColumnCreate(MetaColumn& p_column) const
 {
-  CString sql = "ALTER TABLE "  + p_column.m_schema + "." + p_column.m_table  + "\n";
+  CString sql = "ALTER TABLE "  + p_column.m_schema + "." + p_column.m_table  + "\n"
                 "  ADD COLUMN " + p_column.m_column + " " + p_column.m_typename;
   p_column.GetPrecisionAndScale(sql);
   p_column.GetNullable(sql);
@@ -716,7 +774,7 @@ SQLInfoOracle::GetCATALOGColumnCreate(MetaColumn& p_column) const
 CString 
 SQLInfoOracle::GetCATALOGColumnAlter(MetaColumn& p_column) const
 {
-  CString sql = "ALTER  TABLE  " + p_column.m_schema + "." + p_column.m_table  + "\n";
+  CString sql = "ALTER  TABLE  " + p_column.m_schema + "." + p_column.m_table  + "\n"
                 "MODIFY COLUMN " + p_column.m_column + " " + p_column.m_typename;
   p_column.GetPrecisionAndScale(sql);
   p_column.GetNullable(sql);
@@ -869,6 +927,7 @@ SQLInfoOracle::GetCATALOGIndexFilter(MetaIndex& p_index) const
   }
   catch(StdException& error)
   {
+    ReThrowSafeException(error);
     CString message = ("Cannot find index filter: ") + error.GetErrorMessage();
     throw StdException(message);
   }
@@ -1675,7 +1734,9 @@ SQLInfoOracle::GetPSMProcedureErrors(CString p_schema,CString p_procedure) const
     CString s = qry1.GetColumn(3)->GetAsChar();
     if(s.Find("Statement ignored") < 0) 
     {
-      s.Format("Error in line %d, column %d: %s\n",qry1.GetColumn(1)->GetAsSLong(),qry1.GetColumn(2)->GetAsSLong());
+      s.Format("Error in line %d, column %d: %s\n",qry1.GetColumn(1)->GetAsSLong()
+	                                              ,qry1.GetColumn(2)->GetAsSLong()
+						                          ,qry1.GetColumn(3)->GetAsChar());
       errorText += s;
       query.Format( "SELECT text\n"
                     "  FROM dba_source\n"

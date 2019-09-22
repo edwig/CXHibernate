@@ -45,6 +45,8 @@
 #include <string.h>
 #include <sys/timeb.h>
 #include <io.h>
+#include <vector>
+#include <algorithm>
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -198,6 +200,15 @@ LogAnalysis::SetInterval(int p_interval)
 
   if(m_interval < LOGWRITE_INTERVAL_MIN) m_interval = LOGWRITE_INTERVAL_MIN;
   if(m_interval > LOGWRITE_INTERVAL_MAX) m_interval = LOGWRITE_INTERVAL_MAX;
+}
+
+void
+LogAnalysis::SetKeepfiles(int p_keepfiles)
+{
+  m_keepfiles = p_keepfiles;
+
+  if(m_keepfiles < LOGWRITE_KEEPLOG_MIN) m_keepfiles = LOGWRITE_KEEPLOG_MIN;
+  if(m_keepfiles > LOGWRITE_KEEPLOG_MAX) m_keepfiles = LOGWRITE_KEEPLOG_MAX;
 }
 
 // Setting our logging level
@@ -462,7 +473,7 @@ LogAnalysis::AnalysisHex(const char* p_function,CString p_name,void* p_buffer,un
   AutoCritSec lock(&m_lock);
 
   // Name of the object
-  AnalysisLog(p_function,LogType::LOG_TRACE,true,"Hexadecimal view of: %s",p_name.GetString());
+  AnalysisLog(p_function,LogType::LOG_TRACE,true,"Hexadecimal view of: %s. Length: %d",p_name.GetString(),p_length);
 
   unsigned long  pos    = 0;
   unsigned char* buffer = static_cast<unsigned char*>(p_buffer);
@@ -511,6 +522,8 @@ LogAnalysis::AnalysisHex(const char* p_function,CString p_name,void* p_buffer,un
 void
 LogAnalysis::BareStringLog(const char* p_buffer,int p_length)
 {
+  if (m_file)
+  {
   // Multi threaded protection
   AutoCritSec lock(&m_lock);
 
@@ -528,6 +541,7 @@ LogAnalysis::BareStringLog(const char* p_buffer,int p_length)
 
   // Keep the line
   m_list.push_back(buffer);
+}
 }
 
 
@@ -559,17 +573,12 @@ LogAnalysis::Flush(bool p_all)
       // See if list has become to long
       if(((int)m_list.size() > m_cache) || p_all)
       {
-        // Collecting the buffered list in a string
-        CString buffer;
-
         // Gather the list in the buffer, destroying the list
-        while(!m_list.empty())
+        for(auto& line : m_list)
         {
-          buffer += m_list.front();
-          m_list.pop_front();
+          WriteLog(line);
         }
-        // Write out the buffer
-        WriteLog(buffer);
+        m_list.clear();
       }
     }
   }
@@ -654,6 +663,10 @@ LogAnalysis::ReadConfig()
       {
         m_interval = atoi(&buffer[9]) * CLOCKS_PER_SEC;
       }
+      if(_strnicmp(buffer,"keep=",5) == 0)
+      {
+        m_keepfiles = atoi(&buffer[5]);
+      }
     }
     fclose(file);
 
@@ -664,6 +677,8 @@ LogAnalysis::ReadConfig()
     if(m_cache    > LOGWRITE_MAXCACHE)     m_cache    = LOGWRITE_MAXCACHE;
     if(m_interval < LOGWRITE_INTERVAL_MIN) m_interval = LOGWRITE_INTERVAL_MIN;
     if(m_interval > LOGWRITE_INTERVAL_MAX) m_interval = LOGWRITE_INTERVAL_MAX;
+    if(m_keepfiles < LOGWRITE_KEEPLOG_MIN)  m_keepfiles = LOGWRITE_KEEPLOG_MIN;
+    if(m_keepfiles > LOGWRITE_KEEPLOG_MAX)  m_keepfiles = LOGWRITE_KEEPLOG_MAX;
   }
 }
 
@@ -703,9 +718,6 @@ LogAnalysis::RunLog()
 void
 LogAnalysis::RunLogAnalysis()
 {
-  // Install SEH to regular exception translator
-  _set_se_translator(SeTranslator);
-
   DWORD sync = 0;
 
   while(m_initialised)
@@ -764,6 +776,7 @@ LogAnalysis::AppendDateTimeToFilename()
   {
     m_logFileName = m_logFileName.Left(pos);
     RemoveLastMonthsFiles(today);
+    RemoveLogfilesKeeping();
     m_logFileName += append;
   }
 }
@@ -811,4 +824,54 @@ LogAnalysis::RemoveLastMonthsFiles(struct tm& p_today)
     while(_findnext(nHandle,&fileInfo) != -1);
   }
   _findclose(nHandle);
+}
+
+void
+LogAnalysis::RemoveLogfilesKeeping()
+{
+  std::vector<CString> map;
+
+  // Getting a pattern to read in a directory
+  CString pattern = m_logFileName + "*.txt";
+  EnsureFile ensure;
+  CString direct = ensure.DirectoryPart(pattern);
+
+  // Read in all files
+  intptr_t nHandle = 0;
+  struct _finddata_t fileInfo;
+  nHandle = _findfirst((LPCSTR)pattern,&fileInfo);
+  if(nHandle != -1)
+  {
+    do
+    {
+      // Only considder for delete if it's a 'real' file
+      if((fileInfo.attrib & _A_SUBDIR) == 0)
+      {
+        CString fileName = direct + fileInfo.name;
+        map.push_back(fileName);
+      }
+    }
+    while(_findnext(nHandle,&fileInfo) != -1);
+  }
+  _findclose(nHandle);
+
+  // Sort all files in ascending order
+  std::sort(map.begin(),map.end());
+
+  // Delete from the vector, beginning at the end. 
+  // Start deleting if number of files-to-keep has been reached
+  int total = 0;
+  std::vector<CString>::iterator it = map.end();
+  while(true)
+  {
+    if(it == map.begin())
+    {
+      break;
+    }
+    --it;
+    if(++total > m_keepfiles)
+    {
+      DeleteFile(*it);
+    }
+  }
 }

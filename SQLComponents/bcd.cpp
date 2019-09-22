@@ -8,19 +8,19 @@
 //  And is always stored in normalized mode after an operation or conversion
 //  with an implied decimal point between the first and second position
 //
-//  Copyright (c) 2013-2017 ir. W.E. Huisman
+// Copyright (c) 1998-2019 ir. W.E. Huisman
 //
 //  Examples:
 //  E+03 15456712 45000000 00000000 -> 1545.671245
 //  E+01 34125600 00000000 00000000 -> 3.41256
 //  E-05 78976543 12388770 00000000 -> 0.0000789765431238877
 //
-// Last Revision:   28-05-2018
-// Version number:  1.5.0
+// Version number: See SQLComponents.h
 //
 #include "Stdafx.h"
 #include "SQLComponents.h"
 #include "bcd.h"
+#include "SQLVariantFormat.h"
 #include <math.h>    // Still needed for conversions of double
 #include <intsafe.h>
 
@@ -1848,6 +1848,9 @@ bcd::AsString(int p_format /*=Bookkeeping*/,bool p_printPositive /*=false*/) con
 CString 
 bcd::AsDisplayString(int p_decimals /*=2*/) const
 {
+  // Initalize locale strings
+  InitValutaString();
+
   // Not in the bookkeeping range
   if(m_exponent > 12 || m_exponent < -2)
   {
@@ -1857,21 +1860,44 @@ bcd::AsDisplayString(int p_decimals /*=2*/) const
   number.Round(p_decimals);
 
   CString str = number.AsString();
-  str.Replace(".",",");
-
-  int pos = str.Find(",");
-  if(pos > 0)
+  int pos = str.Find('.');
+  if(pos >= 0)
   {
-    CString result = str.Mid(pos);
-    str = str.Left(pos);
+    str.Replace(".",g_locale_decimalSep);
+  }
+
+  // Apply thousand seperators in first part of the number
+  if((pos > 0) || (pos == -1 && str.GetLength() > 3))
+  {
+    CString result = pos > 0 ? str.Mid(pos) : "";
+    str = pos > 0 ? str.Left(pos) : str;
+    pos = result.GetLength();
 
     while(str.GetLength() > 3)
     {
-      result = "." + str.Right(3) + result;
+      result = CString(g_locale_thousandSep) + str.Right(3) + result;
       str = str.Left(str.GetLength() - 3);
     }
-    result = str + result;
-    return result;
+    str += result;
+  }
+  
+  // Extra zero's for the decimals?
+  if((pos <= 0 && p_decimals > 0) || (0 < pos && pos <= p_decimals))
+  {
+    // Round on this number of decimals
+    int decimals(p_decimals);
+    if(pos < 0)
+    {
+      str += g_locale_decimalSep;
+    }
+    else
+    {
+      decimals = p_decimals - pos + 1;
+    }
+    for(int index = 0;index < decimals; ++index)
+    {
+      str += "0";
+    }
   }
   return str;
 }
@@ -2107,9 +2133,9 @@ bcd::GetFitsInLong() const
   {
     AsLong();
   }
-  catch(StdException& e)
+  catch(StdException& ex)
   {
-    UNREFERENCED_PARAMETER(e);
+    ReThrowSafeException(ex);
     return false;
   }
   return true;
@@ -2125,9 +2151,9 @@ bcd::GetFitsInInt64() const
   {
     AsInt64();
   }
-  catch(StdException& e)
+  catch(StdException& ex)
   {
-    UNREFERENCED_PARAMETER(e);
+    ReThrowSafeException(ex);
     return false;
   }
   return true;
@@ -2820,8 +2846,8 @@ bcd::DebugPrint(char* p_name)
   // Print the mantissa in special format
   for(int ind = 0;ind < bcdLength; ++ind)
   {
-    // Text "%08d" dependent on bcdDigits
-    printf(" %08d",m_mantissa[ind]);
+    // Text "%08ld" dependent on bcdDigits
+    printf(" %08ld",m_mantissa[ind]);
   }
   printf("\n");
 }
@@ -3427,7 +3453,7 @@ bcd ldexp(bcd p_number,int p_power)
   }
   if(p_power > 0 && p_power <= 31)
   {
-    return p_number * bcd((long) (1 << p_power));
+    return p_number * bcd((long) (((unsigned)1) << p_power));
   }
   return p_number * pow(bcd(2L),bcd((long)p_power));
 }

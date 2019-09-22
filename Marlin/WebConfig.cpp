@@ -60,7 +60,7 @@ WebConfig::~WebConfig()
 static char g_staticAddress;
 
 /* static */ CString
-WebConfig::GetExePath()
+WebConfig::GetExeModule()
 {
   char buffer[_MAX_PATH + 1];
 
@@ -68,22 +68,28 @@ WebConfig::GetExePath()
   // If it fails, the process names will be retrieved
   // Thus we get the *.DLL handle in IIS instead of a
   // %systemdrive\system32\inetsrv\w3wp.exe path
-  HMODULE module = NULL;
+  HMODULE hmodule = NULL;
   GetModuleHandleEx(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | 
                     GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT
                    ,static_cast<LPCTSTR>(&g_staticAddress)
-                   ,&module);
+                   ,&hmodule);
 
   // Retrieve the path
-  GetModuleFileName(module,buffer,_MAX_PATH);
-  CString applicatiePlusPad = buffer;
+  GetModuleFileName(hmodule,buffer,_MAX_PATH);
+  return CString(buffer);
+}
 
-  int slashPositie = applicatiePlusPad.ReverseFind('\\');
-  if (slashPositie == 0)
+/* static */ CString
+WebConfig::GetExePath()
+{
+  CString assembly = GetExeModule();
+
+  int slashPosition = assembly.ReverseFind('\\');
+  if(slashPosition == 0)
   {
     return "";
   }
-  return applicatiePlusPad.Left(slashPositie + 1);
+  return assembly.Left(slashPosition + 1);
 }
 
 // Find the name of a URL site specific web.config file
@@ -203,6 +209,14 @@ WebConfig::WriteConfig()
   return XMLMessage::SaveFile(m_fileName);
 }
 
+// In case we want to make in-memory changes that may never
+// be written back to disk
+void
+WebConfig::ForgetChanges()
+{
+  m_changed = false;
+}
+
 // Find section with this name
 XMLElement* 
 WebConfig::FindSection(CString p_section)
@@ -302,7 +316,7 @@ WebConfig::SetEncrypted(CString p_section,CString p_parameter,CString p_value)
     CString reverse(p_value);
     reverse.MakeReverse();
     CString value = reverse + ":" + p_value;
-    encrypted = crypt.Encryptie(value,WEBCONFIG_WACHTWOORD);
+    encrypted = crypt.Encryption(value,WEBCONFIG_WACHTWOORD);
   }
   return SetParameter(p_section,p_parameter,encrypted);
 }
@@ -462,10 +476,12 @@ WebConfig::GetEncryptedString (CString p_section,CString p_parameter,CString p_d
   Crypto crypt;
   CString decrypted;
 
+  try
+  {
   CString encrypted = GetParameterString(p_section,p_parameter,"");
   if(!encrypted.IsEmpty())
   {
-    decrypted = crypt.Decryptie(encrypted,WEBCONFIG_WACHTWOORD);
+      decrypted = crypt.Decryption(encrypted,WEBCONFIG_WACHTWOORD);
     int pos = decrypted.Find(':');
     if(pos > 0)
     {
@@ -484,6 +500,11 @@ WebConfig::GetEncryptedString (CString p_section,CString p_parameter,CString p_d
       decrypted.Empty();
     }
     return decrypted;
+    }
+  }
+  catch(StdException& er)
+  {
+    UNREFERENCED_PARAMETER(er);
   }
   return p_default;
 }

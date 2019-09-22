@@ -2,7 +2,7 @@
 //
 // File: SQLInfoDB.h
 //
-// Copyright (c) 1998-2018 ir. W.E. Huisman
+// Copyright (c) 1998-2019 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy of 
@@ -21,8 +21,7 @@
 // WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION 
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
-// Last Revision:   28-05-2018
-// Version number:  1.5.0
+// Version number: See SQLComponents.h
 //
 #pragma once
 #include "SQLInfo.h"
@@ -62,6 +61,8 @@ public:
 
   // OVERRIDES AND EXTRAS OF THE ODBC MakeInfo<object> functions
 
+  // Meta info about meta types
+  bool    MakeInfoMetaTypes      (MMetaMap&     p_objects,  CString& p_errors,int p_type);
   // Tables
   bool    MakeInfoTableObject    (MTableMap&    p_tables,   CString& p_errors,CString p_schema,CString p_tablename);  // Not known which type!
   bool    MakeInfoTableTable     (MTableMap&    p_tables,   CString& p_errors,CString p_schema,CString p_tablename);  // TABLE   only
@@ -206,6 +207,9 @@ public:
   // Get query to optimize the table statistics
   virtual CString GetSQLOptimizeTable(CString p_schema, CString p_tablename) const = 0;
 
+  // Transform query to select top <n> rows
+  virtual CString GetSQLTopNRows(CString p_sql,int p_top,int p_skip = 0) const = 0;
+
   //////////////////////////////////////////////////////////////////////////
   // SQL STRINGS
 
@@ -252,6 +256,8 @@ public:
   //
   //////////////////////////////////////////////////////////////////////////
 
+  // Meta info about meta types
+  virtual CString GetCATALOGMetaTypes(int p_type) const = 0;
   // All table functions
   virtual CString GetCATALOGTableExists       (CString p_schema,CString p_tablename) const = 0;
   virtual CString GetCATALOGTablesList        (CString p_schema,CString p_pattern)   const = 0;
@@ -410,6 +416,7 @@ public:
   
 private:
   // Read a tables cursor from the database
+  bool    ReadMetaTypesFromQuery(SQLQuery& p_query,MMetaMap&  p_objects,int p_type);
   bool    ReadTablesFromQuery(SQLQuery& p_query,MTableMap& p_tables);
 
   // All default granted users for GRANT statements

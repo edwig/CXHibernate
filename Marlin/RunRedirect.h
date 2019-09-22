@@ -28,11 +28,12 @@
 #pragma once
 #include "Redirect.h"
 
-// Miliseconds wait loop
+// Milliseconds wait loop
 #define WAITTIME_STATUS 25
 
-int  CallProgram_For_String(LPCSTR p_programma,LPCSTR p_commandLine,CString& p_result);
-int  CallProgram_For_String(LPCSTR p_programma,LPCSTR p_commandLine,CString& p_result,int p_waittime);
+int  CallProgram           (LPCSTR p_program,LPCSTR p_commandLine);
+int  CallProgram_For_String(LPCSTR p_program,LPCSTR p_commandLine,CString& p_result);
+int  CallProgram_For_String(LPCSTR p_program,LPCSTR p_commandLine,CString& p_result,int p_waittime);
 
 
 class RunRedirect : public CRedirect

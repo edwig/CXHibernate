@@ -44,6 +44,9 @@
 // sha2-384  CALG_SHA_384  PROV_RSA_AES   CALG_AES_256
 // sha2-512  CALG_SHA_512  PROV_RSA_AES   CALG_AES_256
 
+// Extra memory might be needed in a decryption buffer
+#define MEMORY_PARAGRAPH 16
+
 class Crypto
 {
 public:
@@ -58,9 +61,9 @@ public:
   CString  GetHashMethod(unsigned p_hash);
 
   // ENCRYPT a buffer
-  CString  Encryptie(CString p_input,CString password);
+  CString  Encryption(CString p_input,CString password);
   // DECRYPT a buffer
-  CString  Decryptie(CString p_input,CString password);
+  CString  Decryption(CString p_input,CString password);
 
   // Make a MD5 Hash value for a buffer
   CString& Digest(CString& p_buffer,CString& p_password);
@@ -79,6 +82,8 @@ private:
   CString  m_error;
   CString	 m_digest;
   unsigned m_hashMethod;
+
+  static   CRITICAL_SECTION m_lock;
 };
 
 inline CString&

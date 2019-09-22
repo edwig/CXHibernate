@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////
 //
-// Copyright (c) 1998-2018 ir. W.E. Huisman
+// Copyright (c) 1998-2019 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy of 
@@ -23,8 +23,7 @@
 // Loosely based on the article by: Yap Chun Wei
 // http://www.codeproject.com/Articles/1636/CSpreadSheet-A-Class-to-Read-and-Write-to-Excel-an
 // 
-// Last Revision:   28-05-2018
-// Version number:  1.5.0
+// Version number: See SQLComponents.h
 //
 #include "stdafx.h"
 #include "SQLComponents.h"
@@ -218,13 +217,12 @@ SQLDataSetXLS::Commit()
     }
     catch(StdException& er)
     {
+      ReThrowSafeException(er);
       m_lastError = er.GetErrorMessage();
     }
     catch(CException& er)
     {
-      char buffer[_MAX_PATH];
-      er.GetErrorMessage(buffer,_MAX_PATH);
-      m_lastError = buffer;
+      m_lastError = MessageFromException(er);
     }
     m_lastError += "Error writing file\n";
     return false;
@@ -548,6 +546,7 @@ SQLDataSetXLS::Open()
     }
     catch(StdException& ex)
     {
+      ReThrowSafeException(ex);
       m_lastError = "Error reading spreadhseet: " + ex.GetErrorMessage();
       return false;
     }
@@ -647,6 +646,7 @@ SQLDataSetXLS::Open()
     }
     catch(StdException& ex)
     {
+      ReThrowSafeException(ex);
       m_lastError = ex.GetErrorMessage();
     }
     m_lastError += "Error in opening file\n";

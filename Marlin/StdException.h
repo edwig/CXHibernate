@@ -12,6 +12,9 @@
 
 #include <eh.h>
 
+// Macro to re-throw a safe exception
+#define ReThrowSafeException(ex) if(ex.GetSafeExceptionCode()) throw ex;
+
 class StdException 
 {
 public:
@@ -41,8 +44,10 @@ private:
 
 void SeTranslator(UINT p_safe,_EXCEPTION_POINTERS* p_exceptionPointers);
 
+#ifndef MARLIN_USE_ATL_ONLY
 // Translate CException to CString
 CString MessageFromException(CException& p_exception);
+#endif
 
 // Auto class to store the SE translator function
 // Of an original source system, while setting our own

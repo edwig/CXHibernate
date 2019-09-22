@@ -2,7 +2,7 @@
 //
 // File: SQLTimestamp.h
 //
-// Copyright (c) 1998-2018 ir. W.E. Huisman
+// Copyright (c) 1998-2019 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy of 
@@ -21,8 +21,7 @@
 // WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION 
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
-// Last Revision:   28-05-2018
-// Version number:  1.5.0
+// Version number: See SQLComponents.h
 //
 #pragma once
 #include "SQLLanguage.h"
@@ -66,6 +65,8 @@ struct StampStorage
   char  m_second;    // 0 - 59    seconds
 };
 
+// BEWARE: The epoch of the SQLDate class is 16 november 1858 12:00 hours (noon)
+//         with a DateValue of zero (0) for that date.
 // Timestamp is stored internally as a total number of seconds
 // since MJD + 0.5 = 17 nov 1858 instead of 16 nov 12:00 hours
 typedef __int64 StampValue;
@@ -109,7 +110,7 @@ public:
   bool          operator<=(const SQLTimestamp& p_timestamp) const;
   bool          operator>=(const SQLTimestamp& p_timestamp) const;
 
-  // Comparison without correct NULL behaviour
+  // Comparison without correct NULL behavior
   // So two NULL timestamps equals to each other
   bool    ExactEqual   (const SQLTimestamp& p_timestamp) const;
   bool    NotExactEqual(const SQLTimestamp& p_timestamp) const;
@@ -121,7 +122,7 @@ public:
   int     Minute()  const;      // Minute in the hour   (0-59)
   int     Second()  const;      // Second in the minute (0-59)
   int     Fraction()const;      // Fraction of a second in nanoseconds (0 - 999.999.999)
-  int     WeekDay() const;      // 1=sunday, 2=thursday, ... 7=saturday
+  int     WeekDay() const;      // 1=Sunday, 2=Thursday, ... 7=Saturday
   CString WeekDayName(Language p_lang = LN_DEFAULT) const;  // Name of the day of the week
   CString MonthName  (Language p_lang = LN_DEFAULT) const;  // Name of the month of the year
   int     DaysInMonth() const;
@@ -158,6 +159,9 @@ public:
 
   // For usage in integer, date, time and interval 
   StampValue Value() const;
+  StampValue AsNumber() const;
+  StampValue AsTimeSinceEpoch() const;
+
   //////////////////////////////////////////////////////
   // Static use by SQLDate and SQLTimestamp
   static void SplitStrDate(const CString& strDate,
@@ -203,6 +207,18 @@ private:
 
 inline StampValue
 SQLTimestamp::Value() const
+{
+  return m_value;
+}
+
+inline StampValue
+SQLTimestamp::AsNumber() const
+{
+  return m_value;
+}
+
+inline StampValue
+SQLTimestamp::AsTimeSinceEpoch() const
 {
   return m_value;
 }

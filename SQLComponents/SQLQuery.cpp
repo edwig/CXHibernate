@@ -2,7 +2,7 @@
 //
 // File: SQLQuery.cpp
 //
-// Copyright (c) 1998-2018 ir. W.E. Huisman
+// Copyright (c) 1998-2019 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy of 
@@ -21,8 +21,7 @@
 // WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION 
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
-// Last Revision:   28-05-2018
-// Version number:  1.5.0
+// Version number: See SQLComponents.h
 //
 #include "stdafx.h"
 #include "SQLComponents.h"
@@ -96,6 +95,7 @@ SQLQuery::Init(SQLDatabase* p_database)
   m_boundDone        = false;
   m_lastError        = "";
   m_maxRows          = 0;
+  m_maxColumnLength  = 0;
   m_isSelectQuery    = false;
   m_speedThreshold   = QUERY_TOO_LONG;
   m_connection       = NULL;
@@ -131,8 +131,8 @@ SQLQuery::Close()
         {
           if(m_database->GetSQLState() != "24000")
           {
-            m_database->LogPrint(0,m_lastError);
-            m_database->LogPrint(0,"Trying to continue without closing the cursor!");
+            m_database->LogPrint(m_lastError);
+            m_database->LogPrint("Trying to continue without closing the cursor!");
           }
         }
       }
@@ -345,7 +345,7 @@ SQLQuery::ReportQuerySpeed(LARGE_INTEGER p_start)
   {
     message.Format("Query time: %.6f seconds\n",secondsDBL);
   }
-  m_database->LogPrint(LOGLEVEL_MAX,message);
+  m_database->LogPrint(message);
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -559,6 +559,8 @@ SQLQuery::DoSQLStatement(const CString& p_statement,const bcd&  p_param1)
 void
 SQLQuery::DoSQLStatement(const CString& p_statement)
 {
+  bool logging = false;
+
   // Check for filled statement
   if(p_statement.IsEmpty())
   {
@@ -595,11 +597,12 @@ SQLQuery::DoSQLStatement(const CString& p_statement)
   }
 
   // Log the query, just before we run it, replaced macro's and all
-  if(m_database && m_database->LogLevel() >= LOGLEVEL_MAX)
+  if(m_database && m_database->WilLog())
   {
-    m_database->LogPrint(LOGLEVEL_MAX,"[Database query]\n");
-    m_database->LogPrint(LOGLEVEL_MAX,statement.GetString());
-    m_database->LogPrint(LOGLEVEL_MAX,"\n");
+    logging = true;
+    m_database->LogPrint("[Database query]\n");
+    m_database->LogPrint(statement.GetString());
+    m_database->LogPrint("\n");
   }
 
   // The Oracle 10.2.0.3.0 ODBC Driver - and later versions - contain a bug
@@ -648,7 +651,7 @@ SQLQuery::DoSQLStatement(const CString& p_statement)
     // rcExec == SQL_STILL_EXECUTING
     // rcExec == SQL_NEED_DATA
   }
-  if(m_database && m_database->LogLevel() >= LOGLEVEL_MAX)
+  if(logging)
   {
     ReportQuerySpeed(start);
   }
@@ -664,8 +667,8 @@ SQLQuery::TryDoSQLStatement(const CString& p_statement)
   }
   catch(StdException& error)
   {
+    ReThrowSafeException(error);
     // Do Nothing, ignoring the error
-    UNREFERENCED_PARAMETER(error);
   }
 }
 
@@ -810,11 +813,11 @@ SQLQuery::DoSQLPrepare(const CString& p_statement)
   }
 
   // Log the query, just before we run it, replaced macro's and all
-  if(m_database && m_database->LogLevel() >= LOGLEVEL_MAX)
+  if(m_database && m_database->WilLog())
   {
-    m_database->LogPrint(LOGLEVEL_MAX,"[Database query]\n");
-    m_database->LogPrint(LOGLEVEL_MAX,statement.GetString());
-    m_database->LogPrint(LOGLEVEL_MAX,"\n");
+    m_database->LogPrint("[Database query]\n");
+    m_database->LogPrint(statement.GetString());
+    m_database->LogPrint("\n");
   }
 
   // The Oracle 10.2.0.3.0 ODBC Driver - and later versions - contain a bug
@@ -905,6 +908,8 @@ SQLQuery::DoSQLExecute(bool p_rebind /*=false*/)
 void
 SQLQuery::BindParameters()
 {
+  bool logging = false;
+
   // Optimize for no-parameters
   if(m_parameters.empty())
   {
@@ -915,6 +920,12 @@ SQLQuery::BindParameters()
   if(!m_paramMaxSizes.empty())
   {
     TruncateInputParameters();
+  }
+
+  // Optimize logging
+  if(m_database && m_database->WilLog())
+  {
+    logging = true;
   }
 
   // See if we have an extra function-return parameter
@@ -951,7 +962,10 @@ SQLQuery::BindParameters()
     sqlDatatype = RebindParameter(sqlDatatype);
 
     // Log what we bind here
+    if(logging)
+    {
     LogParameter(icol,var);
+    }
 
     // Do the bindings
     m_retCode = SqlBindParameter(m_hstmt                     // Statement handle
@@ -1019,17 +1033,14 @@ SQLQuery::RebindParameter(short p_datatype)
 void
 SQLQuery::LogParameter(int p_column,SQLVariant* p_parameter)
 {
-  if(m_database && m_database->LogLevel() >= LOGLEVEL_MAX)
-  {
     if(p_column == 1)
     {
-      m_database->LogPrint(LOGLEVEL_MAX,"Parameters as passed on to the database:\n");
+    m_database->LogPrint("Parameters as passed on to the database:\n");
     }
     CString text,value;
     p_parameter->GetAsString(value);
     text.Format("Parameter %d: %s\n",p_column,value.GetString());
-    m_database->LogPrint(LOGLEVEL_MAX,text);
-  }
+  m_database->LogPrint(text);
 }
 
 void

@@ -2,7 +2,7 @@
 //
 // File: SQLInfoMySQL.cpp
 //
-// Copyright (c) 1998-2018 ir. W.E. Huisman
+// Copyright (c) 1998-2019 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy of 
@@ -21,8 +21,7 @@
 // WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION 
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
-// Last Revision:   28-05-2018
-// Version number:  1.5.0
+// Version number: See SQLComponents.h
 //
 #include "stdafx.h"
 #include "SQLComponents.h"
@@ -334,6 +333,24 @@ SQLInfoMySQL::GetSQLOptimizeTable(CString p_schema, CString p_tablename) const
   return "";
 }
 
+// Transform query to select top <n> rows
+CString
+SQLInfoMySQL::GetSQLTopNRows(CString p_sql,int p_top,int p_skip /*= 0*/) const
+{
+  if(p_top > 0)
+  {
+    // MYSQL: " LIMIT <top> [ OFFSET <skip> ]
+    CString limit;
+    limit.Format("\n LIMIT %d",p_top);
+    if(p_skip > 0)
+    {
+      limit.AppendFormat(" OFFSET %d",p_skip);
+    }
+    p_sql += limit;
+  }
+  return p_sql;
+}
+
 //////////////////////////////////////////////////////////////////////////
 //
 // SQL STRINGS
@@ -421,6 +438,15 @@ SQLInfoMySQL::GetSQLDateTimeStrippedString(int p_year,int p_month,int p_day,int 
 //   - Drop
 //
 //////////////////////////////////////////////////////////////////////////
+
+// Meta info about meta types
+// Standard ODBC functions are good enough
+CString
+SQLInfoMySQL::GetCATALOGMetaTypes(int p_type) const
+{
+  UNREFERENCED_PARAMETER(p_type);
+  return "";
+}
 
 // Get SQL to check if a table already exists in the database
 CString
@@ -565,7 +591,7 @@ SQLInfoMySQL::GetCATALOGColumnAttributes(CString /*p_schema*/,CString p_tablenam
 CString 
 SQLInfoMySQL::GetCATALOGColumnCreate(MetaColumn& p_column) const
 {
-  CString sql = "ALTER TABLE "  + p_column.m_table  + "\n";
+  CString sql = "ALTER TABLE "  + p_column.m_table  + "\n"
                 "  ADD COLUMN " + p_column.m_column + " " + p_column.m_typename;
   p_column.GetPrecisionAndScale(sql);
   p_column.GetNullable(sql);
@@ -579,7 +605,7 @@ CString
 SQLInfoMySQL::GetCATALOGColumnAlter(MetaColumn& p_column) const
 {
   // The MODIFY keyword is a-typical
-  CString sql = "ALTER  TABLE  " + p_column.m_table + "\n";
+  CString sql = "ALTER  TABLE  " + p_column.m_table + "\n"
                 "MODIFY COLUMN " + p_column.m_column + " " + p_column.m_typename;
   p_column.GetPrecisionAndScale(sql);
   p_column.GetNullable(sql);

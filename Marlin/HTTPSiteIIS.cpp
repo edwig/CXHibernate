@@ -26,11 +26,13 @@
 // THE SOFTWARE.
 //
 #include "stdafx.h"
+#include <IPTypes.h>//MAX_DOMAIN_NAME_LEN
 #include "HTTPSiteIIS.h"
 #include "HTTPServerIIS.h"
 #include "HTTPURLGroup.h"
 #include "EnsureFile.h"
 #include "WebConfigIIS.h"
+#include "GetUserAccount.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -63,18 +65,18 @@ HTTPSiteIIS::HTTPSiteIIS(HTTPServerIIS* p_server
 void
 HTTPSiteIIS::InitSite()
 {
-  extern WebConfigIIS g_config;
+  WebConfigIIS* config = reinterpret_cast<HTTPServerIIS*>(m_server)->GetWebConfigIIS();
 
   // Read for this site
-  g_config.SetApplication(m_site);
+  config->SetApplication(m_site);
 
   // Getting the port settings from IIS
-  g_streaming_limit = g_config.GetStreamingLimit();
-  m_port            = g_config.GetSitePort     (m_site,m_port);
-  m_ntlmCache       = g_config.GetSiteNTLMCache(m_site,m_ntlmCache);
-  m_realm           = g_config.GetSiteRealm    (m_site,m_realm);
-  m_domain          = g_config.GetSiteDomain   (m_site,m_domain);
-  m_authScheme      = g_config.GetSiteScheme   (m_site,m_authScheme);
+  g_streaming_limit = config->GetStreamingLimit();
+  m_port            = config->GetSitePort     (m_site,m_port);
+  m_ntlmCache       = config->GetSiteNTLMCache(m_site,m_ntlmCache);
+  m_realm           = config->GetSiteRealm    (m_site,m_realm);
+  m_domain          = config->GetSiteDomain   (m_site,m_domain);
+  m_authScheme      = config->GetSiteScheme   (m_site,m_authScheme);
 
 
   // Call our main class InitSite
@@ -175,3 +177,58 @@ HTTPSiteIIS::GetIISSiteDir()
   dir.Replace("/","\\");
   return dir;
 }
+
+// IIS servers always have a token
+bool
+HTTPSiteIIS::GetHasAnonymousAuthentication(HANDLE p_token)
+{
+  // If no token: always anonymous
+  if(p_token == NULL)
+  {
+    return true;
+  }
+
+  // Getting the size of the TOKEN_OWNER block
+  DWORD size = 0;
+  GetTokenInformation(p_token,TokenOwner,NULL,0,&size);
+  if(!size)
+  {
+    CString text;
+    text.Format("Error getting token owner: error code0x%lx\n", GetLastError());
+    ERRORLOG(ENOMEM,text);
+    return false;
+  }
+
+  // Get owner information
+  TOKEN_OWNER* owner = (TOKEN_OWNER *)new uchar[size];
+  GetTokenInformation(p_token,TokenOwner,owner,size,&size);
+  if(owner == nullptr)
+  {
+    ERRORLOG(EACCES,"Error getting token information of logged user");
+    return false;
+  }
+
+  // Get a copy of the SID
+  size = GetLengthSid(owner->Owner);
+  SID* sid = (SID *) new uchar[size];
+  CopySid(size,sid,owner->Owner);
+
+  TCHAR userName  [MAX_USER_NAME];
+  TCHAR domainName[MAX_DOMAIN_NAME_LEN];
+
+  DWORD userSize   = (sizeof userName   / sizeof *userName) - 1;
+  DWORD domainSize = (sizeof domainName / sizeof *domainName) - 1;
+  SID_NAME_USE  sidType = SidTypeUser;
+
+  LookupAccountSid(NULL,sid,userName,&userSize,domainName,&domainSize,&sidType);
+  delete[] sid;
+
+  // Test for "NT AUTHORITY\IUSR" code of IIS
+  if((_strnicmp(domainName,"NT AUTHORITY", MAX_DOMAIN_NAME_LEN) == 0) &&
+     (_strnicmp(userName,  "IUSR",         MAX_USER_NAME)       == 0))
+  {
+    return true;
+  }
+  return false;
+}
+

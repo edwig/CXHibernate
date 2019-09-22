@@ -2,7 +2,7 @@
 //
 // File: SQLVariant.cpp
 //
-// Copyright (c) 1998-2018 ir. W.E. Huisman
+// Copyright (c) 1998-2019 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy of 
@@ -21,8 +21,7 @@
 // WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION 
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
-// Last Revision:   28-05-2018
-// Version number:  1.5.0
+// Version number: See SQLComponents.h
 //
 #include "StdAfx.h"
 #include "SQLComponents.h"
@@ -880,7 +879,7 @@ SQLVariant::GetAsString(CString& result)
     case SQL_C_TINYINT:                   // Fall through
     case SQL_C_STINYINT:                  result.Format("%d",(int)m_data.m_dataTINYINT);
                                           break;
-    case SQL_C_UTINYINT:                  result.Format("%d",(unsigned)m_data.m_dataUTINYINT);
+    case SQL_C_UTINYINT:                  result.Format("%u",(unsigned)m_data.m_dataUTINYINT);
                                           break;
     case SQL_C_SBIGINT:                   result.Format("%I64d",m_data.m_dataSBIGINT);
                                           break;
@@ -1509,8 +1508,8 @@ SQLVariant::GetAsBit()
     case SQL_C_LONG:     // fall through
     case SQL_C_SLONG:    return m_data.m_dataLONG     != 0;
     case SQL_C_ULONG:    return m_data.m_dataULONG    != 0;
-    case SQL_C_FLOAT:    return m_data.m_dataFLOAT    != 0.0;
-    case SQL_C_DOUBLE:   return m_data.m_dataDOUBLE   != 0.0;
+    case SQL_C_FLOAT:    return m_data.m_dataFLOAT  < -FLT_EPSILON || FLT_EPSILON < m_data.m_dataFLOAT;
+    case SQL_C_DOUBLE:   return m_data.m_dataDOUBLE < -DBL_EPSILON || DBL_EPSILON < m_data.m_dataDOUBLE;
     case SQL_C_BIT:      return m_data.m_dataBIT;
     case SQL_C_TINYINT:  // fall through
     case SQL_C_STINYINT: return m_data.m_dataTINYINT  != 0;
@@ -1904,7 +1903,7 @@ SQLVariant::GetAsDate()
     }
     catch(StdException& er)
     {
-      UNREFERENCED_PARAMETER(er);
+      ReThrowSafeException(er);
     }
     return &g_date;
   }
@@ -1935,7 +1934,7 @@ SQLVariant::GetAsTime()
     }
     catch(StdException& er)
     {
-      UNREFERENCED_PARAMETER(er);
+      ReThrowSafeException(er);
     }
     return &g_time;
   }
@@ -1970,7 +1969,7 @@ SQLVariant::GetAsTimestamp()
     }
     catch(StdException& er)
     {
-      UNREFERENCED_PARAMETER(er);
+      ReThrowSafeException(er);
     }
     return &g_timestamp;
   }
@@ -2653,6 +2652,37 @@ SQLVariant::SetFromRawDataPointer(void* p_pointer,int p_size /*= 0*/)
                                           break;
     default:                              m_indicator = SQL_NULL_DATA;
   }
+}
+
+//////////////////////////////////////////////////////////////////////////
+//
+// BLOB Functions
+//
+//////////////////////////////////////////////////////////////////////////
+
+void
+SQLVariant::AttachBinary(void* p_pointer,unsigned long p_size /*= 0*/)
+{
+  // Forget previous allocations
+  ResetDataType(0);
+
+  // Set relevant members
+  m_datatype          = SQL_C_BINARY;
+  m_sqlDatatype       = SQL_LONGVARBINARY;
+  m_useAtExec         = true;
+  m_binaryPieceSize   = 4 * 1000; // Default is 1 TCP/IP block
+  m_indicator         = p_size > 0 ? p_size : SQL_NULL_DATA;
+  // Connect the binary block
+  m_binaryLength      = p_size;
+  m_data.m_dataBINARY = p_pointer;
+}
+
+void
+SQLVariant::DetachBinary()
+{
+  // We forget about the binary block
+  // We must **NEVER** do a free on it!!
+  Init();
 }
 
 //////////////////////////////////////////////////////////////////////////

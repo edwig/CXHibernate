@@ -44,6 +44,8 @@ public:
   virtual bool ReceiveIncomingRequest(HTTPMessage* p_message);
   // Sending response for an incoming message
   virtual void SendResponse(HTTPMessage* p_message);
+  // Create a new WebSocket in the subclass of our server
+  virtual WebSocket* CreateWebSocket(CString p_uri);
 
   // FUNCTIONS FOR STAND-ALONE SERVER
 

@@ -2,7 +2,7 @@
 //
 // File: SQLInfoGenericODBC.cpp
 //
-// Copyright (c) 1998-2018 ir. W.E. Huisman
+// Copyright (c) 1998-2019 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy of 
@@ -21,8 +21,7 @@
 // WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION 
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
-// Last Revision:   28-05-2018
-// Version number:  1.5.0
+// Version number: See SQLComponents.h
 //
 #include "stdafx.h"
 #include "SQLComponents.h"
@@ -332,6 +331,14 @@ SQLInfoGenericODBC::GetSQLOptimizeTable(CString p_schema, CString p_tablename) c
   return "";
 }
 
+// Transform query to select top <n> rows
+CString
+SQLInfoGenericODBC::GetSQLTopNRows(CString p_sql,int /*p_top*/,int /*p_skip = 0*/) const
+{
+  // Does nothing
+  return p_sql;
+}
+
 //////////////////////////////////////////////////////////////////////////
 //
 // SQL STRINGS
@@ -419,6 +426,15 @@ SQLInfoGenericODBC::GetSQLDateTimeStrippedString(int p_year,int p_month,int p_da
 //   - Drop
 //
 //////////////////////////////////////////////////////////////////////////
+
+// Meta info about meta types
+// Standard ODBC functions are good enough
+CString
+SQLInfoGenericODBC::GetCATALOGMetaTypes(int p_type) const
+{
+  UNREFERENCED_PARAMETER(p_type);
+  return "";
+}
 
 // ALL FUNCTIONS FOR TABLE(s)
 
@@ -533,7 +549,7 @@ CString
 SQLInfoGenericODBC::GetCATALOGColumnCreate(MetaColumn& p_column) const
 {
   // General ISO 9075E syntax
-  CString sql = "ALTER TABLE  " + p_column.m_schema + "." + p_column.m_table  + "\n";
+  CString sql = "ALTER TABLE  " + p_column.m_schema + "." + p_column.m_table  + "\n"
                 "  ADD COLUMN " + p_column.m_column + " " + p_column.m_typename;
   p_column.GetPrecisionAndScale(sql);
   p_column.GetNullable(sql);
@@ -548,7 +564,7 @@ CString
 SQLInfoGenericODBC::GetCATALOGColumnAlter(MetaColumn& p_column) const
 {
   // General ISO 9075E syntax
-  CString sql = "ALTER TABLE  " + p_column.m_schema + "." + p_column.m_table  + "\n";
+  CString sql = "ALTER TABLE  " + p_column.m_schema + "." + p_column.m_table  + "\n"
                 "ALTER COLUMN " + p_column.m_column + " " + p_column.m_typename;
   p_column.GetPrecisionAndScale(sql);
   p_column.GetNullable(sql);

@@ -21,38 +21,38 @@
   <PropertyGroup Label="Globals">
     <ProjectGuid>{3CC23320-1FF0-41AF-9F3A-960C5F657C81}</ProjectGuid>
     <RootNamespace>Marlin</RootNamespace>
-    <WindowsTargetPlatformVersion>8.1</WindowsTargetPlatformVersion>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v141</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
     <CharacterSet>MultiByte</CharacterSet>
-    <UseOfMfc>Static</UseOfMfc>
+    <UseOfMfc>Dynamic</UseOfMfc>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v141</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>MultiByte</CharacterSet>
-    <UseOfMfc>Static</UseOfMfc>
+    <UseOfMfc>Dynamic</UseOfMfc>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v141</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
     <CharacterSet>MultiByte</CharacterSet>
-    <UseOfMfc>Static</UseOfMfc>
+    <UseOfMfc>Dynamic</UseOfMfc>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v141</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>MultiByte</CharacterSet>
-    <UseOfMfc>Static</UseOfMfc>
+    <UseOfMfc>Dynamic</UseOfMfc>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
@@ -93,11 +93,11 @@
       <WarningLevel>Level4</WarningLevel>
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>..\ExtraParts;</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\ExtraParts;Zlib;</AdditionalIncludeDirectories>
       <TreatWarningAsError>true</TreatWarningAsError>
       <PreprocessorDefinitions>NO_WARN_MBCS_MFC_DEPRECATION;WIN32;_DEBUG;_CONSOLE;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeTypeInfo>true</RuntimeTypeInfo>
-      <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
+      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <CallingConvention>Cdecl</CallingConvention>
       <LanguageStandard>stdcpp17</LanguageStandard>
@@ -109,16 +109,17 @@
       <WarningLevel>Level4</WarningLevel>
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>..\ExtraParts;</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\ExtraParts;Zlib;</AdditionalIncludeDirectories>
       <TreatWarningAsError>true</TreatWarningAsError>
       <PreprocessorDefinitions>NO_WARN_MBCS_MFC_DEPRECATION;WIN32;_DEBUG;_CONSOLE;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeTypeInfo>true</RuntimeTypeInfo>
       <PrecompiledHeader>Use</PrecompiledHeader>
-      <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
+      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
       <CallingConvention>Cdecl</CallingConvention>
       <LanguageStandard>stdcpp17</LanguageStandard>
       <ExceptionHandling>Async</ExceptionHandling>
       <ProgramDataBaseFileName>$(OutDir)$(ProjectName).pdb</ProgramDataBaseFileName>
+      <MinimalRebuild />
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -128,11 +129,11 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>..\ExtraParts;</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\ExtraParts;Zlib;</AdditionalIncludeDirectories>
       <TreatWarningAsError>true</TreatWarningAsError>
       <PreprocessorDefinitions>NO_WARN_MBCS_MFC_DEPRECATION;WIN32;_CONSOLE;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeTypeInfo>true</RuntimeTypeInfo>
-      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <LanguageStandard>stdcpp17</LanguageStandard>
       <ExceptionHandling>Async</ExceptionHandling>
@@ -149,11 +150,11 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>false</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>..\ExtraParts;</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\ExtraParts;Zlib;</AdditionalIncludeDirectories>
       <TreatWarningAsError>true</TreatWarningAsError>
       <PreprocessorDefinitions>NO_WARN_MBCS_MFC_DEPRECATION;WIN32;_CONSOLE;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeTypeInfo>true</RuntimeTypeInfo>
-      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <WholeProgramOptimization>false</WholeProgramOptimization>
       <InlineFunctionExpansion>Default</InlineFunctionExpansion>
@@ -168,8 +169,11 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="Analysis.cpp" />
+    <ClCompile Include="AppConfig.cpp" />
     <ClCompile Include="Base64.cpp" />
     <ClCompile Include="CommandBus.cpp" />
+    <ClCompile Include="EventLogRegistration.cpp" />
+    <ClCompile Include="ExecuteProcess.cpp" />
     <ClCompile Include="HostedWebCore.cpp" />
     <ClCompile Include="HTTPCertificate.cpp" />
     <ClCompile Include="ConvertWideString.cpp" />
@@ -204,7 +208,7 @@
     <ClCompile Include="IISDebug.cpp" />
     <ClCompile Include="JSONMessage.cpp" />
     <ClCompile Include="JSONParser.cpp" />
-    <ClCompile Include="MarlinModule.cpp" />
+    <ClCompile Include="MarlinServer.cpp" />
     <ClCompile Include="MediaType.cpp" />
     <ClCompile Include="MultiPartBuffer.cpp" />
     <ClCompile Include="Namespace.cpp" />
@@ -213,6 +217,8 @@
     <ClCompile Include="Redirect.cpp" />
     <ClCompile Include="RunRedirect.cpp" />
     <ClCompile Include="ServerApp.cpp" />
+    <ClCompile Include="ServerMain.cpp" />
+    <ClCompile Include="ServiceReporting.cpp" />
     <ClCompile Include="SiteFilter.cpp" />
     <ClCompile Include="SiteFilterClientCertificate.cpp" />
     <ClCompile Include="SiteFilterXSS.cpp" />
@@ -258,6 +264,11 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
       </ExcludedFromBuild>
     </ClCompile>
+    <ClCompile Include="WebSocketClient.cpp" />
+    <ClCompile Include="WebSocketServer.cpp" />
+    <ClCompile Include="WebSocketServerIIS.cpp" />
+    <ClCompile Include="WebSocketServerSync.cpp" />
+    <ClCompile Include="WinSocket.cpp" />
     <ClCompile Include="WSDLCache.cpp" />
     <ClCompile Include="XMLDataType.cpp" />
     <ClCompile Include="XMLMessage.cpp" />
@@ -322,10 +333,13 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Analysis.h" />
+    <ClInclude Include="AppConfig.h" />
     <ClInclude Include="AutoCritical.h" />
     <ClInclude Include="Base64.h" />
     <ClInclude Include="CommandBus.h" />
+    <ClInclude Include="EventLogRegistration.h" />
     <ClInclude Include="EventStream.h" />
+    <ClInclude Include="ExecuteProcess.h" />
     <ClInclude Include="HostedWebCore.h" />
     <ClInclude Include="HTTPCertificate.h" />
     <ClInclude Include="ConvertWideString.h" />
@@ -364,16 +378,19 @@
     <ClInclude Include="JSONMessage.h" />
     <ClInclude Include="JSONParser.h" />
     <ClInclude Include="Marlin.h" />
-    <ClInclude Include="MarlinModule.h" />
+    <ClInclude Include="MarlinServer.h" />
     <ClInclude Include="MediaType.h" />
     <ClInclude Include="MultiPartBuffer.h" />
     <ClInclude Include="Namespace.h" />
     <ClInclude Include="PrintToken.h" />
     <ClInclude Include="ProcInfo.h" />
     <ClInclude Include="Redirect.h" />
+    <ClInclude Include="Routing.h" />
     <ClInclude Include="RunRedirect.h" />
     <ClInclude Include="ServerApp.h" />
     <ClInclude Include="ServerEvent.h" />
+    <ClInclude Include="ServerMain.h" />
+    <ClInclude Include="ServiceReporting.h" />
     <ClInclude Include="SiteFilter.h" />
     <ClInclude Include="SiteFilterClientCertificate.h" />
     <ClInclude Include="SiteFilterXSS.h" />
@@ -409,7 +426,12 @@
     <ClInclude Include="WebServiceClient.h" />
     <ClInclude Include="WebServiceServer.h" />
     <ClInclude Include="WebSocket.h" />
+    <ClInclude Include="WebSocketClient.h" />
+    <ClInclude Include="WebSocketServer.h" />
+    <ClInclude Include="WebSocketServerIIS.h" />
+    <ClInclude Include="WebSocketServerSync.h" />
     <ClInclude Include="WinINETError.h" />
+    <ClInclude Include="WinSocket.h" />
     <ClInclude Include="WSDLCache.h" />
     <ClInclude Include="XMLDataType.h" />
     <ClInclude Include="XMLMessage.h" />

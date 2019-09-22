@@ -2,7 +2,7 @@
 //
 // File: SQLTime.cpp
 //
-// Copyright (c) 1998-2018 ir. W.E. Huisman
+// Copyright (c) 1998-2019 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy of 
@@ -21,8 +21,7 @@
 // WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION 
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
-// Last Revision:   28-05-2018
-// Version number:  1.5.0
+// Version number: See SQLComponents.h
 //
 #include "StdAfx.h"
 #include "SQLComponents.h"
@@ -412,7 +411,7 @@ SQLTime::ParseXMLTime(const CString& p_string)
   //  Parse the string
   // changed char to unsigned int for 64 bit implementation
   char sep1,sep2,sep3,sep4,sep5;
-  int n = sscanf_s(p_string,"%1d%1d%c%1d%1d%c%1d%1d%c%d%c%1d%1d%c%1d%1d",
+  int n = sscanf_s(p_string,"%1u%1u%c%1u%1u%c%1u%1u%c%u%c%1u%1u%c%1u%1u",
                   &uu[0],&uu[1],
                   &sep1,(unsigned int) sizeof(char),
                   &mi[0],&mi[1],

@@ -21,8 +21,8 @@
 // WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION 
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
-// Last Revision:   17-06-2018
-// Version number:  0.9.0
+// Last version date: See CXHibernate.h
+// Version number:    See CXHibernate.h
 //
 #include "stdafx.h"
 #include "CXHibernate.h"
@@ -629,12 +629,12 @@ CXTable::LoadTableInfo(SOAPMessage& p_msg)
   if(elem)
   {
     m_table.m_schema      = p_msg.GetElement(elem,"Schema");
-    m_table.m_table       = p_msg.GetElement(elem, "Table");
-    m_table.m_objectType  = p_msg.GetElement(elem, "ObjectType");
-    m_table.m_remarks     = p_msg.GetElement(elem, "Remarks");
-    m_table.m_fullName    = p_msg.GetElement(elem, "FullName");
-    m_table.m_tablespace  = p_msg.GetElement(elem, "Tablespace");
-    m_table.m_temporary   = p_msg.GetElementBoolean(elem, "Temporary");
+    m_table.m_table       = p_msg.GetElement(elem,"Table");
+    m_table.m_objectType  = p_msg.GetElement(elem,"ObjectType");
+    m_table.m_remarks     = p_msg.GetElement(elem,"Remarks");
+    m_table.m_fullName    = p_msg.GetElement(elem,"FullName");
+    m_table.m_tablespace  = p_msg.GetElement(elem,"Tablespace");
+    m_table.m_temporary   = p_msg.GetElementBoolean(elem,"Temporary");
   }
 }
 
@@ -658,7 +658,7 @@ CXTable::LoadColumnInfo(SOAPMessage& p_msg)
     col.m_numRadix      = p_msg.GetElementInteger(column,"Radix");
     col.m_nullable      = p_msg.GetElementInteger(column,"Nullable");
     col.m_remarks       = p_msg.GetElement       (column,"Remarks");
-    col.m_default       = p_msg.GetElement       (column, "DefaultValue");
+    col.m_default       = p_msg.GetElement       (column,"DefaultValue");
     col.m_datatype3     = p_msg.GetElementInteger(column,"ODCB_Type3");
     col.m_sub_datatype  = p_msg.GetElementInteger(column,"SubType");
     col.m_octet_length  = p_msg.GetElementInteger(column,"OctetLength");
@@ -847,5 +847,4 @@ CXTable::LoadPrivileges(SOAPMessage& p_msg)
     // Next privilege
     pri = p_msg.GetElementSibling(pri);
   }
-
 }

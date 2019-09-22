@@ -27,10 +27,10 @@
 //
 #include "stdafx.h"
 #include "ServerApp.h"
-#include "MarlinModule.h"
 #include "WebConfigIIS.h"
 #include "EnsureFile.h"
 #include <string>
+#include <set>
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -42,17 +42,55 @@ static char THIS_FILE[] = __FILE__;
 #define WARNINGLOG(text,...)    m_httpServer->DetailLogV(__FUNCTION__,LogType::LOG_WARN,text,__VA_ARGS__)
 #define ERRORLOG(code,text)     m_httpServer->ErrorLog  (__FUNCTION__,code,text)
 
-//XTOR
-ServerApp::ServerApp(IHttpServer* p_iis,CString p_appName,CString p_webroot)
-          :m_iis(p_iis)
-          ,m_applicationName(p_appName)
-          ,m_webroot(p_webroot)
+IHttpServer*  g_iisServer   = nullptr;
+LogAnalysis*  g_analysisLog = nullptr;
+ErrorReport*  g_report      = nullptr;
+
+// IIS calls as a C program (no function decoration in object and linker)
+extern "C"
 {
+
+// RegisterModule must be exported from the DLL in one of three ways
+// 1) Through a *.DEF export file with a LIBRARY definition
+//    (but the module name can change!)
+// 2) Through the extra linker option "/EXPORT:RegisterModule" 
+//    (but can be forgotten if you build a different configuration)
+// 3) Through the __declspec(dllexport) modifier in the source
+//    This is the most stable way of exporting from a DLL
+//
+__declspec(dllexport)
+ServerApp* _stdcall CreateServerApp(IHttpServer* p_server
+                                   ,const char*  p_webroot
+                                   ,const char*  p_appName)
+{
+  return appFactory->CreateServerApp(p_server,p_webroot,p_appName);
+}
+
+}
+
+// XTOR
+ServerApp::ServerApp(IHttpServer* p_iis
+                    ,const char*  p_webroot
+                    ,const char*  p_appName)
+          :m_iis(p_iis)
+{
+  // Keep global pointer to the server
+  g_iisServer = p_iis;
+
+  // Construct local MFC CStrings from char pointers
+  m_webroot         = p_webroot;
+  m_applicationName = p_appName;
 }
 
 // DTOR
 ServerApp::~ServerApp()
 {
+  // Free all site configuration info
+  for(auto& site : m_sites)
+  {
+    delete site;
+  }
+
   // Just to be sure
   ExitInstance();
 }
@@ -66,6 +104,10 @@ ServerApp::InitInstance()
   m_httpServer = new HTTPServerIIS(m_applicationName);
   m_httpServer->SetWebroot(m_webroot);
 
+  // Reading our web.config and ApplicationHost.config info
+  m_config.ReadConfig(m_applicationName);
+  m_httpServer->SetWebConfigIIS(&m_config);
+
   // Start our own logging file
   StartLogging();
   m_httpServer->SetLogging(m_logfile);
@@ -74,15 +116,11 @@ ServerApp::InitInstance()
   // Create our error report
   if(g_report == nullptr)
   {
-    m_errorReport = new ErrorReport();
-    m_ownReport   = true;
-    m_httpServer->SetErrorReport(m_errorReport);
-  }
-  else
-  {
+    g_report      = new ErrorReport();
     m_errorReport = g_report;
-    m_httpServer->SetErrorReport(g_report);
+    m_ownReport   = true;
   }
+  m_httpServer->SetErrorReport(m_errorReport);
 
   // Now run the marlin server
   m_httpServer->Run();
@@ -112,15 +150,19 @@ ServerApp::ExitInstance()
     m_logfile->AnalysisLog(__FUNCTION__, LogType::LOG_INFO, true, "%s closed",m_applicationName.GetString());
 
     delete m_logfile;
-    m_logfile = nullptr;
+    m_logfile     = nullptr;
   }
 
   // Destroy the general error report
   if(m_errorReport && m_ownReport)
   {
     delete m_errorReport;
-    m_errorReport = nullptr;
   }
+  m_errorReport = nullptr;
+
+  // Other objects cannot access these any more
+  g_analysisLog = nullptr;
+  g_report      = nullptr;
 }
 
 // The performance counter
@@ -146,20 +188,26 @@ ServerApp::StopCounter()
 void  
 ServerApp::StartLogging()
 {
-  // Create the directory for the logfile
-  CString logfile = g_config.GetLogfilePath() + "\\" + m_applicationName + "\\Logfile.txt";
-  EnsureFile ensure(logfile);
-  ensure.CheckCreateDirectory();
+  if(m_logfile == nullptr)
+  {
+    // Create the directory for the logfile
+    CString logfile = m_config.GetLogfilePath() + "\\" + m_applicationName + "\\Logfile.txt";
+    EnsureFile ensure(logfile);
+    ensure.CheckCreateDirectory();
 
-  // Create the logfile
-  m_logfile = new LogAnalysis(m_applicationName);
-  m_logfile->SetLogFilename(logfile);
-  m_logfile->SetLogRotation(true);
-  m_logfile->SetLogLevel(g_config.GetDoLogging() ? HLL_LOGGING : HLL_NOLOG);
+    // Create the logfile
+    m_logfile = new LogAnalysis(m_applicationName);
+    m_logfile->SetLogFilename(logfile);
+    m_logfile->SetLogRotation(true);
+    m_logfile->SetLogLevel(m_config.GetDoLogging() ? HLL_LOGGING : HLL_NOLOG);
+
+    // Record for test classes
+    g_analysisLog = m_logfile;
+  }
 
   // Tell that we started the logfile
   m_logfile->AnalysisLog(__FUNCTION__,LogType::LOG_INFO,true
-                           ,"Started the application: %s",m_applicationName.GetString());
+                        ,"Started the application: %s",m_applicationName.GetString());
 }
 
 // Server app was correctly started by MarlinIISModule
@@ -220,6 +268,17 @@ ServerApp::LoadSite(IISSiteConfig& /*p_config*/)
   return true;
 }
 
+IISSiteConfig* 
+ServerApp::GetSiteConfig(int ind)
+{
+  if(ind >= 0 && ind < (int)m_sites.size())
+  {
+    return m_sites[ind];
+  }
+  return nullptr;
+}
+
+
 // Start our sites from the IIS configuration
 void 
 ServerApp::LoadSites(IHttpApplication* p_app,CString p_physicalPath)
@@ -233,6 +292,9 @@ ServerApp::LoadSites(IHttpApplication* p_app,CString p_physicalPath)
   CComBSTR siteCollection = L"system.applicationHost/sites";
   CComBSTR configPath = A2CW(config);
 
+  // Reading all global modules of the IIS installation
+  ReadModules(configPath);
+
   IAppHostElement*      element = nullptr;
   IAppHostAdminManager* manager = g_iisServer->GetAdminManager();
   if(manager->GetAdminSection(siteCollection,configPath,&element) == S_OK)
@@ -245,25 +307,145 @@ ServerApp::LoadSites(IHttpApplication* p_app,CString p_physicalPath)
       sites->get_Count(&count);
       for(int i = 0; i < (int)count; ++i)
       {
-        IISSiteConfig iisConfig;
-        iisConfig.m_id       = 0;
-        iisConfig.m_physical = p_physicalPath;
+        IISSiteConfig* iisConfig = new IISSiteConfig();
+        iisConfig->m_id       = 0;
+        iisConfig->m_physical = p_physicalPath;
         
         // Now read in the rest of the configuration
-        if(ReadSite(sites,configSite,i,iisConfig))
+        if(ReadSite(sites,configSite,i,*iisConfig))
         {
-          if(LoadSite(iisConfig))
+          // Get Handlers from global site config
+          ReadHandlers(configPath,*iisConfig);
+
+          if(LoadSite(*iisConfig))
           {
             DETAILLOGV("Loaded IIS Site: %s",config.GetString());
-            return;
           }
         }
+        // Save the site config
+        m_sites.push_back(iisConfig);
       }
     }
   }
   CString text("ERROR Loading IIS Site: ");
   text += config;
   ERRORLOG(ERROR_NO_SITENAME,text);
+}
+
+void
+ServerApp::ReadModules(CComBSTR& /*p_configPath*/)
+{
+//   USES_CONVERSION;
+//   IAppHostAdminManager* manager = g_iisServer->GetAdminManager();
+// 
+//   // Reading all names of the modules of our DLL
+//   IAppHostElement* modulesElement = nullptr;
+//   if (manager->GetAdminSection(CComBSTR(L"system.webServer/globalModules"),p_configPath,&modulesElement) == S_OK)
+//   {
+//     IAppHostElementCollection* modulesCollection = nullptr;
+//     modulesElement->get_Collection(&modulesCollection);
+//     if (modulesCollection)
+//     {
+//       DWORD dwElementCount = 0;
+//       modulesCollection->get_Count(&dwElementCount);
+// 
+//       for (USHORT dwElement = 0; dwElement < dwElementCount; ++dwElement)
+//       {
+//         VARIANT vtItemIndex;
+//         vtItemIndex.vt = VT_I2;
+//         vtItemIndex.iVal = dwElement;
+// 
+//         IAppHostElement* childElement = nullptr;
+//         if (modulesCollection->get_Item(vtItemIndex, &childElement) == S_OK)
+//         {
+//           IAppHostProperty* prop = nullptr;
+//           VARIANT vvar;
+//           vvar.bstrVal = 0;
+// 
+//           if (childElement->GetPropertyByName(CComBSTR(L"image"), &prop) == S_OK && prop->get_Value(&vvar) == S_OK && vvar.vt == VT_BSTR)
+//           {
+//             CString image = W2A(vvar.bstrVal);
+//             if (image.CompareNoCase(GetDLLName()) == 0)
+//             {
+//               if (childElement->GetPropertyByName(CComBSTR(L"name"), &prop) == S_OK && prop->get_Value(&vvar) == S_OK && vvar.vt == VT_BSTR)
+//               {
+//                 m_modules.insert(CString(W2A(vvar.bstrVal)).MakeLower());
+//               }
+//             }
+//           }
+//         }
+//       }
+//     }
+//   }
+}
+
+void  
+ServerApp::ReadHandlers(CComBSTR& p_configPath,IISSiteConfig& p_config)
+{
+  USES_CONVERSION;
+  IAppHostAdminManager* manager = g_iisServer->GetAdminManager();
+
+  // Finding all HTTP Handlers in the configuration
+  IAppHostElement* handlersElement = nullptr;
+  if (manager->GetAdminSection(CComBSTR(L"system.webServer/handlers"), p_configPath, &handlersElement) == S_OK)
+  {
+    IAppHostElementCollection* handlersCollection = nullptr;
+    handlersElement->get_Collection(&handlersCollection);
+    if (handlersCollection)
+    {
+      DWORD dwElementCount = 0;
+      handlersCollection->get_Count(&dwElementCount);
+      for (USHORT dwElement = 0; dwElement < dwElementCount; ++dwElement)
+      {
+        VARIANT vtItemIndex;
+        vtItemIndex.vt = VT_I2;
+        vtItemIndex.iVal = dwElement;
+
+        IAppHostElement* childElement = nullptr;
+        if (handlersCollection->get_Item(vtItemIndex, &childElement) == S_OK)
+        {
+          IAppHostProperty* prop = nullptr;
+          VARIANT vvar;
+          vvar.bstrVal = 0;
+
+          CString name;
+          CString modules;
+          IISHandler handler;
+
+          if (childElement->GetPropertyByName(CComBSTR(L"modules"), &prop) == S_OK && prop->get_Value(&vvar) == S_OK && vvar.vt == VT_BSTR)
+          {
+            modules = W2A(vvar.bstrVal);
+          }
+          if (m_modules.find(modules.MakeLower()) == m_modules.end())
+          {
+            continue;
+          }
+          if (childElement->GetPropertyByName(CComBSTR(L"name"), &prop) == S_OK && prop->get_Value(&vvar) == S_OK && vvar.vt == VT_BSTR)
+          {
+            name = W2A(vvar.bstrVal);
+          }
+          if (childElement->GetPropertyByName(CComBSTR(L"path"), &prop) == S_OK && prop->get_Value(&vvar) == S_OK && vvar.vt == VT_BSTR)
+          {
+            handler.m_path = W2A(vvar.bstrVal);
+          }
+          if (childElement->GetPropertyByName(CComBSTR(L"verb"), &prop) == S_OK && prop->get_Value(&vvar) == S_OK && vvar.vt == VT_BSTR)
+          {
+            handler.m_verb = W2A(vvar.bstrVal);
+          }
+          if (childElement->GetPropertyByName(CComBSTR(L"resourceType"), &prop) == S_OK && prop->get_Value(&vvar) == S_OK && vvar.vt == VT_I4)
+          {
+            handler.m_resourceType.Format("%d",vvar.intVal);
+          }
+          if (childElement->GetPropertyByName(CComBSTR(L"preCondition"), &prop) == S_OK && prop->get_Value(&vvar) == S_OK && vvar.vt == VT_BSTR)
+          {
+            handler.m_precondition = W2A(vvar.bstrVal);
+          }
+          // Add handler mapping to site
+          p_config.m_handlers.insert(std::make_pair(name,handler));
+        }
+      }
+    }
+  }
 }
 
 // Read the site's configuration from the IIS internal structures
@@ -413,9 +595,11 @@ ServerAppFactory::ServerAppFactory()
 }
 
 ServerApp* 
-ServerAppFactory::CreateServerApp(IHttpServer* p_iis,CString p_appName,CString p_webroot)
+ServerAppFactory::CreateServerApp(IHttpServer*  p_iis
+                                 ,const char*   p_webroot
+                                 ,const char*   p_appName)
 {
-  return new ServerApp(p_iis,p_appName,p_webroot);
+  return new ServerApp(p_iis,p_webroot,p_appName);
 }
 
 ServerAppFactory* appFactory = nullptr;

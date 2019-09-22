@@ -2,7 +2,7 @@
 //
 // File: SQLInfoFirebird.cpp
 //
-// Copyright (c) 1998-2018 ir. W.E. Huisman
+// Copyright (c) 1998-2019 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy of 
@@ -21,8 +21,7 @@
 // WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION 
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
-// Last Revision:   28-05-2018
-// Version number:  1.5.0
+// Version number: See SQLComponents.h
 //
 #include "stdafx.h"
 #include "SQLComponents.h"
@@ -329,6 +328,26 @@ SQLInfoFirebird::GetSQLOptimizeTable(CString p_schema, CString p_tablename) cons
   return "";
 }
 
+// Transform query to select top <n> rows
+CString
+SQLInfoFirebird::GetSQLTopNRows(CString p_sql,int p_top,int p_skip /*= 0*/) const
+{
+  if(p_top > 0 && p_sql.Find("SELECT ") == 0)
+  {
+    // FIREBIRD: SELECT FIRST <top> [ SKIP <skip> ] ....
+    CString selectFirst;
+    selectFirst.Format("SELECT FIRST %d ",p_top);
+
+    if(p_skip > 0)
+    {
+      selectFirst.AppendFormat("SKIP %d ",p_skip);
+    }
+
+    p_sql.Replace("SELECT ",selectFirst);
+  }
+  return p_sql;
+}
+
 //////////////////////////////////////////////////////////////////////////
 //
 // SQL STRINGS
@@ -348,7 +367,7 @@ CString
 SQLInfoFirebird::GetSQLDateString(int p_year,int p_month,int p_day) const
 {
   CString retval;
-  retval.Format("CAST '%02d/%02d/04d' AS DATE)",p_day,p_month,p_year); // American order!!
+  retval.Format("CAST '%02d/%02d/%04d' AS DATE)",p_day,p_month,p_year); // American order!!
   return retval;
 }
 
@@ -411,6 +430,15 @@ SQLInfoFirebird::GetSQLDateTimeStrippedString(int p_year,int p_month,int p_day,i
 //   - Drop
 //
 //////////////////////////////////////////////////////////////////////////
+
+// Meta info about meta types
+// Standard ODBC functions are good enough
+CString 
+SQLInfoFirebird::GetCATALOGMetaTypes(int p_type) const
+{
+  UNREFERENCED_PARAMETER(p_type);
+  return "";
+}
 
 // Get SQL to check if a table already exists in the database
 CString
@@ -733,7 +761,7 @@ SQLInfoFirebird::GetCATALOGColumnAttributes(CString /*p_schema*/,CString p_table
 
 CString SQLInfoFirebird::GetCATALOGColumnCreate(MetaColumn& p_column) const
 {
-  CString sql  = "ALTER TABLE "  + p_column.m_table  + "\n";
+  CString sql  = "ALTER TABLE "  + p_column.m_table  + "\n"
                  "  ADD COLUMN " + p_column.m_column + " " + p_column.m_typename;
   p_column.GetPrecisionAndScale(sql);
   p_column.GetNullable(sql);
@@ -744,7 +772,7 @@ CString SQLInfoFirebird::GetCATALOGColumnAlter(MetaColumn& p_column) const
 {
   // The extra 'TYPE' keyword  is a-typical
   // The SET/DROP for the NULL is a-typical
-  CString sql  = "ALTER TABLE "  + p_column.m_table  + "\n";
+  CString sql  = "ALTER TABLE "  + p_column.m_table  + "\n"
                  "      MODIFY COLUMN " + p_column.m_column + " TYPE " + p_column.m_typename;
   p_column.GetPrecisionAndScale(sql);
   if(p_column.m_nullable)
@@ -1201,8 +1229,7 @@ SQLInfoFirebird::GetCATALOGTriggerAttributes(CString p_schema, CString p_tablena
   p_triggername.MakeUpper();
   p_triggername.MakeUpper();
 
-  CString sql;
-  sql.Format("SELECT cast('' as varchar(31)) AS catalog_name\n"
+  CString sql("SELECT cast('' as varchar(31)) AS catalog_name\n"
              "      ,(SELECT trim(tab.rdb$owner_name)\n"
              "          FROM rdb$relations tab\n"
              "         WHERE tab.rdb$relation_name = trg.rdb$relation_name) AS schema_name\n"
@@ -1273,8 +1300,7 @@ SQLInfoFirebird::GetCATALOGTriggerAttributes(CString p_schema, CString p_tablena
              "       END AS trigger_enabled\n"
              "      ,rdb$trigger_source\n"
              "  FROM rdb$triggers trg\n"
-             " WHERE rdb$system_flag   = 0\n"
-            ,p_schema.GetString());
+             " WHERE rdb$system_flag   = 0\n");
 
   // Add tablename filter
   if(!p_tablename.IsEmpty())

@@ -41,7 +41,7 @@
 #include "HTTPCertificate.h"
 #include "HTTPClientTracing.h"
 #include "HTTPError.h"
-#include "ZLib\gzip.h"
+#include "gzip.h"
 #include <winerror.h>
 #include <wincrypt.h>
 #include <atlconv.h>
@@ -97,6 +97,12 @@ HTTPClient::~HTTPClient()
 void
 HTTPClient::Reset()
 {
+  // Execute only once!
+  if(!m_initialized)
+  {
+    return;
+  }
+
   // Stopping the queue
   StopClient();
 
@@ -296,6 +302,24 @@ HTTPClient::Initialize()
   }
   DETAILLOG("Initializing HTTP Client");
   m_initialized = true;
+
+  // If no "web.config" read, fall back to "Marlin.config" for IIS mode applications
+  if(m_webConfig.IsFilled())
+  {
+    DETAILLOG("Configuration file \'web.config\' has been read!");
+  }
+  else
+  {
+    m_webConfig.ReadConfig("Marlin.config");
+    if(m_webConfig.IsFilled())
+    {
+      DETAILLOG("Configuration file \'marlin.config\' has been read!");
+    }
+    else
+    {
+      ERRORLOG("No configuration files found (marlin.config; web.config)!");
+    }
+  }
 
   // Init logging. Log from here on
   InitLogging();
@@ -912,6 +936,27 @@ HTTPClient::AddHostHeader()
   DETAILLOG("Host header set: %s",hostHeader.GetString());
 }
 
+// Add contentlength header
+void
+HTTPClient::AddLengthHeader()
+{
+  USES_CONVERSION;
+  CString length;
+  length.Format("Content-Length: %lu",m_bodyLength);
+  wstring header = A2CW(length);
+
+  if(!::WinHttpAddRequestHeaders(m_request
+                                ,header.c_str()
+                                ,(DWORD)header.size()
+                                ,WINHTTP_ADDREQ_FLAG_ADD |
+                                 WINHTTP_ADDREQ_FLAG_REPLACE))
+  {
+    ErrorLog(__FUNCTION__,"Host header NOT set. Error [%d] %s");
+    return;
+  }
+  DETAILLOG("Length set: %s",length.GetString());
+}
+
 void
 HTTPClient::AddSecurityOptions()
 {
@@ -1139,6 +1184,46 @@ HTTPClient::AddProxyAuthorization()
   }
 }
 
+// Add authorization up-front before the call
+// Sparing an extra round-trip, if you know the site will ask for it!
+void
+HTTPClient::AddPreEmptiveAuthorization()
+{
+  if(m_preemtive && !m_user.IsEmpty() && !m_password.IsEmpty())
+  {
+    if(m_preemtive & (WINHTTP_AUTH_SCHEME_BASIC      |
+                      WINHTTP_AUTH_SCHEME_NTLM       |
+                      WINHTTP_AUTH_SCHEME_PASSPORT   |
+                      WINHTTP_AUTH_SCHEME_DIGEST     |
+                      WINHTTP_AUTH_SCHEME_NEGOTIATE  ))
+    {
+      USES_CONVERSION;
+
+      wstring user = A2CW(m_user);
+      wstring pass = A2CW(m_password);
+
+      if(!WinHttpSetCredentials(m_request
+                               ,WINHTTP_AUTH_TARGET_SERVER
+                               ,m_preemtive
+                               ,user.c_str()
+                               ,pass.c_str()
+                               ,NULL))
+      {
+        // Could not set the credentials
+        ErrorLog(__FUNCTION__,"Setting HTTP Credentials pre-emptively. Error [%d] %s");
+      }
+      else
+      {
+        DETAILLOG("Authentication set for user: %s",m_user.GetString());
+      }
+    }
+    else 
+    {
+      ERRORLOG("Illegal pre-emptive authorization setting: %d",m_preemtive);
+    }
+  }
+}
+
 void
 HTTPClient::AddWebSocketUpgrade()
 {
@@ -1334,7 +1419,7 @@ HTTPClient::AddAuthentication(bool p_ntlm3Step)
                              ,NULL))
     {
       // Could not set the credentials
-      ErrorLog(__FUNCTION__,"Setting HTTP Credentials. Error [%d] %s");
+      ErrorLog(__FUNCTION__,"Setting HTTP Credentials pre-emptively. Error [%d] %s");
       return false;
     }
     DETAILLOG("Authentication set for user: %s",m_user.GetString());
@@ -1377,7 +1462,7 @@ HTTPClient::AddProxyAuthentication()
                                ,NULL))
       {
         // Could not set the credentials
-        ErrorLog(__FUNCTION__,"Set proxy credentials. Error [%d] %s");
+        ErrorLog(__FUNCTION__,"Setting HTTP Credentials pre-emptively. Error [%d] %s");
         return false;
       }
       DETAILLOG("Proxy authentication set for user: %s",m_user.GetString());
@@ -1433,11 +1518,11 @@ HTTPClient::SendBodyData()
       m_buffer->GetBuffer(buffer,length);
       if(buffer)
       {
+        DWORD dwWritten = 0;
         if(length)
         {
           // PART 2: SEND In 1 GO FROM FileBUFFER
           // Only 1 GetBufer required
-          DWORD dwWritten = 0;
           if (!::WinHttpWriteData(m_request
                                  ,buffer
                                  ,(DWORD)length
@@ -1446,7 +1531,7 @@ HTTPClient::SendBodyData()
             ErrorLog(__FUNCTION__,"Write body: File buffer. Error [%d] %s");
           }
         }
-        DETAILLOG("Write body. File buffer. Size: %d",length);
+        DETAILLOG("Write body. File buffer. Size: %d. Written: %d",length,dwWritten);
       }
       else
       {
@@ -2663,6 +2748,8 @@ HTTPClient::Send()
   AddProxyInfo();
   // Standard proxy authorization (if any)
   AddProxyAuthorization();
+  // Add authorization up-front before the call
+  AddPreEmptiveAuthorization();
   // Always add a host header
   AddHostHeader();
   // Add our recorded cookies
@@ -2675,6 +2762,8 @@ HTTPClient::Send()
   AddExtraHeaders();
   // Add WebSocket preparation
   AddWebSocketUpgrade();
+  // Always add content length
+  AddLengthHeader();
   
   // If always using a client certificate, set it upfront
   if(m_certPreset)
@@ -2729,6 +2818,7 @@ HTTPClient::Send()
       BOOL receivedResponse = WinHttpReceiveResponse(m_request,NULL);
       if(receivedResponse == FALSE)
       {
+        // Get last error and log it
         ErrorLog(__FUNCTION__,"Response from HTTP Server: [%d] %s");
 
         if(m_lastError == ERROR_WINHTTP_CLIENT_AUTH_CERT_NEEDED)
@@ -2957,12 +3047,16 @@ HTTPClient::LogTheSend(wstring& p_server,int p_port)
   {
     proxy.Format(" through proxy [%s:%d]",server.GetString(),p_port);
   }
+
+  // Find secure call
+  CString secure = m_secure && m_scheme.Right(1) != "s" ? "s" : "";
+
   // Log in full, do the raw logging call directly
   m_log->AnalysisLog("HTTPClient::Send",LogType::LOG_INFO,true
                     ,"%s %s%s://%s:%d%s%s"
                     ,m_verb.GetString()
                     ,m_scheme.GetString()
-                    ,m_secure ? "s" : ""
+                    ,secure.GetString()
                     ,m_server.GetString()
                     ,m_port
                     ,m_url.GetString()
@@ -2999,18 +3093,22 @@ HTTPClient::TraceTheSend()
     }
     else
     {
+      int    part   = 0;
       uchar* buffer = nullptr;
       size_t length = 0;
-      m_buffer->GetBufferCopy(buffer,length);
 
-      m_trace->TraceBody("Outgoing request",(BYTE*) buffer,(unsigned long) length);
+      while(m_buffer->GetBufferPart(part++,buffer,length))
+      {
+        m_trace->TraceBody("Outgoing bufferpart", (BYTE*)buffer, (unsigned long)length);
+      }
       if (MUSTLOG(HLL_TRACEDUMP))
       {
+        part = 0;
+        while(m_buffer->GetBufferPart(part++, buffer, length))
+        {
         m_trace->TraceHexa("Outgoing",buffer,(unsigned long) length);
       }
-
-      // Delete buffer copy
-      delete[] buffer;
+      }
     }
   }
 }
@@ -3484,7 +3582,7 @@ HTTPClient::DecodeBodyEncryption(CString p_password,SOAPMessage* p_msg,CString p
 
   // Decrypt
   Crypto crypting;
-  CString newBody = crypting.Decryptie(crypt,p_password);
+  CString newBody = crypting.Decryption(crypt,p_password);
 
   int beginPos = p_answer.Find("Body>");
   int endPos = p_answer.Find("Body>",beginPos + 2);
@@ -3539,7 +3637,7 @@ HTTPClient::DecodeMesgEncryption(CString p_password,SOAPMessage* p_msg,CString p
 
   // Decrypt
   Crypto crypting;
-  CString newBody = crypting.Decryptie(crypt,p_password);
+  CString newBody = crypting.Decryption(crypt,p_password);
 
   int beginPos = p_answer.Find("Envelope>");
   int endPos = p_answer.Find("Envelope>",beginPos + 2);
@@ -3751,20 +3849,17 @@ HTTPClient::QueueRunning()
       // Fire and forget. No return status processed
       if(message1)
       {
-        Send(message1);
-        delete message1;
+        ProcessQueueMessage(message1);
         message1 = NULL;
       }
       else if(message2)
       {
-        Send(message2);
-        delete message2;
+        ProcessQueueMessage(message2);
         message2 = NULL;
       }
       else if(message3)
       {
-        Send(message3);
-        delete message3;
+        ProcessQueueMessage(message3);
         message3 = NULL;
       }
     }
@@ -3794,6 +3889,52 @@ HTTPClient::QueueRunning()
   // Last thing the queue is doing
   m_queueThread = NULL;
 }
+
+void
+HTTPClient::ProcessQueueMessage(HTTPMessage* p_message)
+{
+  if(Send(p_message))
+  {
+    DETAILLOG("Did send queued HTTPMessage to: %s",p_message->GetURL().GetString());
+  }
+  else
+  {
+    ERRORLOG("Error while sending queued HTTPMessage to: %s",p_message->GetURL().GetString());
+  }
+  // End of the line: Remove the queue message
+  delete p_message;
+}
+
+void
+HTTPClient::ProcessQueueMessage(SOAPMessage* p_message)
+{
+  if(Send(p_message))
+  {
+    DETAILLOG("Did send queued SOAPMessage [%s] to: %s",p_message->GetSoapAction().GetString(),p_message->GetURL().GetString());
+  }
+  else
+  {
+    ERRORLOG("Error while sending queued SOAPMessage [%s] to: %s", p_message->GetSoapAction().GetString(),p_message->GetURL().GetString());
+  }
+  // End of the line: Remove the queue message
+  delete p_message;
+}
+
+void
+HTTPClient::ProcessQueueMessage(JSONMessage* p_message)
+{
+  if(Send(p_message))
+  {
+    DETAILLOG("Did send queued JSONMessage to: %s",p_message->GetURL().GetString());
+  }
+  else
+  {
+    ERRORLOG("Error while sending queued JSONMessage to: %s", p_message->GetURL().GetString());
+  }
+  // End of the line: Remove the queue message
+  delete p_message;
+}
+
 
 //////////////////////////////////////////////////////////////////////////
 //

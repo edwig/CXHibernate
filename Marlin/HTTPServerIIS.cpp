@@ -38,12 +38,14 @@
 #include "WebServiceServer.h"
 #include "HTTPURLGroup.h"
 #include "HTTPError.h"
+#include "HTTPTime.h"
 #include "GetLastErrorAsString.h"
-#include "MarlinModule.h"
 #include "EnsureFile.h"
-#include "WebSocket.h"
+#include "WebSocketServerIIS.h"
 #include "ConvertWideString.h"
+#pragma warning (disable:4091)
 #include <httpserv.h>
+#pragma warning (error:4091)
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -148,7 +150,10 @@ HTTPServerIIS::Cleanup()
   while(!m_allsites.empty())
   {
     SiteMap::iterator it = m_allsites.begin();
-    it->second->StopSite(true);
+    if (it->second->StopSite(true) == false)
+    {
+      m_allsites.erase(it);
+    };
   }
 
   // Closing the logging file
@@ -358,6 +363,18 @@ HTTPServerIIS::DeleteSite(int p_port,CString p_baseURL,bool p_force /*=false*/)
 //
 //////////////////////////////////////////////////////////////////////////
 
+void
+HTTPServerIIS::SetWebConfigIIS(WebConfigIIS* p_config)
+{
+  m_webConfigIIS = p_config;
+}
+
+WebConfigIIS* 
+HTTPServerIIS::GetWebConfigIIS()
+{
+  return m_webConfigIIS;
+}
+
 EventStream*
 HTTPServerIIS::GetHTTPStreamFromRequest(IHttpContext* p_context
                                         ,HTTPSite*     p_site
@@ -495,12 +512,13 @@ HTTPServerIIS::GetHTTPMessageFromRequest(IHttpContext* p_context
   message->SetReferrer(referrer);
   message->SetAuthorization(authorize);
   message->SetConnectionID(p_request->ConnectionId);
-  message->SetContentType(contentType);
   message->SetRemoteDesktop(remDesktop);
   message->SetSender((PSOCKADDR_IN6)sender);
   message->SetCookiePairs(cookie);
   message->SetAcceptEncoding(acceptEncoding);
   message->SetRequestHandle((HTTP_OPAQUE_ID)p_context);
+  message->SetContentType(contentType);
+  message->SetContentLength((size_t)atoll(contentLength));
 
   // Finding the impersonation access token (if any)
   FindingAccessToken(p_context,message);
@@ -528,6 +546,9 @@ HTTPServerIIS::GetHTTPMessageFromRequest(IHttpContext* p_context
       return nullptr;
     }
   }
+
+  // Find routing information within the site
+  CalculateRouting(p_site,message);
 
   // Find X-HTTP-Method VERB Tunneling
   if(type == HTTPCommand::http_post && p_site->GetVerbTunneling())
@@ -832,6 +853,7 @@ HTTPServerIIS::SendResponse(HTTPMessage* p_message)
 
   // Respond to general HTTP status
   int status = p_message->GetStatus();
+  CString date = HTTPGetSystemTime();
 
   // Protocol switch must keep the channel open (here for: WebSocket!)
   if(status == HTTP_STATUS_SWITCH_PROTOCOLS)
@@ -855,6 +877,7 @@ HTTPServerIIS::SendResponse(HTTPMessage* p_message)
                                               ,site->GetAuthenticationRealm());
     }
     SetResponseHeader(response,HttpHeaderWwwAuthenticate, challenge,true);
+    SetResponseHeader(response,HttpHeaderDate,date,true);
   }
 
   // In case we want IIS to handle the response, and we do nothing!
@@ -948,11 +971,11 @@ HTTPServerIIS::SendResponse(HTTPMessage* p_message)
 
   // Dependent on the filling of FileBuffer
   // Send 1 or more buffers or the file
-  if(buffer->GetHasBufferParts())
+  if(buffer && buffer->GetHasBufferParts())
   {
     SendResponseBufferParts(response,buffer,totalLength,moredata);
   }
-  else if(buffer->GetFileName().IsEmpty())
+  else if(buffer && buffer->GetFileName().IsEmpty())
   {
     SendResponseBuffer(response,buffer,totalLength,moredata);
   }
@@ -1235,6 +1258,7 @@ HTTPServerIIS::CancelRequestStream(HTTP_OPAQUE_ID p_response)
   }
   catch(StdException& er)
   {
+    ReThrowSafeException(er);
     ERRORLOG(ERROR_INVALID_PARAMETER,"Cannot close Event/WebSocket stream! " + er.GetErrorMessage());
   }
 }

@@ -21,8 +21,8 @@
 // WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION 
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
-// Last Revision:   17-06-2018
-// Version number:  0.9.0
+// Last version date: See CXHibernate.h
+// Version number:    See CXHibernate.h
 //
 #include "stdafx.h"
 #include "CXSession.h"
@@ -365,6 +365,24 @@ CXSession::LoadConfiguration(XMLMessage& p_config)
       throw StdException("Cannot load class: " + name);
     }
     // Find next class
+    theclass = p_config.GetElementSibling(theclass);
+  }
+
+  // Perform late binding of associations
+  theclass = p_config.FindElement("class");
+  while(theclass)
+  {
+    CString  name = p_config.GetElement(theclass, "name");
+    name.MakeLower();
+    ClassMap::iterator it = m_classes.find(name);
+    if(it != m_classes.end())
+    {
+      CXClass* newclass = it->second;
+      if (newclass)
+      {
+        newclass->LoadMetaInfoAssociations(p_config,theclass,this);
+      }
+    }
     theclass = p_config.GetElementSibling(theclass);
   }
 
@@ -1250,8 +1268,8 @@ CXSession::FindObjectOnInternet(CString p_className,VariantSet& p_primary)
   CString httpError;
   CString error;
   error.Format("Could not reach CXServer on: %s\n%s\n"
-                ,m_url
-                ,msg.GetFault());
+                ,m_url.GetString()
+                ,msg.GetFault().GetString());
   GetHTTPClient()->GetError(&httpError);
   error += httpError;
   throw StdException(error);
@@ -1421,8 +1439,8 @@ CXSession::SelectObjectsFromInternet(CString p_className,SQLFilterSet& p_filters
   CString httpError;
   CString error;
   error.Format("Could not reach CXServer on: %s\n%s\n"
-                ,m_url
-                ,msg.GetFault());
+                ,m_url.GetString()
+                ,msg.GetFault().GetString());
   GetHTTPClient()->GetError(&httpError);
   error += httpError;
   throw StdException(error);
@@ -1476,8 +1494,8 @@ CXSession::UpdateObjectInInternet(CXObject* p_object)
   CString httpError;
   CString error;
   error.Format("Could not reach CXServer on: %s\n%s\n"
-               ,m_url
-               ,msg.GetFault());
+               ,m_url.GetString()
+               ,msg.GetFault().GetString());
   GetHTTPClient()->GetError(&httpError);
   error += httpError;
   throw StdException(error);
@@ -1537,8 +1555,8 @@ CXSession::InsertObjectInInternet(CXObject* p_object)
   CString httpError;
   CString error;
   error.Format("Could not reach CXServer on: %s\n%s\n"
-               ,m_url
-               ,msg.GetFault());
+               ,m_url.GetString()
+               ,msg.GetFault().GetString());
   GetHTTPClient()->GetError(&httpError);
   error += httpError;
   throw StdException(error);
@@ -1699,8 +1717,8 @@ CXSession::DeleteObjectInInternet(CXObject* p_object)
   CString httpError;
   CString error;
   error.Format("Could not reach CXServer on: %s\n%s\n"
-              ,m_url
-              ,msg.GetFault());
+              ,m_url.GetString()
+              ,msg.GetFault().GetString());
   GetHTTPClient()->GetError(&httpError);
   error += httpError;
   throw StdException(error);

@@ -2,7 +2,7 @@
 //
 // File: SQLAssociation.cpp
 //
-// Copyright (c) 1998-2018 ir. W.E. Huisman
+// Copyright (c) 1998-2019 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy of 
@@ -21,8 +21,7 @@
 // WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION 
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
-// Last Revision:   28-05-2018
-// Version number:  1.5.0
+// Version number: See SQLComponents.h
 //
 #include "Stdafx.h"
 #include "SQLComponents.h"
@@ -176,6 +175,7 @@ SQLAssociation::FollowToMaster()
   {
     SQLFilter filter(m_assocs[ind]->m_primary,OP_Equal,m_assocs[ind]->m_value);
     filters.AddFilter(&filter);
+    m_master->SetFilters(&filters);
   }
 
   bool result = m_master->IsOpen() ? m_master->Append() : m_master->Open();
@@ -204,6 +204,7 @@ SQLAssociation::FollowToDetails()
   {
     SQLFilter filter(m_assocs[ind]->m_foreign,OP_Equal,m_assocs[ind]->m_value);
     filters.AddFilter(&filter);
+    m_detail->SetFilters(&filters);
   }
 
   bool result = m_detail->IsOpen() ? m_detail->Append() : m_detail->Open();

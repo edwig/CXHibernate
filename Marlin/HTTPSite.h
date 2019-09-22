@@ -68,9 +68,8 @@ struct AddressCompare
     if(cmp < 0) return true;
     if(cmp > 0) return false;
     // Compare desktops
-    cmp = p_left.m_desktop < p_right.m_desktop;
-    if(cmp < 0) return true;
-    if(cmp > 0) return false;
+    if(p_left.m_desktop < p_right.m_desktop) return true;
+    if(p_left.m_desktop > p_right.m_desktop) return false;
     // Compare absolute paths
     cmp = p_left.m_absPath.Compare(p_right.m_absPath);
     if(cmp < 0) return true;
@@ -130,7 +129,7 @@ public:
           ,CString        p_prefix
           ,HTTPSite*      p_mainSite = nullptr
           ,LPFN_CALLBACK  p_callback = nullptr);
- ~HTTPSite();
+  virtual ~HTTPSite();
 
   // MANDATORY: Explicitly starting after configuration of the site
   virtual bool StartSite() = 0;
@@ -241,6 +240,7 @@ public:
   SiteFilter*     GetFilter(unsigned p_priority);
   CString         GetContentType(CString p_extension);
   CString         GetContentTypeByResourceName(CString p_pathname);
+  virtual bool    GetHasAnonymousAuthentication(HANDLE p_token);
 
   // FUNCTIONS
 
@@ -286,13 +286,13 @@ protected:
   // Finding the SiteHandler registration
   RegHandler*       FindSiteHandler(HTTPCommand p_command);
   // Calling all filters
-  void              CallFilters(HTTPMessage* p_message);
+  bool              CallFilters(HTTPMessage* p_message);
   // All registered site handlers, and the default action
   void              HandleHTTPMessageDefault(HTTPMessage* p_message);
   // Direct asynchronous response
   void              AsyncResponse(HTTPMessage* p_message);
   // Handle the error after an error report
-  void              PostHandle(HTTPMessage* p_message);
+  void              PostHandle(HTTPMessage* p_message,bool p_reset = true);
     // Check that m_reliable and m_async do not mix
   bool              CheckReliable();
   // Convert authentication token to SID string.
@@ -311,7 +311,7 @@ protected:
   void              RemoveSequence(SessionAddress& p_address);
   SessionSequence*  FindSequence  (SessionAddress& p_address);
   SessionSequence*  CreateSequence(SessionAddress& p_address);
-//void              DebugPrintSessionAddress(CString p_prefix,SessionAddress& p_address);
+  void              DebugPrintSessionAddress(CString p_prefix,SessionAddress& p_address);
 
   // Handle HTTP throttling
   CRITICAL_SECTION* StartThrottling(HTTPMessage* p_message);

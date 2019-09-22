@@ -2,7 +2,7 @@
 //
 // File: SQLDate.h
 //
-// Copyright (c) 1998-2018 ir. W.E. Huisman
+// Copyright (c) 1998-2019 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy of 
@@ -21,8 +21,7 @@
 // WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION 
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
-// Last Revision:   28-05-2018
-// Version number:  1.5.0
+// Version number: See SQLComponents.h
 //
 #pragma once
 #include "SQLDatabase.h"
@@ -37,6 +36,8 @@ namespace SQLComponents
 #define SECONDS_PER_DAY   (60 * 60 * 24)
 #define OLEDATE_MJD_SHIFT 15018             // Difference between MJD and OLE_DATE
 
+// BEWARE: The epoch of the SQLDate class is 16 november 1858 12:00 hours (noon)
+//         with a DateValue of zero (0) for that date.
 // Dates are stored as a MJD (Modified Julian Date = 17-11-1858)
 // and works correctly for dates from 1-1-1 up until 31-12-9999 (ODBC Definition)
 typedef long DateValue;
@@ -86,6 +87,9 @@ public:
   // Get in different formats
   CString     AsString() const;
   DateValue   AsNumber() const;
+  DateValue   AsMJD()    const;
+  DateValue   AsJulianDate()     const;
+  DateValue   AsTimeSinchEpoch() const;
   CString     AsSQLString(SQLDatabase* p_database);
   CString     AsStrippedSQLString(SQLDatabase* p_database);
   void        AsDateStruct(DATE_STRUCT* p_date);
@@ -148,6 +152,9 @@ public:
   static bool IsNumericString(const CString& p_string);
 
 private:
+  // Correction factor is MJD (2,400,000.5) + 0.5 (17 nov 1858 instead of 16 nov 12:00 hours)
+  const long JULIAN_DAY_MODIFIED  = 2400001;
+
   // Calculate m_mjd from a date
   bool SetMJD();
   // Calculate MJD back to a date
@@ -176,11 +183,31 @@ SQLDate::IsNull() const
   return (m_mjd == -1);
 }
 
-// Return the calculated value (MJD)
+// Return the calculated value (MJD) !!
 inline DateValue
 SQLDate::AsNumber() const
 {
   return m_mjd;  
+}
+      
+// Return the Modified Julian Date
+inline DateValue
+SQLDate::AsMJD() const
+{
+  return m_mjd;
+}
+
+inline DateValue
+SQLDate::AsJulianDate() const
+{
+  return m_mjd + JULIAN_DAY_MODIFIED;
+}
+
+// Return the time-since-epoch
+inline DateValue
+SQLDate::AsTimeSinchEpoch() const
+{
+  return m_mjd;
 }
       
 // Test on validity of a date instance

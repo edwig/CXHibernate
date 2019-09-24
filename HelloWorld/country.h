@@ -32,9 +32,9 @@ public:
 protected:
   // Database persistent attributes
   int        m_id                 { 0 };
-  CString    m_name              ;
+  CString    m_name;
   int        m_inhabitants        { 0 };
-  CString    m_continent         ;
+  CString    m_continent;
 
 private:
   // Transient attributes go here

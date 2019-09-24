@@ -1,6 +1,5 @@
 // HelloWorld.cpp : Defines the entry point for the console application.
 //
-
 #include "stdafx.h"
 #include "country.h"
 #include <CXHibernate.h>
@@ -30,4 +29,3 @@ int main()
   }
   return 0;
 }
-

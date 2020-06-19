@@ -339,6 +339,18 @@
     <ClCompile Include="WebSocketServerSync.cpp">
       <Filter>MarlinServer</Filter>
     </ClCompile>
+    <ClCompile Include="Alert.cpp">
+      <Filter>MarlinGeneral</Filter>
+    </ClCompile>
+    <ClCompile Include="AutoCritical.cpp">
+      <Filter>MarlinGeneral</Filter>
+    </ClCompile>
+    <ClCompile Include="bcd.cpp">
+      <Filter>MarlinGeneral</Filter>
+    </ClCompile>
+    <ClCompile Include="Marlin.cpp">
+      <Filter>MarlinGeneral</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ZLib\inflate.h">
@@ -694,6 +706,12 @@
     </ClInclude>
     <ClInclude Include="WebSocketServerSync.h">
       <Filter>MarlinServer\Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="Alert.h">
+      <Filter>MarlinGeneral\Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="bcd.h">
+      <Filter>MarlinGeneral\Headers</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

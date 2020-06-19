@@ -310,7 +310,7 @@ FileBuffer::OpenFile(bool p_reading)
 
   // Get our file modes
   DWORD readWrite   = p_reading ? GENERIC_READ    : GENERIC_WRITE;
-  DWORD sharing     = p_reading ? FILE_SHARE_READ : FILE_SHARE_WRITE;
+  DWORD sharing     =             FILE_SHARE_READ | FILE_SHARE_WRITE;
   DWORD disposition = p_reading ? OPEN_EXISTING   : CREATE_ALWAYS;
 
   // Create or open the file
@@ -420,11 +420,6 @@ cleanup:
 bool    
 FileBuffer::WriteFile()
 {
-  // See if we have work to do
-  if(m_buffer == NULL && m_parts.size() == 0)
-  {
-    return false;
-  }
   // Create file to write to
   bool result = false;
 

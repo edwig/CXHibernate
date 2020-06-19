@@ -2,7 +2,7 @@
 //
 // File: SQLInfoGenericODBC.cpp
 //
-// Copyright (c) 1998-2019 ir. W.E. Huisman
+// Copyright (c) 1998-2020 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy of 
@@ -151,6 +151,13 @@ bool
 SQLInfoGenericODBC::GetRDBMSMustCommitDDL() const
 {
   return false;
+}
+
+// Correct maximum precision,scale for a NUMERIC datatype
+void
+SQLInfoGenericODBC::GetRDBMSNumericPrecisionScale(SQLULEN& /*p_precision*/, SQLSMALLINT& /*p_scale*/) const
+{
+  // NO-OP
 }
 
 // KEYWORDS
@@ -447,14 +454,14 @@ SQLInfoGenericODBC::GetCATALOGTableExists(CString p_schema,CString p_tablename) 
 
 CString
 SQLInfoGenericODBC::GetCATALOGTablesList(CString p_schema,CString p_pattern) const
-  {
+{
   // Cannot do this, let ODBC handle this
   return "";
-  }
+}
 
 CString
 SQLInfoGenericODBC::GetCATALOGTableAttributes(CString /*p_schema*/,CString /*p_tablename*/) const
-  {
+{
   // Cannot do this, let ODBC handle this
   return "";
 }
@@ -1310,6 +1317,13 @@ SQLInfoGenericODBC::GetSESSIONConstraintsImmediate() const
 // Calling a stored function or procedure if the RDBMS does not support ODBC call escapes
 SQLVariant*
 SQLInfoGenericODBC::DoSQLCall(SQLQuery* /*p_query*/,CString& /*p_schema*/,CString& /*p_procedure*/)
+{
+  return nullptr;
+}
+
+// Calling a stored function with named parameters, returning a value
+SQLVariant* 
+SQLInfoGenericODBC::DoSQLCallNamedParameters(SQLQuery* /*p_query*/,CString& /*p_schema*/,CString& /*p_procedure*/)
 {
   return nullptr;
 }

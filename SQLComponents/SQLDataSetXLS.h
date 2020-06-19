@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////
 //
-// Copyright (c) 1998-2019 ir. W.E. Huisman
+// Copyright (c) 1998-2020 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy of 
@@ -55,7 +55,7 @@ public:
   // Undo changes to spreadsheet
   bool RollBack(); 
   // Close worksheet
-  bool  CloseWorksheet();
+  void CloseWorksheet();
 
   // Add header row to spreadsheet
   bool AddHeaders(WordList &FieldNames, bool replace = false); 
@@ -98,7 +98,7 @@ private:
   // Open a text delimited file for reading or writing
   bool  Open(); 
   // Close and forget the spreadsheet
-  bool  Close();
+  virtual void Close() override;
   // Convert Excel column in alphabet into column number
   int   CalculateColumnNumber(CString column, bool p_name = true); 
   // Read a row from spreadsheet. Default is read the next row
@@ -157,10 +157,10 @@ SQLDataSetXLS::GetIsXLS()
   return (m_excel || m_xmlExcel);
 }
 
-inline bool  
+inline void  
 SQLDataSetXLS::CloseWorksheet()
 {
-  return Close();
+  Close();
 }
 
 // End of namespace

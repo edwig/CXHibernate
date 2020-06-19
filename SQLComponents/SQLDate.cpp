@@ -2,7 +2,7 @@
 //
 // File: SQLDate.h
 //
-// Copyright (c) 1998-2019 ir. W.E. Huisman
+// Copyright (c) 1998-2020 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy of 
@@ -261,6 +261,18 @@ SQLDate::AsString() const
   }
   return buffer;
 }
+
+CString     
+SQLDate::AsXMLString() const
+{
+  CString buffer;
+  if (IsNull() == false)
+  {
+    buffer.Format("%04d-%02d-%02d",Year(),Month(),Day());
+  }
+  return buffer;
+}
+
 
 CString     
 SQLDate::AsSQLString(SQLDatabase* p_database)
@@ -523,8 +535,8 @@ SQLDate::CalculateDate(const CString& p_datum)
       // Wrong formatted date
       throw StdException("Date has a wrong format");
     }
-    // Speciaal geval: Pronto doet dit
-    // 00-00-00 -> wordt vandaag
+    // Special case: Some applications do this
+    // 00-00-00 -> Becomes today
     if (dag == 0 && maand == 0)
     {
       *this = Today();
@@ -532,8 +544,8 @@ SQLDate::CalculateDate(const CString& p_datum)
     }
     else
     {
-      // Doet de ZetMJD op de jaar/maand/dag waarden
-      // en doet dus de controle op de domeinwaarden en correctheid
+      // Do a SetDate on the year/month/day values
+      // and does a check on the correctness of the date
       success = SetDate(jaar, maand, dag);
     }
   }
@@ -886,7 +898,7 @@ SQLDate::ParseXMLDate(const CString& p_string,SQLTimestamp& p_moment)
                 offsetminuten = uur * 60 + minuut;
                 if(offsetminuten >= 0 && offsetminuten <= 840)
                 {
-                  if(sep3 == '+')
+                  if(sep3 == '-')
                   {
                     offsetminuten = -offsetminuten;
                   }
@@ -919,7 +931,7 @@ SQLDate::ParseXMLDate(const CString& p_string,SQLTimestamp& p_moment)
                 offsetminuten = fraction * 60 + UTCuurBuffer;
                 if(offsetminuten >= 0 && offsetminuten <= 840)
                 {
-                  if(sep6 == '+')
+                  if(sep6 == '-')
                   {
                     offsetminuten = -offsetminuten;
                   }
@@ -937,7 +949,7 @@ SQLDate::ParseXMLDate(const CString& p_string,SQLTimestamp& p_moment)
                offsetminuten = UTCuurBuffer * 60 + UTCminBuffer;
                if(offsetminuten >= 0 && offsetminuten <= 840)
                {
-                 if(sep7 == '+')
+                 if(sep7 == '-')
                  {
                    offsetminuten = -offsetminuten;
                  }
@@ -950,30 +962,24 @@ SQLDate::ParseXMLDate(const CString& p_string,SQLTimestamp& p_moment)
       ((uur     >= 0 && uur     <= 23 && 
         minuut  >= 0 && minuut  <= 59 && 
         seconde >= 0 && seconde <= 59) || 
-        (uur == 24 && minuut == 0 && seconde == 0 && fraction == 0)))
+        (uur == 24 && minuut == 0 && seconde <= 1 && fraction == 0)))
     {
-      bool plusdag = uur == 24;
-      if(plusdag) uur = 0;
+      // Leap seconds are fixed by adding an extra day and 0 hours
+      bool plusday = (uur == 24);
+      if(plusday)
+      {
+        uur = 0;
+      }
 
+      // Construct the timestamp
       p_moment.SetTimestamp(jaar,maand,dag,uur,minuut,seconde);
-
-      if(plusdag)
+      if(plusday)
       {
         p_moment = p_moment.AddDays(1);
       }
       if(offset)
       {
         p_moment = p_moment.AddMinutes(offsetminuten);
-        UTC = true;
-      }
-      if(UTC)
-      {
-        TIME_ZONE_INFORMATION tziCurrent;
-        ::ZeroMemory(&tziCurrent,sizeof(tziCurrent));
-        if(::GetTimeZoneInformation(&tziCurrent) != TIME_ZONE_ID_INVALID)
-        {
-          p_moment = p_moment.AddMinutes(-tziCurrent.Bias);
-        }
       }
       // Store the fraction (if any)
       p_moment.SetFraction(fraction);

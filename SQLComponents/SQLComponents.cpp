@@ -2,7 +2,7 @@
 //
 // File: SQLComponents.h
 //
-// Copyright (c) 1998-2019 ir. W.E. Huisman
+// Copyright (c) 1998-2020 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy of 
@@ -40,6 +40,9 @@ namespace SQLComponents
 
     // Setting our default language for SQLDate, SQLTime and SQLTimestamp processing
     SetDefaultSQLLanguage(p_language);
+
+    // SQLComponents always works in localtime (UTC +/- timezone)
+    SQLSetLocalTimezone();
 
     // Check if something to do for memory
     if(g_SQLComponentsInitialized)

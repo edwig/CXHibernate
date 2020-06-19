@@ -2,7 +2,7 @@
 //
 // File: SQLFilter.h
 //
-// Copyright (c) 1998-2019 ir. W.E. Huisman
+// Copyright (c) 1998-2020 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy of 
@@ -37,6 +37,7 @@ namespace SQLComponents
 // Forward declarations
 class SQLRecord;
 class SQLQuery;
+class SQLFilterSet;
 // Mapping typedefs
 typedef std::vector<SQLVariant*> VariantSet;
 
@@ -109,6 +110,7 @@ public:
 
   // Resetting the filter
   void        Reset();
+  void        SetSubFilters(SQLFilterSet* subfilters) { m_subfilters = subfilters; }
 
 private:
   // Check that we have at least one operand value
@@ -144,12 +146,12 @@ private:
   bool        MatchBetween     (SQLVariant* p_field);
 
   // Data for the filter
-  CString     m_field;              // Name of the field to act upon
-  SQLOperator m_operator;           // Operator of the condition
-  VariantSet  m_values;             // Multiple values for IN and BETWEEN
-  CString     m_expression;         // Free expression (no values!)
+  CString     m_field;                         // Name of the field to act upon
+  SQLOperator m_operator;                      // Operator of the condition
+  VariantSet  m_values;                        // Multiple values for IN and BETWEEN
+  CString     m_expression;                    // Free expression (no values!)
   SQLFunction m_function         { FN_NOP };   // Extra function for the field operator
-  bool        m_negate { false };   // Negate the whole condition
+  bool        m_negate           { false  };   // Negate the whole condition
   bool        m_openParenthesis  { false  };   // Start with an opening parenthesis
   bool        m_closeParenthesis { false  };   // End with a closing parenthesis
   union       {                                // Parts for functions EXTRACT/TIMESTAMP ADD/DIFF
@@ -158,7 +160,7 @@ private:
               }
               m_extract;
   CString     m_field2;                        // Optional extra field as in "m_field <oper> m_fileld2"
-
+  SQLFilterSet* m_subfilters     { nullptr };
 };
 
 inline CString

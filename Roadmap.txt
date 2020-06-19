@@ -25,7 +25,4 @@ Features from (N)Hibernate that will NEVER be implemented:
 
 Features under consideration
 ----------------------------
-- Runtime reflection by calculation dereference pointer differences
-  as in the following offset:
-  long offset = ((void*)object.m_attribute) - ((void*)object)
-  This could create the desired meta data for reflection
+- typeid() reflection

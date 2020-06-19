@@ -2,7 +2,7 @@
 //
 // File: SQLTime.h
 //
-// Copyright (c) 1998-2019 ir. W.E. Huisman
+// Copyright (c) 1998-2020 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy of 
@@ -59,6 +59,7 @@ public:
   SQLTime(const int p_hours,const int p_minutes,const int p_seconds);
   SQLTime(__int64 p_seconds);
   SQLTime(const SQLTimestamp& p_timestamp);
+  SQLTime(SQL_TIME_STRUCT* p_timestruct);
  ~SQLTime();
 
   CString AsString() const;

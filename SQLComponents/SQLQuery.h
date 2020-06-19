@@ -2,7 +2,7 @@
 //
 // File: SQLQuery.h
 //
-// Copyright (c) 1998-2019 ir. W.E. Huisman
+// Copyright (c) 1998-2020 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy of 
@@ -28,6 +28,7 @@
 #include "SQLVariant.h"
 #include "SQLDatabase.h"
 #include "Locker.h"
+#include "bcd.h"
 #include <sql.h>
 #include <map>
 
@@ -50,7 +51,6 @@ namespace SQLComponents
 #define SQL_STATEMENT_SEPARATOR "<@>"
 #define SQL_SEPARATOR_LENGTH    3
 
-class bcd;
 class SQLDate;
 class SQLDatabase;
 
@@ -111,6 +111,9 @@ public:
   void SetParameter  (SQLTime&      p_param,SQLParamType p_type = P_SQL_PARAM_INPUT);
   void SetParameter  (SQLTimestamp& p_param,SQLParamType p_type = P_SQL_PARAM_INPUT);
   void SetParameter  (const bcd&    p_param,SQLParamType p_type = P_SQL_PARAM_INPUT);
+
+  // Named parameters for DoSQLCall()
+  void SetParameterName(int p_num,CString p_name);
 
   // SINGLE STATEMENT
 

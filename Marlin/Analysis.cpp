@@ -42,6 +42,7 @@
 #include "AutoCritical.h"
 #include "EnsureFile.h"
 #include "ConvertWideString.h"
+#include "WebConfig.h"
 #include <string.h>
 #include <sys/timeb.h>
 #include <io.h>
@@ -175,6 +176,13 @@ bool
 LogAnalysis::GetDoLogging()
 {
   return m_logLevel >= HLL_ERRORS;
+}
+
+// Logfile is currently correctly opened for business
+bool
+LogAnalysis::GetIsOpen()
+{
+  return m_initialised;
 }
 
 // Old interface, simply set logging or turn it of
@@ -400,7 +408,7 @@ LogAnalysis::AnalysisLog(const char* p_function,LogType p_type,bool p_doFormat,c
   logBuffer += p_function;
   if(logBuffer.GetLength() < position + ANALYSIS_FUNCTION_SIZE)
   {
-    logBuffer.Append("                                            "
+    logBuffer.Append("                                                "
                     ,position + ANALYSIS_FUNCTION_SIZE - logBuffer.GetLength());
   }
 
@@ -524,24 +532,24 @@ LogAnalysis::BareStringLog(const char* p_buffer,int p_length)
 {
   if (m_file)
   {
-  // Multi threaded protection
-  AutoCritSec lock(&m_lock);
+    // Multi threaded protection
+    AutoCritSec lock(&m_lock);
 
-  CString buffer;
-  char* pointer = buffer.GetBufferSetLength(p_length + 1);
-  memcpy_s(pointer,p_length+1,p_buffer,p_length);
-  pointer[p_length] = 0;
-  buffer.ReleaseBufferSetLength(p_length);
+    CString buffer;
+    char* pointer = buffer.GetBufferSetLength(p_length + 1);
+    memcpy_s(pointer, p_length + 1, p_buffer, p_length);
+    pointer[p_length] = 0;
+    buffer.ReleaseBufferSetLength(p_length);
 
-  // Test for newline
-  if(buffer.Right(1) != "\n")
-  {
-    buffer += "\n";
+    // Test for newline
+    if (buffer.Right(1) != "\n")
+    {
+      buffer += "\n";
+    }
+
+    // Keep the line
+    m_list.push_back(buffer);
   }
-
-  // Keep the line
-  m_list.push_back(buffer);
-}
 }
 
 
@@ -587,6 +595,7 @@ LogAnalysis::Flush(bool p_all)
     // Logfile failed. Where to log this??
     TRACE("%s\n",er.GetErrorMessage().GetString());
   }
+  FlushFileBuffers(m_file);
 }
 
 // Write out a log line
@@ -610,7 +619,7 @@ void
 LogAnalysis::ReadConfig()
 {
   char buffer[256] = "";
-  CString fileName = "Logfile.config";
+  CString fileName = WebConfig::GetExePath() + "Logfile.config";
 
   FILE* file = NULL;
   fopen_s(&file,fileName,"r");
@@ -626,7 +635,9 @@ LogAnalysis::ReadConfig()
         {
           buffer[len] = 0;
         }
+        else break;
       }
+      // Look for a comment
       if(buffer[0] == ';' || buffer[0] == '#')
       {
         continue;
@@ -638,7 +649,8 @@ LogAnalysis::ReadConfig()
       }
       if(_strnicmp(buffer,"loglevel=",8) == 0)
       {
-        m_logLevel = atoi(&buffer[8]) > 0;
+        int logLevel = atoi(&buffer[8]) > 0;
+        SetLogLevel(logLevel);
         continue;
       }
       if(_strnicmp(buffer,"rotate=",7) == 0)
@@ -654,31 +666,28 @@ LogAnalysis::ReadConfig()
       if(_strnicmp(buffer,"events=",7) == 0)
       {
         m_doEvents = atoi(&buffer[7]) > 0;
+        continue;
       }
       if(_strnicmp(buffer,"cache=",6) == 0)
       {
-        m_cache = atoi(&buffer[6]);
+        int cache = atoi(&buffer[6]);
+        SetCache(cache);
+        continue;
       }
       if(_strnicmp(buffer,"interval=",9) == 0)
       {
-        m_interval = atoi(&buffer[9]) * CLOCKS_PER_SEC;
+        int interval = atoi(&buffer[9]) * CLOCKS_PER_SEC;
+        SetInterval(interval);
+        continue;
       }
       if(_strnicmp(buffer,"keep=",5) == 0)
       {
-        m_keepfiles = atoi(&buffer[5]);
+        int keep = atoi(&buffer[5]);
+        SetKeepfiles(keep);
+        continue;
       }
     }
     fclose(file);
-
-    // Check what we just read
-    if(m_logLevel < HLL_NOLOG)             m_logLevel = HLL_NOLOG;
-    if(m_logLevel > HLL_HIGHEST)           m_logLevel = HLL_HIGHEST;
-    if(m_cache    < LOGWRITE_MINCACHE)     m_cache    = LOGWRITE_MINCACHE;
-    if(m_cache    > LOGWRITE_MAXCACHE)     m_cache    = LOGWRITE_MAXCACHE;
-    if(m_interval < LOGWRITE_INTERVAL_MIN) m_interval = LOGWRITE_INTERVAL_MIN;
-    if(m_interval > LOGWRITE_INTERVAL_MAX) m_interval = LOGWRITE_INTERVAL_MAX;
-    if(m_keepfiles < LOGWRITE_KEEPLOG_MIN)  m_keepfiles = LOGWRITE_KEEPLOG_MIN;
-    if(m_keepfiles > LOGWRITE_KEEPLOG_MAX)  m_keepfiles = LOGWRITE_KEEPLOG_MAX;
   }
 }
 
@@ -844,7 +853,7 @@ LogAnalysis::RemoveLogfilesKeeping()
   {
     do
     {
-      // Only considder for delete if it's a 'real' file
+      // Only consider for delete if it's a 'real' file
       if((fileInfo.attrib & _A_SUBDIR) == 0)
       {
         CString fileName = direct + fileInfo.name;
@@ -858,20 +867,16 @@ LogAnalysis::RemoveLogfilesKeeping()
   // Sort all files in ascending order
   std::sort(map.begin(),map.end());
 
-  // Delete from the vector, beginning at the end. 
+  // Delete from the vector, beginning with the oldest
   // Start deleting if number of files-to-keep has been reached
-  int total = 0;
-  std::vector<CString>::iterator it = map.end();
-  while(true)
+  int total = ((int)map.size()) - m_keepfiles;
+  std::vector<CString>::iterator file = map.begin();
+  while(file != map.end())
   {
-    if(it == map.begin())
+    if(total-- <= 0)
     {
       break;
     }
-    --it;
-    if(++total > m_keepfiles)
-    {
-      DeleteFile(*it);
-    }
+    DeleteFile(*file++);
   }
 }

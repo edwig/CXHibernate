@@ -115,8 +115,7 @@ void XMLElement::DropReference()
 bool
 XMLElement::IsValidName(const CString& p_name)
 {
-  if (p_name.IsEmpty() ||
-      p_name.Left(3).CompareNoCase("XML") == 0)
+  if(p_name.IsEmpty())
   {
     return false;
   }
@@ -125,7 +124,7 @@ XMLElement::IsValidName(const CString& p_name)
   {
     char c = p_name[i];
     if (c == '_' ||
-     // c == ':' || formeel geldig maar geeft ongewenste resultaten 
+     // c == ':' || Formally correct, but gives unwanted results
        (c >= 'A' && c <= 'Z') ||
        (c >= 'a' && c <= 'z'))
     {
@@ -195,7 +194,6 @@ XMLMessage::XMLMessage(XMLMessage* p_orig)
 
 XMLMessage::~XMLMessage()
 {
-  Reset();
   m_root->DropReference();
 }
 
@@ -203,6 +201,17 @@ void
 XMLMessage::Reset()
 {
   m_root->Reset();
+}
+
+void
+XMLMessage::SetRoot(XMLElement* p_root)
+{
+  if(m_root)
+  {
+    m_root->DropReference();
+  }
+  m_root = p_root;
+  m_root->AddReference();
 }
 
 #pragma endregion XMLMessage_XTOR
@@ -287,12 +296,17 @@ XMLMessage::SaveFile(const CString& p_fileName,bool p_withBom /*= false*/)
     }
 
     CString inhoud = Print();
+    // Allow derived classes (SOAP) to encrypt the whole message
+    EncryptMessage(inhoud);
     if(fwrite(inhoud.GetString(),inhoud.GetLength(),1,file) == 1)
     {
       result = true;
     }
     // Close and flush the file
-    fclose(file);
+    if(fclose(file))
+    {
+      return false;
+    }
   }
   return result;
 }
@@ -355,6 +369,8 @@ XMLMessage::Print()
   bool utf8 = (m_encoding == XMLEncoding::ENC_UTF8);
 
   CString message = PrintHeader();
+
+  message += PrintStylesheet();
   message += PrintElements(m_root,utf8);
   if(m_condensed)
   {
@@ -401,6 +417,26 @@ XMLMessage::PrintHeader()
   if(m_condensed == false)
   {
     header += "\n";
+  }
+  return header;
+}
+
+CString
+XMLMessage::PrintStylesheet()
+{
+  CString header;
+  if(!m_stylesheetType.IsEmpty() || !m_stylesheet.IsEmpty())
+  {
+    header = "<?xml-stylesheet";
+    if(!m_stylesheetType.IsEmpty())
+    {
+      header.AppendFormat(" type=\"%s\"",m_stylesheetType.GetString());
+    }
+    if(!m_stylesheet.IsEmpty())
+    {
+      header.AppendFormat(" href=\"%s\"",m_stylesheet.GetString());
+    }
+    header += "?>";
   }
   return header;
 }
@@ -645,6 +681,14 @@ XMLMessage::PrintElementsJson(XMLElement* p_element
   }
 
   return message;
+}
+
+// Encrypt the whole message: yielding a new message
+void
+XMLMessage::EncryptMessage(CString& /*p_message*/)
+{
+  // Does nothing for now.
+  // Only used in derived classes
 }
 
 #pragma endregion Parsing
@@ -1028,7 +1072,7 @@ XMLMessage::FindElement(XMLElement* p_base, CString p_name,bool p_recurse /*=tru
   {
     if(namesp.IsEmpty() || base->GetNamespace().Compare(namesp) == 0)
     {
-    return base;
+      return base;
     }
   }
 

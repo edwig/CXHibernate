@@ -256,7 +256,7 @@ HTTPClient::GetError(CString* p_message /*=NULL*/)
 {
   if(p_message && m_lastError)
   {
-    *p_message = GetLastErrorAsString(m_lastError);
+    p_message->Format("[%d] %s",m_lastError,GetLastErrorAsString(m_lastError).GetString());
   }
   return m_lastError;
 }
@@ -498,8 +498,8 @@ HTTPClient::InitLogging()
     m_logLevel = level;
     if(m_log)
     {
-    m_log->SetLogLevel(m_logLevel);
-  }
+      m_log->SetLogLevel(m_logLevel);
+    }
   }
 
   // Now "Logging.config" can override these settings.
@@ -2119,7 +2119,7 @@ HTTPClient::Send(SOAPMessage* p_msg)
   // Try to optimize and not re-parse the complete URL
   if(!p_msg->GetServer().IsEmpty() &&
      !p_msg->GetAbsolutePath().IsEmpty() &&
-      p_msg->GetPort() != 0)
+      p_msg->GetPort() != INTERNET_DEFAULT_HTTP_PORT)
   {
     ReplaceSetting(&m_user,    p_msg->GetUser());
     ReplaceSetting(&m_password,p_msg->GetPassword());
@@ -2764,7 +2764,7 @@ HTTPClient::Send()
   AddWebSocketUpgrade();
   // Always add content length
   AddLengthHeader();
-  
+
   // If always using a client certificate, set it upfront
   if(m_certPreset)
   {
@@ -3101,13 +3101,13 @@ HTTPClient::TraceTheSend()
       {
         m_trace->TraceBody("Outgoing bufferpart", (BYTE*)buffer, (unsigned long)length);
       }
-      if (MUSTLOG(HLL_TRACEDUMP))
+      if(MUSTLOG(HLL_TRACEDUMP))
       {
         part = 0;
         while(m_buffer->GetBufferPart(part++, buffer, length))
         {
-        m_trace->TraceHexa("Outgoing",buffer,(unsigned long) length);
-      }
+          m_trace->TraceHexa("Outgoing", buffer, (unsigned long)length);
+        }
       }
     }
   }

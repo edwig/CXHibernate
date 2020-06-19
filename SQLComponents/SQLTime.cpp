@@ -2,7 +2,7 @@
 //
 // File: SQLTime.cpp
 //
-// Copyright (c) 1998-2019 ir. W.E. Huisman
+// Copyright (c) 1998-2020 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy of 
@@ -99,6 +99,23 @@ SQLTime::SQLTime(__int64 p_seconden)
 {
   m_seconds = (long)p_seconden;
   Normalise();
+}
+
+// CTOR from a SQL_TIME_STRUCT
+//
+SQLTime::SQLTime(SQL_TIME_STRUCT* p_timestruct)
+{
+  if (p_timestruct == nullptr)
+  {
+    SetNull();
+  }
+  else
+  {
+    m_theTime.m_hour   = p_timestruct->hour;
+    m_theTime.m_minute = p_timestruct->minute;
+    m_theTime.m_second = p_timestruct->second;
+    SetTime();
+  }
 }
 
 // DTOR for SQLTime

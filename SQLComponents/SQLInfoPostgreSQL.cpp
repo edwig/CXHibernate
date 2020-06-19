@@ -2,7 +2,7 @@
 //
 // File: SQLInfoPostgreSQL.cpp
 //
-// Copyright (c) 1998-2019 ir. W.E. Huisman
+// Copyright (c) 1998-2020 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy of 
@@ -158,6 +158,13 @@ bool
 SQLInfoPostgreSQL::GetRDBMSMustCommitDDL() const
 {
   return true;
+}
+
+// Correct maximum precision,scale for a NUMERIC datatype
+void
+SQLInfoPostgreSQL::GetRDBMSNumericPrecisionScale(SQLULEN& /*p_precision*/, SQLSMALLINT& /*p_scale*/) const
+{
+  // NO-OP
 }
 
 // KEYWORDS
@@ -1058,8 +1065,8 @@ SQLInfoPostgreSQL::GetCATALOGForeignAttributes(CString p_schema,CString p_tablen
       }
       else
       {
-      part += "\n   AND sch.nspname = '" + p_schema + "'";
-    }
+        part += "\n   AND sch.nspname = '" + p_schema + "'";
+      }
     }
     if(!p_tablename.IsEmpty())
     {
@@ -1069,8 +1076,8 @@ SQLInfoPostgreSQL::GetCATALOGForeignAttributes(CString p_schema,CString p_tablen
       }
       else
       {
-      part += "\n   AND cla.relname = '" + p_tablename + "'";
-    }
+        part += "\n   AND cla.relname = '" + p_tablename + "'";
+      }
     }
     if(!p_constraint.IsEmpty())
     {
@@ -1080,8 +1087,8 @@ SQLInfoPostgreSQL::GetCATALOGForeignAttributes(CString p_schema,CString p_tablen
       }
       else
       {
-      part += "\n   AND con.conname = '" + p_constraint + "'";
-    }
+        part += "\n   AND con.conname = '" + p_constraint + "'";
+      }
     }
 
     // Append to query, multiple for multiple columns
@@ -1464,7 +1471,7 @@ SQLInfoPostgreSQL::GetCATALOGViewAttributes(CString p_schema,CString p_viewname)
     query += "   AND tab.relname ";
     query += p_viewname.Find('%') >= 0 ? "LIKE '" : "= '";
     query += p_viewname + "'\n";
-}
+  }
   query += " ORDER BY 1,2,3";
                   
   return query;}
@@ -1956,6 +1963,13 @@ SQLInfoPostgreSQL::DoSQLCall(SQLQuery* p_query,CString& p_schema,CString& p_proc
     // Returning the first return column as the result of the procedure
     return p_query->GetParameter(0);
   }
+  return nullptr;
+}
+
+// Calling a stored function with named parameters, returning a value
+SQLVariant*
+SQLInfoPostgreSQL::DoSQLCallNamedParameters(SQLQuery* /*p_query*/,CString& /*p_schema*/,CString& /*p_procedure*/)
+{
   return nullptr;
 }
 

@@ -2,7 +2,7 @@
 //
 // File: SQLDatabasePool.cpp
 //
-// Copyright (c) 1998-2019 ir. W.E. Huisman
+// Copyright (c) 1998-2020 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy of 
@@ -268,6 +268,20 @@ SQLDatabasePool::RegisterLogContext(int p_level,LOGLEVEL p_loglevel,LOGPRINT p_l
   m_logContext   = p_logContext;
 }
 
+// Add a column rebind for this database session: No bounds checking!
+void
+SQLDatabasePool::AddColumnRebind(int p_sqlType,int p_cppType)
+{
+  m_rebindColumns[p_sqlType] = p_cppType;
+}
+
+// Add a parameter rebind for this database session: No bounds checking!
+void
+SQLDatabasePool::AddParameterRebind(int p_sqlType,int p_cppType)
+{
+  m_rebindParameters[p_sqlType] = p_cppType;
+}
+
 //////////////////////////////////////////////////////////////////////////
 //
 // PRIVATE
@@ -433,6 +447,7 @@ SQLDatabasePool::CleanupInternally(bool p_aggressive)
             // Optionally remove the whole list, if it was the last one
             if(all->empty())
             {
+              delete all;
               m_allDatabases.erase(lit);
             }
           }
@@ -451,6 +466,7 @@ SQLDatabasePool::CleanupInternally(bool p_aggressive)
     // Optionally remove the complete list
     if(list->empty())
     {
+      delete list;
       it = m_freeDatabases.erase(it);
     }
     else
@@ -528,6 +544,10 @@ SQLDatabasePool::OpenDatabase(SQLDatabase* p_dbs,CString& p_connectionName)
     p_dbs->Open(connString);
     p_dbs->SetDatasource(conn->m_datasource);
     p_dbs->SetUserName(conn->m_username);
+
+    // Tell it what the standard rebind info is (if any)
+    // Can only be done after the open (when SQLDatabase has cleared and set it' rebound info)
+    AddRebindsToDatabase(p_dbs);
     
     // Tell it the logfile
     CString text;
@@ -648,6 +668,22 @@ SQLDatabasePool::WilLog()
     }
   }
   return false;
+}
+
+// Add our rebind mappings to a newly opened database
+void
+SQLDatabasePool::AddRebindsToDatabase(SQLDatabase* p_database)
+{
+  // Add all our rebound columns
+  for(auto& rebind : m_rebindColumns)
+  {
+    p_database->AddColumnRebind(rebind.first,rebind.second);
+  }
+  // Add all our rebound parameters
+  for(auto& rebind : m_rebindParameters)
+  {
+    p_database->AddParameterRebind(rebind.first,rebind.second);
+  }
 }
 
 }

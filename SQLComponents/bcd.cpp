@@ -8,27 +8,31 @@
 //  And is always stored in normalized mode after an operation or conversion
 //  with an implied decimal point between the first and second position
 //
-// Copyright (c) 1998-2019 ir. W.E. Huisman
+// Copyright (c) 1998-2020 ir. W.E. Huisman
+// Version 1.2 of 18-12-2019
 //
 //  Examples:
 //  E+03 15456712 45000000 00000000 -> 1545.671245
 //  E+01 34125600 00000000 00000000 -> 3.41256
 //  E-05 78976543 12388770 00000000 -> 0.0000789765431238877
 //
-// Version number: See SQLComponents.h
-//
-#include "Stdafx.h"
-#include "SQLComponents.h"
-#include "bcd.h"
-#include "SQLVariantFormat.h"
-#include <math.h>    // Still needed for conversions of double
-#include <intsafe.h>
+//////////////////////////////////////////////////////////////////////////
+
+#include "Stdafx.h"           // MFC is a requirement
+#include "bcd.h"              // OUR INTERFACE
+#include "StdException.h"     // Throwing exceptions
+#include "SQLVariantFormat.h" // Decimal and thousand separators
+#include <math.h>             // Still needed for conversions of double
+#include <intsafe.h>          // Min/Max sizes of integer datatypes
+#include <locale.h>         
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
 #undef THIS_FILE
 static char THIS_FILE[] = __FILE__;
 #endif
+
+#ifndef COMPILED_TOGETHER_WITH_MARLIN
 
 namespace SQLComponents
 {
@@ -66,9 +70,24 @@ bcd::bcd(const char p_value)
 }
 
 // bcd::bcd(value)
+// Description: BCD from an unsigned char value
+bcd::bcd(const unsigned char p_value)
+{
+  SetValueInt((int)p_value);
+}
+
+// bcd::bcd(value)
 // Description: BCD from a short value
 // 
 bcd::bcd(const short p_value)
+{
+  SetValueInt((int)p_value);
+}
+
+// bcd::bcd(value)
+// Description: BCD from an unsigned short value
+//
+bcd::bcd(const unsigned short p_value)
 {
   SetValueInt((int)p_value);
 }
@@ -80,6 +99,13 @@ bcd::bcd(const int p_value)
   SetValueInt(p_value);
 }
 
+// bcd::bcd(value)
+// BCD from an unsigned integer
+bcd::bcd(const unsigned int p_value)
+{
+  SetValueInt64((int64)p_value,0);
+}
+
 // bcd::bcd(value,value)
 // Description: Construct a BCD from a long and an option long
 // Technical:   See description of SetValueLong
@@ -87,6 +113,14 @@ bcd::bcd(const int p_value)
 bcd::bcd(const long p_value, const long p_restValue /*= 0*/)
 {
   SetValueLong(p_value,p_restValue);
+}
+
+// bcd::bcd(value,value)
+// Description: Construct a BCD from an unsigned long and an unsigned optional long
+// Technical:   See description of SetValueLong
+bcd::bcd(const unsigned long p_value, const unsigned long p_restValue /*= 0*/)
+{
+  SetValueInt64((int64)p_value,(int64)p_restValue);
 }
 
 // bcd::bcd(value,value)
@@ -103,6 +137,14 @@ bcd::bcd(const uint64 p_value,const int64 p_restvalue)
   SetValueUInt64(p_value,p_restvalue);
 }
 
+// bcd::bcd(float)
+// Description: Construct a bcd from a float
+// 
+bcd::bcd(const float p_value)
+{
+  SetValueDouble((double)p_value);
+}
+
 // bcd::bcd(double)
 // Description: Construct a bcd from a double
 // 
@@ -111,23 +153,13 @@ bcd::bcd(const double p_value)
   SetValueDouble(p_value);
 }
 
-// bcd::bcd(string)
-// Description: Assignment-constructor of class bcd from a string
-// Parameters:  p_string -> Input string with number
-//              p_fromDB -> Input comes from a database (always American format)
-bcd::bcd(const CString& p_string,bool p_fromDB /*= false*/)
-{
-  SetValueString(p_string,p_fromDB);
-}
-
 // BCD From a character string
 // Description: Assignment-constructor from an elementary character data pointer
 // Parameters:  p_string -> Input character pointer (containing a number)
 //              p_fromDB -> Input comes from a  database (always American format)
 bcd::bcd(const char* p_string,bool p_fromDB /*= false*/)
 {
-  CString str(p_string);
-  SetValueString(str,p_fromDB);
+  SetValueString(p_string,p_fromDB);
 }
 
 // bcd::bcd(numeric)
@@ -145,6 +177,7 @@ bcd::bcd(const SQL_NUMERIC_STRUCT* p_numeric)
 //
 bcd::~bcd()
 {
+  // Nothing interesting here :-)
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -244,12 +277,48 @@ bcd::operator+(const bcd& p_value) const
   return Add(p_value);
 }
 
+const bcd
+bcd::operator+(const int p_value) const
+{
+  return Add(bcd(p_value));
+}
+
+const bcd
+bcd::operator+(const double p_value) const
+{
+  return Add(bcd(p_value));
+}
+
+const bcd
+bcd::operator+(const char* p_value) const
+{
+  return Add(bcd(p_value));
+}
+
 // bcd::-
 // Description: Subtraction operator
 const bcd
 bcd::operator-(const bcd& p_value) const
 {
   return Sub(p_value);
+}
+
+const bcd
+bcd::operator-(const int p_value) const
+{
+  return Sub(bcd(p_value));
+}
+
+const bcd
+bcd::operator-(const double p_value) const
+{
+  return Sub(bcd(p_value));
+}
+
+const bcd
+bcd::operator-(const char* p_value) const
+{
+  return Sub(bcd(p_value));
 }
 
 // bcd::*
@@ -260,12 +329,48 @@ bcd::operator*(const bcd& p_value) const
   return Mul(p_value);
 }
 
+const bcd
+bcd::operator*(const int p_value) const
+{
+  return Mul(bcd(p_value));
+}
+
+const bcd
+bcd::operator*(const double p_value) const
+{
+  return Mul(bcd(p_value));
+}
+
+const bcd
+bcd::operator*(const char* p_value) const
+{
+  return Mul(bcd(p_value));
+}
+
 // bcd::/
 // Description: Division operator
 const bcd
 bcd::operator/(const bcd& p_value) const
 {
   return Div(p_value);
+}
+
+const bcd
+bcd::operator/(const int p_value) const
+{
+  return Div(bcd(p_value));
+}
+
+const bcd
+bcd::operator/(const double p_value) const
+{
+  return Div(bcd(p_value));
+}
+
+const bcd
+bcd::operator/(const char* p_value) const
+{
+  return Div(bcd(p_value));
 }
 
 // bcd::%
@@ -276,12 +381,51 @@ bcd::operator%(const bcd& p_value) const
   return Mod(p_value);
 }
 
+const bcd  
+bcd::operator%(const int p_value) const
+{
+  return Mod(bcd(p_value));
+}
+
+const bcd
+bcd::operator%(const double p_value) const
+{
+  return Mod(bcd(p_value));
+}
+
+const bcd
+bcd::operator%(const char* p_value) const
+{
+  return Mod(bcd(p_value));
+}
+
 // bcd::operator +=
 // Description: Operator to add a bcd to this one
 bcd&
 bcd::operator+=(const bcd& p_value)
 {
-  *this = this->Add(p_value);
+  *this = Add(p_value);
+  return *this;
+}
+
+bcd&
+bcd::operator+=(const int p_value)
+{
+  *this = Add(bcd(p_value));
+  return *this;
+}
+
+bcd&
+bcd::operator+=(const double p_value)
+{
+  *this = Add(bcd(p_value));
+  return *this;
+}
+
+bcd&
+bcd::operator+=(const char* p_value)
+{
+  *this = Add(bcd(p_value));
   return *this;
 }
 
@@ -290,7 +434,28 @@ bcd::operator+=(const bcd& p_value)
 bcd&
 bcd::operator-=(const bcd& p_value)
 {
-  *this = this->Sub(p_value);
+  *this = Sub(p_value);
+  return *this;
+}
+
+bcd& 
+bcd::operator-=(const int p_value)
+{
+  *this = Sub(bcd(p_value));
+  return *this;
+}
+
+bcd&
+bcd::operator-=(const double p_value)
+{
+  *this = Sub(bcd(p_value));
+  return *this;
+}
+
+bcd&
+bcd::operator-=(const char* p_value)
+{
+  *this = Sub(bcd(p_value));
   return *this;
 }
 
@@ -299,7 +464,28 @@ bcd::operator-=(const bcd& p_value)
 bcd& 
 bcd::operator*=(const bcd& p_value)
 {
-  *this = this->Mul(p_value);
+  *this = Mul(p_value);
+  return *this;
+}
+
+bcd&
+bcd::operator*=(const int p_value)
+{
+  *this = Mul(bcd(p_value));
+  return *this;
+}
+
+bcd&
+bcd::operator*=(const double p_value)
+{
+  *this = Mul(bcd(p_value));
+  return *this;
+}
+
+bcd&
+bcd::operator*=(const char* p_value)
+{
+  *this = Mul(bcd(p_value));
   return *this;
 }
 
@@ -308,7 +494,28 @@ bcd::operator*=(const bcd& p_value)
 bcd& 
 bcd::operator/=(const bcd& p_value)
 {
-  *this = this->Div(p_value);
+  *this = Div(p_value);
+  return *this;
+}
+
+bcd&
+bcd::operator/=(const int p_value)
+{
+  *this = Div(bcd(p_value));
+  return *this;
+}
+
+bcd&
+bcd::operator/=(const double p_value)
+{
+  *this = Div(bcd(p_value));
+  return *this;
+}
+
+bcd&
+bcd::operator/=(const char* p_value)
+{
+  *this = Div(bcd(p_value));
   return *this;
 }
 
@@ -317,7 +524,28 @@ bcd::operator/=(const bcd& p_value)
 bcd& 
 bcd::operator%=(const bcd& p_value)
 {
-  *this = this->Mod(p_value);
+  *this = Mod(p_value);
+  return *this;
+}
+
+bcd&
+bcd::operator%=(const int p_value)
+{
+  *this = Mod(bcd(p_value));
+  return *this;
+}
+
+bcd&
+bcd::operator%=(const double p_value)
+{
+  *this = Mod(bcd(p_value));
+  return *this;
+}
+
+bcd&
+bcd::operator%=(const char* p_value)
+{
+  *this = Mod(bcd(p_value));
   return *this;
 }
 
@@ -404,7 +632,7 @@ bcd::operator=(const bcd& p_value)
 // bcd::=
 // Description: Assignment operator from a long
 bcd& 
-bcd::operator=(const long p_value)
+bcd::operator=(const int p_value)
 {
   SetValueLong(p_value,0);
   return *this;
@@ -422,7 +650,7 @@ bcd::operator=(const double p_value)
 // bcd::=
 // Description: Assignment operator from a string
 bcd& 
-bcd::operator=(const CString& p_value)
+bcd::operator=(const char* p_value)
 {
   SetValueString(p_value);
   return *this;
@@ -461,6 +689,27 @@ bcd::operator==(const bcd& p_value) const
   return true;
 }
 
+bool
+bcd::operator==(const int p_value) const
+{
+  bcd value(p_value);
+  return *this == value;
+}
+
+bool
+bcd::operator==(const double p_value) const
+{
+  bcd value(p_value);
+  return *this == value;
+}
+
+bool
+bcd::operator==(const char* p_value) const
+{
+  bcd value(p_value);
+  return *this == value;
+}
+
 // bcd::operator!=
 // Description: Inequality comparison of two bcd's
 //
@@ -469,6 +718,27 @@ bcd::operator!=(const bcd& p_value) const
 {
   // (x != y) is equal to !(x == y)
   return !(*this == p_value);
+}
+
+bool
+bcd::operator!=(const int p_value) const
+{
+  bcd value(p_value);
+  return !(*this == value);
+}
+
+bool
+bcd::operator!=(const double p_value) const
+{
+  bcd value(p_value);
+  return !(*this == value);
+}
+
+bool
+bcd::operator!=(const char* p_value) const
+{
+  bcd value(p_value);
+  return !(*this == value);
 }
 
 bool
@@ -482,6 +752,14 @@ bcd::operator<(const bcd& p_value) const
     // If this one is positive "smaller than" is false
     return (m_sign == Negative);
   }
+
+  // Issue #2 at github
+  // Zero is always smaller than everything else
+  if(IsNull() && !p_value.IsNull())
+  {
+    return (m_sign == Positive);
+  }
+
   // Shortcut: If the exponent differ, the mantissa's don't matter
   if(m_exponent != p_value.m_exponent)
   {
@@ -510,6 +788,27 @@ bcd::operator<(const bcd& p_value) const
 }
 
 bool
+bcd::operator<(const int p_value) const
+{
+  bcd value(p_value);
+  return *this < value;
+}
+
+bool
+bcd::operator<(const double p_value) const
+{
+  bcd value(p_value);
+  return *this < value;
+}
+
+bool
+bcd::operator<(const char* p_value) const
+{
+  bcd value(p_value);
+  return *this < value;
+}
+
+bool
 bcd::operator>(const bcd& p_value) const
 {
   // Shortcut: Negative numbers are smaller than positive ones
@@ -519,6 +818,11 @@ bcd::operator>(const bcd& p_value) const
     // If this one is positive "greater than" is true
     // If this one is negative "greater than" is false
     return (m_sign == Positive);
+  }
+  // Shortcut: if value is zero
+  if(IsNull())
+  {
+    return (p_value.m_sign == Negative);
   }
   // Shortcut: If the exponent differ, the mantissa's don't matter
   if(m_exponent != p_value.m_exponent)
@@ -548,6 +852,27 @@ bcd::operator>(const bcd& p_value) const
 }
 
 bool 
+bcd::operator>(const int p_value) const
+{
+  bcd value(p_value);
+  return *this > value;
+}
+
+bool
+bcd::operator>(const double p_value) const
+{
+  bcd value(p_value);
+  return *this > value;
+}
+
+bool
+bcd::operator>(const char* p_value) const
+{
+  bcd value(p_value);
+  return *this > value;
+}
+
+bool
 bcd::operator<=(const bcd& p_value) const
 {
   // (x <= y) equals !(x > y)
@@ -555,10 +880,52 @@ bcd::operator<=(const bcd& p_value) const
 }
 
 bool 
+bcd::operator<=(const int p_value) const
+{
+  bcd value(p_value);
+  return !(*this > value);
+}
+
+bool
+bcd::operator<=(const double p_value) const
+{
+  bcd value(p_value);
+  return !(*this > value);
+}
+
+bool
+bcd::operator<=(const char* p_value) const
+{
+  bcd value(p_value);
+  return !(*this > value);
+}
+
+bool
 bcd::operator>=(const bcd& p_value) const
 {
   // (x >= y) equals !(x < y)
   return !(*this < p_value);
+}
+
+bool
+bcd::operator>=(const int p_value) const
+{
+  bcd value(p_value);
+  return !(*this < value);
+}
+
+bool
+bcd::operator>=(const double p_value) const
+{
+  bcd value(p_value);
+  return !(*this < value);
+}
+
+bool
+bcd::operator>=(const char* p_value) const
+{
+  bcd value(p_value);
+  return !(*this < value);
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -622,7 +989,7 @@ bcd::Round(int p_precision /*=0*/)
   }
   else
   {
-    // In-between optimalisation
+    // In-between Optimalisation
     int base = bcdBase;
     // Calculate base
     for(int p2 = 0;p2 <= pos; ++p2)
@@ -708,12 +1075,19 @@ bcd::Truncate(int p_precision /*=0*/)
     }
   }
 }
-
+  
 // Change the sign
 void
 bcd::Negate()
 {
+  if(IsNull())
+  {
+    m_sign = Positive;
+  }
+  else
+  {
   m_sign = (m_sign == Positive) ? Negative : Positive;
+  }
 }
   
 //////////////////////////////////////////////////////////////////////////
@@ -829,7 +1203,7 @@ bcd::SquareRoot() const
   number = *this; // Number to get the root from
   if(number.GetSign() == -1)
   {
-    throw StdException("Cannot get a square root from a negative number.");
+    throw new StdException("BCD: Cannot get a square root from a negative number.");
   }
   // Reduction by dividing through square of a whole number
   // for speed a power of two
@@ -923,7 +1297,7 @@ bcd::Log() const
 
   if(*this <= bcd(0L)) 
   { 
-    throw StdException("Cannot calculate a natural logarithme of a number <= 0");
+    throw new StdException("BCD: Cannot calculate a natural logarithm of a number <= 0");
   }
   // Bring number under 10 and save exponent
   number = *this;
@@ -934,7 +1308,7 @@ bcd::Log() const
   }
   // In order to get a fast Taylor series result we need to get the fraction closer to one
   // The fraction part is [1.xxx-9.999] (base 10) OR [1.xxx-255.xxx] (base 256) at this point
-  // Repeat a series of square root until 'getal' < 1.2
+  // Repeat a series of square root until 'number' < 1.2
   for(k = 0; number > fast; k++)
   {
     number = number.SquareRoot();
@@ -986,7 +1360,13 @@ bcd::Exp() const
 
   number = *this;
 
-  if( number.GetSign () < 0 )
+  // Can not calculate: will always be one!
+  if(number.IsNull())
+  {
+    return bcd(1);
+  }
+
+  if(number.GetSign () < 0 )
   {
     number = -number;;
   }
@@ -1032,13 +1412,13 @@ bcd::Exp() const
   // Take care of the sign
   if(this->GetSign() < 0 )
   {
-    result = -result;
+    result = bcd(1) / result;
   }
   return result;
 }
 
 // bcd::Log10
-// Description: Logarithme in base 10
+// Description: Logarithm in base 10
 // Technical:   log10 = ln(x) / ln(10);
 bcd     
 bcd::Log10() const
@@ -1047,7 +1427,7 @@ bcd::Log10() const
 
   if(GetSign() <= 0) 
   { 
-    throw StdException("Cannot get a 10-logarithme of a number <= 0");
+    throw new StdException("BCD: Cannot get a 10-logarithm of a number <= 0");
   }
   res = *this;
   res = res.Log() / LN10();
@@ -1057,7 +1437,7 @@ bcd::Log10() const
 
 // Ten Power
 // Description: bcd . 10^n
-// Technical:   add n to the expponent of the number
+// Technical:   add n to the exponent of the number
 bcd
 bcd::TenPower(int n)
 {
@@ -1086,7 +1466,7 @@ bcd::TenPower(int n)
 //              1) Reduce x to between 0..2*PI 
 //              2) Reduce further until x between 0..PI by means of sin(x+PI) = -Sin(x)
 //              3) Then do the Taylor expansion series
-// Reduction is needed to speed up the Tayler expansion and reduce rounding errors
+// Reduction is needed to speed up the Taylor expansion and reduce rounding errors
 //
 bcd
 bcd::Sine() const
@@ -1201,6 +1581,13 @@ bcd::Cosine() const
   {
     number = result - number;
   }
+
+  // Breaking criterion, cosine close to 1 if number is close to zero
+  if(number.AbsoluteValue() < epsilon)
+  {
+    return (result = 1);
+  }
+
   // Now use the trisection identity cos(3x)=-3*cos(x)+4*cos(x)^3
   // until argument is less than 0.5
   for( trisection = 0, between = c1; number / between > c05; ++trisection)
@@ -1269,7 +1656,7 @@ bcd::Tangent() const
   bcd oneandhalf = three * halfpi;
   if( number == halfpi || number == oneandhalf)
   { 
-    throw StdException("Cannot calculate a tangent from a angle of 1/2 pi or 3/2 pi");
+    throw new StdException("BCD: Cannot calculate a tangent from a angle of 1/2 pi or 3/2 pi");
   }
   // Sin(x)/Sqrt(1-Sin(x)^2)
   result     = number.Sine(); 
@@ -1304,7 +1691,7 @@ bcd::ArcSine() const
   number = *this;
   if(number > c1 || number < -c1)
   {
-    throw StdException("Cannot calculate an arcsine from a number > 1 or < -1");
+    throw new StdException("BCD: Cannot calculate an arcsine from a number > 1 or < -1");
   }
 
   // Save the sign
@@ -1476,7 +1863,7 @@ bcd::ArcTangent2Points(bcd p_x) const
 
 //////////////////////////////////////////////////////////////////////////
 //
-// GET A SOMETHING DIFFERENT THAN THE BCD
+// GET AS SOMETHING DIFFERENT THAN THE BCD
 //
 //////////////////////////////////////////////////////////////////////////
 
@@ -1487,9 +1874,21 @@ double
 bcd::AsDouble() const
 {
   double result = 0.0;
-  double factor = 1.0;
 
+  if(bcdDigits >= 8)
+  {
+    // SHORTCUT FOR PERFORMANCE: 
+    // A double cannot have more than 16 digits
+    // so everything over 16 digits gets discarded
+    result  = ((double)m_mantissa[0]) * 10.0 / (double) bcdBase;
+    result += ((double)m_mantissa[1]) * 10.0 / (double) bcdBase / (double) bcdBase;
+    //result += ((double)m_mantissa[2]) / bcdBase / bcdBase / bcdBase;
+  }
+  else
+  {
+    // Works for ALL implementations of bcdDigits  and bcdLength
   // Get the mantissa into the result
+    double factor = 1.0;
   for(int ind = 0; ind < bcdLength; ++ind)
   {
     long base    = bcdBase / 10;
@@ -1507,6 +1906,8 @@ bcd::AsDouble() const
       factor /= 10;
     }
   }
+  }
+
   // Take care of exponent
   if(m_exponent)
   {
@@ -1546,14 +1947,14 @@ bcd::AsShort() const
   {
     if(result > SHORT_MAX)
     {
-      throw StdException("BCD: Overflow in conversion to short number.");
+      throw new StdException("BCD: Overflow in conversion to short number.");
     }
   }
   else
   {
     if(result < SHORT_MIN)
     {
-      throw StdException("BCD: Underflow in conversion to short number.");
+      throw new StdException("BCD: Underflow in conversion to short number.");
     }
   }
   return (short) result;
@@ -1567,7 +1968,7 @@ bcd::AsUShort() const
   // Check for unsigned
   if(m_sign == Negative)
   {
-    throw StdException("BCD: Cannot convert a negative number to an unsigned short number.");
+    throw new StdException("BCD: Cannot convert a negative number to an unsigned short number.");
   }
   // Quick check for zero
   if(m_exponent < 0)
@@ -1588,7 +1989,7 @@ bcd::AsUShort() const
   // Take care of overflow
   if(result > USHORT_MAX)
   {
-    throw StdException("BCD: Overflow in conversion to unsigned short number.");
+    throw new StdException("BCD: Overflow in conversion to unsigned short number.");
   }
 
   return (short)result;
@@ -1620,14 +2021,14 @@ bcd::AsLong() const
   {
     if(result > LONG_MAX)
     {
-      throw StdException("BCD: Overflow in conversion to integer number.");
+      throw new StdException("BCD: Overflow in conversion to integer number.");
     }
   }
   else
   {
     if(result < LONG_MIN)
     {
-      throw StdException("BCD: Underflow in conversion to integer number.");
+      throw new StdException("BCD: Underflow in conversion to integer number.");
     }
     result = -result;
   }
@@ -1642,7 +2043,7 @@ bcd::AsULong() const
   // Check for unsigned
   if(m_sign == Negative)
   {
-    throw StdException("BCD: Cannot convert a negative number to an unsigned long.");
+    throw new StdException("BCD: Cannot convert a negative number to an unsigned long.");
   }
 
   // Quick optimization for really small numbers
@@ -1664,7 +2065,7 @@ bcd::AsULong() const
   // Take care of overflow
   if(result > ULONG_MAX)
   {
-    throw StdException("BCD: Overflow in conversion to unsigned long integer.");
+    throw new StdException("BCD: Overflow in conversion to unsigned long integer.");
   }
   return (long)result;
 }
@@ -1703,7 +2104,7 @@ bcd::AsInt64() const
   // Take care of overflow
   if(result1 > (LLONG_MAX / base2))
   {
-    throw StdException("BCD: Overflow in conversion to 64 bits integer number.");
+    throw new StdException("BCD: Overflow in conversion to 64 bits integer number.");
   }
   result2 += (result1 * base2);
 
@@ -1722,7 +2123,7 @@ bcd::AsUInt64() const
   // Check for negative
   if(m_sign == Negative)
   {
-    throw StdException("BCD: Cannot convert a negative number to an unsigned 64 bits integer");
+    throw new StdException("BCD: Cannot convert a negative number to an unsigned 64 bits integer");
   }
   // Quick optimization for really small numbers
   if(m_exponent < 0)
@@ -1752,7 +2153,7 @@ bcd::AsUInt64() const
   // Take care of overflow
   if(result1 > (ULLONG_MAX / base2))
   {
-    throw StdException("BCD: Overflow in conversion to 64 bits unsigned integer number.");
+    throw new StdException("BCD: Overflow in conversion to 64 bits unsigned integer number.");
   }
   result2 += (result1 * base2);
 
@@ -1763,7 +2164,7 @@ bcd::AsUInt64() const
 // Description: Get as a mathematical string
 // Technical:   Convert back to "[sign][digit][.[digit]*][E[sign][digits]+]"
 CString 
-bcd::AsString(int p_format /*=Bookkeeping*/,bool p_printPositive /*=false*/) const
+bcd::AsString(bcd::Format p_format /*=Bookkeeping*/,bool p_printPositive /*=false*/) const
 {
   CString result;
   int exp    = m_exponent;
@@ -1848,7 +2249,7 @@ bcd::AsString(int p_format /*=Bookkeeping*/,bool p_printPositive /*=false*/) con
 CString 
 bcd::AsDisplayString(int p_decimals /*=2*/) const
 {
-  // Initalize locale strings
+  // Initialize locale strings
   InitValutaString();
 
   // Not in the bookkeeping range
@@ -1866,7 +2267,7 @@ bcd::AsDisplayString(int p_decimals /*=2*/) const
     str.Replace(".",g_locale_decimalSep);
   }
 
-  // Apply thousand seperators in first part of the number
+  // Apply thousand separators in first part of the number
   if((pos > 0) || (pos == -1 && str.GetLength() > 3))
   {
     CString result = pos > 0 ? str.Mid(pos) : "";
@@ -1922,7 +2323,7 @@ bcd::AsNumeric(SQL_NUMERIC_STRUCT* p_numeric) const
   // Check for overflow. Cannot be greater than 9.999999999E+37
   if(m_exponent >= SQLNUM_MAX_PREC)
   {
-    throw StdException("Overflow in converting bcd to SQL NUMERIC/DECIMAL");
+    throw new StdException("BCD: Overflow in converting bcd to SQL NUMERIC/DECIMAL");
   }
 
   // Calculate the scale of the number
@@ -2006,6 +2407,15 @@ bcd::IsNull() const
     return false;
   }
   return true;
+}
+
+// bcd::IsNearZero
+// Description: Nearly zero or zero
+bool
+bcd::IsNearZero()
+{
+  bcd epsilon = Epsilon(2);
+  return AbsoluteValue() < epsilon;
 }
 
 // bcd::GetSign
@@ -2389,6 +2799,7 @@ bcd::SetValueUInt64(const uint64 p_value,const int64 p_restValue)
   {
     *this += bcd((long)LONG_MAX);
   }
+  Normalize();
 }
 
 // bcd::SetValueDouble
@@ -2429,6 +2840,7 @@ bcd::SetValueDouble(const double p_value)
       base /= 10;
     }
   }
+  Normalize();
 }
 
 // bcd::SetValueString
@@ -2436,7 +2848,7 @@ bcd::SetValueDouble(const double p_value)
 // Technical:   Scans [sign][digit][.[digit]*][E[sign][digits]+]
 //              part =       1        2          3    
 void
-bcd::SetValueString(const CString& p_string,bool /*p_fromDB*/)
+bcd::SetValueString(const char* p_string,bool /*p_fromDB*/)
 {
   // Zero out this number
   Zero();
@@ -2454,10 +2866,10 @@ bcd::SetValueString(const CString& p_string,bool /*p_fromDB*/)
   m_exponent = -1;
 
   // Scan the entire string
-  for(int pos = 0; pos < p_string.GetLength(); ++pos)
+  for(const char* pos = p_string; *pos; ++pos)
   {
     // Get a char at the next position
-    unsigned char c = p_string.GetAt(pos);
+    unsigned char c = *pos;
 
     // Skip whitespace at the beginning
     if(spacing)
@@ -2499,7 +2911,7 @@ bcd::SetValueString(const CString& p_string,bool /*p_fromDB*/)
       default:  // Now must be a digit. No other chars allowed
                 if(isdigit(c) == false)
                 {
-                  throw StdException("BCD: Conversion from string. Bad format in decimal number");
+                  throw new StdException("BCD: Conversion from string. Bad format in decimal number");
                 }
                 break;
     }
@@ -2752,7 +3164,7 @@ bcd::LongToString(long p_value) const
 // bcd::StringNaarLong
 // Description: Convert a string to a single long value
 long
-bcd::StringToLong(CString& p_string) const
+bcd::StringToLong(const char* p_string) const
 {
   return atoi(p_string);
 }
@@ -2829,35 +3241,39 @@ bcd::CompareMantissa(const bcd& p_value) const
   return 0;
 }
 
-#ifdef DEBUG
+#ifdef _DEBUG
 // Debug print of the mantissa
-void 
+CString
 bcd::DebugPrint(char* p_name)
 {
+  CString debug;
+
   // Print the debug name
-  printf("%-14s ",p_name);
+  debug.Format("%-14s ",p_name);
 
   // Print the sign
-  printf("%c ",m_sign == Positive ? '+' : '-');
+  debug.AppendFormat("%c ",m_sign == Positive ? '+' : '-');
 
   // Print the exponent
-  printf("E%+d ",m_exponent);
+  debug.AppendFormat("E%+d ",m_exponent);
 
   // Print the mantissa in special format
   for(int ind = 0;ind < bcdLength; ++ind)
   {
     // Text "%08ld" dependent on bcdDigits
-    printf(" %08ld",m_mantissa[ind]);
+    debug.AppendFormat(" %08ld",m_mantissa[ind]);
   }
-  printf("\n");
+  debug += "\n";
+
+  return debug;
 }
 #endif
 
 // bcd::Epsilon
 // Description: Stopping criterion for iterations
 // Technical:   Translates fraction to lowest decimal position
-//               10 -> 0,00000000000000000010
-//                5 -> 0,00000000000000000005
+//               10 -> 0.00000000000000000010
+//                5 -> 0.00000000000000000005
 bcd&
 bcd::Epsilon(long p_fraction) const
 {
@@ -2887,11 +3303,11 @@ bcd::Add(const bcd& p_number) const
   // See if we must do addition or subtraction
   // Probably we need to swap the arguments....
   // (+x) + (+y) -> Addition,    result positive, Do not swap
-  // (+x) + (-y) -> Subtraction, result positive, Do not swap
-  // (-x) + (+y) -> Subtraction, result positive, Swap the arguments!!
+  // (+x) + (-y) -> Subtraction, result pos/neg,  Possibly swap
+  // (-x) + (+y) -> Subtraction, result pos/neg,  Possibly swap
   // (-x) + (-y) -> Addition,    result negative, Do not swap
-  Sign signResult;
-  Operator operatorKind;
+  Sign     signResult   = Positive;
+  Operator operatorKind = Addition;
   bcd arg1(*this);
   bcd arg2(p_number);
   PositionArguments(arg1, arg2, signResult, operatorKind);
@@ -2909,7 +3325,6 @@ bcd::Add(const bcd& p_number) const
     else
     {
       arg1 = PositiveSubtraction(arg2, arg1);
-      signResult = Negative;
     }
   }
   arg1.m_sign = signResult;
@@ -2945,7 +3360,7 @@ bcd::Div(const bcd& p_number) const
   // If divisor is zero -> ERROR
   if (p_number.IsNull())
   {
-    throw StdException("BCD: Division by zero.");
+    throw new StdException("BCD: Division by zero.");
   }
   // Shortcut: result is zero if this is zero
   if(IsNull())
@@ -2968,23 +3383,8 @@ bcd
 bcd::Mod(const bcd& p_number) const 
 {
   bcd count = ((*this) / p_number).Floor();
-
-//   bcd part  = (*this) / p_number;
-//   bcd floor = deel.Floor();
-//   bcd subst = floor * p_number;
-//   bcd answ  = *this - subst;
-// 
-//   part .DebugPrint("Divisor");
-//   floor.DebugPrint("Divisor-floor");
-//   subst.DebugPrint("Subtrahend");
-//   answ .DebugPrint("Answer");
-
-  // Divisor:     240963853305269,14298709106993387
-  // Floor:       240963853305269,0
-  // Subtrahend: 1234567890123455,3908686065289664
-  // Answer:                    0,7325881824833792
-  
   bcd mod((*this) - (count * p_number));
+
   if (m_sign == Negative)
   {
     mod = -mod;
@@ -2992,6 +3392,8 @@ bcd::Mod(const bcd& p_number) const
   return mod;
 }
 
+// Position the arguments for a positive addition or subtraction
+// Only called from within Add()
 void
 bcd::PositionArguments(bcd&       arg1,
                        bcd&       arg2,
@@ -3004,35 +3406,42 @@ bcd::PositionArguments(bcd&       arg1,
   {
     if(arg2.m_sign == Positive)
     {
+      // Both are positive
       signResult   = Positive;
       operatorKind = Addition;
     }
     else
     {
-      signResult   = Positive;
+      // Arg2 is negative
+      // Now the rest is positive
+      arg1.m_sign  = Positive;
+      arg2.m_sign  = Positive;
       operatorKind = Subtraction;
+      // Sign depends on the size
+      signResult   = (arg1 >= arg2) ? Positive : Negative;
     }
   }
-  else
+  else // arg1.m_sign == Negative
   {
-    if (arg2.m_sign == Positive)
+    if(arg2.m_sign == Negative)
     {
-      signResult   = Positive;
-      operatorKind = Subtraction;
-      // Swap arguments
-      bcd dummy(arg1);
-      arg1 = arg2;
-      arg2 = dummy;
-    }
-    else
-    {
+      // Both are negative
+      arg1.m_sign  = Positive;
+      arg2.m_sign  = Positive;
       signResult   = Negative;
       operatorKind = Addition;
     }
-  }
+    else
+    {
+      // arg2 is positive
   // Now the rest is positive
   arg1.m_sign = Positive;
   arg2.m_sign = Positive;
+      operatorKind = Subtraction;
+      // Sign depends on the size
+      signResult  = (arg2 >= arg1) ? Positive : Negative;
+    }
+  }
 }
 
 bcd::Sign
@@ -3125,8 +3534,15 @@ bcd::PositiveSubtraction(bcd& arg1,bcd& arg2) const
       // Adding arg2 will not result in a difference
       return arg1;
     }
+    if (shift > 0)
+    {
     // Shift arg2 to the right;
     arg2.Div10(shift);
+  }
+    else
+    {
+      arg2.Mult10(-shift);
+    }
   }
   // Do the subtraction of the mantissa
   int64 reg   = 0L;
@@ -3504,6 +3920,7 @@ bcd tan(bcd p_number)
 //////////////////////////////////////////////////////////////////////////
 //
 // FILE STREAM FUNCTIONS
+// Used for binary storage in a binary-mode file stream!
 //
 //////////////////////////////////////////////////////////////////////////
 
@@ -3565,4 +3982,18 @@ bcd::ReadFromFile(FILE* p_fp)
   return true;
 }
 
-} // End of namespace
+//////////////////////////////////////////////////////////////////////////
+//
+// END OF FILE STREAM FUNCTIONS
+//
+//////////////////////////////////////////////////////////////////////////
+
+//////////////////////////////////////////////////////////////////////////
+//
+// END OF BCD IMPLEMENTATION
+//
+//////////////////////////////////////////////////////////////////////////
+
+}
+
+#endif // Compiled with Marlin

@@ -58,20 +58,20 @@ void CloseSession()
 void PrintMaster(Master* p_master)
 {
   CString text;
-  text.Format("Record ID      : %d", p_master->GetID());               puts(text);
-  text.Format("Invoice number : %d", p_master->GetInvoice());          puts(text);
-  text.Format("Description    : %s", p_master->GetDescription());      puts(text);
-  text.Format("Total amount   : %s", p_master->GetTotal().AsString()); puts(text);
+  text.Format("Record ID      : %d", p_master->GetID());                           puts(text);
+  text.Format("Invoice number : %d", p_master->GetInvoice());                      puts(text);
+  text.Format("Description    : %s", p_master->GetDescription().GetString());      puts(text);
+  text.Format("Total amount   : %s", p_master->GetTotal().AsString().GetString()); puts(text);
 }
 
 void PrintDetail(Detail* p_detail)
 {
   CString text;
-  text.Format("Record ID      : %d", p_detail->GetID());                puts(text);
-  text.Format("Master ID      : %d", p_detail->GetMasterID());          puts(text);
-  text.Format("Line number    : %d", p_detail->GetLine());              puts(text);
-  text.Format("Description    : %s", p_detail->GetDescription());       puts(text);
-  text.Format("Part amount    : %s", p_detail->GetAmount().AsString()); puts(text);
+  text.Format("Record ID      : %d", p_detail->GetID());                            puts(text);
+  text.Format("Master ID      : %d", p_detail->GetMasterID());                      puts(text);
+  text.Format("Line number    : %d", p_detail->GetLine());                          puts(text);
+  text.Format("Description    : %s", p_detail->GetDescription().GetString());       puts(text);
+  text.Format("Part amount    : %s", p_detail->GetAmount().AsString().GetString()); puts(text);
 }
 
 void T01_SelectMaster()
@@ -169,7 +169,7 @@ void T04_InsertDelete()
 
     // Delete the object again and destroy the derived object!
     result = g_session->Delete(numbers);
-    ASSERT(result = true);
+    ASSERT(result == true);
 
     // Test that it is gone
     printf("Test_number record deleted again!\n");

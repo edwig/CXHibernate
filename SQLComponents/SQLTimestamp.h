@@ -2,7 +2,7 @@
 //
 // File: SQLTimestamp.h
 //
-// Copyright (c) 1998-2019 ir. W.E. Huisman
+// Copyright (c) 1998-2020 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy of 
@@ -79,7 +79,7 @@ public:
   SQLTimestamp(const SQLTimestamp& p_timestamp);
   SQLTimestamp(const SQLDate& p_date, const SQLTime& p_time);
   SQLTimestamp(int p_year,int p_month,int p_day,int p_hour,int p_min,int p_sec,int p_fraction = 0);
-  SQLTimestamp(TIMESTAMP_STRUCT  p_stamp);
+  SQLTimestamp(TIMESTAMP_STRUCT* p_stamp);
   SQLTimestamp(StampValue p_value,int p_fraction = 0);
  ~SQLTimestamp();
  
@@ -102,6 +102,8 @@ public:
   SQLInterval   operator- (const SQLTimestamp& p_timestamp) const;
   SQLTimestamp  operator+ (const SQLInterval&  p_interval)  const;
   SQLTimestamp  operator- (const SQLInterval&  p_interval)  const;
+  SQLTimestamp  operator+ (const SQLTime&      p_time)      const;
+  SQLTimestamp  operator- (const SQLTime&      p_time)      const;
   // Comparison operators
   bool          operator==(const SQLTimestamp& p_timestamp) const;
   bool          operator!=(const SQLTimestamp& p_timestamp) const;
@@ -176,7 +178,7 @@ private:
   //
   // Parse string to timestamp
   void    ParseMoment(const CString& p_string);
-  // Named timestamp with short or long monthnames
+  // Named timestamp with short or long month names
   bool    ParseNamedDate(const CString& p_string);
   // Calculate value from a StampStorage
   void    RecalculateValue();
@@ -198,7 +200,7 @@ private:
 
   ///////////////////////////////////////////////////////////////////////////////////////////
   //
-  // datamembers
+  // data members
   //
   StampStorage m_timestamp; // year/month/second/hour/minute/day
   StampValue   m_value;		  // Seconds since MJD Epoch

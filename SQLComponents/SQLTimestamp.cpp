@@ -2,7 +2,7 @@
 //
 // File: SQLTimestamp.cpp
 //
-// Copyright (c) 1998-2019 ir. W.E. Huisman
+// Copyright (c) 1998-2020 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy of 
@@ -43,6 +43,40 @@ static char THIS_FILE[] = __FILE__;
 
 namespace SQLComponents
 {
+
+// Difference between local time zone and UTC (Coordinated Universal Time)
+bool g_west_of_greenwich   = false;
+int  g_sql_timezone_hour   = 0;
+int  g_sql_timezone_minute = 0;
+SQLInterval g_sql_timezone;
+
+// SQLComponents always works in localtime (UTC +/- timezone)
+void SQLSetLocalTimezone()
+{
+  // Ask system for UTC and localtime
+  SYSTEMTIME system;
+  SYSTEMTIME local;
+  ::GetSystemTime(&system);
+  ::GetLocalTime(&local);
+
+  // Convert to timestamps
+  SQLTimestamp sys(system.wYear,system.wMonth,system.wDay,system.wHour,system.wMinute,0);
+  SQLTimestamp loc( local.wYear, local.wMonth, local.wDay, local.wHour, local.wMinute,0);
+
+  // Difference between localtime and UTC time is our timezone correction from Greenwich
+  g_sql_timezone = loc - sys;
+  
+  // Cache times and position
+  g_sql_timezone_hour   = abs(g_sql_timezone.GetHours());
+  g_sql_timezone_minute = abs(g_sql_timezone.GetMinutes()) % 60;
+  g_west_of_greenwich   = g_sql_timezone.GetIsNegative();
+}
+
+//////////////////////////////////////////////////////////////////////////
+//
+// SQLTimestamp begins here
+//
+//////////////////////////////////////////////////////////////////////////
 
 SQLTimestamp::SQLTimestamp()
 {
@@ -100,18 +134,18 @@ SQLTimestamp::SQLTimestamp(const CString& p_string)
 
 // Construct from a SQL TIMESTAMP_STRUCT
 //
-SQLTimestamp::SQLTimestamp(TIMESTAMP_STRUCT p_stamp)
+SQLTimestamp::SQLTimestamp(TIMESTAMP_STRUCT* p_stamp)
 {
-  if(p_stamp.year == 0 && p_stamp.month == 0 && p_stamp.day == 0)
+  if(p_stamp == nullptr || (p_stamp->year == 0 && p_stamp->month == 0 && p_stamp->day == 0))
   {
     // Most likely a database NULL value
     SetNull();
   }
   else
   {
-    SetTimestamp(p_stamp.year,p_stamp.month, p_stamp.day,
-                 p_stamp.hour,p_stamp.minute,p_stamp.second,
-                 p_stamp.fraction);
+    SetTimestamp(p_stamp->year,p_stamp->month, p_stamp->day,
+                 p_stamp->hour,p_stamp->minute,p_stamp->second,
+                 p_stamp->fraction);
   }
 }
 
@@ -520,7 +554,7 @@ SQLTimestamp::AddYears(int p_number) const
     catch(StdException& er)
     {
       ReThrowSafeException(er);
-      if (Month() == 2 && Day() == 29) // Correction for leap year
+      if(Month() == 2 && Day() == 29) // Correction for leap year
       {
         // 29-2-1968 plus 1 year becomes 28-2-1969
         return SQLTimestamp(Year() + p_number, Month(), Day() - 1, Hour(), Minute(), Second());
@@ -677,14 +711,18 @@ SQLTimestamp::ParseMoment(const CString& p_string)
         SetTimestamp(temp.m_year,temp.m_month,temp.m_day,temp.m_hour,temp.m_minute,temp.m_second);
         return;
       }
+      *this = CurrentTimestamp();
+      return;
     }
-    else if (CurrentDate.CompareNoCase(g_dateNames[g_defaultLanguage][DN_TODAY]) == 0)
+    else if(CurrentDate.CompareNoCase(g_dateNames[g_defaultLanguage][DN_TODAY]) == 0)
     { 
       if (GetVirtualMoment(Sign, ExtraTime, interval, temp))
       {
-        SetTimestamp(temp.m_year, temp.m_month, temp.m_day, 0, 0, 0);
+        SetTimestamp(temp.m_year,temp.m_month,temp.m_day,temp.m_hour,temp.m_minute,temp.m_second);
         return;
       }
+      *this = SQLDate::Today();
+      return;
     }
     else if (CurrentDate.CompareNoCase(g_dateNames[g_defaultLanguage][DN_FOM]) == 0)
     {
@@ -868,12 +906,8 @@ SQLTimestamp::AsXMLStringUTC(int p_precision /*=0*/) const
   if(IsNull() == false)
   {
     SQLTimestamp stamp(*this);
-    TIME_ZONE_INFORMATION tziCurrent;
-    ::ZeroMemory(&tziCurrent,sizeof(tziCurrent));
-    if(::GetTimeZoneInformation(&tziCurrent) != TIME_ZONE_ID_INVALID)
-    {
-      stamp = AddMinutes(tziCurrent.Bias);
-    }
+    stamp = stamp - g_sql_timezone;
+
     theStamp.Format("%04d-%02d-%02dT%02d:%02d:%02d"
                     ,stamp.Year(),stamp.Month(), stamp.Day()
                     ,stamp.Hour(),stamp.Minute(),stamp.Second());
@@ -881,8 +915,16 @@ SQLTimestamp::AsXMLStringUTC(int p_precision /*=0*/) const
     {
       theStamp += PrintFraction(p_precision);
     }
-    // Mark as UTC string
-    theStamp += "Z";
+    // Mark as UTC string, timezone difference
+    if(g_sql_timezone_hour == 0 && g_sql_timezone_minute == 0)
+    {
+      theStamp += "Z";  // Exact on the spot: Wintertime in London
+    }
+    else
+    {
+      theStamp += g_west_of_greenwich ? "-" : "+";
+      theStamp.AppendFormat("%2.2d:%2.2d",g_sql_timezone_hour,g_sql_timezone_minute);
+    }
   }
   return theStamp;
 }
@@ -1140,6 +1182,28 @@ SQLTimestamp::operator-(const SQLInterval& p_interval) const
   StampValue value = m_value - (sign * p_interval.AsValue() / NANOSECONDS_PER_SEC);
   int  fraction = m_fraction - (sign * p_interval.AsValue() % NANOSECONDS_PER_SEC);
   SQLTimestamp stamp(value,fraction);
+  return stamp;
+}
+
+SQLTimestamp  
+SQLTimestamp::operator+ (const SQLTime& p_time) const
+{
+  SQLTimestamp stamp(*this);
+  stamp.AddHours  (p_time.Hour());
+  stamp.AddMinutes(p_time.Minute());
+  stamp.AddSeconds(p_time.Second());
+
+  return stamp;
+}
+
+SQLTimestamp  
+SQLTimestamp::operator-(const SQLTime& p_time) const
+{
+  SQLTimestamp stamp(*this);
+  stamp.AddHours  (- p_time.Hour());
+  stamp.AddMinutes(- p_time.Minute());
+  stamp.AddSeconds(- p_time.Second());
+
   return stamp;
 }
 

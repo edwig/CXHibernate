@@ -2,7 +2,7 @@
 //
 // File: SQLFilter.cpp
 //
-// Copyright (c) 1998-2019 ir. W.E. Huisman
+// Copyright (c) 1998-2020 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy of 
@@ -115,6 +115,8 @@ SQLFilter::SQLFilter(SQLFilter* p_other)
 SQLFilter::SQLFilter(SQLFilter& p_other)
 {
   *this = p_other;
+  m_subfilters = p_other.m_subfilters;
+  p_other.m_subfilters = nullptr;
 }
 
 // DTOR: Remove all variant values
@@ -125,13 +127,14 @@ SQLFilter::~SQLFilter()
     delete val;
   }
   m_values.clear();
+  delete m_subfilters;
 }
 
 // Adding a comparison field (if not yet set)
 bool
 SQLFilter::SetField(CString p_field)
 {
-  if(m_field.IsEmpty())
+  if(m_field.IsEmpty() && m_subfilters == nullptr)
   {
     m_field = p_field;
     return true;
@@ -234,6 +237,18 @@ SQLFilter::GetSQLFilter(SQLQuery& p_query)
     sql += m_field;
   }
 
+  // Test for special ISNULL case
+  if(m_operator == OP_Equal && m_values.size() == 1)
+  {
+    SQLVariant* var = m_values.front();
+    CString value;
+    var->GetAsString(value);
+    if(var->IsNULL() || value.CompareNoCase("null") == 0)
+    {
+      m_operator = OP_IsNULL;
+    }
+  }
+
   // Add the operator
   switch(m_operator)
   {
@@ -251,8 +266,8 @@ SQLFilter::GetSQLFilter(SQLQuery& p_query)
     case OP_IN:           sql += " IN (";       break;
     case OP_Between:      sql += " BETWEEN ";   break;
     case OP_Exists:       sql += " EXISTS ";    break;
-    case OP_NOP:          // Fall through
-    default:              throw StdException("SQLFilter without an operator!");
+    //case OP_NOP:          // Fall through
+    //default:              throw StdException("SQLFilter without an operator!");
   }
 
   // In case of a LIKE search of a character field
@@ -270,7 +285,7 @@ SQLFilter::GetSQLFilter(SQLQuery& p_query)
   {
     ConstructBetween(sql,p_query);
   }
-  else if(m_operator != OP_IsNULL && m_operator != OP_IsNotNULL)
+  else if(m_operator != OP_IsNULL && m_operator != OP_IsNotNULL && m_operator != OP_NOP)
   {
     // For all other operators, getting the argument
     // Getting the value as an SQL expression string (with ODBC escapes)
@@ -367,7 +382,7 @@ SQLFilter::ConstructOperand(CString& p_sql,SQLQuery& p_query)
   {
     if(m_field2.IsEmpty())
     {
-    // Check that we have a value, and use it
+      // Check that we have a value, and use it
       if(m_values.empty())
       {
         p_sql += "IS NULL";
@@ -375,7 +390,7 @@ SQLFilter::ConstructOperand(CString& p_sql,SQLQuery& p_query)
       else
       {
         // Use last value (earlier can be used by functions!!)
-    p_sql += "?";
+        p_sql += "?";
         size_t num = m_values.size() - 1;
         p_query.SetParameter(m_values[num]);
       }
@@ -539,6 +554,10 @@ SQLFilter::ConstructFunctionSQL(SQLQuery& p_query)
   }
 
   // Construct ODBC Function
+  if (m_subfilters != nullptr)
+  {
+    m_field = m_subfilters->ParseFiltersToCondition(p_query);
+  }
   switch(parameters)
   {
     case 0: m_expression = sql = "{fn " + sql + "()}";

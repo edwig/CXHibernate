@@ -2,7 +2,7 @@
 //
 // File: SQLInfoSQLServer.cpp
 //
-// Copyright (c) 1998-2019 ir. W.E. Huisman
+// Copyright (c) 1998-2020 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy of 
@@ -158,6 +158,13 @@ bool
 SQLInfoSQLServer::GetRDBMSMustCommitDDL() const
 {
   return true;
+}
+
+// Correct maximum precision,scale for a NUMERIC datatype
+void
+SQLInfoSQLServer::GetRDBMSNumericPrecisionScale(SQLULEN& /*p_precision*/, SQLSMALLINT& /*p_scale*/) const
+{
+  // NO-OP
 }
 
 // KEYWORDS
@@ -524,7 +531,7 @@ SQLInfoSQLServer::GetCATALOGTableCatalog(CString p_schema,CString p_tablename) c
                   " WHERE xtype IN ('V','S')\n"
                   "   AND obj.uid = usr.uid\n";
   if(!p_schema.IsEmpty())
-{
+  {
     query += "   AND usr.name      = '" + p_schema + "'\n";
   }
   if(!p_tablename.IsEmpty())
@@ -807,7 +814,7 @@ SQLInfoSQLServer::GetCATALOGPrimaryExists(CString p_schema,CString p_tablename) 
                   " WHERE tab.id    = con.parent_obj\n"
                   "   AND tab.uid   = use.uid\n"
                   "   AND con.xtype = 'PK'\n"
-                  "   AND con.type  = 'K '"
+                  "   AND con.type  = 'K'"
                   "   AND use.name  = '" + p_schema    + "'\n"
                   "   AND tab.name  = '" + p_tablename + "'";
   return query;
@@ -918,11 +925,11 @@ SQLInfoSQLServer::GetCATALOGForeignAttributes(CString p_schema
                   "      ,fok.is_disabled   as disabled\n"
                   "  FROM sys.foreign_keys        fok\n"
                   "      ,sys.foreign_key_columns fkc\n"
-                  "      ,sys.schemas sch\n"
-                  "      ,sys.tables  tab\n"
-                  "      ,sys.columns col\n"
-                  "      ,sys.tables  pri\n"
-                  "      ,sys.columns pky\n"
+                  "      ,sys.schemas    sch\n"
+                  "      ,sys.tables     tab\n"
+                  "      ,sys.columns    col\n"
+                  "      ,sys.tables     pri\n"
+                  "      ,sys.columns    pky\n"
                   "      ,sys.sysobjects prk\n"
                   " WHERE fok.type = 'F'\n"
                   "   AND fok.parent_object_id     = tab.object_id\n"
@@ -948,8 +955,8 @@ SQLInfoSQLServer::GetCATALOGForeignAttributes(CString p_schema
     }
     else
     {
-    query += "   AND tab.name = '" + p_tablename + "'\n";
-  }
+      query += "   AND tab.name = '" + p_tablename + "'\n";
+    }
   }
   if(!p_constraint.IsEmpty())
   {
@@ -959,10 +966,10 @@ SQLInfoSQLServer::GetCATALOGForeignAttributes(CString p_schema
     }
     else
     {
-    query += "   AND fok.name = '" + p_constraint + "'\n";
+      query += "   AND fok.name = '" + p_constraint + "'\n";
+    }
   }
-  }
-  // Order upto column number
+  // Order up to column number
   query += " ORDER BY 1,2,3,4,5,6,7,8,9";
 
   return query;
@@ -1098,36 +1105,36 @@ SQLInfoSQLServer::GetCATALOGTriggerAttributes(CString p_schema, CString p_tablen
   p_triggername.MakeLower();
 
   CString sql("SELECT ''       AS catalog_name\n"
-             "      ,sch.name AS schema_name\n"
-             "      ,tab.name AS table_name\n"
-             "      ,trg.name AS trigger_name\n"
-             "      ,trg.name + ' ON TABLE ' + tab.name AS trigger_description\n"
-             "      ,0        AS position\n"
-             "      ,0        AS trigger_before\n"
-             "      ,(SELECT CASE type_desc WHEN 'INSERT' THEN 1 ELSE 0 END\n"
-             "          FROM sys.trigger_events ev\n"
-             "         WHERE ev.object_id = trg.object_id) AS trigger_insert\n"
-             "      ,(SELECT CASE type_desc WHEN 'UPDATE' THEN 1 ELSE 0 END\n"
-             "          FROM sys.trigger_events ev\n"
-             "         WHERE ev.object_id = trg.object_id) AS trigger_update\n"
-             "      ,(SELECT CASE type_desc WHEN 'DELETE' THEN 1 ELSE 0 END\n"
-             "          FROM sys.trigger_events ev\n"
-             "         WHERE ev.object_id = trg.object_id) AS trigger_delete\n"
-             "      ,(SELECT CASE type_desc WHEN 'SELECT' THEN 1 ELSE 0 END\n"
-             "          FROM sys.trigger_events ev\n"
-             "         WHERE ev.object_id = trg.object_id) AS trigger_select\n"
-             "      ,0  AS trigger_session\n"
-             "   	  ,0  AS trigger_transaction\n"
-             "      ,0  AS trigger_rollback\n"
-             "      ,'' AS trigger_referencing\n"
-             "  	  ,CASE trg.is_disabled WHEN 0 THEN 1 ELSE 0 END AS trigger_enabled\n"
-             "  	  ,mod.definition AS trigger_source\n"
-             "  FROM sys.triggers    trg\n"
-             "      ,sys.sql_modules mod\n"
-             "      ,sys.objects     tab\n"
-             "      ,sys.schemas     sch\n"
-             " WHERE trg.object_id = mod.object_id\n"
-             "   AND tab.object_id = trg.parent_id\n"
+              "      ,sch.name AS schema_name\n"
+              "      ,tab.name AS table_name\n"
+              "      ,trg.name AS trigger_name\n"
+              "      ,trg.name + ' ON TABLE ' + tab.name AS trigger_description\n"
+              "      ,0        AS position\n"
+              "      ,0        AS trigger_before\n"
+              "      ,(SELECT CASE type_desc WHEN 'INSERT' THEN 1 ELSE 0 END\n"
+              "          FROM sys.trigger_events ev\n"
+              "         WHERE ev.object_id = trg.object_id) AS trigger_insert\n"
+              "      ,(SELECT CASE type_desc WHEN 'UPDATE' THEN 1 ELSE 0 END\n"
+              "          FROM sys.trigger_events ev\n"
+              "         WHERE ev.object_id = trg.object_id) AS trigger_update\n"
+              "      ,(SELECT CASE type_desc WHEN 'DELETE' THEN 1 ELSE 0 END\n"
+              "          FROM sys.trigger_events ev\n"
+              "         WHERE ev.object_id = trg.object_id) AS trigger_delete\n"
+              "      ,(SELECT CASE type_desc WHEN 'SELECT' THEN 1 ELSE 0 END\n"
+              "          FROM sys.trigger_events ev\n"
+              "         WHERE ev.object_id = trg.object_id) AS trigger_select\n"
+              "      ,0  AS trigger_session\n"
+              "   	  ,0  AS trigger_transaction\n"
+              "      ,0  AS trigger_rollback\n"
+              "      ,'' AS trigger_referencing\n"
+              "  	  ,CASE trg.is_disabled WHEN 0 THEN 1 ELSE 0 END AS trigger_enabled\n"
+              "  	  ,mod.definition AS trigger_source\n"
+              "  FROM sys.triggers    trg\n"
+              "      ,sys.sql_modules mod\n"
+              "      ,sys.objects     tab\n"
+              "      ,sys.schemas     sch\n"
+              " WHERE trg.object_id = mod.object_id\n"
+              "   AND tab.object_id = trg.parent_id\n"
               "   AND tab.schema_id = sch.schema_id\n");
   if(!p_schema.IsEmpty())
   {
@@ -1316,7 +1323,7 @@ SQLInfoSQLServer::GetCATALOGViewAttributes(CString p_schema,CString p_viewname) 
     query += "   AND tab.name ";
     query += p_viewname.Find('%') >= 0 ? "LIKE '" : "= '";
     query += p_viewname + "'\n";
-}
+  }
   query += " ORDER BY 1,2,3";
   return query;}
 
@@ -1720,6 +1727,13 @@ SQLInfoSQLServer::GetSESSIONConstraintsImmediate() const
 // Calling a stored function or procedure if the RDBMS does not support ODBC call escapes
 SQLVariant*
 SQLInfoSQLServer::DoSQLCall(SQLQuery* /*p_query*/,CString& /*p_schema*/,CString& /*p_procedure*/)
+{
+  return nullptr;
+}
+
+// Calling a stored function with named parameters, returning a value
+SQLVariant*
+SQLInfoSQLServer::DoSQLCallNamedParameters(SQLQuery* /*p_query*/,CString& /*p_schema*/,CString& /*p_procedure*/)
 {
   return nullptr;
 }

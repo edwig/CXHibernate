@@ -2,7 +2,7 @@
 //
 // File: SQLVariant.cpp
 //
-// Copyright (c) 1998-2019 ir. W.E. Huisman
+// Copyright (c) 1998-2020 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy of 
@@ -605,6 +605,12 @@ SQLVariant::IsDateTimeType()
     case SQL_C_TYPE_TIMESTAMP:  return true;
     default:                    return false;
   }
+}
+
+void
+SQLVariant::Reset()
+{
+  ResetDataType(m_datatype);
 }
 
 void

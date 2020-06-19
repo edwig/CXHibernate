@@ -2,7 +2,7 @@
 //
 // File: SQLVariantFormat.cpp
 //
-// Copyright (c) 1998-2019 ir. W.E. Huisman
+// Copyright (c) 1998-2020 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy of 
@@ -150,18 +150,18 @@ SQLVariantFormat::StringInitCapital()
       {
         if(doCapital)
         {
-          m_format.SetAt(ind,(unsigned char)toupper(ch));
+          m_format.SetAt(ind, (unsigned char)toupper(ch));
           doCapital = false;
         }
         else
         {
-          m_format.SetAt(ind,(unsigned char)tolower(ch));
+          m_format.SetAt(ind, (unsigned char)tolower(ch));
         }
       }
       doCapital = false;
-      }
     }
   }
+}
 
 // First character of the string becomes a capital
 // The rest becomes all lower case
@@ -183,8 +183,8 @@ SQLVariantFormat::StringStartCapital()
       {
         m_format.SetAt(ind,doCapital ? (unsigned char)toupper(ch) : (unsigned char) tolower(ch));
       }
-          doCapital = false;
-        }
+      doCapital = false;
+    }
   }
 }
 
@@ -603,7 +603,11 @@ SQLVariantFormat::FormatDate(CString p_pattern)
     {
       if(!GetDateFromStringVariant(m_variant,m_format,&date))
       {
-        return ER_FormatDateTypeValue;
+        if(m_variant)
+        {
+          return ER_FormatDateTypeValue;
+        }
+        return OK;
       }
     }
     // Is there a time present in the string?
@@ -779,7 +783,11 @@ SQLVariantFormat::DateCalculate(char p_operator,CString p_argument)
     DATE_STRUCT date;
     if(!GetDateFromStringVariant(m_variant,m_format,&date))
     {
-      return ER_FormatDateTypeValue;
+      if(m_variant)
+      {
+        return ER_FormatDateTypeValue;
+      }
+      return OK;
     }
     if(m_owner)
     {
@@ -858,7 +866,7 @@ SQLVariantFormat::DateCalculate(char p_operator,CString p_argument)
       {
         SQLInterval intval = date - other;
         days = intval.GetDays();
-    }
+      }
       else
       {
         SQLTimestamp other2(p_argument);

@@ -2,7 +2,7 @@
 //
 // File: SQLInfo.cpp
 //
-// Copyright (c) 1998-2019 ir. W.E. Huisman
+// Copyright (c) 1998-2020 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy of 
@@ -2718,9 +2718,9 @@ SQLInfo::MakeInfoMetaTypes(MMetaMap& p_objects,CString& p_errors,int p_type)
                               break;
           case META_TABLES:   if(cbTableType   > 0) nameFound = (char*)szTableType;
                               break;
-                              }
+        }
         if(cbRemarks > 0)
-                              {
+        {
           object.m_remarks = szRemarks;
         }
         if(nameFound)

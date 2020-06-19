@@ -304,7 +304,7 @@ Crypto::Encryption(CString p_input,CString p_password)
 {
   AutoCritSec lock(&m_lock);
 
-  HCRYPTPROV hCryptProv = NULL; 
+  HCRYPTPROV hCryptProv = NULL;
   HCRYPTKEY  hCryptKey  = NULL;
   HCRYPTHASH hCryptHash = NULL;
   DWORD      dwDataLen  = 0;
@@ -352,7 +352,7 @@ Crypto::Encryption(CString p_input,CString p_password)
   pbData = new BYTE[dwBuffLen];
   strcpy_s((char*)pbData,dwBuffLen,p_input.GetString());
 
-  DWORD dwFlags = 0;
+  DWORD dwFlags   = 0;
   BOOL  bFinal    = FALSE;
   DWORD totallen  = 0;
   BYTE* crypting  = pbData;
@@ -372,14 +372,14 @@ Crypto::Encryption(CString p_input,CString p_password)
     }
     
     // Do the encryption of the block
-  if(CryptEncrypt(hCryptKey
-                  ,NULL            // No hashing
+    if(CryptEncrypt(hCryptKey
+                   ,NULL            // No hashing
                    ,bFinal          // Final action
-                  ,dwFlags         // Reserved
+                   ,dwFlags         // Reserved
                    ,crypting        // The data
                    ,&dataLength     // Pointer to data length
-                  ,dwBuffLen))     // Pointer to buffer length
-  {
+                   ,dwBuffLen))     // Pointer to buffer length
+    {
       // Total encrypted bytes
       totallen  += dataLength;
       // This much space left in the receiving buffer
@@ -396,11 +396,11 @@ Crypto::Encryption(CString p_input,CString p_password)
   }
   while(bFinal == FALSE);
 
-    // Create a base64 string of the hash data
+  // Create a base64 string of the hash data
   int b64length = (int)base64.B64_length(totallen);
-    char* buffer  = result.GetBufferSetLength(b64length);
+  char*  buffer = result.GetBufferSetLength(b64length);
   base64.Encrypt((const unsigned char*)pbData,totallen,(unsigned char*)buffer);
-    result.ReleaseBuffer(b64length);
+  result.ReleaseBuffer(b64length);
 
 error_exit:
   // Freeing everything
@@ -429,7 +429,7 @@ Crypto::Decryption(CString p_input,CString p_password)
 {
   AutoCritSec lock(&m_lock);
 
-  HCRYPTPROV hCryptProv = NULL; 
+  HCRYPTPROV hCryptProv = NULL;
   HCRYPTKEY  hCryptKey  = NULL;
   HCRYPTHASH hCryptHash = NULL;
   DWORD      dwDataLen  = 0;
@@ -512,22 +512,22 @@ Crypto::Decryption(CString p_input,CString p_password)
     }
 
     // Decrypt
-  if(CryptDecrypt(hCryptKey
-                  ,NULL            // No hashing
+    if(CryptDecrypt(hCryptKey
+                   ,NULL            // No hashing
                    ,bFinal          // Final action
-                  ,dwFlags         // Reserved
+                   ,dwFlags         // Reserved
                    ,decrypting      // The data
                    ,&data))         // Pointer to data length
-  {
+    {
       // Totally decrypted length
       totallen   += data;
       // Work the lengths
       dataLength -= blocklen;
       // Next block of data to be decrypted
       decrypting += blocklen;
-  }
-  else
-  {
+    }
+    else
+    {
       m_error.Format("Decrypting not done: 0x%08x : %s",GetLastError(),GetLastErrorAsString().GetString());
       goto error_exit;
     }

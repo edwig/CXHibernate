@@ -26,6 +26,7 @@
 // THE SOFTWARE.
 //
 #include "stdafx.h"
+#include "bcd.h"
 #include "JSONParser.h"
 #include "XMLParser.h"
 #include "DefuseBOM.h"
@@ -442,9 +443,10 @@ JSONParser::ParseNumber()
   }
 
   // Locals
-  int    factor    = 1;
-  int    intNumber = 0;
-  double dblNumber = 0.0;
+  bcd     bcdNumber;
+  int     factor    = 1;
+  __int64 number    = 0;
+  int     intNumber = 0;
   JsonType type = JsonType::JDT_number_int;
 
   // See if we find a negative number
@@ -457,27 +459,29 @@ JSONParser::ParseNumber()
   // Finding the integer part
   while(*m_pointer && isdigit(*m_pointer))
   {
-    intNumber *= 10; // JSON is always in radix 10!
-    intNumber += (*m_pointer - '0');
+    number *= 10; // JSON is always in radix 10!
+    number += (*m_pointer - '0');
     ++m_pointer;
   }
 
   // Finding a broken number
-  if(*m_pointer == '.')
+  if(*m_pointer == '.' || tolower(*m_pointer) == 'e')
   {
     // Prepare
-    ++m_pointer;
-    type = JsonType::JDT_number_dbl;
-    dblNumber = (double)intNumber;
-    double decimPart = 1;
-
-    while(*m_pointer && isdigit(*m_pointer))
+    if(*m_pointer == '.')
     {
-      decimPart *= 10;
-      dblNumber += (*m_pointer - '0') / decimPart;
       ++m_pointer;
-    }
+      type = JsonType::JDT_number_bcd;
+      bcdNumber = number;
+      bcd decimPart = 1;
 
+      while(*m_pointer && isdigit(*m_pointer))
+      {
+        decimPart *= 10;
+        bcdNumber += ((bcd)(*m_pointer - '0')) / decimPart;
+        ++m_pointer;
+      }
+    }
     // Do the exponential?
     if(tolower(*m_pointer) == 'e')
     {
@@ -500,18 +504,35 @@ JSONParser::ParseNumber()
         exp += (*m_pointer - '0');
         ++m_pointer;
       }
-      dblNumber *= pow(10.0,exp * fac);
+      bcdNumber *= pow(10.0,exp * fac);
+    }
+
+    // Do not forget the sign
+    bcdNumber *= factor;
+  }
+  else
+  {
+    number *= factor;
+    if((number > MAXINT32) || (number < MININT32))
+    {
+      type = JsonType::JDT_number_bcd;
+      bcdNumber = number;
+    }
+    else
+    {
+      // Static cast allowed because test on MAXINT32/MININT32
+      intNumber = static_cast<int>(number);
     }
   }
 
   // Preserving our findings
   if(type == JsonType::JDT_number_int)
   {
-    m_valPointer->SetValue(intNumber * factor);
+    m_valPointer->SetValue(intNumber);
   }
   else // if(type == JDT_number_dbl)
   {
-    m_valPointer->SetValue(dblNumber * factor);
+    m_valPointer->SetValue(bcdNumber);
   }
   return true;
 }
@@ -531,7 +552,7 @@ JSONParserSOAP::JSONParserSOAP(JSONMessage* p_message,SOAPMessage* p_soap)
   p_soap->GetSoapMessage();
 
   JSONvalue&  valPointer = *m_message->m_value;
-  XMLElement& element    = *m_soap->m_paramObject;
+  XMLElement& element    = *m_soap->GetParameterObjectNode();
 
   ParseMain(valPointer,element);
 }

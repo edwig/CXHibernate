@@ -2,7 +2,7 @@
 //
 // File: SQLVariant.h
 //
-// Copyright (c) 1998-2019 ir. W.E. Huisman
+// Copyright (c) 1998-2020 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy of 
@@ -25,6 +25,8 @@
 //
 #pragma  once
 #include <sqlext.h>
+#include "SQLVariantOperator.h"
+#include "bcd.h"
 
 namespace SQLComponents
 {
@@ -32,12 +34,14 @@ namespace SQLComponents
 #ifndef SQLNUM_MAX_PREC
 // Max precision of a NUMERIC as a bcd (Binary Coded Decimal)
 #define SQLNUM_MAX_PREC    38
+#endif 
+
+#ifndef SQLNUM_DEF_SCALE
 // The default scaling of a NUMERIC
 #define SQLNUM_DEF_SCALE    2
 #endif
 
 // Forwarded declarations
-class bcd;
 class SQLDate;
 class SQLTime;
 class SQLTimestamp;
@@ -75,8 +79,8 @@ public:
    SQLVariant(CString& p_data);               // SQL_C_CHAR
    SQLVariant(short p_short);                 // SQL_C_SHORT / SQL_C_SSHORT
    SQLVariant(unsigned short p_short);        // SQL_C_USHORT
-   SQLVariant(int p_long);                   // SQL_C_LONG / SQL_C_SLONG
-   SQLVariant(unsigned int p_long);          // SQL_C_ULONG
+   SQLVariant(int p_long);                    // SQL_C_LONG / SQL_C_SLONG
+   SQLVariant(unsigned int p_long);           // SQL_C_ULONG
    SQLVariant(float p_float);                 // SQL_C_FLOAT
    SQLVariant(double p_double);               // SQL_C_DOUBLE
    SQLVariant(bool p_bit);                    // SQL_C_BIT
@@ -101,8 +105,8 @@ public:
    // Destructor
   ~SQLVariant();
    
-  // Init empty variant
-  void     Init(); 
+   // Reset the current value. BEWARE: Frees the char and binary pointers!!
+   void    Reset();
 
    // STATUS
    bool    IsNULL();
@@ -195,8 +199,8 @@ public:
    SQLVariant& operator  =(CString& p_data);                 // SQL_C_CHAR
    SQLVariant& operator  =(short p_data);                    // SQL_C_SHORT / SQL_C_SSHORT
    SQLVariant& operator  =(unsigned short p_data);           // SQL_C_USHORT
-   SQLVariant& operator  =(int p_data);                     // SQL_C_LONG  / SQL_C_SLONG
-   SQLVariant& operator  =(unsigned int p_data);            // SQL_C_ULONG
+   SQLVariant& operator  =(int p_data);                      // SQL_C_LONG  / SQL_C_SLONG
+   SQLVariant& operator  =(unsigned int p_data);             // SQL_C_ULONG
    SQLVariant& operator  =(float p_data);                    // SQL_C_FLOAT
    SQLVariant& operator  =(double p_data);                   // SQL_C_DOUBLE
    SQLVariant& operator  =(bool p_data);                     // SQL_C_BIT
@@ -233,6 +237,19 @@ public:
    SQLVariant  operator  /(SQLVariant& p_right);
    SQLVariant  operator  %(SQLVariant& p_right);
 
+   // Arithmetic assignment operators
+   SQLVariant& operator  +=(SQLVariant& p_right);
+   SQLVariant& operator  -=(SQLVariant& p_right);
+   SQLVariant& operator  *=(SQLVariant& p_right);
+   SQLVariant& operator  /=(SQLVariant& p_right);
+   SQLVariant& operator  %=(SQLVariant& p_right);
+
+   // Unary increment/decrement operators
+   SQLVariant& operator ++();       // Prefix  increment
+   SQLVariant& operator --();       // Prefix  decrement
+   SQLVariant  operator ++(int);    // Postfix increment
+   SQLVariant  operator --(int);    // Postfix decrement
+
    // Cast operators
    operator bool();
    operator char();
@@ -257,6 +274,8 @@ public:
    operator bcd();
 
 private:
+   // Init empty variant
+   void    Init();
    // Total internal reset (type and data store)
    void    ResetDataType(int p_type);
    // Internal conversions
@@ -264,6 +283,8 @@ private:
    bool    BinaryToString (unsigned char* buffer,int buflen);
    // Throw error as a result of internal trimming
    void*   ThrowErrorDatatype(int p_getas);
+   // Throw error as a result of an impossible operator
+   void    ThrowErrorOperator(SQLVarOperator p_operator);
 
    // Private Data
    int    m_datatype;         // Primary datatype SQL_C_XXXX

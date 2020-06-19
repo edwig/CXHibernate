@@ -28,6 +28,7 @@
 #include "stdafx.h"
 #include "ServerApp.h"
 #include "WebConfigIIS.h"
+#include "HTTPSite.h"
 #include "EnsureFile.h"
 #include <string>
 #include <set>
@@ -66,7 +67,92 @@ ServerApp* _stdcall CreateServerApp(IHttpServer* p_server
   return appFactory->CreateServerApp(p_server,p_webroot,p_appName);
 }
 
+__declspec(dllexport)
+HTTPSite* _stdcall FindHTTPSite(ServerApp* p_application,int p_port, PCWSTR p_url)
+{
+  HTTPSite* site = nullptr;
+  if (p_application)
+  {
+    p_application->StartCounter();
+    site = p_application->GetHTTPServer()->FindHTTPSite(p_port,p_url);
+    p_application->StopCounter();
+  }
+  return site;
 }
+
+__declspec(dllexport)
+bool _stdcall GetStreamFromRequest(ServerApp* p_application, IHttpContext* p_context, HTTPSite* p_site, PHTTP_REQUEST p_request)
+{
+  bool gotstream = false;
+  if (p_application)
+  {
+    p_application->StartCounter();
+    gotstream = (p_application->GetHTTPServer()->GetHTTPStreamFromRequest(p_context,p_site,p_request) != nullptr);
+    p_application->StopCounter();
+  }
+  return gotstream;
+}
+
+__declspec(dllexport)
+HTTPMessage* _stdcall GetHTTPMessageFromRequest(ServerApp*    p_application
+                                               ,IHttpContext* p_context
+                                               ,HTTPSite*     p_site
+                                               ,PHTTP_REQUEST p_request)
+{
+  HTTPMessage* msg = nullptr;
+  if(p_application)
+  {
+    p_application->StartCounter();
+    HTTPServerIIS* server = p_application->GetHTTPServer();
+    if(server)
+    {
+      msg = server->GetHTTPMessageFromRequest(p_context,p_site,p_request);
+    }
+    p_application->StopCounter();
+  }
+  return msg;
+}
+
+__declspec(dllexport)
+bool _stdcall HandleHTTPMessage(ServerApp* p_application,HTTPSite* p_site,HTTPMessage* p_message)
+{
+  bool handled = false;
+
+  if(p_application && p_message)
+  {
+    // Install SEH to regular exception translator
+    AutoSeTranslator trans(SeTranslator);
+
+    p_application->StartCounter();
+
+    // GO! Let the site handle the message
+    p_message->AddReference();
+    p_site->HandleHTTPMessage(p_message);
+
+    // If handled (Marlin has reset the request handle)
+    if (p_message->GetHasBeenAnswered())
+    {
+      handled = true;
+    }
+    p_message->DropReference();
+    p_application->StopCounter();
+  }
+  return handled;
+}
+
+__declspec(dllexport)
+int __stdcall SitesInApplicationPool(ServerApp* p_application)
+{
+  return p_application->SitesInThePool();
+}
+
+}
+
+//////////////////////////////////////////////////////////////////////////
+//
+// THE GENERAL SERVER APP ROOT CLASS
+//
+//////////////////////////////////////////////////////////////////////////
 
 // XTOR
 ServerApp::ServerApp(IHttpServer* p_iis
@@ -165,6 +251,16 @@ ServerApp::ExitInstance()
   g_report      = nullptr;
 }
 
+// Number of logfiles to keep
+void 
+ServerApp::SetKeepLogfiles(int p_keep)
+{
+  m_keepLogFiles = p_keep;
+
+  if(m_keepLogFiles < LOGWRITE_KEEPLOG_MIN) m_keepLogFiles = LOGWRITE_KEEPLOG_MIN;
+  if(m_keepLogFiles > LOGWRITE_KEEPLOG_MAX) m_keepLogFiles = LOGWRITE_KEEPLOG_MAX;
+}
+
 // The performance counter
 void 
 ServerApp::StartCounter()
@@ -200,6 +296,7 @@ ServerApp::StartLogging()
     m_logfile->SetLogFilename(logfile);
     m_logfile->SetLogRotation(true);
     m_logfile->SetLogLevel(m_config.GetDoLogging() ? HLL_LOGGING : HLL_NOLOG);
+    m_logfile->SetKeepfiles(m_keepLogFiles);
 
     // Record for test classes
     g_analysisLog = m_logfile;
@@ -239,6 +336,13 @@ ServerApp::CorrectlyStarted()
   return false;
 }
 
+// Number of IIS sites in this Application Pool
+int
+ServerApp::SitesInThePool()
+{
+  return m_numSites;
+}
+
 // Default implementation. Use the Marlin error report
 ErrorReport*
 ServerApp::GetErrorReport()
@@ -261,10 +365,21 @@ ServerApp::SetLogLevel(int p_logLevel)
   }
 }
 
+// LoadSites will call LoadSite or its overloaded methods
+// Do not forget to call this one, or at least increment the number of sites
 bool
 ServerApp::LoadSite(IISSiteConfig& /*p_config*/)
 {
-  // Already done in LoadSites
+  ++m_numSites;
+  return true;
+}
+
+// When stopping the sites: calls the overloaded methods
+// Do not forget to call this one, or at least decrement the number of sites
+bool
+ServerApp::UnloadSite(IISSiteConfig* /*p_config*/)
+{
+  --m_numSites;
   return true;
 }
 
@@ -330,6 +445,16 @@ ServerApp::LoadSites(IHttpApplication* p_app,CString p_physicalPath)
   CString text("ERROR Loading IIS Site: ");
   text += config;
   ERRORLOG(ERROR_NO_SITENAME,text);
+}
+
+// Stopping all of our sites in the IIS configuration
+void 
+ServerApp::UnloadSites()
+{
+  for(auto& site : m_sites)
+  {
+    UnloadSite(site);
+  }
 }
 
 void

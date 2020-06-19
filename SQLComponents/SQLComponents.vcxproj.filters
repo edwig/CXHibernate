@@ -175,6 +175,9 @@
     <ClCompile Include="SQLGetExePath.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="SQLDriverManager.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="BasicExcel.h">
@@ -352,6 +355,9 @@
       <Filter>Headers Files</Filter>
     </ClInclude>
     <ClInclude Include="SQLTimestampExtract.h">
+      <Filter>Headers Files</Filter>
+    </ClInclude>
+    <ClInclude Include="SQLDriverManager.h">
       <Filter>Headers Files</Filter>
     </ClInclude>
   </ItemGroup>

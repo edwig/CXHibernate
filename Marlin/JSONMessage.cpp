@@ -69,7 +69,8 @@ JSONvalue::operator=(JSONvalue& p_other)
   m_type     = p_other.m_type;
   m_string   = p_other.m_string;
   m_constant = p_other.m_constant;
-  m_number   = p_other.m_number;
+  m_number.m_intNumber = p_other.m_number.m_intNumber;
+  m_number.m_bcdNumber = p_other.m_number.m_bcdNumber;
   // Copy objects
   m_array.clear();
   m_object.clear();
@@ -88,6 +89,7 @@ JSONvalue::SetDatatype(JsonType p_type)
   m_array .clear();
   m_string.Empty();
   m_number.m_intNumber = 0;
+  m_number.m_bcdNumber.Zero();
   m_constant = JsonConst::JSON_NONE;
   // Remember our type
   m_type = p_type;
@@ -102,6 +104,7 @@ JSONvalue::SetValue(CString p_value)
   m_array .clear();
   m_object.clear();
   m_number.m_intNumber = 0;
+  m_number.m_bcdNumber.Zero();
   m_constant = JsonConst::JSON_NONE;
 }
 
@@ -114,6 +117,7 @@ JSONvalue::SetValue(JsonConst p_value)
   m_array.clear();
   m_object.clear();
   m_number.m_intNumber = 0;
+  m_number.m_bcdNumber.Zero();
   m_string.Empty();
 }
 
@@ -126,7 +130,8 @@ JSONvalue::SetValue(JSONobject p_value)
   // Clear the rest
   m_array.clear();
   m_string.Empty();
-  m_number.m_dblNumber = 0;
+  m_number.m_intNumber = 0;
+  m_number.m_bcdNumber.Zero();
   m_constant = JsonConst::JSON_NONE;
 }
 
@@ -140,6 +145,7 @@ JSONvalue::SetValue(JSONarray p_value)
   m_object.clear();
   m_string.Empty();
   m_number.m_intNumber = 0;
+  m_number.m_bcdNumber.Zero();
   m_constant = JsonConst::JSON_NONE;
 }
 
@@ -148,6 +154,7 @@ JSONvalue::SetValue(int p_value)
 {
   m_type = JsonType::JDT_number_int;
   m_number.m_intNumber = p_value;
+  m_number.m_bcdNumber.Zero();
   // Clear the rest
   m_object.clear();
   m_array.clear();
@@ -156,10 +163,11 @@ JSONvalue::SetValue(int p_value)
 }
 
 void
-JSONvalue::SetValue(double p_value)
+JSONvalue::SetValue(bcd p_value)
 {
-  m_type = JsonType::JDT_number_dbl;
-  m_number.m_dblNumber = p_value;
+  m_type = JsonType::JDT_number_bcd;
+  m_number.m_bcdNumber = p_value;
+  m_number.m_intNumber = 0;
   // Clear the rest
   m_object.clear();
   m_array.clear();
@@ -195,7 +203,7 @@ JSONvalue::GetAsJsonString(bool p_white,bool p_utf8,unsigned p_level /*=0*/)
     case JsonType::JDT_string:      return FormatAsJsonString(m_string,p_utf8);
     case JsonType::JDT_number_int:  result.Format("%ld",m_number.m_intNumber);
                                     break;
-    case JsonType::JDT_number_dbl:  result.Format("%.15g",m_number.m_dblNumber);
+    case JsonType::JDT_number_bcd:  result = m_number.m_bcdNumber.AsString();
                                     break;
     case JsonType::JDT_array:       result = newln + "[" + separ;
                                     for(unsigned ind = 0;ind < m_array.size();++ind)
@@ -367,7 +375,7 @@ JSONMessage::JSONMessage(CString p_message,CString p_url)
 JSONMessage::JSONMessage(JSONMessage* p_other)
 {
   // Copy the primary message value, and reference it
-  m_value = p_other->m_value;
+  m_value = new JSONvalue(p_other->m_value);
   m_value->AddReference();
 
   // Copy all other data members
@@ -377,6 +385,7 @@ JSONMessage::JSONMessage(JSONMessage* p_other)
   m_lastError   = p_other->m_lastError;
   m_url         = p_other->m_url;
   m_cracked     = p_other->m_cracked;
+  m_status      = p_other->m_status;
   m_request     = p_other->m_request;
   m_site        = p_other->m_site;
   m_desktop     = p_other->m_desktop;
@@ -419,6 +428,7 @@ JSONMessage::JSONMessage(HTTPMessage* p_message)
 
   // Copy all parts
   m_url            = p_message->GetURL();
+  m_status         = p_message->GetStatus();
   m_request        = p_message->GetRequestHandle();
   m_site           = p_message->GetHTTPSite();
   m_cracked        = p_message->GetCrackedURL();
@@ -426,6 +436,7 @@ JSONMessage::JSONMessage(HTTPMessage* p_message)
   m_contentType    = p_message->GetContentType();
   m_acceptEncoding = p_message->GetAcceptEncoding();
   m_verbTunnel     = p_message->GetVerbTunneling();
+  m_referrer       = p_message->GetReferrer();
   m_incoming       = (p_message->GetCommand() != HTTPCommand::http_response);
 
   // Duplicate all cookies
@@ -516,6 +527,7 @@ JSONMessage::JSONMessage(SOAPMessage* p_message)
   // Copy all parts
   m_url             = p_message->GetURL();
   ParseURL(m_url);
+  m_status          = p_message->GetStatus();
   m_request         = p_message->GetRequestHandle();
   m_site            = p_message->GetHTTPSite();
   m_desktop         = p_message->GetRemoteDesktop();
@@ -583,7 +595,17 @@ JSONMessage::Reset()
   // Reset error
   m_errorstate = false;
   m_lastError.Empty();
-  // leave the rest for the destination
+
+  // Routing is reset
+  m_routing.clear();
+
+  // Do not use incoming headers for outgoing headers
+  m_headers.clear();
+
+  // Leave the rest for the destination
+  // Leave access token untouched!
+  // Leave cookie cache untouched!
+  // Leave HTTPSite and HTTP_REQUEST for the answer
 }
 
 // Parse the URL, true if legal
@@ -630,7 +652,7 @@ JSONMessage::GetVerb()
 CString
 JSONMessage::GetRoute(int p_index)
 {
-  if(p_index >= 0 && p_index < m_routing.size())
+  if(p_index >= 0 && p_index < (int) m_routing.size())
   {
     return m_routing[p_index];
   }
@@ -755,6 +777,275 @@ JSONMessage::UseVerbTunneling()
   }
   return false;
 }
+
+// Load from file
+bool
+JSONMessage::LoadFile(const CString& p_fileName)
+{
+  FILE* file = nullptr;
+  if(fopen_s(&file, p_fileName, "rb") == 0 && file)
+  {
+    // Find the length of a file
+    fseek(file, 0, SEEK_END);
+    unsigned long length = ftell(file);
+    fseek(file, 0, SEEK_SET);
+
+    // Check for the streaming limit
+    if(length > g_streaming_limit)
+    {
+      fclose(file);
+      return false;
+    }
+
+    // Prepare buffer
+    // CString buffers are allocated on the heap
+    // so shut up the warning about stack overflow
+    CString inhoud;
+    char* buffer = inhoud.GetBufferSetLength(length + 1);
+
+    // Read the buffer
+    if(fread(buffer,1,length,file) < length)
+    {
+      fclose(file);
+      return false;
+    }
+    buffer[length] = 0;
+
+    // Buffer unlock
+    inhoud.ReleaseBuffer(length);
+
+    // Close the file
+    if(fclose(file))
+    {
+      return false;
+    }
+
+    // And parse it
+    ParseMessage(inhoud);
+    return true;
+  }
+  return false;
+}
+
+// Save to file
+bool
+JSONMessage::SaveFile(const CString& p_fileName, bool p_withBom /*= false*/)
+{
+  bool result = false;
+  FILE* file = nullptr;
+  if(fopen_s(&file, p_fileName, "w") == 0 && file)
+  {
+    CString inhoud;
+    if(p_withBom)
+    {
+      inhoud = GetJsonMessage(m_encoding);
+    }
+    else
+    {
+      inhoud = GetJsonMessageWithBOM(m_encoding);
+    }
+    if(fwrite(inhoud.GetString(),inhoud.GetLength(),1,file) == 1)
+    {
+      result = true;
+    }
+    // Close and flush the file
+    if(fclose(file))
+    {
+      result = false;
+    }
+  }
+  return result;
+}
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Finding value nodes within the JSON structure
+//
+//////////////////////////////////////////////////////////////////////////
+
+// Finding the first value of this name
+JSONvalue* 
+JSONMessage::FindValue(CString p_name,bool p_object /*= false*/)
+{
+  // Find from the root value
+  return FindValue(m_value,p_name,p_object);
+}
+
+// Finding the first value with this name AFTER the p_from value
+JSONvalue* 
+JSONMessage::FindValue(JSONvalue* p_from,CString p_name,bool p_object /*=false*/)
+{
+  // Stopping criterion: nothing more to find
+  if(p_from == nullptr)
+  {
+    return nullptr;
+  }
+
+  // Recurse through an array
+  if(p_from->GetDataType() == JsonType::JDT_array)
+  {
+    for(auto& val : p_from->GetArray())
+    {
+      JSONvalue* value = FindValue(&val,p_name,p_object);
+      if(value)
+      {
+        return value;
+      }
+    }
+  }
+
+  // Recurse through an object
+  if(p_from->GetDataType() == JsonType::JDT_object)
+  {
+    for(auto& val : p_from->GetObject())
+    {
+      // Stopping at this element
+      if(val.m_name.Compare(p_name) == 0)
+      {
+        // Return the object node instead of the pair
+        if(p_object)
+        {
+          return p_from;
+        }
+        return &val.m_value;
+      }
+      // Recurse for array and object
+      if(val.m_value.GetDataType() == JsonType::JDT_array ||
+         val.m_value.GetDataType() == JsonType::JDT_object)
+      {
+        JSONvalue* value = FindValue(&val.m_value,p_name,p_object);
+        if(value)
+        {
+          return value;
+        }
+      }
+    }
+  }
+  return nullptr;
+}
+
+// Finding the first name/value pair of this name
+JSONpair*
+JSONMessage::FindPair(CString p_name)
+{
+  if(m_value)
+  {
+    return FindPair(m_value, p_name);
+  }
+  return nullptr;
+}
+
+// Finding the first name/value pair AFTER this value
+JSONpair* 
+JSONMessage::FindPair(JSONvalue* p_value,CString p_name)
+{
+  if(p_value && p_value->GetDataType() == JsonType::JDT_object)
+  {
+    for(auto& pair : p_value->GetObject())
+    {
+      if(pair.m_name.Compare(p_name) == 0)
+      {
+        return &pair;
+      }
+    }
+  }
+  if(p_value && p_value->GetDataType() == JsonType::JDT_array)
+  {
+    for(auto& val : p_value->GetArray())
+    {
+      if(val.GetDataType() == JsonType::JDT_object ||
+         val.GetDataType() == JsonType::JDT_array  )
+      {
+        JSONpair* pair = FindPair(&val,p_name);
+        if(pair)
+        {
+          return pair;
+        }
+      }
+    }
+  }
+  return nullptr;
+}
+
+// Get an array element of an array value node
+JSONvalue* 
+JSONMessage::GetArrayElement(JSONvalue* p_array,int p_index)
+{
+  if(p_array->GetDataType() == JsonType::JDT_array)
+  {
+    if(0 <= p_index && p_index < (int)p_array->GetArray().size())
+    {
+      return &(p_array->GetArray()[p_index]);
+    }
+  }
+  return nullptr;
+}
+
+// Get an object element of an object value node
+JSONpair* 
+JSONMessage::GetObjectElement(JSONvalue* p_object, int p_index)
+{
+  if (p_object->GetDataType() == JsonType::JDT_object)
+  {
+    if (0 <= p_index && p_index < (int)p_object->GetObject().size())
+    {
+      return &(p_object->GetObject()[p_index]);
+    }
+  }
+  return nullptr;
+}
+
+// Getting a string value by an unique name
+CString
+JSONMessage::GetValueString(CString p_name)
+{
+  CString value;
+  JSONvalue* val = FindValue(p_name);
+  if(val && val->GetDataType() == JsonType::JDT_string)
+  {
+    value = val->GetString();
+  }
+  return value;
+}
+
+// Getting an integer value by an unique name
+long
+JSONMessage::GetValueInteger(CString p_name)
+{
+  long value = 0;
+  JSONvalue* val = FindValue(p_name);
+  if (val && val->GetDataType() == JsonType::JDT_number_int)
+  {
+    value = val->GetNumberInt();
+  }
+  return value;
+}
+
+// Getting a number value by an unique name
+bcd
+JSONMessage::GetValueNumber(CString p_name)
+{
+  bcd value;
+  JSONvalue* val = FindValue(p_name);
+  if (val && val->GetDataType() == JsonType::JDT_number_bcd)
+  {
+    value = val->GetNumberBcd();
+  }
+  return value;
+}
+
+// Getting a constant (boolean/null) by an unique name
+JsonConst
+JSONMessage::GetValueConstant(CString p_name)
+{
+  JSONvalue* val = FindValue(p_name);
+  if (val && val->GetDataType() == JsonType::JDT_const)
+  {
+    return val->GetConstant();
+  }
+  return JsonConst::JSON_NONE;
+}
+
 
 #pragma region References
 

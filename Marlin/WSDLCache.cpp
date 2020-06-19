@@ -670,9 +670,9 @@ WSDLCache::CheckOutgoingMessage(SOAPMessage* p_msg,bool p_checkFields)
   // See if it is an registered operation in this WSDL
   OperationMap::iterator it = m_operations.find(name);
   if(it != m_operations.end())
-    {
-      return CheckMessage(it->second.m_output,p_msg,"Server",p_checkFields);
-    }
+  {
+    return CheckMessage(it->second.m_output,p_msg,"Server",p_checkFields);
+  }
   // No valid operation found
   p_msg->Reset();
   p_msg->SetFault("No operation","Server","No operation [" + p_msg->GetSoapAction() + "] found","While testing against WSDL");
@@ -798,11 +798,11 @@ WSDLCache::CheckParameters(XMLElement*  p_orgBase
   {
     CString checkName = checkParam->GetName();
     if(p_orig->FindElement(p_orgBase,checkName,false) == nullptr)
-  {
-    p_check->Reset();
+    {
+      p_check->Reset();
       p_check->SetFault("Extra field found",p_who,"Message has unexpected parameter",checkName);
-    return false;
-  }
+      return false;
+    }
     // Get next parameter in sequence list
     checkParam = p_check->GetElementSibling(checkParam);
   }
@@ -1097,7 +1097,7 @@ WSDLCache::GetOperationPageSoap(SOAPMessage* p_msg,bool p_soapVersion)
   message.Replace("&gt;dateTime&lt;",     "&gt;<font class=value>dateTime</font>&lt;");
   message.Replace("&gt;base64Binary&lt;", "&gt;<font class=value>base64Binary</font>&lt;");
 
-  // Ending of pre-formatted section
+  // Ending of preformatted section
   message += "</pre>\n";
 
   return message;
@@ -1190,24 +1190,24 @@ WSDLCache::ReadWSDLFile(LPCTSTR p_filename)
   {
     if(ex.GetSafeExceptionCode())
     {
-    // We need to detect the fact that a second exception can occur,
-    // so we do **not** call the error report method again
-    // Otherwise we would end into an infinite loop
+      // We need to detect the fact that a second exception can occur,
+      // so we do **not** call the error report method again
+      // Otherwise we would end into an infinite loop
       m_exception = true;
       m_exception = ErrorReport::Report(ex.GetSafeExceptionCode(),ex.GetExceptionPointers());
 
-    if(m_exception)
-    {
-      // Error while sending an error report
-      // This error can originate from another thread, OR from the sending of this error report
-      CRASHLOG(0xFFFF,"DOUBLE INTERNAL ERROR while making an error report.!!");
-      m_exception = false;
+      if(m_exception)
+      {
+        // Error while sending an error report
+        // This error can originate from another thread, OR from the sending of this error report
+        CRASHLOG(0xFFFF,"DOUBLE INTERNAL ERROR while making an error report.!!");
+        m_exception = false;
+      }
+      else
+      {
+        CRASHLOG(WER_S_REPORT_UPLOADED,"CRASH: Errorreport while reading WSDL has been made");
+      }
     }
-    else
-    {
-      CRASHLOG(WER_S_REPORT_UPLOADED,"CRASH: Errorreport while reading WSDL has been made");
-    }
-  }
     else
     {
       // 'Normale' C++ exception: Maar we hebben hem vergeten af te vangen
@@ -1267,8 +1267,8 @@ WSDLCache::ReadWSDLFileFromURL(CString p_url)
       {
         result = ReadWSDL(wsdl);
       }
+      delete[] contents;
     }
-    delete [] contents;
   }
   return result;
 }

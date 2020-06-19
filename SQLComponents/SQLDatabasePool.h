@@ -2,7 +2,7 @@
 //
 // File: SQLDatabasePool.cpp
 //
-// Copyright (c) 1998-2019 ir. W.E. Huisman
+// Copyright (c) 1998-2020 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy of 
@@ -64,22 +64,28 @@ public:
   void            GetListOfConnections(CString& p_list);
 
     // Return a database connection to the pool
-  void         GiveUp(SQLDatabase* p_database);
+  void            GiveUp(SQLDatabase* p_database);
   // Clean-up all database connections
-  void         CloseAll();
+  void            CloseAll();
   // Cleanup: To be called in the cleanup process of the program
-  void         Cleanup(bool p_aggressive = false);
+  void            Cleanup(bool p_aggressive = false);
   // Set current max databases allowed
-  void         SetMaxDatabases(unsigned p_maximum);
+  void            SetMaxDatabases(unsigned p_maximum);
   // Read all database definitions from 'database.xml'
-  bool         ReadConnections(CString p_filename = "");
+  bool            ReadConnections(CString p_filename = "");
+
+  // Add a column rebind for this database session: No bounds checking!
+  void            AddColumnRebind(int p_sqlType, int p_cppType);
+  // Add a parameter rebind for this database session: No bounds checking!
+  void            AddParameterRebind(int p_sqlType, int p_cppType);
+
 
   // Support of logging functions (for all databases in the pool)
-  void         RegisterLogContext(int p_level, LOGLEVEL p_loglevel, LOGPRINT p_logprinter, void* p_logContext);
-  void         LogPrint(const char* p_text);
-  int          LogLevel();
-  bool         WilLog();
-  void         SetLoggingActivation(int p_loglevel);
+  void            RegisterLogContext(int p_level, LOGLEVEL p_loglevel, LOGPRINT p_logprinter, void* p_logContext);
+  void            LogPrint(const char* p_text);
+  int             LogLevel();
+  bool            WilLog();
+  void            SetLoggingActivation(int p_loglevel);
 
 private:
   // Get OR make a logged in database connection
@@ -96,6 +102,9 @@ private:
   void         CloseAllInternally();
   // Clean up the free lists
   void         CleanupAllInternally();
+  // Add our rebind mappings to a newly opened database
+  void         AddRebindsToDatabase(SQLDatabase* p_database);
+
 
   // Data
   bool            m_isopen          { false };          // If database pool is currently open for business
@@ -111,6 +120,10 @@ private:
   void*           m_logContext   { nullptr };           // Logging context (e.g. and object)
   int             m_loggingLevel { 0       };           // Current level
   int             m_logActive    {LOGLEVEL_MAX};        // Threshold: Log only above this loglevel
+
+  // General rebind mapping for new databases
+  RebindMap       m_rebindParameters;                   // Rebinding of parameters for SQLBindParam
+  RebindMap       m_rebindColumns;                      // Rebinding of result columns for SQLBindCol
 
   // Thread synchronization
   CRITICAL_SECTION m_lock;

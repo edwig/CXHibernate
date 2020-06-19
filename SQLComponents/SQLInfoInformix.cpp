@@ -2,7 +2,7 @@
 //
 // File: SQLInfoInformix.cpp
 //
-// Copyright (c) 1998-2019 ir. W.E. Huisman
+// Copyright (c) 1998-2020 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy of 
@@ -165,6 +165,13 @@ bool
 SQLInfoInformix::GetRDBMSMustCommitDDL() const
 {
   return false;
+}
+
+// Correct maximum precision,scale for a NUMERIC datatype
+void
+SQLInfoInformix::GetRDBMSNumericPrecisionScale(SQLULEN& /*p_precision*/, SQLSMALLINT& /*p_scale*/) const
+{
+  // NO-OP
 }
 
 // KEYWORDS
@@ -896,7 +903,7 @@ SQLInfoInformix::GetCATALOGForeignAttributes(CString p_schema
                 "      ,trim(tab.tabname)      AS foreign_table_name\n"
                 "      ,trim(pcn.constrname)   AS primary_key_constraint\n"
                 "      ,trim(con.constrname)   AS foreign_key_constraint\n"
-                "      ,%d               AS key_sequence\n"
+                "      ,%d                     AS key_sequence\n"
                 "      ,trim(pcl.colname)      AS primary_column_name\n"
                 "      ,trim(col.colname)      AS foreign_column_name\n"
                 "      ,CASE WHEN ref.updrule = 'R' THEN 1\n"
@@ -950,8 +957,8 @@ SQLInfoInformix::GetCATALOGForeignAttributes(CString p_schema
       }
       else
       {
-      part += "    AND tab.owner = '" + p_schema + "'\n";
-    }
+        part += "   AND tab.owner      = '" + p_schema + "'\n";
+      }
     }
     if(!p_tablename.IsEmpty())
     {
@@ -961,8 +968,8 @@ SQLInfoInformix::GetCATALOGForeignAttributes(CString p_schema
       }
       else
       {
-      part += "   AND tab.tabname    = '" + p_tablename + "'\n";
-    }
+        part += "   AND tab.tabname    = '" + p_tablename + "'\n";
+      }
     }
     if(!p_constraint.IsEmpty())
     {
@@ -972,8 +979,8 @@ SQLInfoInformix::GetCATALOGForeignAttributes(CString p_schema
       }
       else
       {
-      part += "    AND con.constrname = '" + p_constraint + "'\n";
-    }
+        part += "    AND con.constrname = '" + p_constraint + "'\n";
+      }
     }
     // Add to the query
     if(!query.IsEmpty())
@@ -983,7 +990,7 @@ SQLInfoInformix::GetCATALOGForeignAttributes(CString p_schema
     query += part;
   }
 
-  // Add ordering upto column number
+  // Add ordering up to column number
   query += " ORDER BY 1,2,3,4,5,6,7,8,9";
 
   return query;
@@ -1853,6 +1860,13 @@ SQLInfoInformix::GetSESSIONConstraintsImmediate() const
 // Calling a stored function or procedure if the RDBMS does not support ODBC call escapes
 SQLVariant*
 SQLInfoInformix::DoSQLCall(SQLQuery* /*p_query*/,CString& /*p_schema*/,CString& /*p_procedure*/)
+{
+  return nullptr;
+}
+
+// Calling a stored function with named parameters, returning a value
+SQLVariant*
+SQLInfoInformix::DoSQLCallNamedParameters(SQLQuery* /*p_query*/,CString& /*p_schema*/,CString& /*p_procedure*/)
 {
   return nullptr;
 }

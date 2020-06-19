@@ -2,7 +2,7 @@
 //
 // File: SQLInfoPostgreSQL.h
 //
-// Copyright (c) 1998-2019 ir. W.E. Huisman
+// Copyright (c) 1998-2020 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy of 
@@ -79,6 +79,9 @@ public:
 
   // Database must commit DDL commands in a transaction
   bool GetRDBMSMustCommitDDL() const;
+
+  // Correct maximum precision,scale for a NUMERIC datatype
+  void GetRDBMSNumericPrecisionScale(SQLULEN& p_precision, SQLSMALLINT& p_scale) const;
 
   // KEYWORDS
 
@@ -202,14 +205,14 @@ public:
   // Meta info about meta types
   CString GetCATALOGMetaTypes(int p_type) const;
   // All table functions
-  CString GetCATALOGTableExists    (CString p_schema,CString p_tablename) const;
-  CString GetCATALOGTablesList     (CString p_schema,CString p_pattern) const;
+  CString GetCATALOGTableExists       (CString p_schema,CString p_tablename) const;
+  CString GetCATALOGTablesList        (CString p_schema,CString p_pattern)   const;
   CString GetCATALOGTableAttributes   (CString p_schema,CString p_tablename) const;
   CString GetCATALOGTableSynonyms     (CString p_schema,CString p_tablename) const;
   CString GetCATALOGTableCatalog      (CString p_schema,CString p_tablename) const;
-  CString GetCATALOGTableCreate    (MetaTable& p_table,MetaColumn& p_column) const;
-  CString GetCATALOGTableRename    (CString p_schema,CString p_tablename,CString p_newname) const;
-  CString GetCATALOGTableDrop      (CString p_schema,CString p_tablename) const;
+  CString GetCATALOGTableCreate       (MetaTable& p_table,MetaColumn& p_column) const;
+  CString GetCATALOGTableRename       (CString p_schema,CString p_tablename,CString p_newname) const;
+  CString GetCATALOGTableDrop         (CString p_schema,CString p_tablename) const;
   // All Temporary table functions
   CString GetCATALOGTemptableCreate   (CString p_schema,CString p_tablename,CString p_select) const;
   CString GetCATALOGTemptableIntoTemp (CString p_schema,CString p_tablename,CString p_select) const;
@@ -356,6 +359,8 @@ public:
 
   // Calling a stored function or procedure if the RDBMS does not support ODBC call escapes
   SQLVariant* DoSQLCall(SQLQuery* p_query,CString& p_schema,CString& p_procedure);
+  // Calling a stored function with named parameters, returning a value
+  SQLVariant* DoSQLCallNamedParameters(SQLQuery* p_query,CString& p_schema,CString& p_procedure);
 
 private:
   // IMPLEMENTATION OF the DoSQLCall interface

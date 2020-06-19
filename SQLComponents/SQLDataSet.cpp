@@ -2,7 +2,7 @@
 //
 // File: SQLDataSet.cpp
 //
-// Copyright (c) 1998-2019 ir. W.E. Huisman
+// Copyright (c) 1998-2020 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy of 
@@ -30,8 +30,6 @@
 #include "SQLVariantFormat.h"
 #include "SQLInfoDB.h"
 #include <algorithm>
-#include <sstream>
-#include <set>
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -103,6 +101,22 @@ SQLDataSet::SQLDataSet(CString p_name,SQLDatabase* p_database /*=NULL*/)
 SQLDataSet::~SQLDataSet()
 {
   Close();
+}
+
+void
+SQLDataSet::InitCounter()
+{
+  LARGE_INTEGER timing{ 0, 0 };
+  QueryPerformanceFrequency(&timing);
+  m_frequency = timing.QuadPart / CLOCKS_PER_SEC;
+}
+
+ULONG64
+SQLDataSet::GetCounter()
+{
+  LARGE_INTEGER timing = { 0, 0 };
+  QueryPerformanceCounter(&timing);
+  return timing.QuadPart / m_frequency;
 }
 
 // Navigate in the records
@@ -180,6 +194,7 @@ SQLDataSet::Close()
   m_query.Empty();
   m_selection.Empty();
   m_primaryTableName.Empty();
+  m_primaryAlias.Empty();
 
   // Reset the open status
   m_open = false;
@@ -356,7 +371,6 @@ SQLDataSet::SetQuery(CString& p_query)
   m_whereCondition.Empty();
   m_groupby.Empty();
   m_orderby.Empty();
-  m_apply.Empty();
   m_filters = nullptr;
   m_havings = nullptr;
 
@@ -399,11 +413,14 @@ SQLDataSet::SetHavings(SQLFilterSet* p_havings)
   m_havings = p_havings;
 }
 
+// Maximum time alloted to the Open() method
 void
-SQLDataSet::SetApply(CString p_apply)
+SQLDataSet::SetQueryTime(int p_milliseconds)
 {
-  m_query.Empty();
-  m_apply = p_apply;
+  if(p_milliseconds >= 0)
+  {
+    m_queryTime = p_milliseconds;
+  }
 }
 
 // Replace $name for the value of a parameter
@@ -469,15 +486,7 @@ SQLDataSet::ParseSelection(SQLQuery& p_query)
 {
   CString sql("SELECT ");
   
-  if(!m_apply.IsEmpty())
-  {
-    ParseApply(sql);
-  }
-  else
-  {
-    CheckDuplicateColumns();
-  sql += m_selection.IsEmpty() ? "*" : m_selection;
-  }
+    sql += m_selection.IsEmpty() ? "*" : m_selection;
   sql += "\n  FROM ";
 
   if(!m_primarySchema.IsEmpty())
@@ -485,12 +494,18 @@ SQLDataSet::ParseSelection(SQLQuery& p_query)
     sql += m_primarySchema + ".";
   }
   sql += m_primaryTableName;
+  if(!m_primaryAlias.IsEmpty())
+  {
+    sql += " ";
+    sql += m_primaryAlias;
+  }
 
+  int count = 0;
   int number = 0;
   ParameterSet::iterator it;
   for(it = m_parameters.begin();it != m_parameters.end(); ++it)
   {
-    sql += (it == m_parameters.begin()) ? "\n WHERE " : "\n   AND ";
+    sql += (count++ == 0) ? "\n WHERE " : "\n   AND ";
     sql += it->m_name;
     if(it->m_value.IsNULL())
     {
@@ -503,85 +518,6 @@ SQLDataSet::ParseSelection(SQLQuery& p_query)
     }
   }
   return sql;
-}
-
-// Parse the apply part
-void
-SQLDataSet::ParseApply(CString& sql)
-{
-  m_apply.TrimLeft();
-  m_apply.MakeLower();
-  if (m_apply.GetLength() > 10 && m_apply.Mid(0, 9) == "aggregate")
-  {
-    int from = 0;
-    int upto = 0;
-    CString action = "";
-    CString column = "";
-
-    // Remove double spaces
-    while (m_apply.Find("  ") >= 0)
-    {
-      m_apply.Replace("  ", " ");
-    }
-    // Remove space behind parenthesis
-    m_apply.Replace("( ", "(");
-
-    from = m_apply.Find("(", 0) + 1;
-    upto = m_apply.Find(" ", from);
-    column = m_apply.Mid(from, (upto - from));
-
-    if (m_apply.Find("with sum ") > 0)
-    {
-      action = "SUM(" + column + ")";
-    }
-    else if (m_apply.Find("with min ") > 0)
-    {
-      action = "MIN(" + column + ")";
-    }
-    else if (m_apply.Find("with max ") > 0)
-    {
-      action = "MAX(" + column + ")";
-    }
-    else if (m_apply.Find("with average ") > 0)
-    {
-      action = "AVG(" + column + ")";
-    }
-    else if (m_apply.Find("with countdistinct ") > 0)
-    {
-      action = "COUNT(DISTINCT(" + column + "))";
-    }
-    else if (m_apply.Find("with count ") > 0)
-    {
-      action = "COUNT(" + column + ")";
-    }
-    else
-    {
-      // Error as a MIN with just one record
-      throw StdException("Invalid apply aggregate option");
-    }
-
-    if(action.GetLength() > 1)
-    {
-      if(!m_selection.IsEmpty() && m_selection.Compare("*"))
-      {
-        sql += m_selection;
-        sql += ",";
-      }
-
-      sql += action;
-      if (m_apply.Find(" as ") > 0)
-      {
-        from = m_apply.Find(" as ") + 4;
-        upto = m_apply.Find(")", from);
-        sql += " AS " + m_apply.Mid(from, upto - from);
-      }
-    }
-  }
-  else
-  {
-    // Error as a MIN with just one record
-    throw StdException("Missing aggregate");
-  }
 }
 
 // Parse the filters (m_filters must be non-null)
@@ -664,6 +600,7 @@ bool
 SQLDataSet::Open(bool p_stopIfNoColumns /*=false*/)
 {
   bool   result = false;
+  ULONG64 begin  = 0;
   CString query;
 
   if(m_query.IsEmpty() && m_selection.IsEmpty())
@@ -692,7 +629,15 @@ SQLDataSet::Open(bool p_stopIfNoColumns /*=false*/)
     if(m_topRecords)
     {
       query = m_database->GetSQLInfoDB()->GetSQLTopNRows(query,m_topRecords,m_skipRecords);
-      }
+    }
+
+    // Probably record the begin time
+    if(m_queryTime)
+    {
+      // Use high-performance counter to get the clock ticks in long-range resolution
+      InitCounter();
+      begin = GetCounter();
+    }
 
     // Do the SELECT query
     qry.DoSQLStatement(query);
@@ -709,6 +654,12 @@ SQLDataSet::Open(bool p_stopIfNoColumns /*=false*/)
     while(qry.GetRecord())
     {
       ReadRecordFromQuery(qry,modifiable);
+
+      // See if we can read a next record
+      if(begin && ((GetCounter() - begin) > (ULONG64)m_queryTime))
+      {
+        throw StdException("Querytime exceeded");
+      }
     }
     // Reached the end: we are OPEN!
     m_open = true;
@@ -737,6 +688,7 @@ bool
 SQLDataSet::Append()
 {
   bool result = false;
+  ULONG64 begin  = 0;
 
   // See if already opened
   if(!m_open)
@@ -766,7 +718,15 @@ SQLDataSet::Append()
     if(m_topRecords)
     {
       query = m_database->GetSQLInfoDB()->GetSQLTopNRows(query,m_topRecords,m_skipRecords);
-      }
+    }
+
+    // Probably record the begin time
+    if(m_queryTime)
+    {
+      // Use high-performance counter to get the clock ticks in long-range resolution
+      InitCounter();
+      begin = GetCounter();
+    }
 
     // Do the SELECT query
     qry.DoSQLStatement(query);
@@ -778,6 +738,12 @@ SQLDataSet::Append()
     while(qry.GetRecord())
     {
       ReadRecordFromQuery(qry,modifiable,true);
+
+      // See if we can read a next record
+      if(begin && ((GetCounter() - begin) > (ULONG64)m_queryTime))
+      {
+        throw StdException("Querytime exceeded");
+      }
     }
     // Legal 0 or more records
     result = true;
@@ -902,43 +868,6 @@ SQLDataSet::ReadTypes(SQLQuery& qr)
   {
     type = qr.GetColumnType(ind);
     m_types.push_back(type);
-  }
-}
-
-void
-SQLDataSet::CheckDuplicateColumns()
-{
-  // Check whether m_selection has duplicate column names. 
-  // Remove double spaces
-  m_selection.TrimLeft();
-  while (m_selection.Find("  ") >= 0)
-  {
-    m_selection.Replace("  ", " ");
-  }
-  while (m_selection.Find(", ") >= 0)
-  {
-    m_selection.Replace(", ", ",");
-  }
-  while (m_selection.Find(" ,") >= 0)
-  {
-    m_selection.Replace(" ,", ",");
-  }
-  std::set<std::string>kolommen;
-  std::stringstream selectie(m_selection.MakeLower().GetString());
-  // Seperate the selection in columns
-  while (selectie.good())
-  {
-    std::string kolom;
-    std::getline(selectie, kolom, ',');
-    // if the column already exists throw error.
-    if (kolommen.find(kolom) != kolommen.end()) // count(kolom))
-    {
-      throw StdException("Duplicate columns in select");
-    }
-    else
-    {
-      kolommen.insert(kolom);
-    }
   }
 }
 

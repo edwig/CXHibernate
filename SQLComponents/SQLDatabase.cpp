@@ -2,7 +2,7 @@
 //
 // File: SQLDatabase.cpp
 //
-// Copyright (c) 1998-2019 ir. W.E. Huisman
+// Copyright (c) 1998-2020 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy of 
@@ -88,22 +88,22 @@ SQLDatabase::Close()
   
   try
   {
-  // Close database handle
-  if(m_hdbc != SQL_NULL_HANDLE)
-  {
-    // See if there are pending transactions,
-    CloseAllTransactions();
+    // Close database handle
+    if(m_hdbc != SQL_NULL_HANDLE)
+    {
+      // See if there are pending transactions,
+      CloseAllTransactions();
 
-    // Try to disconnect 
-    // (time consuming for some database engines)
-    FreeDbcHandle();
-  }
-  // Close environment handle
-  if(m_henv != SQL_NULL_HANDLE)
-  {
-    // Disconnect environment
-    FreeEnvHandle();
-  }
+      // Try to disconnect 
+      // (time consuming for some database engines)
+      FreeDbcHandle();
+    }
+    // Close environment handle
+    if(m_henv != SQL_NULL_HANDLE)
+    {
+      // Disconnect environment
+      FreeEnvHandle();
+    }
   }
   catch(StdException& ex)
   {
@@ -475,10 +475,10 @@ SQLDatabase::CollectInfo()
     m_rdbmsType = RDBMS_ODBC_STANDARD;
   }
 
-  // After findint the databasea type, set the rebinds
+  // After finding the database type, set the rebinds
   SetKnownRebinds();
 
-  // Now find the 'real' databasename
+  // Now find the 'real' database name
   if(RealDatabaseName() == false)
   {
     return DatabaseNameFromDSN();
@@ -546,6 +546,20 @@ SQLDatabase::SetKnownRebinds()
     m_rebindParameters[SQL_C_SLONG] = SQL_C_LONG;
     m_rebindParameters[SQL_C_ULONG] = SQL_C_LONG;
   }
+}
+
+// Add a column rebind for this database session: No bounds checking!
+void
+SQLDatabase::AddColumnRebind(int p_sqlType,int p_cppType)
+{
+  m_rebindColumns[p_sqlType] = p_cppType;
+}
+
+// Add a parameter rebind for this database session: No bounds checking!
+void
+SQLDatabase::AddParameterRebind(int p_sqlType,int p_cppType)
+{
+  m_rebindParameters[p_sqlType] = p_cppType;
 }
 
 // Get the SQL Info object by database
@@ -1071,9 +1085,9 @@ SQLDatabase::Check(INT nRetCode)
   switch (nRetCode)
   {
     case SQL_SUCCESS_WITH_INFO: if(WilLog())
-                                  {
-                                    CString error;
-                                    error.Format("=> ODBC Success with info: %s\n",GetErrorString().GetString());
+                                {
+                                  CString error;
+                                  error.Format("=> ODBC Success with info: %s\n",GetErrorString().GetString());
                                   LogPrint(error);
                                 }
     case SQL_SUCCESS:           // Fall through

@@ -288,8 +288,8 @@ HTTPSite::SetHandler(HTTPCommand p_command,SiteHandler* p_handler,bool p_owner /
     }
     if(handler)
     {
-    handler->SetNextHandler(p_handler,p_owner);
-  }
+      handler->SetNextHandler(p_handler,p_owner);
+    }
   }
   else
   {
@@ -355,9 +355,9 @@ HTTPSite::CheckReliable()
   }
   if(m_reliable && m_scheme.IsEmpty())
   {
-      // Not strictly an error, but issue a serious warning against using RM without authorization
-      WARNINGLOG("ReliableMessaging protocol used without an authorization scheme.");
-    }
+    // Not strictly an error, but issue a serious warning against using RM without authorization
+    WARNINGLOG("ReliableMessaging protocol used without an authorization scheme.");
+  }
   return true;
 }
 
@@ -601,12 +601,12 @@ HTTPSite::HandleHTTPMessage(HTTPMessage* p_message)
     // This is now done by the threadpool thread, so the central
     // server has more time to handle the incoming requests.
     if(p_message->GetReadBuffer() && m_server->ReceiveIncomingRequest(p_message) == false)
-      {
-        // Error already report to log, EOF or stream not read
-        p_message->Reset();
-        p_message->SetStatus(HTTP_STATUS_GONE);
-        SendResponse(p_message);
-      }
+    {
+      // Error already report to log, EOF or stream not read
+      p_message->Reset();
+      p_message->SetStatus(HTTP_STATUS_GONE);
+      SendResponse(p_message);
+    }
 
     // If site in asynchronous SOAP/XML mode
     if(m_async)
@@ -627,15 +627,15 @@ HTTPSite::HandleHTTPMessage(HTTPMessage* p_message)
     // Call the correct handler for this site
     if(doPerformHandlers)
     {
-    handler = GetSiteHandler(p_message->GetCommand());
-    if(handler)
-    {
-      handler->HandleMessage(p_message);
-    }
-    else
-    {
-      HandleHTTPMessageDefault(p_message);
-    }
+      handler = GetSiteHandler(p_message->GetCommand());
+      if(handler)
+      {
+        handler->HandleMessage(p_message);
+      }
+      else
+      {
+        HandleHTTPMessageDefault(p_message);
+      }
     }
     else
     {
@@ -653,23 +653,23 @@ HTTPSite::HandleHTTPMessage(HTTPMessage* p_message)
   {
     if(ex.GetSafeExceptionCode())
     {
-    // We need to detect the fact that a second exception can occur,
-    // so we do **not** call the error report method again
-    // Otherwise we would end into an infinite loop
+      // We need to detect the fact that a second exception can occur,
+      // so we do **not** call the error report method again
+      // Otherwise we would end into an infinite loop
       g_exception = true;
       g_exception = ErrorReport::Report(ex.GetSafeExceptionCode(),ex.GetExceptionPointers(),m_webroot,m_site);
 
-    if(g_exception)
-    {
-      // Error while sending an error report
-      // This error can originate from another thread, OR from the sending of this error report
-      CRASHLOG(310L,"DOUBLE INTERNAL ERROR while making an error report.!!");
-      g_exception = false;
-    }
-    else
-    {
-      CRASHLOG(WER_S_REPORT_UPLOADED,"CRASH: Errorreport has been made");
-    }
+      if(g_exception)
+      {
+        // Error while sending an error report
+        // This error can originate from another thread, OR from the sending of this error report
+        CRASHLOG(310L,"DOUBLE INTERNAL ERROR while making an error report.!!");
+        g_exception = false;
+      }
+      else
+      {
+        CRASHLOG(WER_S_REPORT_UPLOADED,"CRASH: Errorreport has been made");
+      }
     }
     else
     {
@@ -710,10 +710,10 @@ HTTPSite::PostHandle(HTTPMessage* p_message,bool p_reset /*=true*/)
     // Do NOT send the error report to the client. No need to show the error-stack!!
     if(p_reset)
     {
-    p_message->Reset();
-    p_message->GetFileBuffer()->Reset();
-    p_message->GetFileBuffer()->ResetFilename();
-    p_message->SetStatus(HTTP_STATUS_SERVER_ERROR);
+      p_message->Reset();
+      p_message->GetFileBuffer()->Reset();
+      p_message->GetFileBuffer()->ResetFilename();
+      p_message->SetStatus(HTTP_STATUS_SERVER_ERROR);
     }
     m_server->SendResponse(p_message);
 
@@ -727,24 +727,24 @@ HTTPSite::PostHandle(HTTPMessage* p_message,bool p_reset /*=true*/)
   {
     if(ex.GetSafeExceptionCode())
     {
-    // We need to detect the fact that a second exception can occur,
-    // so we do **not** call the error report method again
-    // Otherwise we would end into an infinite loop
+      // We need to detect the fact that a second exception can occur,
+      // so we do **not** call the error report method again
+      // Otherwise we would end into an infinite loop
       g_exception = true;
       g_exception = ErrorReport::Report(ex.GetSafeExceptionCode(),ex.GetExceptionPointers(),m_webroot,m_site);
 
-    if(g_exception)
-    {
-      // Error while sending an error report
-      // This error can originate from another thread, OR from the sending of this error report
-      CRASHLOG(0xFFFF,"DOUBLE INTERNAL ERROR while making an error report.!!");
-      g_exception = false;
+      if(g_exception)
+      {
+        // Error while sending an error report
+        // This error can originate from another thread, OR from the sending of this error report
+        CRASHLOG(0xFFFF,"DOUBLE INTERNAL ERROR while making an error report.!!");
+        g_exception = false;
+      }
+      else
+      {
+        CRASHLOG(WER_S_REPORT_UPLOADED,"CRASH: Errorreport has been made");
+      }
     }
-    else
-    {
-      CRASHLOG(WER_S_REPORT_UPLOADED,"CRASH: Errorreport has been made");
-    }
-  }
     else
     {
       // 'Normale' C++ exception: Maar we hebben hem vergeten af te vangen
@@ -1830,7 +1830,7 @@ HTTPSite::AddSiteOptionalHeaders(UKHeaders& p_headers)
       case XFrameOption::XFO_DENY:        value = "DENY";        break;
       case XFrameOption::XFO_SAMEORIGIN:  value = "SAMEORIGIN";  break;
       case XFrameOption::XFO_ALLOWFROM:   value = "ALLOW-FROM ";
-        value += m_xFrameAllowed;
+                                          value += m_xFrameAllowed;
       default:                            break;
     }
     p_headers.insert(std::make_pair("X-Frame-Options",value));

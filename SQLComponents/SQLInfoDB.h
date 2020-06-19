@@ -2,7 +2,7 @@
 //
 // File: SQLInfoDB.h
 //
-// Copyright (c) 1998-2019 ir. W.E. Huisman
+// Copyright (c) 1998-2020 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy of 
@@ -52,7 +52,7 @@ class SQLInfoDB : public SQLInfo
 {
 public:
   SQLInfoDB(SQLDatabase* p_database);
- ~SQLInfoDB();
+  virtual ~SQLInfoDB();
 
   // DB INTERFACE
 
@@ -134,6 +134,9 @@ public:
 
   // Database must commit DDL commands in a transaction
   virtual bool GetRDBMSMustCommitDDL() const = 0;
+
+  // Correct maximum precision,scale for a NUMERIC datatype
+  virtual void GetRDBMSNumericPrecisionScale(SQLULEN& p_precision,SQLSMALLINT& p_scale) const = 0;
 
   //////////////////////////////////////////////////////////////////////////
   // KEYWORDS
@@ -413,11 +416,13 @@ public:
 
   // Calling a stored function or procedure if the RDBMS does not support ODBC call escapes
   virtual SQLVariant* DoSQLCall(SQLQuery* p_query,CString& p_schema,CString& p_procedure) = 0;
+  // Calling a stored function with named parameters, returning a value
+  virtual SQLVariant* DoSQLCallNamedParameters(SQLQuery* p_query,CString& p_schema,CString& p_procedure) = 0;
   
 private:
   // Read a tables cursor from the database
   bool    ReadMetaTypesFromQuery(SQLQuery& p_query,MMetaMap&  p_objects,int p_type);
-  bool    ReadTablesFromQuery(SQLQuery& p_query,MTableMap& p_tables);
+  bool    ReadTablesFromQuery   (SQLQuery& p_query,MTableMap& p_tables);
 
   // All default granted users for GRANT statements
   CString m_grantedUsers;

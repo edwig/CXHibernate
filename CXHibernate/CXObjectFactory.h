@@ -120,7 +120,6 @@ CXOReg##classname _register##classname;
 #include <SQLDate.h>
 #include <SQLGuid.h>
 
-using SQLComponents::bcd;
 using SQLComponents::SQLGuid;
 using SQLComponents::SQLDate;
 using SQLComponents::SQLTime; 
@@ -214,7 +213,7 @@ inline uchar GetElementuchar(SOAPMessage& p_message,XMLElement* p_entity,CString
 
 inline bcd GetElementbcd(SOAPMessage& p_message, XMLElement* p_entity,CString p_column)
 {
-  bcd num = p_message.GetElement(p_entity, p_column);
+  bcd num(p_message.GetElement(p_entity, p_column));
   return num;
 }
 

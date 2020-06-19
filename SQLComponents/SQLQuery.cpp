@@ -2,7 +2,7 @@
 //
 // File: SQLQuery.cpp
 //
-// Copyright (c) 1998-2019 ir. W.E. Huisman
+// Copyright (c) 1998-2020 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy of 
@@ -529,6 +529,16 @@ SQLQuery::SetParameter(const bcd& p_param,SQLParamType p_type /*=SQL_PARAM_INPUT
   InternalSetParameter(size,var,p_type);
 }
 
+// Named parameters for DoSQLCall()
+void 
+SQLQuery::SetParameterName(int p_param,CString p_name)
+{
+  SQLVariant* var = GetParameter(p_param);
+  var->SetColumnNumber(p_param);
+  // Keep as name
+  m_nameMap.insert(std::make_pair(p_name,var));
+}
+
 //////////////////////////////////////////////////////////////////////////
 //
 // STATEMENTS
@@ -964,7 +974,7 @@ SQLQuery::BindParameters()
     // Log what we bind here
     if(logging)
     {
-    LogParameter(icol,var);
+      LogParameter(icol,var);
     }
 
     // Do the bindings
@@ -1033,13 +1043,13 @@ SQLQuery::RebindParameter(short p_datatype)
 void
 SQLQuery::LogParameter(int p_column,SQLVariant* p_parameter)
 {
-    if(p_column == 1)
-    {
+  if(p_column == 1)
+  {
     m_database->LogPrint("Parameters as passed on to the database:\n");
-    }
-    CString text,value;
-    p_parameter->GetAsString(value);
-    text.Format("Parameter %d: %s\n",p_column,value.GetString());
+  }
+  CString text,value;
+  p_parameter->GetAsString(value);
+  text.Format("Parameter %d: %s\n",p_column,value.GetString());
   m_database->LogPrint(text);
 }
 
@@ -1070,7 +1080,7 @@ SQLQuery::BindColumns()
                               ,colName            // Column name
                               ,SQL_MAX_IDENTIFIER // name buffer length
                               ,&dummy             // actual name length gotten
-                              ,&dataType          // SQL datatype (SQL_XX)
+                              ,&dataType          // SQL data type (SQL_XX)
                               ,&precision         // precision of numbers
                               ,&scale             // decimal scale
                               ,&nullable);        // NULL values OK?
@@ -1095,23 +1105,23 @@ SQLQuery::BindColumns()
       }
       else
       {
-      int BUFFERSIZE = m_bufferSize ? m_bufferSize : OPTIM_BUFFERSIZE;
-      if(precision > (unsigned)BUFFERSIZE)
-      {
-        // Must use AT_EXEC SQLGetData Interface
-        atexec = min((int)m_maxColumnLength,BUFFERSIZE);
-        if(atexec == 0)
+        int BUFFERSIZE = m_bufferSize ? m_bufferSize : OPTIM_BUFFERSIZE;
+        if(precision > (unsigned)BUFFERSIZE)
         {
-          // Provide arbitrary border value
-          atexec = BUFFERSIZE;
+          // Must use AT_EXEC SQLGetData Interface
+          atexec = min((int)m_maxColumnLength,BUFFERSIZE);
+          if(atexec == 0)
+          {
+            // Provide arbitrary border value
+            atexec = BUFFERSIZE;
+          }
+          precision = atexec;
         }
-        precision = atexec;
-      }
-      // Some ODBC drivers crash as a result of the fact
-      // that CHAR types could be WCHAR types and they 
-      // reserve the privilege to allocate double the memory
-      // IF YOU DON'T DO THIS, YOU WILL CRASH!!
-      precision *= 2;
+        // Some ODBC drivers crash as a result of the fact
+        // that CHAR types could be WCHAR types and they 
+        // reserve the privilege to allocate double the memory
+        // IF YOU DON'T DO THIS, YOU WILL CRASH!!
+        precision *= 2;
       }
     }
     // Create new variant and reserve space for CHAR and BINARY types
@@ -1129,6 +1139,10 @@ SQLQuery::BindColumns()
     if(type == SQL_C_NUMERIC)
     {
       SQL_NUMERIC_STRUCT* numeric = var->GetAsNumeric();
+      if (m_database)
+      {
+        m_database->GetSQLInfoDB()->GetRDBMSNumericPrecisionScale(precision,scale);
+      }
       numeric->precision = (SQLCHAR)  precision;
       numeric->scale     = (SQLSCHAR) scale;
     }
@@ -1863,10 +1877,16 @@ SQLQuery::DoSQLCall(CString p_schema,CString p_procedure,bool p_hasReturn /*=fal
 
   // Make sure we have a minimal output parameter (SQL_SLONG !!)
   // OTHERWISE, YOU HAVE TO PROVIDE IT YOURSELF!
-  if(p_hasReturn && m_parameters.find(0) == m_parameters.end())
+  if(p_hasReturn && m_parameters.find(0) == m_parameters.end() && m_nameMap.empty())
   {
     SQLVariant* var = new SQLVariant((long)0L);
     InternalSetParameter(0,var,P_SQL_PARAM_OUTPUT);
+  }
+
+  // See if we ask for a call with named parameters
+  if(!m_nameMap.empty())
+  {
+    return m_database->GetSQLInfoDB()->DoSQLCallNamedParameters(this,p_schema,p_procedure);
   }
 
   // Is we support standard ODBC, do that call

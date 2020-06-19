@@ -7,7 +7,7 @@
 
 int main()
 {
-  CXSession * session = hibernate.CreateSession();
+  CXSession* session = hibernate.CreateSession();
   if(session)
   {
     // Set a database session

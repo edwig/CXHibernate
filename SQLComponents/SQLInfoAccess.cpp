@@ -2,7 +2,7 @@
 //
 // File: SQLInfoAccess.cpp
 //
-// Copyright (c) 1998-2019 ir. W.E. Huisman
+// Copyright (c) 1998-2020 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy of 
@@ -148,6 +148,13 @@ bool
 SQLInfoAccess::GetRDBMSMustCommitDDL() const
 {
   return false;
+}
+
+// Correct maximum precision,scale for a NUMERIC datatype
+void 
+SQLInfoAccess::GetRDBMSNumericPrecisionScale(SQLULEN& /*p_precision*/, SQLSMALLINT& /*p_scale*/) const
+{
+  // NO-OP
 }
 
 // KEYWORDS
@@ -1229,6 +1236,13 @@ SQLInfoAccess::GetSESSIONConstraintsImmediate() const
 // Calling a stored function or procedure if the RDBMS does not support ODBC call escapes
 SQLVariant*
 SQLInfoAccess::DoSQLCall(SQLQuery* /*p_query*/,CString& /*p_schema*/,CString& /*p_procedure*/)
+{
+  return nullptr;
+}
+
+// Calling a stored function with named parameters, returning a value
+SQLVariant*
+SQLInfoAccess::DoSQLCallNamedParameters(SQLQuery* /*p_query*/,CString& /*p_schema*/,CString& /*p_procedure*/)
 {
   return nullptr;
 }

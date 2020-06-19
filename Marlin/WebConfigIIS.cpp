@@ -57,14 +57,14 @@ WebConfigIIS::ReadConfig()
 
 bool
 WebConfigIIS::ReadConfig(CString p_baseWebConfig)
-  {
+{
   // Standard web.config file
   m_webconfig = p_baseWebConfig;
 
   // Reads the central IIS application host configuration file first
   // this file contains the defaults for IIS.
   bool result = ReadConfig("%windir%\\system32\\inetsrv\\config\\ApplicationHost.Config",nullptr);
-    SetApplication(m_application);
+  SetApplication(m_application);
   return result;
 }
 
@@ -396,7 +396,7 @@ WebConfigIIS::ReadSites(XMLMessage& p_msg)
   }
 }
 
-void 
+void
 WebConfigIIS::ReadSettings(XMLMessage& p_msg)
 {
   XMLElement* settings = p_msg.FindElement("appSettings");
@@ -648,7 +648,7 @@ WebConfigIIS::GetSite(CString p_site)
   p_site.MakeLower();
   p_site.Trim('/');
 
-  // Knock off the subsites
+  // Knock off the sub sites
   int pos = p_site.Find('/');
   if(pos > 0)
   {

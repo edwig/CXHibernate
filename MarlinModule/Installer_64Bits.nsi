@@ -5,12 +5,13 @@
 ;
 ; Copyright (c) 2019 Edwig Huisman
 ;
-; Date of last change: 03-07-2019
-; Version:             6.1
+; Date of last change: 16-06-2020
+; Version:             6.5
 ;-------------------------------------------------------
  !define PRODUCT_NAME                         "Marlin IIS Module 64Bits"
- !define PRODUCT_VERSION                      "6.3.0"
- !define PRODUCT_BUILDNUMBER                  "11"
+ !define PRODUCT_VERSION                      "6.5.0.18"
+ !define PRODUCT_EXT                          "650"
+ !define PRODUCT_BUILDNUMBER                  "18"
  !define PRODUCT_PUBLISHER                    "Edwig Huisman"
  !define PRODUCT_WEB_SITE                     "https://github.com/Edwig/Marlin"
  !define PRODUCT_DIR_REGKEY                   "Software\Microsoft\Windows\CurrentVersion\App Paths\${PRODUCT_NAME}"
@@ -23,6 +24,7 @@
   
  ; Directories containing our files
  !define InputDirectory64                     "C:\Develop\Marlin\BinRelease_x64"
+ !define ExtraDirectory                       "C:\Develop\Marlin\ExtraParts"
  !define RedistMap                            "C:\Develop\Marlin\Documentation"
 
 ;--------------------------------------------------------------------------------------------------------
@@ -160,12 +162,14 @@ Section "MarlinModule"
  !insertmacro LogDetail "Output directory set to: $INSTDIR"
  !insertmacro LogDetail "Copiing files."
 
- File /r "${InputDirectory64}\MarlinModule.dll"
+ File /r "${InputDirectory64}\MarlinModule${PRODUCT_EXT}.dll"
+ File /r "${InputDirectory64}\MarlinModule${PRODUCT_EXT}.pdb"
+ File /r "${ExtraDirectory}\dbghelp64.dll"
 
  ; Registering the module
  !insertmacro LogDetail "Registering the MarlinModule with IIS"
- ExecWait '"$INSTDIR\appcmd.exe" install module /name:MarlinModule /image:"$INSTDIR\MarlinModule.dll"' $0
- !insertmacro LogDetail "Registering MarlinModule with appcmd returned: $0"
+ ExecWait '"$INSTDIR\appcmd.exe" install module /name:MarlinModule${PRODUCT_EXT} /image:"$INSTDIR\MarlinModule${PRODUCT_EXT}.dll"' $0
+ !insertmacro LogDetail "Registering MarlinModule${PRODUCT_EXT} with appcmd returned: $0"
 
 SectionEnd
 
@@ -207,16 +211,13 @@ Section Uninstall
  !insertmacro LogDetail "De-installation and de-registration of ${PRODUCT_NAME} version: ${PRODUCT_VERSION} buildnummer ${PRODUCT_BUILDNUMBER}"
 
  ; UN-Registering the module
- !insertmacro LogDetail "Deleting the MarlinModule from IIS"
- ExecWait '"$SYSDIR\inetsrv\appcmd.exe" delete module MarlinModule' $0
+ !insertmacro LogDetail "Deleting the MarlinModule${PRODUCT_EXT} from IIS"
+ ExecWait '"$SYSDIR\inetsrv\appcmd.exe" delete module MarlinModule${PRODUCT_EXT}' $0
  !insertmacro LogDetail "Deleting MarlinModule with appcmd returned: $0"
 
- !insertmacro LogDetail "Uninstall the MarlinModule from IIS"
- ExecWait '"$SYSDIR\inetsrv\appcmd.exe" uninstall module MarlinModule' $0
- !insertmacro LogDetail "Uninstalling MarlinModule with appcmd returned: $0"
-
  !insertmacro LogDetail "Removing files from : $SYSDIR\inetsrv"
- Delete /REBOOTOK "$SYSDIR\inetsrv\MarlinModule.dll"
+ Delete /REBOOTOK "$SYSDIR\inetsrv\MarlinModule${PRODUCT_EXT}.dll"
+ Delete /REBOOTOK "$SYSDIR\inetsrv\MarlinModule${PRODUCT_EXT}.pdb"
  
   ;De-Registration of the product.
  DetailPrint "De-register of ${PRODUCT_NAME}"

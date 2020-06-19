@@ -140,6 +140,15 @@ public:
   // Parse incoming GET URL to SOAP parameters
   virtual void    Url2SoapParameters(CrackedURL& p_url);
 
+  // FILE OPERATIONS
+
+  // Load from file
+  virtual bool    LoadFile(const CString& p_fileName);
+  virtual bool    LoadFile(const CString& p_fileName, XMLEncoding p_encoding);
+  // Save to file
+  virtual bool    SaveFile(const CString& p_fileName, bool p_withBom = false);
+  virtual bool    SaveFile(const CString& p_fileName, XMLEncoding p_encoding, bool p_withBom = false);
+
   // SETTERS
 
   // Set the alternative namespace
@@ -167,6 +176,7 @@ public:
   void            SetRequestHandle(HTTP_OPAQUE_ID p_request);
   // Set URL to send message to
   void            SetURL(CString& p_url);
+  void            SetStatus(unsigned p_status);
   // Set parts of the URL
   void            SetSecure(bool p_secure);
   void            SetUser(CString& p_user);
@@ -236,6 +246,7 @@ public:
   // Get URL destination
   CString         GetURL() const;
   CString         GetUnAuthorisedURL() const;
+  unsigned        GetStatus();
   // Get Request handle
   HTTP_OPAQUE_ID  GetRequestHandle() const;
   HTTPSite*       GetHTTPSite() const;
@@ -327,8 +338,12 @@ public:
   // OPERATORS
   SOAPMessage* operator=(JSONMessage& p_json);
 
+  // Complete the message (members to XML)
+  void            CompleteTheMessage();
+
 protected:
-  friend          JSONParserSOAP;
+  // Encrypt the whole message: yielding a new message
+  virtual void    EncryptMessage(CString& p_message);
 
   // Set the SOAP 1.1 SOAPAction from the HTTP protocol
   void            SetSoapActionFromHTTTP(CString p_action);
@@ -378,8 +393,6 @@ protected:
   void            EncryptNode(CString& p_body);
   // Encrypt the body: yielding a new body
   void            EncryptBody();
-  // Encrypt the whole message: yielding a new message
-  void            EncryptMessage(CString& p_message);
   // Get body signing value from header
   CString         CheckBodySigning();
   // Get body encryption value from body
@@ -403,6 +416,7 @@ protected:
   bool            m_understand    { true  };              // Set "mustUnderstand" to true or false
   // DESTINATION
   CString         m_url;                                  // Full URL of the soap service
+  unsigned        m_status        { HTTP_STATUS_OK };     // HTTP status return code
   HTTP_OPAQUE_ID  m_request       { NULL  };              // Request it must answer
   HTTPSite*       m_site          { nullptr };            // Site for which message is received
   HeaderMap       m_headers;                              // Extra HTTP headers (incoming / outgoing)
@@ -912,6 +926,18 @@ inline Routing&
 SOAPMessage::GetRouting()
 {
   return m_routing;
+}
+
+inline unsigned
+SOAPMessage::GetStatus() 
+{
+  return m_status; 
+};
+
+inline void
+SOAPMessage::SetStatus(unsigned p_status)
+{
+  m_status = p_status;
 }
 
 //////////////////////////////////////////////////////////////////////////

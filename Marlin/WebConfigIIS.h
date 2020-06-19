@@ -52,22 +52,22 @@ using IISHandlers = std::map<CString,IISHandler>;
 // What we want to remember about an IIS HTTP site
 typedef struct _iisSite
 {
-  CString m_name;
-  CString m_binding;
-  CString m_protocol;
-  int     m_port;
-  bool    m_secure;
-  CString m_path;
-  ULONG   m_authScheme;
-  CString m_realm;
-  CString m_domain;
-  bool    m_ntlmCache;
+  CString     m_name;
+  CString     m_binding;
+  CString     m_protocol;
+  int         m_port;
+  bool        m_secure;
+  CString     m_path;
+  ULONG       m_authScheme;
+  CString     m_realm;
+  CString     m_domain;
+  bool        m_ntlmCache;
   IISError    m_error;
   IISHandlers m_handlers;
 }
 IISSite;
 
-using IISSites = std::map<CString,IISSite>;
+using IISSites    = std::map<CString,IISSite>;
 using WCFiles     = std::map<CString,int>;
 using AppSettings = std::map<CString,CString>;
 
@@ -116,8 +116,8 @@ private:
   // Site registration
   IISSite*    GetSite(CString p_site);
   // Reading of the internal structures of a config file
-  void        ReadLogPath(XMLMessage& p_msg);
-  void        ReadSites  (XMLMessage& p_msg);
+  void        ReadLogPath (XMLMessage& p_msg);
+  void        ReadSites   (XMLMessage& p_msg);
   void        ReadSettings(XMLMessage& p_msg);
   void        ReadStreamingLimit(XMLMessage& p_msg, XMLElement* p_elem);
   void        ReadAuthentication(IISSite& p_site,XMLMessage& p_msg,XMLElement* p_elem);
@@ -126,15 +126,15 @@ private:
   void        ReadHandlerMapping(IISSite& p_site,XMLMessage& p_msg,XMLElement* p_elem);
 
   // For specific web application, or just defaults
-  CString   m_application;
+  CString     m_application;
   // Base web.config file
   CString     m_webconfig;
   // Files already read in
   WCFiles     m_files;
 
   AppSettings m_settings;
-  IISSites  m_sites;
-  CString   m_logpath;
-  bool      m_logging        { false };
-  ULONG     m_streamingLimit { STREAMING_LIMIT };
+  IISSites    m_sites;
+  CString     m_logpath;
+  bool        m_logging        { false };
+  ULONG       m_streamingLimit { STREAMING_LIMIT };
 };

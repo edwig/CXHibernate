@@ -31,6 +31,7 @@
 #include "XMLMessage.h"
 #include "Routing.h"
 #include "http.h"
+#include "bcd.h"
 #include <vector>
 #include <xstring>
 
@@ -57,7 +58,7 @@ enum class JsonType
 {
   JDT_string      = 1
  ,JDT_number_int  = 2
- ,JDT_number_dbl  = 3 
+ ,JDT_number_bcd  = 3 
  ,JDT_array       = 4
  ,JDT_object      = 5
  ,JDT_const       = 6
@@ -74,10 +75,10 @@ enum class JsonEncoding
 
 
 // Numbers are integers or exponentials
-typedef union _jsonNumber
+typedef struct _jsonNumber
 {
-  long   m_intNumber;
-  double m_dblNumber;
+  long m_intNumber;
+  bcd  m_bcdNumber;
 }
 JSONnumber;
 
@@ -100,13 +101,13 @@ public:
   void        SetValue(JSONobject p_value);
   void        SetValue(JSONarray  p_value);
   void        SetValue(int        p_value);
-  void        SetValue(double     p_value);
+  void        SetValue(bcd        p_value);
 
   // GETTERS
   JsonType    GetDataType()  { return m_type;     };
   CString     GetString()    { return m_string;   };
   int         GetNumberInt() { return m_number.m_intNumber;  };
-  double      GetNumberDbl() { return m_number.m_dblNumber;  };
+  bcd         GetNumberBcd() { return m_number.m_bcdNumber;  };
   JSONarray&  GetArray()     { return m_array;    };
   JSONobject& GetObject()    { return m_object;   };
   JsonConst   GetConstant()  { return m_constant; };
@@ -167,6 +168,22 @@ public:
   void Reset();
   // Create from message stream
   bool ParseMessage(CString p_message,JsonEncoding p_encoding = JsonEncoding::JENC_Plain);
+  // Load from file
+  bool LoadFile(const CString& p_fileName);
+  // Save to file
+  bool SaveFile(const CString& p_fileName, bool p_withBom = false);
+
+  // Finding value nodes within the JSON structure
+  JSONvalue*      FindValue (CString    p_name,               bool p_object = false);
+  JSONvalue*      FindValue (JSONvalue* p_from,CString p_name,bool p_object = false);
+  JSONpair*       FindPair  (CString    p_name);
+  JSONpair*       FindPair  (JSONvalue* p_value, CString p_name);
+  JSONvalue*      GetArrayElement (JSONvalue* p_array, int p_index);
+  JSONpair*       GetObjectElement(JSONvalue* p_object,int p_index);
+  CString         GetValueString  (CString p_name);
+  long            GetValueInteger (CString p_name);
+  bcd             GetValueNumber  (CString p_name);
+  JsonConst       GetValueConstant(CString p_name);
 
   // GETTERS
   CString         GetJsonMessage       (JsonEncoding p_encoding = JsonEncoding::JENC_Plain);
@@ -174,6 +191,7 @@ public:
   JSONvalue&      GetValue()          { return *m_value;                };
   CString         GetURL()            { return m_url;                   };
   CrackedURL&     GetCrackedURL()     { return m_cracked;               };
+  unsigned        GetStatus()         { return m_status;                };
   HTTP_OPAQUE_ID  GetRequestHandle()  { return m_request;               };
   HTTPSite*       GetHTTPSite()       { return m_site;                  };
   HeaderMap*      GetHeaderMap()      { return &m_headers;              };
@@ -197,6 +215,7 @@ public:
   bool            GetVerbTunneling()  { return m_verbTunnel;            };
   bool            GetIncoming()       { return m_incoming;              };
   bool            GetHasBeenAnswered(){ return m_request == NULL;       };
+  CString         GetReferrer()       { return m_referrer;              };
   Routing&        GetRouting()        { return m_routing;               };
   CString         GetHeader(CString p_name);
   CString         GetRoute(int p_index);
@@ -214,6 +233,7 @@ public:
   void            SetServer(CString p_server)             { m_cracked.m_host     = p_server;   ReparseURL(); };
   void            SetPort(int p_port)                     { m_cracked.m_port     = p_port;     ReparseURL(); };
   void            SetAbsolutePath(CString p_path)         { m_cracked.m_path     = p_path;     ReparseURL(); };
+  void            SetStatus(unsigned p_status)            { m_status             = p_status;   };
   void            SetDesktop(UINT p_desktop)              { m_desktop            = p_desktop;  };
   void            SetRequestHandle(HTTP_OPAQUE_ID p_id)   { m_request            = p_id;       };
   void            SetVerb(CString p_verb)                 { m_verb               = p_verb;     };
@@ -259,12 +279,14 @@ private:
   bool            m_verbTunnel  { false };                      // HTTP-VERB Tunneling used
   // DESTINATION
   CString         m_url;                                        // Full URL of the JSON service
+  unsigned        m_status      { HTTP_STATUS_OK };             // HTTP status return code
   CrackedURL      m_cracked;                                    // Cracked down URL (all parts)
   CString         m_verb;                                       // HTTP verb, default = POST
   HTTP_OPAQUE_ID  m_request     { NULL };                       // Request it must answer
   HTTPSite*       m_site        { nullptr };                    // Site for which message is received
   HeaderMap       m_headers;                                    // Extra HTTP headers (incoming / outgoing)
   // Message details
+  CString         m_referrer;                                   // Referrer of the message
   CString         m_contentType;                                // Content type of JSON message
   CString         m_acceptEncoding;                             // Accepted HTTP compression encoding
   Cookies         m_cookies;                                    // Cookies

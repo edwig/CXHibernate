@@ -2,7 +2,7 @@
 //
 // File: SQLInfo.h
 //
-// Copyright (c) 1998-2019 ir. W.E. Huisman
+// Copyright (c) 1998-2020 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy of 
@@ -110,8 +110,8 @@ public:
   CString GetVersionRDBMS();
 
   // Get information about the primary key of a table
-  bool GetPrimaryKeyInfo(CString&    p_tablename
-                        ,CString&    p_primary
+  bool GetPrimaryKeyInfo(CString&     p_tablename
+                        ,CString&     p_primary
                         ,MPrimaryMap& p_keymap);
 
   // GETTING ALL THE TABLES OF A NAME PATTERN

@@ -27,6 +27,7 @@
 //
 #include "Stdafx.h"
 #include "EnsureFile.h"
+#include <AclAPI.h>
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -130,16 +131,16 @@ EnsureFile::CheckCreateDirectory()
 // Special optimized function to resolve %5C -> '\' in pathnames
 // Returns number of chars replaced
 int
-EnsureFile::ResolveSpecialChars(CString& value)
+EnsureFile::ResolveSpecialChars(CString& p_value)
 {
   int total = 0;
 
-  int pos = value.Find('%');
+  int pos = p_value.Find('%');
   while(pos >= 0)
   {
     ++total;
     int num = 0;
-    CString hexstring = value.Mid(pos + 1,2);
+    CString hexstring = p_value.Mid(pos + 1,2);
     hexstring.MakeUpper();
     if(isdigit(hexstring.GetAt(0)))
     {
@@ -158,10 +159,44 @@ EnsureFile::ResolveSpecialChars(CString& value)
     {
       num += hexstring.GetAt(1) - 'A' + 10;
     }
-    value.SetAt(pos,(char)num);
-    value = value.Left(pos + 1) + value.Mid(pos + 3);
-    pos = value.Find('%');
+    p_value.SetAt(pos,(char)num);
+    p_value = p_value.Left(pos + 1) + p_value.Mid(pos + 3);
+    pos = p_value.Find('%');
   }
+  return total;
+}
+
+// Encode a filename in special characters
+int
+EnsureFile::EncodeSpecialChars(CString& p_value)
+{
+  int total = 0;
+
+  int pos = 0;
+  while (pos < p_value.GetLength())
+  {
+    int ch = p_value.GetAt(pos);
+    if(!isalnum(ch) && ch != '/')
+    {
+      // Encoding in 2 chars HEX
+      CString hexstring;
+      hexstring.Format("%%%2.2X",ch);
+
+      // Take left and right of the special char
+      CString left  = p_value.Left(pos);
+      CString right = p_value.Mid(pos + 1);
+
+      // Create a new value with the encoded char in it
+      p_value = left + hexstring + right;
+
+      // Next position + 1 conversion done
+      pos += 2;
+      ++total;
+    }
+    // Look at next character
+    ++pos;
+  }
+
   return total;
 }
 
@@ -464,4 +499,72 @@ EnsureFile::FilenameParts(CString fullpath,CString& p_drive,CString& p_directory
   p_directory = CString(direct);
   p_filename  = CString(fname);
   p_extension = CString(extens);
+}
+
+// Grant full access on file or directory
+bool
+EnsureFile::GrantFullAccess()
+{
+  // Check if we have a filename to work on
+  if(m_filename.IsEmpty())
+  {
+    return false;
+  }
+
+  bool result      = false;
+  PSID SIDEveryone = nullptr;
+  PACL acl         = nullptr;
+  SID_IDENTIFIER_AUTHORITY SIDAuthWorld = SECURITY_WORLD_SID_AUTHORITY;
+  EXPLICIT_ACCESS ea;
+
+  __try 
+  {
+    // Create a SID for the Everyone group.
+    if(AllocateAndInitializeSid(&SIDAuthWorld,1,SECURITY_WORLD_RID
+                               ,0,0,0,0,0,0,0
+                               ,&SIDEveryone) == 0)
+    {
+      // AllocateAndInitializeSid (Everyone) failed
+      __leave;
+    }
+    // Set full access for Everyone.
+    ZeroMemory(&ea, sizeof(EXPLICIT_ACCESS));
+    ea.grfAccessPermissions = MAXIMUM_ALLOWED;
+    ea.grfAccessMode        = SET_ACCESS;
+    ea.grfInheritance       = SUB_CONTAINERS_AND_OBJECTS_INHERIT;
+    ea.Trustee.TrusteeForm  = TRUSTEE_IS_SID;
+    ea.Trustee.TrusteeType  = TRUSTEE_IS_WELL_KNOWN_GROUP;
+    ea.Trustee.ptstrName    = (LPTSTR)SIDEveryone;
+
+    if(ERROR_SUCCESS != SetEntriesInAcl(1,&ea,nullptr,&acl))
+    {
+      // SetEntriesInAcl failed
+      __leave;
+    }
+    // Try to modify the object's DACL.
+    if(ERROR_SUCCESS != SetNamedSecurityInfo((LPSTR)m_filename.GetString() // name of the object
+                                             ,SE_FILE_OBJECT               // type of object: file or directory
+                                             ,DACL_SECURITY_INFORMATION    // change only the object's DACL
+                                             ,nullptr,nullptr              // do not change owner or group
+                                             ,acl                          // DACL specified
+                                             ,nullptr))                    // do not change SACL
+    {
+      // SetNamedSecurityInfo failed to change the DACL Maximum Allowed Access
+      __leave;
+    }
+    // Full access granted!
+    result = true;
+  }
+  __finally 
+  {
+    if(SIDEveryone)
+    {
+      FreeSid(SIDEveryone);
+    }
+    if(acl)
+    {
+      LocalFree(acl);
+    }
+  }
+  return result;
 }

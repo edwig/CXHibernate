@@ -1784,14 +1784,14 @@ uInt *v)               // working area: values in order of bit length
       f = 1 << (k - w);
       if(q)
       {
-      for (j = i >> w; j < z; j += f)
+        for(j = i >> w; j < z; j += f)
         {
-        q[j] = r;
+          q[j] = r;
         }
       } 
 
       // backwards increment the k-bit code i 
-      for (j = 1 << (k - 1); i & j; j >>= 1)
+      for(j = 1 << (k - 1); i & j; j >>= 1)
       {
         i ^= j;
       }
@@ -2278,13 +2278,13 @@ const char * zError(int err)
 voidpf zcalloc (voidpf opaque, unsigned items, unsigned size)
 {
   UNREFERENCED_PARAMETER(opaque);
-    return (voidpf)calloc(items, size);
+  return (voidpf)calloc(items, size);
 }
 
 void  zcfree (voidpf opaque, voidpf ptr)
 {
   UNREFERENCED_PARAMETER(opaque);
-    zfree(ptr);
+  zfree(ptr);
 }
 
 

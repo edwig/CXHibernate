@@ -4,7 +4,7 @@
 //
 // Marlin Server: Internet server/client
 // 
-// Copyright (c) 2015-2018 ir. W.E. Huisman
+// Copyright (c) 2015-2020 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -46,6 +46,7 @@
 #include "WebConfigIIS.h"
 #include "StdException.h"
 #include "RunRedirect.h"
+#include <io.h>
 #ifdef _DEBUG
 #include "IISDebug.h"
 #endif
@@ -56,13 +57,15 @@
 static char THIS_FILE[] = __FILE__;
 #endif
 
-#define MODULE_NAME "MarlinModule"
-#define MODULE_PATH "DllDirectory"
+#define MODULE_NAME "Application"
+#define MODULE_PATH "Directory"
+#define MODULE_XSS  "XSSBlocking"
 
 // GLOBALS Needed for the module
 AppPool       g_IISApplicationPool;   // All applications in the application pool
 WebConfigIIS* g_config  { nullptr };  // The ApplicationHost.config information only!
 LogAnalysis*  g_logfile { nullptr };  // Logfile for the MarlinModule only
+ErrorReport   g_error;                // Local error reporting object
 wchar_t       g_moduleName[SERVERNAME_BUFFERSIZE + 1] = L"";
 
 // Logging macro for this file only
@@ -93,12 +96,10 @@ RegisterModule(DWORD                        p_version
               ,IHttpServer*                 p_server)
 {
   USES_CONVERSION;
-
-  // FIRST MOMENT OF DEBUG
-  // WAIT HERE FOR IIS
-  // Sleep(20000);
-
   TRACE("REGISTER MODULE\n");
+
+  // Global name for the WMI Service event registration
+  PRODUCT_NAME = "IIS-MarlinModule";
 
   // Declaration of the start log function
   void StartLog(DWORD p_version);
@@ -318,21 +319,29 @@ MarlinGlobalFactory::OnGlobalApplicationStart(_In_ IHttpApplicationStartProvider
   if(dllLocation.IsEmpty())
   {
     delete poolapp;
-    CString error("MarlinModule could **NOT** locate MarlinModule in web.config: " + baseWebConfig);
-    return Unhealthy(error,ERROR_NOT_FOUND);
+    return Unhealthy("MarlinModule could **NOT** locate the 'Application' in web.config: " + baseWebConfig,ERROR_NOT_FOUND);
   }
-  dllLocation = ConstructDLLLocation(physical,dllLocation);
 
   CString dllPath = poolapp->m_config.GetSetting(MODULE_PATH);
-  if(!dllPath.IsEmpty())
+  if(dllPath.IsEmpty())
   {
-    dllPath = ConstructDLLLocation(physical,dllPath);
-    if(SetDllDirectory(dllPath) == FALSE)
-    {
-      delete poolapp;
-      CString error("MarlinModule could **NOT** set the DLL directory path to: " + dllPath);
-      return Unhealthy(error,ERROR_NOT_FOUND);
-    }
+    delete poolapp;
+    return Unhealthy("MarlinModule could **NOT** locate the 'Directory' in web.config: " + baseWebConfig,ERROR_NOT_FOUND);
+  }
+
+  // Tell MS-Windows where to look while loading our DLL
+  dllPath = ConstructDLLLocation(physical,dllPath);
+  if(SetDllDirectory(dllPath) == FALSE)
+  {
+    delete poolapp;
+    return Unhealthy("MarlinModule could **NOT** append DLL-loading search path with: " + dllPath,ERROR_NOT_FOUND);
+  }
+
+  // Ultimatly check that the directory exists and that we have read rights on the application's DLL
+  if(!CheckApplicationPresent(dllPath, dllLocation))
+  {
+    delete poolapp;
+    return Unhealthy("MarlinModule could not access the application module DLL: " + dllLocation,ERROR_ACCESS_DENIED);
   }
 
   // See if we must load the DLL application
@@ -353,27 +362,39 @@ MarlinGlobalFactory::OnGlobalApplicationStart(_In_ IHttpApplicationStartProvider
     {
       HRESULT code = GetLastError();
       CString error("MarlinModule could **NOT** load DLL from: " + dllLocation);
-      SetDllDirectory(NULL);
+      SetDllDirectory(nullptr);
       delete poolapp;
       return Unhealthy(error,code);
     }
 
     // Getting the start address of the application factory
-    poolapp->m_createServer = (CreateServerAppFunc)GetProcAddress(poolapp->m_module,"CreateServerApp");
-    if (poolapp->m_createServer == nullptr)
+    poolapp->m_createServerApp = (CreateServerAppFunc)GetProcAddress(poolapp->m_module,"CreateServerApp");
+    poolapp->m_findSite        = (FindHTTPSiteFunc)   GetProcAddress(poolapp->m_module,"FindHTTPSite");
+    poolapp->m_getHttpStream   = (GetHTTPStreamFunc)  GetProcAddress(poolapp->m_module,"GetStreamFromRequest");
+    poolapp->m_getHttpMessage  = (GetHTTPMessageFunc) GetProcAddress(poolapp->m_module,"GetHTTPMessageFromRequest");
+    poolapp->m_handleMessage   = (HandleMessageFunc)  GetProcAddress(poolapp->m_module,"HandleHTTPMessage");
+    poolapp->m_sitesInAppPool  = (SitesInApplicPool)  GetProcAddress(poolapp->m_module,"SitesInApplicationPool");
+
+
+    if(poolapp->m_createServerApp == nullptr ||
+       poolapp->m_findSite        == nullptr ||
+       poolapp->m_getHttpStream   == nullptr ||
+       poolapp->m_getHttpMessage  == nullptr ||
+       poolapp->m_handleMessage   == nullptr ||
+       poolapp->m_sitesInAppPool  == nullptr  )
     {
-      HRESULT code = GetLastError();
-      CString error("MarlinModule loaded ***INCORRECT*** DLL. Missing 'CreateServerApp'");
+      CString error("MarlinModule loaded ***INCORRECT*** DLL. Missing 'CreateServerApp', 'FindHTTPSite', 'GetStreamFromRequest', "
+                    "'GetHTTPMessageFromRequest', 'HandleHTTPMessage' or 'SitesInApplicPool'");
       delete poolapp;
-      return Unhealthy(error,code);
+      return Unhealthy(error,ERROR_NOT_FOUND);
     }
   }
 
   // Let the server app factory create a new one for us
   // And store it in our representation of the active application pool
-  ServerApp* app = (*poolapp->m_createServer)(g_iisServer               // Microsoft IIS server object
-                                             ,webroot.GetString()       // The IIS registered webroot
-                                             ,application.GetString()); // The application's name
+  ServerApp* app = (*poolapp->m_createServerApp)(g_iisServer               // Microsoft IIS server object
+                                                ,webroot.GetString()       // The IIS registered webroot
+                                                ,application.GetString()); // The application's name
   if(app == nullptr)
   {
     delete poolapp;
@@ -404,7 +425,7 @@ MarlinGlobalFactory::OnGlobalApplicationStart(_In_ IHttpApplicationStartProvider
   // Restore the original DLL search order
   if(!dllPath.IsEmpty())
   {
-    SetDllDirectory(NULL);
+    SetDllDirectory(nullptr);
   }
 
   // Flush the results of starting the server to the logfile
@@ -448,6 +469,8 @@ MarlinGlobalFactory::OnGlobalApplicationStop(_In_ IHttpApplicationStartProvider*
   DETAILLOG(stopping);
 
   // STOP!!
+  app->UnloadSites();
+
   // Let the application stop itself 
   app->ExitInstance();
 
@@ -462,6 +485,7 @@ MarlinGlobalFactory::OnGlobalApplicationStop(_In_ IHttpApplicationStartProvider*
   if (hmodule != NULL && !StillUsed(hmodule))
   {
     FreeLibrary(hmodule);
+    DETAILLOG("Unloaded the application DLL");
   }
 
   return GL_NOTIFICATION_HANDLED;
@@ -517,7 +541,7 @@ MarlinGlobalFactory::ExtractAppSite(CString p_configPath)
 }
 
 // See if we already did load the module
-// For some reason refrence counting does not work from within IIS.
+// For some reason reference counting does not work from within IIS.
 bool
 MarlinGlobalFactory::AlreadyLoaded(APP* p_app,CString p_path_to_dll)
 {
@@ -525,8 +549,16 @@ MarlinGlobalFactory::AlreadyLoaded(APP* p_app,CString p_path_to_dll)
   {
     if(p_path_to_dll.Compare(app.second->m_marlinDLL) == 0)
     {
-      p_app->m_module       = app.second->m_module;
-      p_app->m_createServer = app.second->m_createServer;
+      // Application module
+      p_app->m_module          = app.second->m_module;
+      p_app->m_createServerApp = app.second->m_createServerApp;
+      // Function pointers
+      p_app->m_createServerApp = app.second->m_createServerApp;
+      p_app->m_findSite        = app.second->m_findSite;
+      p_app->m_getHttpStream   = app.second->m_getHttpStream;
+      p_app->m_getHttpMessage  = app.second->m_getHttpMessage;
+      p_app->m_handleMessage   = app.second->m_handleMessage;
+      p_app->m_sitesInAppPool  = app.second->m_sitesInAppPool;
       return true;
     }
   }
@@ -630,26 +662,58 @@ MarlinGlobalFactory::Unhealthy(CString p_error,HRESULT p_code)
 }
 
 // If the given DLL begins with a '@' it is an absolute pathname
-// Othwerwise it is relative to the directory the 'web.config' is in
+// Otherwise it is relative to the directory the 'web.config' is in
 CString 
 MarlinGlobalFactory::ConstructDLLLocation(CString p_rootpath,CString p_dllPath)
 {
-  CString pathname;
-
+#ifdef _DEBUG
   if(p_dllPath.GetAt(0) == '@')
   {
-    pathname = p_dllPath.Mid(1);
+    return p_dllPath.Mid(1);
+  
   }
-  else
+#endif
+  // Default implementation
+  CString pathname = p_rootpath;
+  if(pathname.Right(1) != "\\")
   {
-    pathname = p_rootpath;
-    if(pathname.Right(1) != "\\")
-    {
-      pathname += "\\";
-    }
-    pathname += p_dllPath;
+    pathname += "\\";
+  }
+  pathname += p_dllPath;
+  if(pathname.Right(1) != "\\")
+  {
+    pathname += "\\";
   }
   return pathname;
+}
+
+// Checking for the presence of the application DLL
+bool
+MarlinGlobalFactory::CheckApplicationPresent(CString& p_dllPath,CString& p_dllName)
+{
+  // Check if the directory exists
+  if(_access(p_dllPath, 0) == -1)
+  {
+    ERRORLOG("The directory does not exist: " + p_dllPath);
+    return false;
+  }
+
+  // Check that dllName does not have a directory
+  int pos = p_dllName.Find('\\');
+  if (pos >= 0)
+  {
+    ERRORLOG("The variable 'Application' must only be the name of the application DLL: " + p_dllName);
+    return false;
+  }
+
+  // Construct the complete path and check for presence
+  p_dllName = p_dllPath + p_dllName;
+  if(_access(p_dllPath, 4) == -1)
+  {
+    ERRORLOG("The application DLL cannot be read: " + p_dllName);
+    return false;
+  }
+  return true;
 }
 
 // Stopping the global factory
@@ -681,12 +745,16 @@ MarlinGlobalFactory::Terminate()
 
 MarlinModuleFactory::MarlinModuleFactory()
 {
+#ifdef _DEBUG
   DETAILLOG("Starting new module factory");
+#endif
 }
 
 MarlinModuleFactory::~MarlinModuleFactory()
 {
+#ifdef _DEBUG
   DETAILLOG("Stopping module factory");
+#endif
 }
   
 HRESULT 
@@ -728,12 +796,16 @@ MarlinModuleFactory::Terminate()
 
 MarlinModule::MarlinModule()
 {
+#ifdef _DEBUG
   DETAILLOG("Start Request");
+#endif
 }
 
 MarlinModule::~MarlinModule()
 {
+#ifdef _DEBUG
   DETAILLOG("Request ready");
+#endif
 }
 
 // On each request: Note the fact that we got it. 
@@ -790,10 +862,8 @@ MarlinModule::OnResolveRequestCache(IN IHttpContext*       p_context,
   }
 
   // Find our app
-  ServerApp* app = it->second->m_application;
-
-  // Starting the performance counter
-  app->StartCounter();
+  APP* app = it->second;
+  ServerApp* serverapp = app->m_application;
 
   // Getting the request/response objects
   IHttpRequest*  request  = p_context->GetRequest();
@@ -801,23 +871,27 @@ MarlinModule::OnResolveRequestCache(IN IHttpContext*       p_context,
   if(request == nullptr || response == nullptr)
   {
     DETAILLOG("No request or response objects");
-    app->StopCounter();
     return status;
   }
 
-  // Detect Cross Site Scripting (XSS)
-  HRESULT hr = p_context->GetServerVariable("SERVER_NAME",&serverName, &size);
-  if(hr == S_OK)
+  // Detect Cross Site Scripting (XSS) and block if detected
+  if(app->m_config.GetSetting(MODULE_XSS).CompareNoCase("true") == 0)
   {
-    hr = p_context->GetServerVariable("HTTP_REFERER", &referer, &size);
-    if(hr == S_OK)
+    // Detect Cross Site Scripting (XSS)
+    HRESULT hr = p_context->GetServerVariable("SERVER_NAME", &serverName, &size);
+    if (hr == S_OK)
     {
-      if(strstr(referer,serverName) == 0)
+      hr = p_context->GetServerVariable("HTTP_REFERER", &referer, &size);
+      if (hr == S_OK)
       {
-        DETAILLOG("XSS Detected!! Referrer not our server!");
-        DETAILLOG(CString("SERVER_NAME : ") + serverName);
-        DETAILLOG(CString("HTTP_REFERER: ") + referer);
-        // response->SetStatus(HTTP_STATUS_BAD_REQUEST,"XSS Detected");
+        if (strstr(referer, serverName) == 0)
+        {
+          DETAILLOG("XSS Detected!! Referrer not our server!");
+          DETAILLOG(CString("SERVER_NAME : ") + serverName);
+          DETAILLOG(CString("HTTP_REFERER: ") + referer);
+          response->SetStatus(HTTP_STATUS_BAD_REQUEST,"XSS Detected");
+          return RQ_NOTIFICATION_FINISH_REQUEST;
+        }
       }
     }
   }
@@ -827,7 +901,6 @@ MarlinModule::OnResolveRequestCache(IN IHttpContext*       p_context,
   if(rawRequest == nullptr)
   {
     ERRORLOG("Abort: IIS did not provide a raw request object!");
-    app->StopCounter();
     return status;
   }
 
@@ -836,7 +909,8 @@ MarlinModule::OnResolveRequestCache(IN IHttpContext*       p_context,
   DETAILLOG(url);
 
   // Find our marlin representation of the site
-  HTTPSite* site =  app->GetHTTPServer()->FindHTTPSite(serverPort,rawRequest->CookedUrl.pAbsPath);
+  // Use HTTPServer()->FindHTTPSite of the application in the loaded DLL
+  HTTPSite* site =  (*app->m_findSite)(serverapp,serverPort,rawRequest->CookedUrl.pAbsPath);
 
   // ONLY IF WE ARE HANDLING THIS SITE AND THIS MESSAGE!!!
   if(site == nullptr)
@@ -846,23 +920,19 @@ MarlinModule::OnResolveRequestCache(IN IHttpContext*       p_context,
     CString message("Rejected HTTP call: ");
     message += rawRequest->pRawUrl;
     DETAILLOG(message);
-    app->StopCounter();
     // Let someone else handle this call (if any :-( )
     return RQ_NOTIFICATION_CONTINUE;
   }
 
   // Grab an event stream, if it was present, otherwise continue to the next handler
-  EventStream* stream = app->GetHTTPServer()->GetHTTPStreamFromRequest(p_context,site,rawRequest);
-  if(stream != nullptr)
+  // Use the HTTPServer() method GetHTTPStreamFromRequest to see if we must turn it into a stream
+  bool stream = (*app->m_getHttpStream)(serverapp,p_context,site,rawRequest);
+  if(stream)
   {
     // If we turn into a stream, more notifications are pending
     // This means the context of this request will **NOT** end
     status = RQ_NOTIFICATION_PENDING;
   }
-
-  // Now completely ready. We did everything!
-  app->StopCounter();
-
   return status;
 }
 
@@ -889,10 +959,8 @@ MarlinModule::OnExecuteRequestHandler(IN IHttpContext*       p_context,
   }
 
   // Find our app
-  ServerApp* app = it->second->m_application;
-
-  // Starting the performance counter
-  app->StartCounter();
+  APP* app = it->second;
+  ServerApp* serverapp = app->m_application;
 
   // Getting the request/response objects
   IHttpRequest*  request  = p_context->GetRequest();
@@ -900,21 +968,24 @@ MarlinModule::OnExecuteRequestHandler(IN IHttpContext*       p_context,
   if (request == nullptr || response == nullptr)
   {
     DETAILLOG("No request or response objects");
-    app->StopCounter();
     return status;
   }
 
-  // Detect Cross Site Scripting (XSS)
-  HRESULT hr = p_context->GetServerVariable("SERVER_NAME", &serverName, &size);
-  if (hr == S_OK)
+  // Detect Cross Site Scripting (XSS) and block if detected
+  if(app->m_config.GetSetting(MODULE_XSS).CompareNoCase("true") == 0)
   {
-    hr = p_context->GetServerVariable("HTTP_REFERER", &referer, &size);
-    if((hr == S_OK) && (strstr(referer, serverName) == 0))
+    HRESULT hr = p_context->GetServerVariable("SERVER_NAME", &serverName, &size);
+    if (hr == S_OK)
     {
-      DETAILLOG("XSS Detected!! Referrer not our server!");
-      DETAILLOG(CString("SERVER_NAME : ") + serverName);
-      DETAILLOG(CString("HTTP_REFERER: ") + referer);
-      // response->SetStatus(HTTP_STATUS_BAD_REQUEST,"XSS Detected");
+      hr = p_context->GetServerVariable("HTTP_REFERER", &referer, &size);
+      if((hr == S_OK) && (strstr(referer, serverName) == 0))
+      {
+        DETAILLOG("XSS Detected!! Referrer not our server!");
+        DETAILLOG(CString("SERVER_NAME : ") + serverName);
+        DETAILLOG(CString("HTTP_REFERER: ") + referer);
+        response->SetStatus(HTTP_STATUS_BAD_REQUEST,"XSS Detected");
+        return RQ_NOTIFICATION_FINISH_REQUEST;
+      }
     }
   }
 
@@ -923,7 +994,6 @@ MarlinModule::OnExecuteRequestHandler(IN IHttpContext*       p_context,
   if(rawRequest == nullptr)
   {
     ERRORLOG("Abort: IIS did not provide a raw request object!");
-    app->StopCounter();
     return status;
   }
 
@@ -932,7 +1002,8 @@ MarlinModule::OnExecuteRequestHandler(IN IHttpContext*       p_context,
   DETAILLOG(url);
 
   // Getting the HTTPSite through the server port/absPath combination
-  HTTPSite* site = app->GetHTTPServer()->FindHTTPSite(serverPort, rawRequest->CookedUrl.pAbsPath);
+  // Use the HTTPServer() method FindHTTPSite to grab the site
+  HTTPSite* site = (*app->m_findSite)(serverapp,serverPort,rawRequest->CookedUrl.pAbsPath);
 
   // ONLY IF WE ARE HANDLING THIS SITE AND THIS MESSAGE!!!
   if (site == nullptr)
@@ -942,24 +1013,18 @@ MarlinModule::OnExecuteRequestHandler(IN IHttpContext*       p_context,
     CString message("Rejected HTTP call: ");
     message += rawRequest->pRawUrl;
     DETAILLOG(message);
-    app->StopCounter();
     // Let someone else handle this call (if any :-( )
     return RQ_NOTIFICATION_CONTINUE;
   }
 
   // Grab a message from the raw request
-  HTTPMessage* msg = app->GetHTTPServer()->GetHTTPMessageFromRequest(p_context, site, rawRequest);
+  // Uste the HTTPServer() method GetHTTPMessageFromRequest to construct the message
+  HTTPMessage* msg = (*app->m_getHttpMessage)(serverapp,p_context,site,rawRequest);
   if(msg)
   {
-    // Install SEH to regular exception translator
-    AutoSeTranslator trans(SeTranslator);
-
-    // GO! Let the site handle the message
-    msg->AddReference();
-    site->HandleHTTPMessage(msg);
-  
-    // If handled (Marlin has reset the request handle)
-    if(msg->GetHasBeenAnswered())
+    // Call HTTPSite->HandleMessage
+    bool handled = (*app->m_handleMessage)(serverapp,site,msg);
+    if(handled)
     {
        // Ready for IIS!
        p_context->SetRequestHandled();
@@ -967,16 +1032,12 @@ MarlinModule::OnExecuteRequestHandler(IN IHttpContext*       p_context,
       // This request is now completely handled
       status = GetCompletionStatus(response);
     }
-    msg->DropReference();
   }
   else
   {
     ERRORLOG("Cannot handle the request: IIS did not provide enough info for a HTTPMessage.");
     status = RQ_NOTIFICATION_CONTINUE;
   }
-  // Now completely ready. We did everything!
-  app->StopCounter();
-
   return status;
 }
 

@@ -43,8 +43,13 @@ using IISModules = std::set<CString>;
 
 class ServerApp;
 
-// Exported function that must be called first in the loaded Marlin application DLL
-typedef ServerApp* (CALLBACK* CreateServerAppFunc)(IHttpServer*,const char*,const char*);
+// Exported functions that can be called from the MarlinModule
+typedef ServerApp*    (CALLBACK* CreateServerAppFunc)(IHttpServer*,const char*,const char*);
+typedef HTTPSite*     (CALLBACK* FindHTTPSiteFunc)   (ServerApp*,int port,PCWSTR p_url);
+typedef bool          (CALLBACK* GetHTTPStreamFunc)  (ServerApp*,IHttpContext*,HTTPSite*,PHTTP_REQUEST);
+typedef HTTPMessage*  (CALLBACK* GetHTTPMessageFunc) (ServerApp*,IHttpContext*,HTTPSite*,PHTTP_REQUEST);
+typedef bool          (CALLBACK* HandleMessageFunc)  (ServerApp*,HTTPSite* p_site,HTTPMessage*);
+typedef int           (CALLBACK* SitesInApplicPool)  (ServerApp*);
 
 extern IHttpServer*  g_iisServer;
 extern LogAnalysis*  g_analysisLog;
@@ -63,10 +68,14 @@ public:
            ,const char*   p_appName);
   virtual ~ServerApp();
 
+  // BEWARE: MarlinModule uses VTABLE in this order
+  //         ONLY ADD NEW virtual overrides AT THE END!!
+
   // Starting and stopping the server
   virtual void InitInstance();
   virtual void ExitInstance();
-  virtual bool LoadSite(IISSiteConfig& p_config);
+  virtual bool LoadSite  (IISSiteConfig& p_config);
+  virtual bool UnloadSite(IISSiteConfig* p_config);
   virtual ErrorReport* GetErrorReport();
 
   // The performance counter
@@ -78,9 +87,20 @@ public:
 
   // Start our sites from the IIS configuration
   virtual void LoadSites(IHttpApplication* p_app,CString p_physicalPath);
+  // Stopping all of our sites in the IIS configuration
+  virtual void UnloadSites();
 
   // Server app was correctly started by MarlinIISModule
   virtual bool CorrectlyStarted();
+
+  // Number of IIS sites in this Application Pool
+  virtual int  SitesInThePool();
+
+  // Add new MarlinModule used virtual overrides at this end of the table!
+  // END OF THE VTABLE
+
+  // Number of logfiles to keep
+  void SetKeepLogfiles(int p_keep);
 
   // GETTERS
   // Never virtual. Derived classes should use these!!
@@ -88,6 +108,7 @@ public:
   ThreadPool*    GetThreadPool()  { return m_threadPool;  };
   LogAnalysis*   GetLogfile()     { return m_logfile;     };
   int            GetLogLevel()    { return m_logLevel;    };
+  int            GetKeepLogfiles(){ return m_keepLogFiles;};
   IISSiteConfig* GetSiteConfig(int ind);
 
 protected:
@@ -109,6 +130,7 @@ protected:
   IISModules     m_modules;                     // Global IIS modules for this application
   IISSiteConfigs m_sites;                       // Configures sites, modules and handlers
   WebConfigIIS   m_config;                      // Our web.config object
+  int            m_numSites     { 0       };    // Reference counting of sites in the pool
   IHttpServer*   m_iis          { nullptr };    // Main ISS application
   HTTPServerIIS* m_httpServer   { nullptr };    // Our Marlin HTTPServer for IIS
   ThreadPool*    m_threadPool   { nullptr };    // Pointer to our own ThreadPool
@@ -116,6 +138,7 @@ protected:
   ErrorReport*   m_errorReport  { nullptr };    // Error reporting object
   bool           m_ownReport    { false   };    // We made the error report
   int            m_logLevel     { HLL_NOLOG };  // Logging level of server and logfile
+  int            m_keepLogFiles { LOGWRITE_KEEPFILES };  // Default number of logfiles to keep
 };
 
 // Factory for your application to create a new class derived from the ServerApp

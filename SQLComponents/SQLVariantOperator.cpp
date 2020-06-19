@@ -2,7 +2,7 @@
 //
 // File: SQLVariantOperator.cpp
 //
-// Copyright (c) 1998-2019 ir. W.E. Huisman
+// Copyright (c) 1998-2020 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy of 
@@ -579,6 +579,589 @@ SQLVariant::operator bcd()
 {
   return GetAsBCD();
 }
+
+//////////////////////////////////////////////////////////////////////////
+//
+// PRE- AND POST-INCREMENT AND DECREMENT OPERATORS
+//
+//////////////////////////////////////////////////////////////////////////
+
+void
+SQLVariant::ThrowErrorOperator(SQLVarOperator p_operator)
+{
+  CString error;
+  char* type = FindDatatype(m_datatype);
+  char* oper = nullptr;
+  switch (p_operator)
+  {
+    case SVO_PreIncrement:    oper = "pre-increment";  break;
+    case SVO_PreDecrement:    oper = "pre-decrement";  break;
+    case SVO_PostIncrement:   oper = "post-increment"; break;
+    case SVO_PostDecrement:   oper = "post-decrement"; break;
+    case SVO_AssignAdd:       oper = "+=";             break;
+    case SVO_AssignSubtract:  oper = "-=";             break;
+    case SVO_AssignMultiply:  oper = "*=";             break;
+    case SVO_AssignDivide:    oper = "/=";             break;
+    case SVO_AssignModulo:    oper = "%=";             break;
+    default:                  oper = "unknown";        break;
+  }
+  error.Format("Cannot execute %s operator on datatype: %s.",oper,type);
+  throw StdException(error);
+}
+
+// Pre-increment
+SQLVariant& 
+SQLVariant::operator++()
+{
+  // NULL will always be NULL
+  if(IsNULL())
+  {
+    return *this;
+  }
+  switch(m_datatype)
+  {
+    case SQL_C_CHAR:                      // fall through
+    case SQL_C_GUID:                      // fall through
+    case SQL_C_BINARY:                    // fall through
+    default:                              ThrowErrorOperator(SVO_PreIncrement);
+
+    case SQL_C_SHORT:                     // fall through
+    case SQL_C_SSHORT:                    ++m_data.m_dataSHORT;
+                                          break;
+    case SQL_C_USHORT:                    ++m_data.m_dataUSHORT;
+                                          break;
+    case SQL_C_LONG:                      // fall through
+    case SQL_C_SLONG:                     ++m_data.m_dataSLONG;
+                                          break;
+    case SQL_C_ULONG:                     ++m_data.m_dataULONG;
+                                          break;
+    case SQL_C_FLOAT:                     ++m_data.m_dataFLOAT;
+                                          break;
+    case SQL_C_DOUBLE:                    ++m_data.m_dataDOUBLE;
+                                          break;
+    case SQL_C_BIT:                       ++m_data.m_dataBIT;
+                                          break;
+    case SQL_C_TINYINT:                   // fall through
+    case SQL_C_STINYINT:                  ++m_data.m_dataSTINYINT;
+                                          break;
+    case SQL_C_UTINYINT:                  ++m_data.m_dataUTINYINT;
+                                          break;
+    case SQL_C_SBIGINT:                   ++m_data.m_dataSBIGINT;
+                                          break;
+    case SQL_C_UBIGINT:                   ++m_data.m_dataUBIGINT;
+                                          break;
+    case SQL_C_NUMERIC:                   {  bcd data(&m_data.m_dataNUMERIC);
+                                             ++data;
+                                             data.AsNumeric(&m_data.m_dataNUMERIC);
+                                          }
+                                          break;
+    case SQL_C_DATE:                      // fall through
+    case SQL_C_TYPE_DATE:                 {  SQLDate date(&m_data.m_dataDATE);
+                                             date.AddDays(1);
+                                             date.AsDateStruct(&m_data.m_dataDATE);
+                                          }
+                                          break;
+    case SQL_C_TIME:                      // fall through
+    case SQL_C_TYPE_TIME:                 {  SQLTime time(&m_data.m_dataTIME);
+                                             time.AddSeconds(1);
+                                             time.AsTimeStruct(&m_data.m_dataTIME);
+                                          }
+                                          break;
+    case SQL_C_TIMESTAMP:                 // fall through
+    case SQL_C_TYPE_TIMESTAMP:            {  SQLTimestamp stamp(&m_data.m_dataTIMESTAMP);
+                                             stamp.AddSeconds(1);
+                                             stamp.AsTimeStampStruct(&m_data.m_dataTIMESTAMP);
+                                          }
+                                          break;
+    case SQL_C_INTERVAL_YEAR:             {  SQLInterval intval(&m_data.m_dataINTERVAL);
+                                             intval.AddYears(1);
+                                             intval.AsIntervalStruct(&m_data.m_dataINTERVAL);
+                                          }
+                                          break;
+    case SQL_C_INTERVAL_MONTH:            {  SQLInterval intval(&m_data.m_dataINTERVAL);
+                                             intval.AddMonths(1);
+                                             intval.AsIntervalStruct(&m_data.m_dataINTERVAL);
+                                          }
+                                          break;
+    case SQL_C_INTERVAL_YEAR_TO_MONTH:    {  SQLInterval intval(&m_data.m_dataINTERVAL);
+                                             intval.AddMonths(1);
+                                             intval.AsIntervalStruct(&m_data.m_dataINTERVAL);
+                                          }
+                                          break;
+    case SQL_C_INTERVAL_DAY:              {  SQLInterval intval(&m_data.m_dataINTERVAL);
+                                             intval.AddDays(1);
+                                             intval.AsIntervalStruct(&m_data.m_dataINTERVAL);
+                                          }
+                                          break;
+    case SQL_C_INTERVAL_HOUR:             {  SQLInterval intval(&m_data.m_dataINTERVAL);
+                                             intval.AddHours(1);
+                                             intval.AsIntervalStruct(&m_data.m_dataINTERVAL);
+                                          }
+                                          break;
+    case SQL_C_INTERVAL_MINUTE:           {  SQLInterval intval(&m_data.m_dataINTERVAL);
+                                             intval.AddMinutes(1);
+                                             intval.AsIntervalStruct(&m_data.m_dataINTERVAL);
+                                          }
+                                          break;
+    case SQL_C_INTERVAL_SECOND:           {  SQLInterval intval(&m_data.m_dataINTERVAL);
+                                             intval.AddSeconds(1);
+                                             intval.AsIntervalStruct(&m_data.m_dataINTERVAL);
+                                          }
+                                          break;
+    case SQL_C_INTERVAL_DAY_TO_HOUR:      {  SQLInterval intval(&m_data.m_dataINTERVAL);
+                                             intval.AddHours(1);
+                                             intval.AsIntervalStruct(&m_data.m_dataINTERVAL);
+                                          }
+                                          break;
+    case SQL_C_INTERVAL_DAY_TO_MINUTE:    {  SQLInterval intval(&m_data.m_dataINTERVAL);
+                                             intval.AddMinutes(1);
+                                             intval.AsIntervalStruct(&m_data.m_dataINTERVAL);
+                                          }
+                                          break;
+    case SQL_C_INTERVAL_DAY_TO_SECOND:    {  SQLInterval intval(&m_data.m_dataINTERVAL);
+                                             intval.AddSeconds(1);
+                                             intval.AsIntervalStruct(&m_data.m_dataINTERVAL);
+                                          }
+                                          break;
+    case SQL_C_INTERVAL_HOUR_TO_MINUTE:   {  SQLInterval intval(&m_data.m_dataINTERVAL);
+                                             intval.AddMinutes(1);
+                                             intval.AsIntervalStruct(&m_data.m_dataINTERVAL);
+                                          }
+                                          break;
+    case SQL_C_INTERVAL_HOUR_TO_SECOND:   {  SQLInterval intval(&m_data.m_dataINTERVAL);
+                                             intval.AddSeconds(1);
+                                             intval.AsIntervalStruct(&m_data.m_dataINTERVAL);
+                                          }
+                                          break;
+    case SQL_C_INTERVAL_MINUTE_TO_SECOND: {  SQLInterval intval(&m_data.m_dataINTERVAL);
+                                             intval.AddSeconds(1);
+                                             intval.AsIntervalStruct(&m_data.m_dataINTERVAL);
+                                          }
+                                          break;
+  }
+  return* this;
+}
+
+// Post increment
+SQLVariant  
+SQLVariant::operator++(int p_val)
+{
+  // NULL will always be NULL
+  if (IsNULL())
+  {
+    return *this;
+  }
+  // Value before increment
+  SQLVariant pre(this);
+
+  // Could possibly called with a discrete value
+  if(p_val == 0)
+  {
+    p_val = 1;
+  }
+
+  switch(m_datatype)
+  {
+    case SQL_C_CHAR:                      // fall through
+    case SQL_C_GUID:                      // fall through
+    case SQL_C_BINARY:                    // fall through
+    default:                              ThrowErrorOperator(SVO_PostIncrement);
+
+    case SQL_C_SHORT:                     // fall through
+    case SQL_C_SSHORT:                    m_data.m_dataSHORT += (short)p_val;
+                                          break;
+    case SQL_C_USHORT:                    m_data.m_dataUSHORT += (ushort)p_val;
+                                          break;
+    case SQL_C_LONG:                      // fall through
+    case SQL_C_SLONG:                     m_data.m_dataSLONG += p_val;
+                                          break;
+    case SQL_C_ULONG:                     m_data.m_dataULONG += p_val;
+                                          break;
+    case SQL_C_FLOAT:                     m_data.m_dataFLOAT += p_val;
+                                          break;
+    case SQL_C_DOUBLE:                    m_data.m_dataDOUBLE += p_val;
+                                          break;
+    case SQL_C_BIT:                       ++m_data.m_dataBIT;
+                                          break;
+    case SQL_C_TINYINT:                   // fall through
+    case SQL_C_STINYINT:                  m_data.m_dataSTINYINT += (char)p_val;
+                                          break;
+    case SQL_C_UTINYINT:                  m_data.m_dataUTINYINT += (uchar)p_val;
+                                          break;
+    case SQL_C_SBIGINT:                   m_data.m_dataSBIGINT += p_val;
+                                          break;
+    case SQL_C_UBIGINT:                   m_data.m_dataUBIGINT += p_val;
+                                          break;
+    case SQL_C_NUMERIC:                   {  bcd data(&m_data.m_dataNUMERIC);
+                                             data += bcd(p_val);
+                                             data.AsNumeric(&m_data.m_dataNUMERIC);
+                                          }
+                                          break;
+    case SQL_C_DATE:                      // fall through
+    case SQL_C_TYPE_DATE:                 {  SQLDate date(&m_data.m_dataDATE);
+                                             date.AddDays(p_val);
+                                             date.AsDateStruct(&m_data.m_dataDATE);
+                                          }
+                                          break;
+    case SQL_C_TIME:                      // fall through
+    case SQL_C_TYPE_TIME:                 {  SQLTime time(&m_data.m_dataTIME);
+                                             time.AddSeconds(p_val);
+                                             time.AsTimeStruct(&m_data.m_dataTIME);
+                                          }
+                                          break;
+    case SQL_C_TIMESTAMP:                 // fall through
+    case SQL_C_TYPE_TIMESTAMP:            {  SQLTimestamp stamp(&m_data.m_dataTIMESTAMP);
+                                             stamp.AddSeconds(p_val);
+                                             stamp.AsTimeStampStruct(&m_data.m_dataTIMESTAMP);
+                                          }
+                                          break;
+    case SQL_C_INTERVAL_YEAR:             {  SQLInterval intval(&m_data.m_dataINTERVAL);
+                                             intval.AddYears(p_val);
+                                             intval.AsIntervalStruct(&m_data.m_dataINTERVAL);
+                                          }
+                                          break;
+    case SQL_C_INTERVAL_MONTH:            {  SQLInterval intval(&m_data.m_dataINTERVAL);
+                                             intval.AddMonths(p_val);
+                                             intval.AsIntervalStruct(&m_data.m_dataINTERVAL);
+                                          }
+                                          break;
+    case SQL_C_INTERVAL_YEAR_TO_MONTH:    {  SQLInterval intval(&m_data.m_dataINTERVAL);
+                                             intval.AddMonths(p_val);
+                                             intval.AsIntervalStruct(&m_data.m_dataINTERVAL);
+                                          }
+                                          break;
+    case SQL_C_INTERVAL_DAY:              {  SQLInterval intval(&m_data.m_dataINTERVAL);
+                                             intval.AddDays(p_val);
+                                             intval.AsIntervalStruct(&m_data.m_dataINTERVAL);
+                                          }
+                                          break;
+    case SQL_C_INTERVAL_HOUR:             {  SQLInterval intval(&m_data.m_dataINTERVAL);
+                                             intval.AddHours(p_val);
+                                             intval.AsIntervalStruct(&m_data.m_dataINTERVAL);
+                                          }
+                                          break;
+    case SQL_C_INTERVAL_MINUTE:           {  SQLInterval intval(&m_data.m_dataINTERVAL);
+                                             intval.AddMinutes(p_val);
+                                             intval.AsIntervalStruct(&m_data.m_dataINTERVAL);
+                                          }
+                                          break;
+    case SQL_C_INTERVAL_SECOND:           {  SQLInterval intval(&m_data.m_dataINTERVAL);
+                                             intval.AddSeconds(p_val);
+                                             intval.AsIntervalStruct(&m_data.m_dataINTERVAL);
+                                          }
+                                          break;
+    case SQL_C_INTERVAL_DAY_TO_HOUR:      {  SQLInterval intval(&m_data.m_dataINTERVAL);
+                                             intval.AddHours(p_val);
+                                             intval.AsIntervalStruct(&m_data.m_dataINTERVAL);
+                                          }
+                                          break;
+    case SQL_C_INTERVAL_DAY_TO_MINUTE:    {  SQLInterval intval(&m_data.m_dataINTERVAL);
+                                             intval.AddMinutes(p_val);
+                                             intval.AsIntervalStruct(&m_data.m_dataINTERVAL);
+                                          }
+                                          break;
+    case SQL_C_INTERVAL_DAY_TO_SECOND:    {  SQLInterval intval(&m_data.m_dataINTERVAL);
+                                             intval.AddSeconds(p_val);
+                                             intval.AsIntervalStruct(&m_data.m_dataINTERVAL);
+                                          }
+                                          break;
+    case SQL_C_INTERVAL_HOUR_TO_MINUTE:   {  SQLInterval intval(&m_data.m_dataINTERVAL);
+                                             intval.AddMinutes(p_val);
+                                             intval.AsIntervalStruct(&m_data.m_dataINTERVAL);
+                                          }
+                                          break;
+    case SQL_C_INTERVAL_HOUR_TO_SECOND:   {  SQLInterval intval(&m_data.m_dataINTERVAL);
+                                             intval.AddSeconds(p_val);
+                                             intval.AsIntervalStruct(&m_data.m_dataINTERVAL);
+                                          }
+                                          break;
+    case SQL_C_INTERVAL_MINUTE_TO_SECOND: {  SQLInterval intval(&m_data.m_dataINTERVAL);
+                                             intval.AddSeconds(p_val);
+                                             intval.AsIntervalStruct(&m_data.m_dataINTERVAL);
+                                          }
+                                          break;
+  }
+  // Post increment returns the value before the increment
+  return pre;
+}
+
+// Prefix decrement
+SQLVariant&
+SQLVariant::operator--()
+{
+  // NULL will always be NULL
+  if (IsNULL())
+  {
+    return *this;
+  }
+  switch(m_datatype)
+  {
+    case SQL_C_CHAR:                      // fall through
+    case SQL_C_GUID:                      // fall through
+    case SQL_C_BINARY:                    // fall through
+    default:                              ThrowErrorOperator(SVO_PreDecrement);
+
+    case SQL_C_SHORT:                     // fall through
+    case SQL_C_SSHORT:                    --m_data.m_dataSHORT;
+                                          break;
+    case SQL_C_USHORT:                    --m_data.m_dataUSHORT;
+                                          break;
+    case SQL_C_LONG:                      // fall through
+    case SQL_C_SLONG:                     --m_data.m_dataSLONG;
+                                          break;
+    case SQL_C_ULONG:                     --m_data.m_dataULONG;
+                                          break;
+    case SQL_C_FLOAT:                     --m_data.m_dataFLOAT;
+                                          break;
+    case SQL_C_DOUBLE:                    --m_data.m_dataDOUBLE;
+                                          break;
+    case SQL_C_BIT:                       --m_data.m_dataBIT;
+                                          break;
+    case SQL_C_TINYINT:                   // fall through
+    case SQL_C_STINYINT:                  --m_data.m_dataSTINYINT;
+                                          break;
+    case SQL_C_UTINYINT:                  --m_data.m_dataUTINYINT;
+                                          break;
+    case SQL_C_SBIGINT:                   --m_data.m_dataSBIGINT;
+                                          break;
+    case SQL_C_UBIGINT:                   --m_data.m_dataUBIGINT;
+                                          break;
+    case SQL_C_NUMERIC:                   {  bcd data(&m_data.m_dataNUMERIC);
+                                             --data;
+                                             data.AsNumeric(&m_data.m_dataNUMERIC);
+                                          }
+                                          break;
+    case SQL_C_DATE:                      // fall through
+    case SQL_C_TYPE_DATE:                 {  SQLDate date(&m_data.m_dataDATE);
+                                             date.AddDays(-1);
+                                             date.AsDateStruct(&m_data.m_dataDATE);
+                                          }
+                                          break;
+    case SQL_C_TIME:                      // fall through
+    case SQL_C_TYPE_TIME:                 {  SQLTime time(&m_data.m_dataTIME);
+                                             time.AddSeconds(-1);
+                                             time.AsTimeStruct(&m_data.m_dataTIME);
+                                          }
+                                          break;
+    case SQL_C_TIMESTAMP:                 // fall through
+    case SQL_C_TYPE_TIMESTAMP:            {  SQLTimestamp stamp(&m_data.m_dataTIMESTAMP);
+                                             stamp.AddSeconds(-1);
+                                             stamp.AsTimeStampStruct(&m_data.m_dataTIMESTAMP);
+                                          }
+                                          break;
+    case SQL_C_INTERVAL_YEAR:             {  SQLInterval intval(&m_data.m_dataINTERVAL);
+                                             intval.AddYears(-1);
+                                             intval.AsIntervalStruct(&m_data.m_dataINTERVAL);
+                                          }
+                                          break;
+    case SQL_C_INTERVAL_MONTH:            {  SQLInterval intval(&m_data.m_dataINTERVAL);
+                                             intval.AddMonths(-1);
+                                             intval.AsIntervalStruct(&m_data.m_dataINTERVAL);
+                                          }
+                                          break;
+    case SQL_C_INTERVAL_YEAR_TO_MONTH:    {  SQLInterval intval(&m_data.m_dataINTERVAL);
+                                             intval.AddMonths(-1);
+                                             intval.AsIntervalStruct(&m_data.m_dataINTERVAL);
+                                          }
+                                          break;
+    case SQL_C_INTERVAL_DAY:              {  SQLInterval intval(&m_data.m_dataINTERVAL);
+                                             intval.AddDays(-1);
+                                             intval.AsIntervalStruct(&m_data.m_dataINTERVAL);
+                                          }
+                                          break;
+    case SQL_C_INTERVAL_HOUR:             {  SQLInterval intval(&m_data.m_dataINTERVAL);
+                                             intval.AddHours(-1);
+                                             intval.AsIntervalStruct(&m_data.m_dataINTERVAL);
+                                          }
+                                          break;
+    case SQL_C_INTERVAL_MINUTE:           {  SQLInterval intval(&m_data.m_dataINTERVAL);
+                                             intval.AddMinutes(-1);
+                                             intval.AsIntervalStruct(&m_data.m_dataINTERVAL);
+                                          }
+                                          break;
+    case SQL_C_INTERVAL_SECOND:           {  SQLInterval intval(&m_data.m_dataINTERVAL);
+                                             intval.AddSeconds(-1);
+                                             intval.AsIntervalStruct(&m_data.m_dataINTERVAL);
+                                          }
+                                          break;
+    case SQL_C_INTERVAL_DAY_TO_HOUR:      {  SQLInterval intval(&m_data.m_dataINTERVAL);
+                                             intval.AddHours(-1);
+                                             intval.AsIntervalStruct(&m_data.m_dataINTERVAL);
+                                          }
+                                          break;
+    case SQL_C_INTERVAL_DAY_TO_MINUTE:    {  SQLInterval intval(&m_data.m_dataINTERVAL);
+                                             intval.AddMinutes(-1);
+                                             intval.AsIntervalStruct(&m_data.m_dataINTERVAL);
+                                          }
+                                          break;
+    case SQL_C_INTERVAL_DAY_TO_SECOND:    {  SQLInterval intval(&m_data.m_dataINTERVAL);
+                                             intval.AddSeconds(-1);
+                                             intval.AsIntervalStruct(&m_data.m_dataINTERVAL);
+                                          }
+                                          break;
+    case SQL_C_INTERVAL_HOUR_TO_MINUTE:   {  SQLInterval intval(&m_data.m_dataINTERVAL);
+                                             intval.AddMinutes(-1);
+                                             intval.AsIntervalStruct(&m_data.m_dataINTERVAL);
+                                          }
+                                          break;
+    case SQL_C_INTERVAL_HOUR_TO_SECOND:   {  SQLInterval intval(&m_data.m_dataINTERVAL);
+                                             intval.AddSeconds(-1);
+                                             intval.AsIntervalStruct(&m_data.m_dataINTERVAL);
+                                          }
+                                          break;
+    case SQL_C_INTERVAL_MINUTE_TO_SECOND: {  SQLInterval intval(&m_data.m_dataINTERVAL);
+                                             intval.AddSeconds(-1);
+                                             intval.AsIntervalStruct(&m_data.m_dataINTERVAL);
+                                          }
+                                          break;
+  }
+  return *this;
+}
+
+// Post decrement
+SQLVariant
+SQLVariant::operator--(int p_val)
+{
+  // NULL will always be NULL
+  if (IsNULL())
+  {
+    return *this;
+  }
+  // Value before increment
+  SQLVariant pre(this);
+
+  // Could possibly called with a discrete value
+  if(p_val == 0)
+  {
+    p_val = 1;
+  }
+
+  switch(m_datatype)
+  {
+    case SQL_C_CHAR:                      // fall through
+    case SQL_C_GUID:                      // fall through
+    case SQL_C_BINARY:                    // fall through
+    default:                              ThrowErrorOperator(SVO_PostDecrement);
+
+    case SQL_C_SHORT:                     // fall through
+    case SQL_C_SSHORT:                    m_data.m_dataSHORT -= (short)p_val;
+                                          break;
+    case SQL_C_USHORT:                    m_data.m_dataUSHORT -= (ushort)p_val;
+                                          break;
+    case SQL_C_LONG:                      // fall through
+    case SQL_C_SLONG:                     m_data.m_dataSLONG -= p_val;
+                                          break;
+    case SQL_C_ULONG:                     m_data.m_dataULONG -= p_val;
+                                          break;
+    case SQL_C_FLOAT:                     m_data.m_dataFLOAT -= p_val;
+                                          break;
+    case SQL_C_DOUBLE:                    m_data.m_dataDOUBLE -= p_val;
+                                          break;
+    case SQL_C_BIT:                       --m_data.m_dataBIT;
+                                          break;
+    case SQL_C_TINYINT:                   // fall through
+    case SQL_C_STINYINT:                  m_data.m_dataSTINYINT -= (char)p_val;
+                                          break;
+    case SQL_C_UTINYINT:                  m_data.m_dataUTINYINT -= (uchar)p_val;
+                                          break;
+    case SQL_C_SBIGINT:                   m_data.m_dataSBIGINT -= p_val;
+                                          break;
+    case SQL_C_UBIGINT:                   m_data.m_dataUBIGINT -= p_val;
+                                          break;
+    case SQL_C_NUMERIC:                   {  bcd data(&m_data.m_dataNUMERIC);
+                                             data += bcd(-p_val);
+                                             data.AsNumeric(&m_data.m_dataNUMERIC);
+                                          }
+                                          break;
+    case SQL_C_DATE:                      // fall through
+    case SQL_C_TYPE_DATE:                 {  SQLDate date(&m_data.m_dataDATE);
+                                             date.AddDays(-p_val);
+                                             date.AsDateStruct(&m_data.m_dataDATE);
+                                          }
+                                          break;
+    case SQL_C_TIME:                      // fall through
+    case SQL_C_TYPE_TIME:                 {  SQLTime time(&m_data.m_dataTIME);
+                                             time.AddSeconds(-p_val);
+                                             time.AsTimeStruct(&m_data.m_dataTIME);
+                                          }
+                                          break;
+    case SQL_C_TIMESTAMP:                 // fall through
+    case SQL_C_TYPE_TIMESTAMP:            {  SQLTimestamp stamp(&m_data.m_dataTIMESTAMP);
+                                             stamp.AddSeconds(-p_val);
+                                             stamp.AsTimeStampStruct(&m_data.m_dataTIMESTAMP);
+                                          }
+                                          break;
+    case SQL_C_INTERVAL_YEAR:             {  SQLInterval intval(&m_data.m_dataINTERVAL);
+                                             intval.AddYears(-p_val);
+                                             intval.AsIntervalStruct(&m_data.m_dataINTERVAL);
+                                          }
+                                          break;
+    case SQL_C_INTERVAL_MONTH:            {  SQLInterval intval(&m_data.m_dataINTERVAL);
+                                             intval.AddMonths(-p_val);
+                                             intval.AsIntervalStruct(&m_data.m_dataINTERVAL);
+                                          }
+                                          break;
+    case SQL_C_INTERVAL_YEAR_TO_MONTH:    {  SQLInterval intval(&m_data.m_dataINTERVAL);
+                                             intval.AddMonths(-p_val);
+                                             intval.AsIntervalStruct(&m_data.m_dataINTERVAL);
+                                          }
+                                          break;
+    case SQL_C_INTERVAL_DAY:              {  SQLInterval intval(&m_data.m_dataINTERVAL);
+                                             intval.AddDays(-p_val);
+                                             intval.AsIntervalStruct(&m_data.m_dataINTERVAL);
+                                          }
+                                          break;
+    case SQL_C_INTERVAL_HOUR:             {  SQLInterval intval(&m_data.m_dataINTERVAL);
+                                             intval.AddHours(-p_val);
+                                             intval.AsIntervalStruct(&m_data.m_dataINTERVAL);
+                                          }
+                                          break;
+    case SQL_C_INTERVAL_MINUTE:           {  SQLInterval intval(&m_data.m_dataINTERVAL);
+                                             intval.AddMinutes(-p_val);
+                                             intval.AsIntervalStruct(&m_data.m_dataINTERVAL);
+                                          }
+                                          break;
+    case SQL_C_INTERVAL_SECOND:           {  SQLInterval intval(&m_data.m_dataINTERVAL);
+                                             intval.AddSeconds(-p_val);
+                                             intval.AsIntervalStruct(&m_data.m_dataINTERVAL);
+                                          }
+                                          break;
+    case SQL_C_INTERVAL_DAY_TO_HOUR:      {  SQLInterval intval(&m_data.m_dataINTERVAL);
+                                             intval.AddHours(-p_val);
+                                             intval.AsIntervalStruct(&m_data.m_dataINTERVAL);
+                                          }
+                                          break;
+    case SQL_C_INTERVAL_DAY_TO_MINUTE:    {  SQLInterval intval(&m_data.m_dataINTERVAL);
+                                             intval.AddMinutes(-p_val);
+                                             intval.AsIntervalStruct(&m_data.m_dataINTERVAL);
+                                          }
+                                          break;
+    case SQL_C_INTERVAL_DAY_TO_SECOND:    {  SQLInterval intval(&m_data.m_dataINTERVAL);
+                                             intval.AddSeconds(-p_val);
+                                             intval.AsIntervalStruct(&m_data.m_dataINTERVAL);
+                                          }
+                                          break;
+    case SQL_C_INTERVAL_HOUR_TO_MINUTE:   {  SQLInterval intval(&m_data.m_dataINTERVAL);
+                                             intval.AddMinutes(-p_val);
+                                             intval.AsIntervalStruct(&m_data.m_dataINTERVAL);
+                                          }
+                                          break;
+    case SQL_C_INTERVAL_HOUR_TO_SECOND:   {  SQLInterval intval(&m_data.m_dataINTERVAL);
+                                             intval.AddSeconds(-p_val);
+                                             intval.AsIntervalStruct(&m_data.m_dataINTERVAL);
+                                          }
+                                          break;
+    case SQL_C_INTERVAL_MINUTE_TO_SECOND: {  SQLInterval intval(&m_data.m_dataINTERVAL);
+                                             intval.AddSeconds(-p_val);
+                                             intval.AsIntervalStruct(&m_data.m_dataINTERVAL);
+                                          }
+                                          break;
+  }
+  // Post increment returns the value before the increment
+  return pre;
+}
+
+
 
 // End of namespace
 }

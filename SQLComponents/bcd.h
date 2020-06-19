@@ -14,9 +14,15 @@
 #pragma once
 #include <sqltypes.h>   // Needed for conversions of SQL_NUMERIC_STRUCT
 
+#ifdef COMPILED_TOGETHER_WITH_MARLIN
+#include "..\Marlin\bcd.h"
+#else
+
 namespace SQLComponents
 {
 
+// The ODBC standard has a maximum of 38 decimal places
+// At least one database (Oracle) implements these numbers
 #ifndef SQLNUM_MAX_PREC
 #define SQLNUM_MAX_PREC 38
 #endif
@@ -93,29 +99,41 @@ public:
   // BCD from a char value
   bcd(const char p_value);
 
+  // BCD from an unsigned char value
+  bcd(const unsigned char p_value);
+
   // BCD from a short value
   bcd(const short p_value);
+
+  // BCD from an unsigned short value
+  bcd(const unsigned short p_value);
 
   // BCD from an integer
   bcd(const int p_value);
 
+  // BCD from an unsigned integer
+  bcd(const unsigned int p_value);
+
   // BCD from a long
   bcd(const long p_value, const long p_restValue = 0);
+
+  // BCD from an unsigned long
+  bcd(const unsigned long p_value, const unsigned long p_restValue = 0);
 
   // BCD from a 64bits int
   bcd(const int64 p_value,const int64 p_restvalue = 0);
 
-  // BCD from a 64bits int
+  // BCD from an unsigned 64bits int
   bcd(const uint64 p_value,const int64 p_restvalue = 0);
 
   // Copy constructor.
   bcd(const bcd& icd);
 
+  // BCD from a float
+  bcd(const float p_value);
+
   // BCD from a double
   bcd(const double p_value);
-
-  // Assignment-constructor of class bcd.
-  bcd(const CString& p_string,bool p_fromDB = false);
 
   // BCD From a character string
   bcd(const char* p_string,bool p_fromDB = false);
@@ -141,12 +159,48 @@ public:
   const bcd  operator/(const bcd& p_value) const;
   const bcd  operator%(const bcd& p_value) const;
 
+  const bcd  operator+(const int    p_value) const;
+  const bcd  operator-(const int    p_value) const;
+  const bcd  operator*(const int    p_value) const;
+  const bcd  operator/(const int    p_value) const;
+  const bcd  operator%(const int    p_value) const;
+
+  const bcd  operator+(const double p_value) const;
+  const bcd  operator-(const double p_value) const;
+  const bcd  operator*(const double p_value) const;
+  const bcd  operator/(const double p_value) const;
+  const bcd  operator%(const double p_value) const;
+
+  const bcd  operator+(const char*  p_value) const;
+  const bcd  operator-(const char*  p_value) const;
+  const bcd  operator*(const char*  p_value) const;
+  const bcd  operator/(const char*  p_value) const;
+  const bcd  operator%(const char*  p_value) const;
+
   // Standard math/assignment operators
   bcd& operator+=(const bcd& p_value);
   bcd& operator-=(const bcd& p_value);
   bcd& operator*=(const bcd& p_value);
   bcd& operator/=(const bcd& p_value);
   bcd& operator%=(const bcd& p_value);
+
+  bcd& operator+=(const int p_value);
+  bcd& operator-=(const int p_value);
+  bcd& operator*=(const int p_value);
+  bcd& operator/=(const int p_value);
+  bcd& operator%=(const int p_value);
+
+  bcd& operator+=(const double p_value);
+  bcd& operator-=(const double p_value);
+  bcd& operator*=(const double p_value);
+  bcd& operator/=(const double p_value);
+  bcd& operator%=(const double p_value);
+
+  bcd& operator+=(const char*  p_value);
+  bcd& operator-=(const char*  p_value);
+  bcd& operator*=(const char*  p_value);
+  bcd& operator/=(const char*  p_value);
+  bcd& operator%=(const char*  p_value);
 
   // Prefix unary minus (negation)
   bcd  operator-() const;
@@ -159,9 +213,9 @@ public:
 
   // Assignment operators
   bcd& operator=(const bcd&     p_value);
-  bcd& operator=(const long     p_value);
+  bcd& operator=(const int    p_value);
   bcd& operator=(const double   p_value);
-  bcd& operator=(const CString& p_value);
+  bcd& operator=(const char*  p_value);
 
   // comparison operators
   bool operator==(const bcd& p_value) const;
@@ -170,6 +224,27 @@ public:
   bool operator> (const bcd& p_value) const;
   bool operator<=(const bcd& p_value) const;
   bool operator>=(const bcd& p_value) const;
+
+  bool operator==(const int    p_value) const;
+  bool operator!=(const int    p_value) const;
+  bool operator< (const int    p_value) const;
+  bool operator> (const int    p_value) const;
+  bool operator<=(const int    p_value) const;
+  bool operator>=(const int    p_value) const;
+
+  bool operator==(const double p_value) const;
+  bool operator!=(const double p_value) const;
+  bool operator< (const double p_value) const;
+  bool operator> (const double p_value) const;
+  bool operator<=(const double p_value) const;
+  bool operator>=(const double p_value) const;
+
+  bool operator==(const char*  p_value) const;
+  bool operator!=(const char*  p_value) const;
+  bool operator< (const char*  p_value) const;
+  bool operator> (const char*  p_value) const;
+  bool operator<=(const char*  p_value) const;
+  bool operator>=(const char*  p_value) const;
 
   // MAKING AN EXACT NUMERIC value
   
@@ -241,7 +316,7 @@ public:
   // Get as an unsigned 64 bits long
   uint64  AsUInt64() const;
   // Get as a mathematical string
-  CString AsString(int p_format = Bookkeeping,bool p_printPositive = false) const;
+  CString AsString(bcd::Format p_format = Bookkeeping,bool p_printPositive = false) const;
   // Get as a display string (by desktop locale)
   CString AsDisplayString(int p_decimals = 2) const;
   // Get as an ODBC SQL NUMERIC(p,s)
@@ -251,6 +326,8 @@ public:
 
   // Is bcd exactly 0.0?
   bool    IsNull() const; 
+  // Is bcd nearly 0.0 (smaller than epsilon)
+  bool    IsNearZero();
   // Gets the sign 0 (= 0.0), 1 (greater than 0) of -1 (smaller than 0)
   int     GetSign() const;
   // Total length (before and after decimal point)
@@ -274,6 +351,11 @@ public:
   bool    WriteToFile (FILE* p_fp);
   bool    ReadFromFile(FILE* p_fp);
 
+#ifdef _DEBUG
+  // Debug print of the mantissa
+  CString DebugPrint(char* p_name);
+#endif
+
 private:
 
   // INTERNALS
@@ -288,7 +370,7 @@ private:
   // Sets the value from a double
   void    SetValueDouble(const double p_value);
   // Sets the value from a string
-  void    SetValueString(const CString& p_string,bool p_fromDB = false);
+  void    SetValueString(const char* p_string,bool p_fromDB = false);
   // Sets the value from a SQL NUMERIC
   void    SetValueNumeric(const SQL_NUMERIC_STRUCT* p_numeric);
   // Take the absolute value of a long
@@ -304,15 +386,13 @@ private:
   // Shift mantissa 1 position left
   void    ShiftLeft();
   // Convert a string to a single long value
-  long    StringToLong(CString& p_string) const;
+  long    StringToLong(const char* p_string) const;
   // Convert a long to a string
   CString LongToString(long p_value) const;
   // Split the mantissa for floor/ceiling operations
   bcd     SplitMantissa() const;
   // Compare two mantissa
   int     CompareMantissa(const bcd& p_value) const;
-  // Debug print of the mantissa
-  void    DebugPrint(char* p_name);
   // Stopping criterion for internal iterations
   bcd&    Epsilon(long p_fraction) const;
 
@@ -346,9 +426,11 @@ private:
 
   // STORAGE OF THE NUMBER
   Sign   m_sign;                // 0 = Positive, 1 = Negative
-  short  m_exponent;            // +/- 10E32768
+  short  m_exponent;            // +/- 10E32767
   long   m_mantissa[bcdLength]; // Up to (bcdDigits * bcdLength) digits
 };
 
 // End of namespace
 }
+
+#endif // COMPILED_TOGETHER_WITH_MARLIN

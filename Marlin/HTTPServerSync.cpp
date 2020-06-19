@@ -522,6 +522,10 @@ HTTPServerSync::RunHTTPServer()
       if((type == HTTPCommand::http_get) && (eventStream || acceptTypes.Left(17).CompareNoCase("text/event-stream") == 0))
       {
         CString absolutePath = CW2A(request->CookedUrl.pAbsPath);
+        if(CheckUnderDDOSAttack((PSOCKADDR_IN6)sender,absolutePath))
+        {
+          continue;
+        }
         EventStream* stream = SubscribeEventStream((PSOCKADDR_IN6) sender
                                                    ,remDesktop
                                                    ,site
@@ -816,12 +820,12 @@ HTTPServerSync::ReceiveIncomingRequest(HTTPMessage* p_message)
   while(reading && totalRead < mustRead)
   {
     ULONG result = HttpReceiveRequestEntityBody(m_requestQueue
-                                                ,p_message->GetRequestHandle()
-                                                ,HTTP_RECEIVE_REQUEST_ENTITY_BODY_FLAG_FILL_BUFFER
-                                                ,entityBuffer
-                                                ,entityBufferLength
-                                                ,&bytesRead
-                                                ,NULL);
+                                               ,p_message->GetRequestHandle()
+                                               ,HTTP_RECEIVE_REQUEST_ENTITY_BODY_FLAG_FILL_BUFFER
+                                               ,entityBuffer
+                                               ,entityBufferLength
+                                               ,&bytesRead
+                                               ,NULL);
     switch(result)
     {
       case NO_ERROR:          // Regular incoming body part
@@ -846,7 +850,7 @@ HTTPServerSync::ReceiveIncomingRequest(HTTPMessage* p_message)
                               break;
                               
     }
-  } 
+  }
 
   // Clean up buffer after reading
   delete [] entityBuffer;

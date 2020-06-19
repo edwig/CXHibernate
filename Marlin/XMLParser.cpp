@@ -207,6 +207,10 @@ XMLParser::ParseLevel()
     {
       ParseDeclaration();
     }
+    else if(strncmp((const char*)m_pointer,"<?xml-stylesheet",16) == 0)
+    {
+      ParseStylesheet();
+    }
     else if(strncmp((const char*)m_pointer,"<!--",4) == 0)
     {
       ParseComment();
@@ -369,6 +373,47 @@ XMLParser::ParseDeclaration()
   SkipWhiteSpace();
 }
 
+// For now we only parse the type and href attributes
+void
+XMLParser::ParseStylesheet()
+{
+  m_message->m_stylesheetType.Empty();
+  m_message->m_stylesheet.Empty();
+
+  // Skip over "<?xml-stylesheet"
+  m_pointer += 16;
+
+  CString attributeName;
+
+  SkipWhiteSpace();
+  while(GetIdentifier(attributeName))
+  {
+    SkipWhiteSpace();
+    NeedToken('=');
+    CString value = GetQuotedString();
+    SkipWhiteSpace();
+
+    if(attributeName.Compare("type") == 0)
+    {
+      m_message->m_stylesheetType = value;
+    }
+    else if(attributeName.Compare("href") == 0)
+    {
+      m_message->m_stylesheet = value;
+    }
+    else
+    {
+      CString message;
+      message.Format("Unknown stylesheet attributes [%s=%s]",attributeName.GetString(),value.GetString());
+      SetError(XmlError::XE_HeaderAttribs,(uchar*)message.GetString());
+    }
+  }
+  // Skip over end of the declaration
+  NeedToken('?');
+  NeedToken('>');
+  SkipWhiteSpace();
+}
+
 void
 XMLParser::ParseComment()
 {
@@ -517,9 +562,9 @@ XMLParser::ParseElement()
         WhiteSpace  space = m_whiteSpace;
 
         m_whiteSpace = elemspace;
-        m_element = m_lastElement;
+        m_element    = m_lastElement;
         ParseLevel();
-        m_element = level;
+        m_element    = level;
         m_whiteSpace = space;
       }
       else
@@ -860,7 +905,7 @@ XMLParserJSON::ParseLevel(XMLElement* p_element,JSONvalue& p_value,CString p_arr
     case JsonType::JDT_number_int:  value.Format("%d",p_value.GetNumberInt());
                                     p_element->SetValue(value);
                                     break;
-    case JsonType::JDT_number_dbl:  value.Format("%.15g",p_value.GetNumberDbl());
+    case JsonType::JDT_number_bcd:  value = p_value.GetNumberBcd().AsString();
                                     p_element->SetValue(value);
                                     break;
     case JsonType::JDT_const:       switch(p_value.GetConstant())

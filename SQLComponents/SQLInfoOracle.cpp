@@ -2,7 +2,7 @@
 //
 // File: SQLInfoOracle.cpp
 //
-// Copyright (c) 1998-2019 ir. W.E. Huisman
+// Copyright (c) 1998-2020 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy of 
@@ -166,6 +166,20 @@ bool
 SQLInfoOracle::GetRDBMSMustCommitDDL() const
 {
   return false;
+}
+
+// Correct maximum precision,scale for a NUMERIC datatype
+// If no precision and scale are given, Oracle assumes NUMERIC(38,0)
+// This does not work for database views with a different scale in the backing table.
+// So we change this to NUMERIC(38,18)
+void
+SQLInfoOracle::GetRDBMSNumericPrecisionScale(SQLULEN& p_precision, SQLSMALLINT& p_scale) const
+{
+  if(p_precision == NUMERIC_MAX_PRECISION &&
+     p_scale     == NUMERIC_MIN_SCALE)
+  {
+    p_scale     = NUMERIC_DEFAULT_SCALE;
+  }
 }
 
 // KEYWORDS
@@ -588,10 +602,10 @@ SQLInfoOracle::GetCATALOGTableSynonyms(CString p_schema,CString p_tablename) con
     sql += " WHERE table_owner ";
     sql += p_schema.Find('%') >= 0 ? "LIKE '" : " = '";
     sql += p_schema + "'\n";
-}
+  }
 
   if(!p_tablename.IsEmpty())
-{
+  {
     sql += p_schema.IsEmpty() ? " WHERE " : "   AND ";
     sql += "synonym_name ";
     sql += p_tablename.Find('%') >= 0 ? "LIKE '" : "= '";
@@ -1118,8 +1132,8 @@ SQLInfoOracle::GetCATALOGForeignAttributes(CString  p_schema
     }
     else
     {
-    query += "   AND con.constraint_name = '" + p_constraint + "'\n";
-  }
+      query += "   AND con.constraint_name = '" + p_constraint + "'\n";
+    }
   }
 
   // Order upto the column number
@@ -1281,26 +1295,26 @@ SQLInfoOracle::GetCATALOGTriggerAttributes(CString p_schema, CString p_tablename
   p_triggername.MakeUpper();
 
   CString sql = "SELECT ''    AS catalog_name\n"
-             "      ,owner AS schema_name\n"
-             "      ,table_name\n"
-             "      ,trigger_name\n"
-             "      ,triggering_event || ' ON ' || table_name AS description\n"
-             "      ,0     AS position\n"
-             "      ,CASE WHEN (InStr(trigger_type,    'BEFORE') > 0) THEN 1 ELSE 0 END AS trigger_before\n"
-             "      ,CASE WHEN (InStr(triggering_event,'INSERT') > 0) THEN 1 ELSE 0 END AS trigger_insert\n"
-             "      ,CASE WHEN (InStr(triggering_event,'UPDATE') > 0) THEN 1 ELSE 0 END AS trigger_update\n" 
-             "      ,CASE WHEN (InStr(triggering_event,'DELETE') > 0) THEN 1 ELSE 0 END AS trigger_delete\n" 
-             "      ,CASE WHEN (InStr(triggering_event,'SELECT') > 0) THEN 1 ELSE 0 END AS trigger_select\n"
-             "      ,CASE WHEN (InStr(triggering_event,'LOGON')  > 0 OR\n"
-             "                  InStr(triggering_event,'LOGOFF') > 0 ) THEN 1 ELSE 0 END AS trigger_session\n"
-             "      ,0  AS trigger_transaction\n"
-             "      ,0  AS trigger_rollback\n"
-             "      ,referencing_names\n"
-             "      ,CASE status\n"
-             "            WHEN 'DISABLED' THEN 0\n"
-             "                            ELSE 1\n"
-             "            END AS trigger_status\n"
-             "      ,trigger_body AS source\n"
+                "      ,owner AS schema_name\n"
+                "      ,table_name\n"
+                "      ,trigger_name\n"
+                "      ,triggering_event || ' ON ' || table_name AS description\n"
+                "      ,0     AS position\n"
+                "      ,CASE WHEN (InStr(trigger_type,    'BEFORE') > 0) THEN 1 ELSE 0 END AS trigger_before\n"
+                "      ,CASE WHEN (InStr(triggering_event,'INSERT') > 0) THEN 1 ELSE 0 END AS trigger_insert\n"
+                "      ,CASE WHEN (InStr(triggering_event,'UPDATE') > 0) THEN 1 ELSE 0 END AS trigger_update\n" 
+                "      ,CASE WHEN (InStr(triggering_event,'DELETE') > 0) THEN 1 ELSE 0 END AS trigger_delete\n" 
+                "      ,CASE WHEN (InStr(triggering_event,'SELECT') > 0) THEN 1 ELSE 0 END AS trigger_select\n"
+                "      ,CASE WHEN (InStr(triggering_event,'LOGON')  > 0 OR\n"
+                "                  InStr(triggering_event,'LOGOFF') > 0 ) THEN 1 ELSE 0 END AS trigger_session\n"
+                "      ,0  AS trigger_transaction\n"
+                "      ,0  AS trigger_rollback\n"
+                "      ,referencing_names\n"
+                "      ,CASE status\n"
+                "            WHEN 'DISABLED' THEN 0\n"
+                "                            ELSE 1\n"
+                "            END AS trigger_status\n"
+                "      ,trigger_body AS source\n"
                 "  FROM dba_triggers\n";
   if(!p_schema.IsEmpty())
   {
@@ -2056,6 +2070,45 @@ SQLVariant*
 SQLInfoOracle::DoSQLCall(SQLQuery* /*p_query*/,CString& /*p_schema*/,CString& /*p_procedure*/)
 {
   return nullptr;
+}
+
+// Calling a stored function with named parameters, returning a value
+SQLVariant*
+SQLInfoOracle::DoSQLCallNamedParameters(SQLQuery* p_query,CString& p_schema,CString& p_procedure)
+{
+  CString sql = "BEGIN DECLARE x NUMBER; BEGIN ? := ";
+  if(!p_schema.IsEmpty())
+  {
+    sql += p_schema;
+    sql += ".";
+  }
+  sql += p_procedure;
+  sql += "(";
+
+  bool found = true;
+  int index = 1;
+  while(found)
+  {
+    CString name;
+    found = p_query->GetColumnName(index++,name);
+    if(found)
+    {
+      if(index > 2)
+      {
+        sql += ",";
+      }
+      sql += name;
+      sql += " => ? ";
+    }
+  }
+  sql += "); END; END;";
+
+  // Add parameter 0 as result parameter
+  p_query->SetParameter(0,0);
+
+  // Now find the result
+  p_query->DoSQLStatement(sql);
+  return p_query->GetParameter(0);
 }
 
 // End of namespace

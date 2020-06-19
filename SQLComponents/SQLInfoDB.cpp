@@ -2,7 +2,7 @@
 //
 // File: SQLInfoDB.cpp
 //
-// Copyright (c) 1998-2019 ir. W.E. Huisman
+// Copyright (c) 1998-2020 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy of 
@@ -233,7 +233,7 @@ SQLInfoDB::MakeInfoTableCatalog(MTableMap&  p_tables
   return 0;
 }
 
-bool
+bool    
 SQLInfoDB::MakeInfoTableColumns(MColumnMap& p_columns
                                ,CString&    p_errors
                                ,CString     p_schema

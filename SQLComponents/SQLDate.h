@@ -2,7 +2,7 @@
 //
 // File: SQLDate.h
 //
-// Copyright (c) 1998-2019 ir. W.E. Huisman
+// Copyright (c) 1998-2020 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy of 
@@ -86,6 +86,7 @@ public:
 
   // Get in different formats
   CString     AsString() const;
+  CString     AsXMLString() const;
   DateValue   AsNumber() const;
   DateValue   AsMJD()    const;
   DateValue   AsJulianDate()     const;
@@ -127,12 +128,12 @@ public:
   SQLDate       operator+ (const SQLInterval& p_interval) const;
   SQLDate       operator- (const SQLInterval& p_interval) const;
   // Logical comparison operators on a a date
-  bool     operator <(const SQLDate& p_date) const;
-  bool     operator >(const SQLDate& p_date) const;
-  bool     operator==(const SQLDate& p_date) const;
-  bool     operator!=(const SQLDate& p_date) const;
-  bool     operator<=(const SQLDate& p_date) const;
-  bool     operator>=(const SQLDate& p_date) const;
+  bool          operator <(const SQLDate& p_date) const;
+  bool          operator >(const SQLDate& p_date) const;
+  bool          operator==(const SQLDate& p_date) const;
+  bool          operator!=(const SQLDate& p_date) const;
+  bool          operator<=(const SQLDate& p_date) const;
+  bool          operator>=(const SQLDate& p_date) const;
 
   // Asking for the current date
   static SQLDate Today();
@@ -187,9 +188,9 @@ SQLDate::IsNull() const
 inline DateValue
 SQLDate::AsNumber() const
 {
-  return m_mjd;  
+  return m_mjd;
 }
-      
+
 // Return the Modified Julian Date
 inline DateValue
 SQLDate::AsMJD() const
@@ -221,7 +222,7 @@ SQLDate::Valid() const
 inline long
 SQLDate::WeekDay() const 
 { 
-  return ((m_mjd +3)% 7);
+  return ((m_mjd + 3) % 7);
 }
 
 // Day of the date

@@ -186,6 +186,7 @@ HTTPMessage::HTTPMessage(HTTPCommand p_command,SOAPMessage* p_msg)
   m_site          = p_msg->GetHTTPSite();
   m_sendBOM       = p_msg->GetSendBOM();
   m_acceptEncoding= p_msg->GetAcceptEncoding();
+  m_status        = p_msg->GetStatus();
   memset(&m_systemtime,0,sizeof(SYSTEMTIME));
 
   // Getting the URL of all parts
@@ -287,6 +288,7 @@ HTTPMessage::HTTPMessage(HTTPCommand p_command,JSONMessage* p_msg)
   m_sendBOM        = p_msg->GetSendBOM();
   m_site           = p_msg->GetHTTPSite();
   m_verbTunnel     = p_msg->GetVerbTunneling();
+  m_status         = p_msg->GetStatus();
   memset(&m_systemtime,0,sizeof(SYSTEMTIME));
 
   // Getting the URL of all parts
@@ -577,7 +579,7 @@ HTTPMessage::GetCookieValue(CString p_name /*=""*/,CString p_metadata /*=""*/)
   return "";
 }
 
-void 
+void
 HTTPMessage::SetReadBuffer(bool p_read,size_t p_length)
 {
   m_readBuffer    = p_read;
@@ -606,7 +608,7 @@ HTTPMessage::SetFile(CString& p_fileName)
 CString
 HTTPMessage::GetRoute(int p_index)
 {
-  if(p_index >= 0 && p_index < m_routing.size())
+  if(p_index >= 0 && p_index < (int)m_routing.size())
   {
     return m_routing[p_index];
   }

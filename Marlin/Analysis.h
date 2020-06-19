@@ -38,7 +38,6 @@
 #pragma once
 #include "HTTPLoglevel.h"
 #include <deque>
-#include <time.h>
 
 constexpr auto ANALYSIS_FUNCTION_SIZE = 48;                            // Size of prefix printing in logfile
 constexpr auto LOGWRITE_INTERVAL      = (CLOCKS_PER_SEC * 30);         // Median  is once per 30 seconds
@@ -102,6 +101,7 @@ public:
   void    SetInterval(int  p_interval);
 
   // GETTERS
+  bool    GetIsOpen();
   bool    GetDoLogging();
   int     GetLogLevel()                        { return m_logLevel;   };
   bool    GetDoEvents()                        { return m_doEvents;   };
@@ -136,8 +136,8 @@ private:
   bool    m_doTiming    { true  };              // Prepend date-and-time to log-lines
   bool    m_doEvents    { false };              // Also write to WMI event log
   bool    m_rotate      { false };              // Log rotation for server solutions
-  int     m_cache       { LOGWRITE_CACHE };     // Number of cached lines
-  int     m_interval    { LOGWRITE_INTERVAL };  // Interval between writes (in seconds)
+  int     m_cache       { LOGWRITE_CACHE     }; // Number of cached lines
+  int     m_interval    { LOGWRITE_INTERVAL  }; // Interval between writes (in seconds)
   int     m_keepfiles   { LOGWRITE_KEEPFILES }; // Keep a maximum of n files in a directory
 
   // Internal bookkeeping

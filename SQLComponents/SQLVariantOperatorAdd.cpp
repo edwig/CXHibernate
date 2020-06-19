@@ -2,7 +2,7 @@
 //
 // File: SQLVariantOperatorAdd.cpp
 //
-// Copyright (c) 1998-2019 ir. W.E. Huisman
+// Copyright (c) 1998-2020 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy of 
@@ -1641,6 +1641,43 @@ SQLVariant::operator+(SQLVariant& p_right)
   error.Format("Cannot do the add operator on (%s + %s)",leftType.GetString(),rightType.GetString());
   throw StdException(error);
 }
+
+SQLVariant&
+SQLVariant::operator+=(SQLVariant& p_right)
+{
+  // If one of both is NULL, the result is false
+  if(IsNULL() || p_right.IsNULL())
+  {
+    SetNULL();
+    return *this;
+  }
+
+  // Getting the concise type
+  SQLConciseType left  = SQLTypeToConciseType(m_datatype);
+  SQLConciseType right = SQLTypeToConciseType(p_right.m_datatype);
+
+  // Check whether both datatypes are valid
+  if(left == CT_LAST || right == CT_LAST)
+  {
+    ThrowErrorOperator(SVO_AssignAdd);
+  }
+
+  // Find our comparison function
+  OperatorCalculate function = OperatorAdd[left][right].function;
+  if(function)
+  {
+    *this = (*function)(*this,p_right);
+    return *this;
+  }
+  // No compare function found
+  // Data types are not comparable
+  CString leftType  = FindDatatype(m_datatype);
+  CString rightType = FindDatatype(p_right.m_datatype);
+  CString error;
+  error.Format("Cannot do the += operator on (%s + %s)",leftType.GetString(),rightType.GetString());
+  throw StdException(error);
+}
+
 
 // End of namespace
 }

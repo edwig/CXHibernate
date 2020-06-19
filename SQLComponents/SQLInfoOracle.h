@@ -2,7 +2,7 @@
 //
 // File: SQLInfoOracle.h
 //
-// Copyright (c) 1998-2019 ir. W.E. Huisman
+// Copyright (c) 1998-2020 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy of 
@@ -28,6 +28,10 @@
 
 namespace SQLComponents
 {
+
+#define NUMERIC_MAX_PRECISION      38
+#define NUMERIC_MIN_SCALE           0
+#define NUMERIC_DEFAULT_SCALE      18
 
 class SQLInfoOracle : public SQLInfoDB
 {
@@ -79,6 +83,9 @@ public:
 
   // Database must commit DDL commands in a transaction
   bool GetRDBMSMustCommitDDL() const;
+
+  // Correct maximum precision,scale for a NUMERIC datatype
+  void GetRDBMSNumericPrecisionScale(SQLULEN& p_precision, SQLSMALLINT& p_scale) const;
 
   // KEYWORDS
 
@@ -203,7 +210,7 @@ public:
   CString GetCATALOGMetaTypes(int p_type) const;
   // All table functions
   CString GetCATALOGTableExists    (CString p_schema,CString p_tablename) const;
-  CString GetCATALOGTablesList     (CString p_schema,CString p_pattern) const;
+  CString GetCATALOGTablesList     (CString p_schema,CString p_pattern)   const;
   CString GetCATALOGTableAttributes(CString p_schema,CString p_tablename) const;
   CString GetCATALOGTableSynonyms  (CString p_schema,CString p_tablename) const;
   CString GetCATALOGTableCatalog   (CString p_schema,CString p_tablename) const;
@@ -356,6 +363,8 @@ public:
 
   // Calling a stored function or procedure if the RDBMS does not support ODBC call escapes
   SQLVariant* DoSQLCall(SQLQuery* p_query,CString& p_schema,CString& p_procedure);
+  // Calling a stored function with named parameters, returning a value
+  SQLVariant* DoSQLCallNamedParameters(SQLQuery* p_query,CString& p_schema,CString& p_procedure);
 };
 
 // End of namespace

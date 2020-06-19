@@ -2,7 +2,7 @@
 //
 // File: Database.h
 //
-// Copyright (c) 1998-2019 ir. W.E. Huisman
+// Copyright (c) 1998-2020 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy of 
@@ -76,7 +76,7 @@ typedef enum _schemaAction
 SchemaAction;
 
 // Structure to hold information about a DSN (DataSourceName)
-typedef struct _datasource
+typedef struct _datasourceInternal
 {
   CString m_datasource;
   CString m_username;
@@ -160,6 +160,11 @@ public:
   void           SetUserName(CString p_user);
   void           SetLastActionTime();
   bool           PastWaitingTime();
+
+  // Add a column rebind for this database session: No bounds checking!
+  void           AddColumnRebind(int p_sqlType,int p_cppType);
+  // Add a parameter rebind for this database session: No bounds checking!
+  void           AddParameterRebind(int p_sqlType,int p_cppType);
 
   // GETTERS
   CString        GetUserName();
@@ -285,10 +290,10 @@ protected:
   bool              m_mars         { true          };  // Multiple Active Record Sets
   bool              m_readOnly     { false         };  // ReadOnly connection
   CString           m_connectionName;                    // Can differ from m_datasource !!
-  CString	          m_DBName;
-  CString	          m_DBVersion;
-  CString	          m_DriverName;
-  CString	          m_DriverVersion;
+  CString           m_DBName;
+  CString           m_DBVersion;
+  CString           m_DriverName;
+  CString           m_DriverVersion;
   CString           m_databaseName;
   CString           m_namingMethod;
   CString           m_originalConnect;

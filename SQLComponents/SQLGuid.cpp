@@ -2,7 +2,7 @@
 //
 // File: SQLGuid.cpp
 //
-// Copyright (c) 1998-2019 ir. W.E. Huisman
+// Copyright (c) 1998-2020 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy of 
@@ -97,17 +97,19 @@ SQLGuid::IsValid()
 CString 
 SQLGuid::AsString()
 {
+  CString guid;
   if(m_initialized)
   {
-    unsigned char* guidString = nullptr;
+    RPC_CSTR guidString = nullptr;
     // Convert the GUID to a string
-    if(UuidToString(&m_guid, &guidString) == RPC_S_OK)
+    if(UuidToString(&m_guid,&guidString) == RPC_S_OK)
     {
       // And convert to a CString
-      return CString(guidString);
+      guid = CString(guidString);
+      RpcStringFree(&guidString);
     }
   }
-  return CString("");
+  return guid;
 }
 
 SQLGUID* 

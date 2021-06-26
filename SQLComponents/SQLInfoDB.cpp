@@ -69,21 +69,28 @@ SQLInfoDB::MakeInfoTableObject(MTableMap& p_tables
   CString sql3 = GetCATALOGTableSynonyms  (p_schema,p_tablename);
   CString sql4 = GetCATALOGTableCatalog   (p_schema,p_tablename);
 
-  if(sql1.IsEmpty() || sql2.IsEmpty() || sql3.IsEmpty() || sql4.IsEmpty())
+  if(sql1.IsEmpty() || sql2.IsEmpty() || sql3.IsEmpty() || sql4.IsEmpty() || m_preferODBC)
   {
     // Ask ODBC to find all object types (empty search argument)
     return SQLInfo::MakeInfoTableTable(p_tables,p_errors,p_schema,p_tablename,"");
   }
 
-  // Search on all types
-  CString uni = "UNION ALL\n";
-  CString sql = sql1 + uni + sql2 + uni + sql3 + uni + sql4;
-
   try
   {
     SQLQuery qry(m_database);
-    qry.DoSQLStatement(sql);
-    return ReadTablesFromQuery(qry,p_tables);
+
+    if(!p_schema   .IsEmpty()) qry.SetParameter(p_schema);
+    if(!p_tablename.IsEmpty()) qry.SetParameter(p_tablename);
+
+    qry.DoSQLStatement(sql1);
+    ReadTablesFromQuery(qry,p_tables);
+    qry.DoSQLStatement(sql2);
+    ReadTablesFromQuery(qry,p_tables);
+    qry.DoSQLStatement(sql3);
+    ReadTablesFromQuery(qry,p_tables);
+    qry.DoSQLStatement(sql4);
+    ReadTablesFromQuery(qry,p_tables);
+    return !p_tables.empty();
   }
   catch(StdException& er)
   {
@@ -93,12 +100,12 @@ SQLInfoDB::MakeInfoTableObject(MTableMap& p_tables
   return 0;
 }
 
-
+// Meta info about meta types: META_CATALOGS/META_SCHEMAS/META_TABLES
 bool
 SQLInfoDB::MakeInfoMetaTypes(MMetaMap& p_objects,CString& p_errors,int p_type)
 {
   CString sql = GetCATALOGMetaTypes(p_type);
-  if(sql.IsEmpty())
+  if(sql.IsEmpty() || m_preferODBC)
   {
     // Ask ODBC driver to find the required meta types
     return SQLInfo::MakeInfoMetaTypes(p_objects,p_errors,p_type);
@@ -124,7 +131,7 @@ SQLInfoDB::MakeInfoTableTable(MTableMap& p_tables
                              ,CString    p_tablename)
 {
   CString sql = GetCATALOGTableAttributes(p_schema,p_tablename);
-  if(sql.IsEmpty())
+  if(sql.IsEmpty() || m_preferODBC)
   {
     // Ask ODBC driver to find tables
     return SQLInfo::MakeInfoTableTable(p_tables,p_errors,p_schema,p_tablename,"TABLE");
@@ -133,6 +140,10 @@ SQLInfoDB::MakeInfoTableTable(MTableMap& p_tables
   try
   {
     SQLQuery qry(m_database);
+
+    if(!p_schema   .IsEmpty()) qry.SetParameter(p_schema);
+    if(!p_tablename.IsEmpty()) qry.SetParameter(p_tablename);
+
     qry.DoSQLStatement(sql);
     return ReadTablesFromQuery(qry,p_tables);
   }
@@ -151,7 +162,7 @@ SQLInfoDB::MakeInfoTableView(MTableMap& p_tables
                             ,CString    p_tablename)
 {
   CString sql = GetCATALOGViewAttributes(p_schema,p_tablename);
-  if(sql.IsEmpty())
+  if(sql.IsEmpty() || m_preferODBC)
   {
     // Ask ODBC driver to find views
     return SQLInfo::MakeInfoTableTable(p_tables,p_errors,p_schema,p_tablename,"VIEW");
@@ -160,6 +171,10 @@ SQLInfoDB::MakeInfoTableView(MTableMap& p_tables
   try
   {
     SQLQuery qry(m_database);
+
+    if(!p_schema   .IsEmpty()) qry.SetParameter(p_schema);
+    if(!p_tablename.IsEmpty()) qry.SetParameter(p_tablename);
+
     qry.DoSQLStatement(sql);
     return ReadTablesFromQuery(qry,p_tables);
   }
@@ -178,7 +193,7 @@ SQLInfoDB::MakeInfoTableSynonyms(MTableMap& p_tables
                                 ,CString    p_tablename)
 {
   CString sql = GetCATALOGTableSynonyms(p_schema,p_tablename);
-  if(sql.IsEmpty())
+  if(sql.IsEmpty() || m_preferODBC)
   {
     // Ask ODBC driver to find synonyms
     bool result = SQLInfo::MakeInfoTableTable(p_tables,p_errors,p_schema,p_tablename,"SYNONYM");
@@ -193,6 +208,10 @@ SQLInfoDB::MakeInfoTableSynonyms(MTableMap& p_tables
   try
   {
     SQLQuery qry(m_database);
+
+    if(!p_schema   .IsEmpty()) qry.SetParameter(p_schema);
+    if(!p_tablename.IsEmpty()) qry.SetParameter(p_tablename);
+
     qry.DoSQLStatement(sql);
     return ReadTablesFromQuery(qry,p_tables);
   }
@@ -211,7 +230,7 @@ SQLInfoDB::MakeInfoTableCatalog(MTableMap&  p_tables
                                ,CString     p_tablename)
 {
   CString sql = GetCATALOGTableCatalog(p_schema,p_tablename);
-  if(sql.IsEmpty())
+  if(sql.IsEmpty() || m_preferODBC)
   {
     p_schema = "%";
     p_tablename = "%";
@@ -222,6 +241,10 @@ SQLInfoDB::MakeInfoTableCatalog(MTableMap&  p_tables
   try
   {
     SQLQuery qry(m_database);
+
+    if(!p_schema   .IsEmpty()) qry.SetParameter(p_schema);
+    if(!p_tablename.IsEmpty()) qry.SetParameter(p_tablename);
+
     qry.DoSQLStatement(sql);
     return ReadTablesFromQuery(qry,p_tables);
   }
@@ -238,16 +261,21 @@ SQLInfoDB::MakeInfoTableColumns(MColumnMap& p_columns
                                ,CString&    p_errors
                                ,CString     p_schema
                                ,CString     p_tablename
-                               ,CString     p_columname /*=""*/)
+                               ,CString     p_columnname /*=""*/)
 {
-  CString sql = GetCATALOGColumnAttributes(p_schema,p_tablename,p_columname);
-  if(sql.IsEmpty())
+  CString sql = GetCATALOGColumnAttributes(p_schema,p_tablename,p_columnname);
+  if(sql.IsEmpty() || m_preferODBC)
   {
-    return SQLInfo::MakeInfoTableColumns(p_columns,p_errors,p_schema,p_tablename,p_columname);
+    return SQLInfo::MakeInfoTableColumns(p_columns,p_errors,p_schema,p_tablename,p_columnname);
   }
   try
   {
     SQLQuery qry(m_database);
+
+    if(!p_schema    .IsEmpty()) qry.SetParameter(p_schema);
+    if(!p_tablename .IsEmpty()) qry.SetParameter(p_tablename);
+    if(!p_columnname.IsEmpty()) qry.SetParameter(p_columnname);
+
     qry.DoSQLStatement(sql);
     while(qry.GetRecord())
     {
@@ -299,7 +327,7 @@ SQLInfoDB::MakeInfoTablePrimary(MPrimaryMap&  p_primaries
                                ,CString       p_tablename)
 {
   CString sql = GetCATALOGPrimaryAttributes(p_schema,p_tablename);
-  if(sql.IsEmpty())
+  if(sql.IsEmpty() || m_preferODBC)
   {
     return SQLInfo::MakeInfoTablePrimary(p_primaries,p_errors,p_schema,p_tablename);
   }
@@ -307,6 +335,10 @@ SQLInfoDB::MakeInfoTablePrimary(MPrimaryMap&  p_primaries
   try
   {
     SQLQuery qry(m_database);
+
+    if(!p_schema   .IsEmpty()) qry.SetParameter(p_schema);
+    if(!p_tablename.IsEmpty()) qry.SetParameter(p_tablename);
+
     qry.DoSQLStatement(sql);
     while(qry.GetRecord())
     {
@@ -339,14 +371,20 @@ SQLInfoDB::MakeInfoTableForeign(MForeignMap&  p_foreigns
                                ,CString       p_tablename
                                ,bool          p_referenced /* = false */) 
 {
-  CString sql = GetCATALOGForeignAttributes(p_schema,p_tablename,"",p_referenced);
-  if(sql.IsEmpty())
+  CString constraint;
+  CString sql = GetCATALOGForeignAttributes(p_schema,p_tablename,constraint,p_referenced);
+  if(sql.IsEmpty() || m_preferODBC)
   {
     return SQLInfo::MakeInfoTableForeign(p_foreigns,p_errors,p_schema,p_tablename,p_referenced);
   }
   try
   {
     SQLQuery query(m_database);
+
+    if(!p_schema   .IsEmpty()) query.SetParameter(p_schema);
+    if(!p_tablename.IsEmpty()) query.SetParameter(p_tablename);
+    if(!constraint .IsEmpty()) query.SetParameter(constraint);
+
     query.DoSQLStatement(sql);
     while(query.GetRecord())
     {
@@ -392,10 +430,13 @@ SQLInfoDB::MakeInfoTableStatistics(MIndicesMap& p_indices
                                   ,CString      p_schema
                                   ,CString      p_tablename
                                   ,MPrimaryMap* p_keymap
-                                  ,bool         p_all /*= true*/)
+                                  ,bool         p_all         /*=true*/)
 {
-  CString sql = GetCATALOGIndexAttributes(p_schema,p_tablename,"");
-  if(sql.IsEmpty())
+  CString column;
+  CString sql1 = GetCATALOGIndexAttributes(p_schema,p_tablename,column);   // Indices
+  column = "0";
+  CString sql2 = GetCATALOGIndexAttributes(p_schema,p_tablename,column);   // Table statistics
+  if(sql1.IsEmpty() || m_preferODBC)
   {
     return SQLInfo::MakeInfoTableStatistics(p_indices,p_errors,p_schema,p_tablename,p_keymap,p_all);
   }
@@ -403,25 +444,40 @@ SQLInfoDB::MakeInfoTableStatistics(MIndicesMap& p_indices
   try
   {
     SQLQuery query(m_database);
-    query.DoSQLStatement(sql);
-    while(query.GetRecord())
+
+    if (!p_schema   .IsEmpty()) query.SetParameter(p_schema);
+    if (!p_tablename.IsEmpty()) query.SetParameter(p_tablename);
+    if (!column     .IsEmpty()) query.SetParameter(column);
+
+    while(sql1.GetLength())
     {
-      MetaIndex index;
+      query.DoSQLStatement(sql1);
+      while(query.GetRecord())
+      {
+        MetaIndex index;
 
-      index.m_catalogName = (CString) query[1];
-      index.m_schemaName  = (CString) query[2];
-      index.m_tableName   = (CString) query[3];
-      index.m_unique      = (bool)    query[4];
-      index.m_indexName   = (CString) query[5];
-      index.m_indexType   = (int)     query[6];
-      index.m_position    = (int)     query[7];
-      index.m_columnName  = (CString) query[8];
-      index.m_ascending   = (CString) query[9];
-      index.m_cardinality = (int)     query[10];
-      index.m_pages       = (int)     query[11];
-      index.m_filter      = (CString) query[12];
+        index.m_catalogName = (CString) query[1];
+        index.m_schemaName  = (CString) query[2];
+        index.m_tableName   = (CString) query[3];
+        index.m_nonunique   = (bool)    query[4];
+        index.m_indexName   = (CString) query[5];
+        index.m_indexType   = (int)     query[6];
+        index.m_position    = (int)     query[7];
+        index.m_columnName  = (CString) query[8];
+        index.m_ascending   = (CString) query[9];
+        index.m_cardinality = (int)     query[10];
+        index.m_pages       = (int)     query[11];
+        index.m_filter      = (CString) query[12];
 
-      p_indices.push_back(index);
+        p_indices.push_back(index);
+      }
+      // Possibly an extra loop to get the table statistics
+      if(sql2.GetLength())
+      {
+        sql1 = sql2;
+        sql2.Empty();
+      }
+      else sql1.Empty();
     }
     return !p_indices.empty();
   }
@@ -444,6 +500,7 @@ SQLInfoDB::MakeInfoPSMProcedures(MProcedureMap&  p_procedures
   if(p_procedure.IsEmpty() || p_procedure.Compare("%") == 0)
   {
     sql = GetPSMProcedureList(p_schema);
+    p_procedure.Empty();
   }
   else
   {
@@ -451,7 +508,7 @@ SQLInfoDB::MakeInfoPSMProcedures(MProcedureMap&  p_procedures
   }
 
   // Let ODBC handle the call
-  if(sql.IsEmpty())
+  if(sql.IsEmpty() || m_preferODBC)
   {
     return SQLInfo::MakeInfoPSMProcedures(p_procedures,p_errors,p_schema,p_procedure);
   }
@@ -459,6 +516,10 @@ SQLInfoDB::MakeInfoPSMProcedures(MProcedureMap&  p_procedures
   try
   {
     SQLQuery qry(m_database);
+
+    if(!p_schema   .IsEmpty()) qry.SetParameter(p_schema);
+    if(!p_procedure.IsEmpty()) qry.SetParameter(p_procedure);
+
     qry.DoSQLStatement(sql);
     
     if(qry.GetNumberOfColumns() == 3)
@@ -533,7 +594,7 @@ SQLInfoDB::MakeInfoPSMParameters(MParameterMap& p_parameters
                                 ,CString        p_procedure)
 {
   CString sql = GetPSMProcedureParameters(p_schema,p_procedure);
-  if(sql.IsEmpty())
+  if(sql.IsEmpty() || m_preferODBC)
   {
     // No SQL, let ODBC handle the parameters
     return SQLInfo::MakeInfoPSMParameters(p_parameters,p_errors,p_schema,p_procedure);
@@ -541,6 +602,10 @@ SQLInfoDB::MakeInfoPSMParameters(MParameterMap& p_parameters
   try
   {
     SQLQuery qry(m_database);
+
+    if(!p_schema   .IsEmpty()) qry.SetParameter(p_schema);
+    if(!p_procedure.IsEmpty()) qry.SetParameter(p_procedure);
+
     qry.DoSQLStatement(sql);
     while(qry.GetRecord())
     {
@@ -608,6 +673,11 @@ SQLInfoDB::MakeInfoTableTriggers(MTriggerMap& p_triggers
   try
   {
     SQLQuery qry(m_database);
+
+    if(!p_schema.IsEmpty())    qry.SetParameter(p_schema);
+    if(!p_tablename.IsEmpty()) qry.SetParameter(p_tablename);
+    if(!p_trigger.IsEmpty())   qry.SetParameter(p_trigger);
+
     qry.DoSQLStatement(sql);
     while(qry.GetRecord())
     {
@@ -659,13 +729,17 @@ SQLInfoDB::MakeInfoTableSequences(MSequenceMap& p_sequences,CString& p_errors,CS
   CString sql = GetCATALOGSequenceList(p_schema,p_tablename);
   if(sql.IsEmpty())
   {
-    // No triggers to be gotten from this RDBMS
+    // No sequences to be gotten from this RDBMS
     return false;
   }
 
   try
   {
     SQLQuery qry(m_database);
+
+    if(!p_schema.IsEmpty())    qry.SetParameter(p_schema);
+    if(!p_tablename.IsEmpty()) qry.SetParameter(p_tablename);
+
     qry.DoSQLStatement(sql);
     while(qry.GetRecord())
   {
@@ -700,6 +774,90 @@ SQLInfoDB::MakeInfoTableSequences(MSequenceMap& p_sequences,CString& p_errors,CS
     }
   }
   return 0;
+}
+
+bool    
+SQLInfoDB::MakeInfoTablePrivileges(MPrivilegeMap& p_privileges,CString& p_errors,CString p_schema,CString p_tablename)
+{
+  CString sql = GetCATALOGTablePrivileges(p_schema,p_tablename);   // Table privileges query
+  if(sql.IsEmpty() || m_preferODBC)
+  {
+    return SQLInfo::MakeInfoTablePrivileges(p_privileges,p_errors,p_schema,p_tablename);
+  }
+
+  try
+  {
+    SQLQuery query(m_database);
+
+    if(!p_schema    .IsEmpty()) query.SetParameter(p_schema);
+    if(!p_tablename .IsEmpty()) query.SetParameter(p_tablename);
+
+    query.DoSQLStatement(sql);
+    while(query.GetRecord())
+    {
+      MetaPrivilege priv;
+
+      priv.m_catalogName = (CString) query[1];
+      priv.m_schemaName  = (CString) query[2];
+      priv.m_tableName   = (CString) query[3];
+      priv.m_grantor     = (CString) query[4];
+      priv.m_grantee     = (CString) query[5];
+      priv.m_privilege   = (CString) query[6];
+      priv.m_grantable   = ((CString)query[7]).Compare("YES") == 0;
+
+      p_privileges.push_back(priv);
+    }
+    return !p_privileges.empty();
+  }
+  catch(StdException& er)
+  {
+    ReThrowSafeException(er);
+    p_errors += er.GetErrorMessage();
+  }
+  return false;
+}
+
+bool
+SQLInfoDB::MakeInfoColumnPrivileges(MPrivilegeMap& p_privileges,CString& p_errors,CString p_schema,CString p_tablename,CString p_columnname /*= ""*/)
+{
+  CString sql = GetCATALOGColumnPrivileges(p_schema,p_tablename,p_columnname);   // Column privileges query
+  if(sql.IsEmpty() || m_preferODBC)
+  {
+    return SQLInfo::MakeInfoColumnPrivileges(p_privileges,p_errors,p_schema,p_tablename,p_columnname);
+  }
+
+  try
+  {
+    SQLQuery query(m_database);
+
+    if(!p_schema    .IsEmpty()) query.SetParameter(p_schema);
+    if(!p_tablename .IsEmpty()) query.SetParameter(p_tablename);
+    if(!p_columnname.IsEmpty()) query.SetParameter(p_columnname);
+
+    query.DoSQLStatement(sql);
+    while(query.GetRecord())
+    {
+      MetaPrivilege priv;
+
+      priv.m_catalogName = (CString) query[1];
+      priv.m_schemaName  = (CString) query[2];
+      priv.m_tableName   = (CString) query[3];
+      priv.m_columnName  = (CString) query[4];
+      priv.m_grantor     = (CString) query[5];
+      priv.m_grantee     = (CString) query[6];
+      priv.m_privilege   = (CString) query[7];
+      priv.m_grantable   = ((CString)query[8]).Compare("YES") == 0;
+
+      p_privileges.push_back(priv);
+    }
+    return !p_privileges.empty();
+  }
+  catch(StdException& er)
+  {
+    ReThrowSafeException(er);
+    p_errors += er.GetErrorMessage();
+  }
+  return false;
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -738,6 +896,7 @@ SQLInfoDB::ReadTablesFromQuery(SQLQuery& p_query,MTableMap& p_tables)
     table.m_tablespace = (CString) p_query[6];
     table.m_temporary  = (bool)    p_query[7];
 
+    // Some RDBMS's still have CHAR catalog fields, padded with spaces
     table.m_catalog.Trim();
     table.m_schema.Trim();
     table.m_table.Trim();

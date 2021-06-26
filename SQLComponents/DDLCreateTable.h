@@ -26,19 +26,19 @@
 #pragma once
 #include "SQLComponents.h"
 #include "SQLInfoDB.h"
-#include <vector>
+#include <deque>
 
 namespace SQLComponents
 {
 
-using DDLS = std::vector<CString>;
+using DDLS = std::deque<CString>;
 
 class DDLCreateTable
 {
 public:
   DDLCreateTable(SQLInfoDB* p_info);
 
-  // Request DDL for "table" or "schema.table" or "catalog.schema.table"
+  // Request DDL for "table" or "schema.table" 
   // Where "table" can be of type: "TABLE" / "VIEW"
   CString GetTableDDL(CString p_tableName);
   DDLS    GetTableStatements(CString p_tablename);
@@ -54,10 +54,17 @@ public:
   void    SetTableInfoSequence (MSequenceMap&  p_info);
   void    SetTableInfoPrivilege(MPrivilegeMap& p_info);
 
+  // Setting of special members
+  void    SetInfoDB(SQLInfoDB* p_info);
+  void    SetTablesSchema(CString p_schema);
+  void    SetTableTablespace(CString p_tablespace);
+  void    SetIndexTablespace(CString p_tablespace);
+
 private:
   // Primary formatting of 'create table' DDL
   void    GetTableInfo();
   void    GetColumnInfo();
+  void    GetOptionsInfo();
   void    GetIndexInfo();
   void    GetPrimaryKeyInfo();
   void    GetForeignKeyInfo();
@@ -67,28 +74,21 @@ private:
 
   // Service routines
 
+  bool    FindSchemaName(CString p_tableName);
   void    StashTheLine(CString p_line);
   CString ReplaceLengthPrecScale(CString p_template,int p_length,int p_precision,int p_scale);
   CString FormatColumnName(CString p_column,int p_length);
   int     CalculateColumnLength(MColumnMap& p_columns);
   void    FindIndexFilter(MetaIndex& p_index);
+  bool    IsStrictODBCPrivilege(CString p_privilege);
 
   // Private data for the DDL creation
   SQLInfoDB* m_info;
   CString    m_schema;
   CString    m_tableName;
+  CString    m_indexTablespace;
   DDLS       m_statements;
   CString    m_createDDL;
-
-  // Mappings
-  MTableMap       m_tables;
-  MColumnMap      m_columns;
-  MIndicesMap     m_indices;
-  MPrimaryMap     m_primaries;
-  MForeignMap     m_foreigns;
-  MTriggerMap     m_triggers;
-  MSequenceMap    m_sequences;
-  MPrivilegeMap   m_access;
 
   // Info gotten
   bool m_hasTable      { false };
@@ -99,6 +99,17 @@ private:
   bool m_hasTriggers   { false };
   bool m_hasSequence   { false };
   bool m_hasPrivileges { false };
+
+public:
+  // Mappings are public. We may examine/change them directly!
+  MTableMap       m_tables;
+  MColumnMap      m_columns;
+  MIndicesMap     m_indices;
+  MPrimaryMap     m_primaries;
+  MForeignMap     m_foreigns;
+  MTriggerMap     m_triggers;
+  MSequenceMap    m_sequences;
+  MPrivilegeMap   m_access;
 };
 
 };

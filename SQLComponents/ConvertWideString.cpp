@@ -2,9 +2,6 @@
 //
 // SourceFile: ConvertWideString.cpp
 //
-// From the project: Marlin Server: Internet server/client
-// See: https://github.com/edwig/Marlin
-// 
 // Copyright (c) 1998-2020 ir. W.E. Huisman
 // All rights reserved
 //
@@ -26,10 +23,9 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 //
-// Version number: See SQLComponents.h
-//
 #include "stdafx.h"
 #include "ConvertWideString.h"
+#include "XMLMessage.h"
 #include <map>
 #include <string>
 
@@ -38,9 +34,6 @@
 #undef THIS_FILE
 static char THIS_FILE[] = __FILE__;
 #endif
-
-namespace SQLComponents
-{
 
 typedef struct _cpNames
 {
@@ -323,7 +316,7 @@ FindCharsetInContentType(CString p_contentType)
   {
     // Set after charset
     pos += 7;
-    // Skip withe space
+    // Skip white space
     while(pos < length && isspace(type.GetAt(pos))) ++pos;
     if(type.GetAt(pos) == '=')
     {
@@ -380,6 +373,37 @@ CString ConstructBOM()
   return bom;
 }
 
+// Construct a UTF-16 Byte-Order-Mark
+CString ConstructBOMUTF16()
+{
+  CString bom;
+
+  // 2 BYTE UTF-16 Byte-order-Mark "\0xFE\0xFF"
+  bom.GetBufferSetLength(3);
+  bom.SetAt(0,(unsigned char)0xFE);
+  bom.SetAt(1,(unsigned char)0xFF);
+  bom.SetAt(2,0);
+  bom.ReleaseBuffer(2);
+
+  return bom;
+}
+
+// Construct a BOM
+CString ConstructBOM(XMLEncoding p_encoding)
+{
+  CString bom;
+
+  switch (p_encoding)
+  {
+    case XMLEncoding::ENC_UTF8:    bom = ConstructBOM();      break;
+    case XMLEncoding::ENC_UTF16:   bom = ConstructBOMUTF16(); break;
+    case XMLEncoding::ENC_ISO88591:// Fall through
+    case XMLEncoding::ENC_Plain:   // Fall through
+    default:                       break;
+  }
+  return bom;
+}
+
 bool
 TryConvertWideString(const uchar* p_buffer
                     ,int          p_length
@@ -388,7 +412,6 @@ TryConvertWideString(const uchar* p_buffer
                     ,bool&        p_foundBOM)
 {
   UINT codePage = GetACP(); // Default is to use the current codepage
-  DWORD dwFlag  = 0;        // WC_COMPOSITECHECK | WC_DISCARDNS;
   int   iLength = -1;       // I think it will be null terminated
   bool  result  = false;
   BYTE* extraBuffer = nullptr;
@@ -455,6 +478,7 @@ TryConvertWideString(const uchar* p_buffer
     char* buffer = new char[iLength];
     if(buffer != NULL)
     {
+      DWORD dwFlag = 0; // WC_COMPOSITECHECK | WC_DISCARDNS;
       memset(buffer, 0, iLength * sizeof(char));
       iLength = ::WideCharToMultiByte(codePage,
                                       dwFlag, 
@@ -560,5 +584,58 @@ TryCreateWideString(const CString& p_string
   return result;
 }
 
-// End of namespace
+
+// Decoding incoming strings from the internet
+// Defaults to UTF-8 encoding
+CString
+DecodeStringFromTheWire(CString p_string,CString p_charset /*="utf-8"*/)
+{
+  // Check for empty charset
+  if(p_charset.IsEmpty())
+  {
+    p_charset = "utf-8";
+  }
+
+  // Now decode the UTF-8 in the encoded string, to decoded MBCS
+  uchar* buffer = nullptr;
+  int    length = 0;
+  if (TryCreateWideString(p_string,p_charset,false,&buffer,length))
+  {
+    CString decoded;
+    bool foundBom = false;
+
+    if (TryConvertWideString(buffer,length,"",decoded,foundBom))
+    {
+      p_string = decoded;
+    }
+  }
+  delete[] buffer;
+  return p_string;
+}
+
+// Encode to string for internet. Defaults to UTF-8 encoding
+CString
+EncodeStringForTheWire(CString p_string,CString p_charset /*="utf-8"*/)
+{
+  // Check for empty charset
+  if(p_charset.IsEmpty())
+  {
+    p_charset = "utf-8";
+  }
+
+  // Now encode MBCS to UTF-8 without a BOM
+  uchar*  buffer = nullptr;
+  int     length = 0;
+  if(TryCreateWideString(p_string,"",false,&buffer,length))
+  {
+    CString encoded;
+    bool foundBom = false;
+
+    if(TryConvertWideString(buffer,length,p_charset,encoded,foundBom))
+    {
+      p_string = encoded;
+    }
+  }
+  delete[] buffer;
+  return p_string;
 }

@@ -141,6 +141,8 @@ public:
   bool           SetAutoCommitMode(bool p_autoCommit);
   // Add a general ODBC option for use in the connection string
   void           AddConnectOption(CString p_keyword,CString p_value);
+  // Setting the default database schema after login
+  bool           SetDefaultSchema(CString p_schema);
 
   // GETTING/CONSTRUCTING the SQLInfo object
   SQLInfoDB*     GetSQLInfoDB();

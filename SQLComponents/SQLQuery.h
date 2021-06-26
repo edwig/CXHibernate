@@ -114,6 +114,8 @@ public:
 
   // Named parameters for DoSQLCall()
   void SetParameterName(int p_num,CString p_name);
+  // Set bounded parameters for execute (all in one go)
+  void SetParameters(VarMap* p_map);
 
   // SINGLE STATEMENT
 
@@ -137,6 +139,12 @@ public:
   // Batching multiple SQL statements
   void        DoSQLStatementBatch(CString p_statements);
 
+  // POST PROCESSING of the query result
+  // Truncate the char fields in the gotten buffer
+  void        TruncateCharFields();
+  // Truncate the timestamps to a number of decimals (0 - 6)
+  void        TruncateTimestamps(int p_decimals = 0);
+
   // Call FUNCTION / PROCEDURE
   SQLVariant* DoSQLCall(CString p_schema,CString p_procedure,bool p_hasReturn = false);
   // Overrides with one input parameter and an int return parameter
@@ -152,6 +160,10 @@ public:
   void        DoSQLExecute(bool p_rebind = false);
   // Get bounded columns from query
   ColNumMap*  GetBoundedColumns();
+
+  // Bind application parameters
+  void        BindParameters();
+  void        BindColumns();
 
   // Parallel cancellation of the statement
   void        DoCancelQuery();
@@ -209,8 +221,6 @@ private:
   void  InternalSetParameter(int p_num,SQLVariant* p_param,SQLParamType p_type = P_SQL_PARAM_INPUT);
   // Bind application parameters
   void  TruncateInputParameters();
-  void  BindParameters();
-  void  BindColumns();
   void  BindColumnNumeric(SQLSMALLINT p_column,SQLVariant* p_var,int p_type);
 
   // Reset all column to NULL

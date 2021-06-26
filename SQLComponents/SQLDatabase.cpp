@@ -32,6 +32,7 @@
 #include "SQLInfoMySQL.h"
 #include "SQLInfoAccess.h"
 #include "SQLInfoOracle.h"
+#include "SQLInfoMariaDB.h"
 #include "SQLInfoFirebird.h"
 #include "SQLInfoInformix.h"
 #include "SQLInfoSQLServer.h"
@@ -304,7 +305,7 @@ SQLDatabase::Open(CString const& p_connectString,bool p_readOnly)
   {
     CString error(GetErrorString());
     Close();
-    throw CString("Error at opening database: ") + error;
+    throw StdException("Error at opening database: " + error);
   }
   // Remember the returned completed connect string of the database
   // This contains all the database option settings from the ODBC Driver
@@ -469,6 +470,7 @@ SQLDatabase::CollectInfo()
   else if(baseName.CompareNoCase("FIREBI") == 0)  m_rdbmsType = RDBMS_FIREBIRD;
   else if(baseName.CompareNoCase("POSTGR") == 0)  m_rdbmsType = RDBMS_POSTGRESQL;
   else if(baseName.CompareNoCase("MYSQL")  == 0)  m_rdbmsType = RDBMS_MYSQL;
+  else if(baseName.CompareNoCase("MARIAD") == 0)  m_rdbmsType = RDBMS_MARIADB;
   else
   {
     // Generic default type, now supported by SQLInfoGenericODBC class
@@ -525,8 +527,8 @@ SQLDatabase::SetKnownRebinds()
   if(m_rdbmsType == RDBMS_ORACLE)
   {
     m_rebindColumns.clear();
-    m_rebindColumns[SQL_REAL   ] = SQL_C_DOUBLE;
-    m_rebindColumns[SQL_FLOAT  ] = SQL_C_DOUBLE;
+//     m_rebindColumns[SQL_REAL   ] = SQL_C_DOUBLE;
+//     m_rebindColumns[SQL_FLOAT  ] = SQL_C_DOUBLE;
   }
   else if(m_rdbmsType == RDBMS_SQLSERVER)
   {
@@ -545,6 +547,11 @@ SQLDatabase::SetKnownRebinds()
     m_rebindParameters.clear();
     m_rebindParameters[SQL_C_SLONG] = SQL_C_LONG;
     m_rebindParameters[SQL_C_ULONG] = SQL_C_LONG;
+  }
+  else if (m_rdbmsType == RDBMS_MARIADB)
+  {
+    m_rebindParameters.clear();
+    m_rebindParameters[SQL_VARCHAR] = SQL_VARCHAR;
   }
 }
 
@@ -578,10 +585,31 @@ SQLDatabase::GetSQLInfoDB()
       case RDBMS_POSTGRESQL:m_info = new SQLInfoPostgreSQL (this); break;
       case RDBMS_FIREBIRD:  m_info = new SQLInfoFirebird   (this); break;
       case RDBMS_MYSQL:     m_info = new SQLInfoMySQL      (this); break;
+      case RDBMS_MARIADB:   m_info = new SQLInfoMariaDB    (this); break;
       default:              m_info = new SQLInfoGenericODBC(this); break;
     }
   }
   return m_info;
+}
+
+// Setting the default database schema after login
+bool
+SQLDatabase::SetDefaultSchema(CString p_schema)
+{
+  CString sql = GetSQLInfoDB()->GetSQLDefaultSchema(p_schema);
+  if(!sql.IsEmpty())
+  {
+    try
+    {
+      SQLQuery query(this);
+      query.DoSQLStatement(sql);
+    }
+    catch(StdException& /*ex*/)
+    {
+      return false;
+    }
+  }
+  return true;
 }
 
 // Find the **REAL** database name
@@ -594,7 +622,7 @@ SQLDatabase::RealDatabaseName()
   bool  result = false;
 
   CString databaseName;
-  // ODBC 1.x method. Databasename.
+  // ODBC 1.x method. Database name.
   buffer = databaseName.GetBuffer(SQL_MAX_OPTION_STRING_LENGTH);
   SQLGetInfo(m_hdbc, SQL_DATABASE_NAME, buffer, SQL_MAX_OPTION_STRING_LENGTH, &len);
   databaseName.ReleaseBuffer();
@@ -736,6 +764,7 @@ SQLDatabase::GetDatabaseTypeName()
     case RDBMS_POSTGRESQL:    return "PostgreSQL";
     case RDBMS_FIREBIRD:      return "Firebird";
     case RDBMS_MYSQL:         return "MySQL";
+    case RDBMS_MARIADB:       return "MariaDB";
     case RDBMS_ODBC_STANDARD: return "Generic ODBC";
   }
   return "";

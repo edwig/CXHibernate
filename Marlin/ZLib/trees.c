@@ -661,11 +661,11 @@ local void build_tree(deflate_state* s,tree_desc* desc)
       {
         max_code = n;
         s->heap[++(s->heap_len)] = n;
-            s->depth[n] = 0;
+        s->depth[n] = 0;
       } else 
       {
-            tree[n].Len = 0;
-        }
+        tree[n].Len = 0;
+      }
     }
 
     /* The pkzip format requires that at least one distance code exists,
@@ -677,14 +677,14 @@ local void build_tree(deflate_state* s,tree_desc* desc)
     {
       node = (max_code < 2 ? ++max_code : 0);
       s->heap[++(s->heap_len)] = node;
-        tree[node].Freq = 1;
-        s->depth[node] = 0;
+      tree[node].Freq = 1;
+      s->depth[node] = 0;
       s->opt_len--; 
       if(stree)
       {
         s->static_len -= stree[node].Len;
       }
-        /* node is 0 or 1 so it does not have extra bits */
+      /* node is 0 or 1 so it does not have extra bits */
     }
     desc->max_code = max_code;
 
@@ -772,7 +772,7 @@ local void scan_tree (deflate_state* s,ct_data* tree,int max_code)
           {
             s->bl_tree[curlen].Freq++;
           }
-            s->bl_tree[REP_3_6].Freq++;
+          s->bl_tree[REP_3_6].Freq++;
         } 
         else if (count <= 10) 
         {
@@ -857,7 +857,7 @@ local void send_tree (deflate_state* s,ct_data* tree,int max_code)
             send_code(s, REPZ_3_10, s->bl_tree); 
             send_bits(s, count-3, 3);
 
-        }
+        } 
         else 
         {
             send_code(s, REPZ_11_138, s->bl_tree); 
@@ -1202,9 +1202,9 @@ local int detect_data_type(deflate_state* s)
     for(n = 0; n <= 31; n++)
     {
       black_mask >>= 1;
-        if ((black_mask & 1) && (s->dyn_ltree[n].Freq != 0))
+      if((black_mask & 1) && (s->dyn_ltree[n].Freq != 0))
       {
-            return Z_BINARY;
+        return Z_BINARY;
       }
     }
 

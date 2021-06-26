@@ -1608,16 +1608,16 @@ const uInt cpdext[30] = { // Extra bits for distance codes
 #define BMAX 15         // maximum bit length of any code
 
 int huft_build(
-uInt *b,               // code lengths in bits (all assumed <= BMAX)
+uInt *b,                // code lengths in bits (all assumed <= BMAX)
 uInt n,                 // number of codes (assumed <= 288)
 uInt s,                 // number of simple-valued codes (0..s-1)
-const uInt *d,         // list of base values for non-simple codes
-const uInt *e,         // list of extra bits for non-simple codes
-inflate_huft * *t,  // result: starting table
-uInt *m,               // maximum lookup bits, returns actual
+const uInt *d,          // list of base values for non-simple codes
+const uInt *e,          // list of extra bits for non-simple codes
+inflate_huft * *t,      // result: starting table
+uInt *m,                // maximum lookup bits, returns actual
 inflate_huft *hp,       // space for trees
 uInt *hn,               // hufts used in space
-uInt *v)               // working area: values in order of bit length
+uInt *v)                // working area: values in order of bit length
 // Given a list of code lengths and a maximum table size, make a set of
 // tables to decode that set of codes.  Return Z_OK on success, Z_BUF_ERROR
 // if the given code set is incomplete (the tables are still built in this
@@ -1629,18 +1629,18 @@ uInt *v)               // working area: values in order of bit length
   uInt f;                       // i repeats in table every f entries 
   int g;                        // maximum code length 
   int h;                        // table level 
-  register uInt i;              // counter, current code 
-  register uInt j;              // counter
-  register int k;               // number of bits in current code 
+  uInt i;                       // counter, current code 
+  uInt j;                       // counter
+  int k;                        // number of bits in current code 
   int l;                        // bits per table (returned in m) 
   uInt mask;                    // (1 << w) - 1, to avoid cc -O bug on HP 
-  register uInt *p;            // pointer into c[], b[], or v[]
+  uInt *p;                      // pointer into c[], b[], or v[]
   inflate_huft *q;              // points to current table 
   struct inflate_huft_s r;      // table entry for structure assignment 
   inflate_huft *u[BMAX];        // table stack 
-  register int w;               // bits before this table == (l * h) 
+  int w;                        // bits before this table == (l * h) 
   uInt x[BMAX+1];               // bit offsets, then code stack 
-  uInt *xp;                    // pointer into x 
+  uInt *xp;                     // pointer into x 
   int y;                        // number of dummy codes added 
   uInt z;                       // number of entries in current table 
 

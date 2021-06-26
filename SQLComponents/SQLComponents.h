@@ -24,17 +24,11 @@
 #pragma once
 #include "SQLLanguage.h"
 #include "StdException.h"
+#include "SQLComponentsVersion.h"
 
 // Everything in this library is part of this namespace
 namespace SQLComponents
 {
-
-// General version, date and copyright
-// of the SQLComponents library
-
-#define SQL_COMPONENTS_VERSION   "1.6.3"
-#define SQL_COMPONENTS_DATE      "10-06-2020"
-#define SQL_COMPONENTS_COPYRIGHT "Copyright (c) 2020 ir. W.E. Huisman"
 
 // SQL/CLI Standard states that 128 is the maximum length
 // for any identifier in any namespace
@@ -61,12 +55,16 @@ typedef enum _databaseType
  ,RDBMS_POSTGRESQL    = 6
  ,RDBMS_FIREBIRD      = 7
  ,RDBMS_MYSQL         = 8
+ ,RDBMS_MARIADB       = 9
 }
 DatabaseType;
 
+// We are running in a background server (No message boxes allowed!)
+extern bool g_SQLComponentsInServer;
+
 // Initialization of the SQLComponents library
 // Call at least **ONCE** at the beginning of your program
-void InitSQLComponents(Language p_language = LN_ENGLISH);
+void InitSQLComponents(Language p_language = LN_ENGLISH,bool p_inServer = false);
 
 // Test if we are properly initialized
 void SQLComponentsInitialized();

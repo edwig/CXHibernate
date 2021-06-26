@@ -145,6 +145,13 @@ SQLInfoPostgreSQL::GetRDBMSSupportsDatatypeInterval() const
   return true;
 }
 
+// Supports functions at the place of table columns in create/alter index statement
+bool
+SQLInfoPostgreSQL::GetRDBMSSupportsFunctionalIndexes() const
+{
+  return false;
+}
+
 // Gets the maximum length of an SQL statement
 unsigned long
 SQLInfoPostgreSQL::GetRDBMSMaxStatementLength() const
@@ -193,6 +200,13 @@ SQLInfoPostgreSQL::GetKEYWORDConcatanationOperator() const
 // Get quote character for strings
 CString
 SQLInfoPostgreSQL::GetKEYWORDQuoteCharacter() const
+{
+  return "\'";
+}
+
+// Get quote character around reserved words as an identifier
+CString
+SQLInfoPostgreSQL::GetKEYWORDReservedWordQuote() const
 {
   return "\'";
 }
@@ -269,6 +283,20 @@ CString
 SQLInfoPostgreSQL::GetKEYWORDStatementNVL(CString& p_test,CString& p_isnull) const
 {
   return "{fn IFNULL(" + p_test + "," + p_isnull + ")}";
+}
+
+// Gets the RDBMS definition of the datatype
+CString
+SQLInfoPostgreSQL::GetKEYWORDDataType(MetaColumn* p_column)
+{
+  return p_column->m_typename;
+}
+
+// Connects to a default schema in the database/instance
+CString
+SQLInfoPostgreSQL::GetSQLDefaultSchema(CString p_schema) const
+{
+  return "SET SEARCH_PATH TO " + p_schema;
 }
 
 // Gets the construction for inline generating a key within an INSERT statement
@@ -453,7 +481,7 @@ SQLInfoPostgreSQL::GetCATALOGMetaTypes(int p_type) const
 
 // Get SQL to check if a table already exists in the database
 CString
-SQLInfoPostgreSQL::GetCATALOGTableExists(CString p_schema,CString p_tablename) const
+SQLInfoPostgreSQL::GetCATALOGTableExists(CString& p_schema,CString& p_tablename) const
 {
   p_schema.MakeLower();
   p_tablename.MakeLower();
@@ -461,19 +489,19 @@ SQLInfoPostgreSQL::GetCATALOGTableExists(CString p_schema,CString p_tablename) c
                   "  FROM pg_class cl\n"
                   "      ,pg_namespace ns\n"
                   " WHERE cl.relnamespace = ns.oid\n"
-                  "   AND ns.nspname = '" + p_schema    + "'\n"
-                  "   AND cl.relname = '" + p_tablename + "'";
+                  "   AND ns.nspname = ?\n"
+                  "   AND cl.relname = ?";
   return query;
 }
 
 CString
-SQLInfoPostgreSQL::GetCATALOGTablesList(CString p_schema,CString p_pattern) const
+SQLInfoPostgreSQL::GetCATALOGTablesList(CString& p_schema,CString& p_pattern) const
 {
   return GetCATALOGTableAttributes(p_schema,p_pattern);
 }
 
 CString
-SQLInfoPostgreSQL::GetCATALOGTableAttributes(CString p_schema,CString p_tablename) const
+SQLInfoPostgreSQL::GetCATALOGTableAttributes(CString& p_schema,CString& p_tablename) const
 {
   p_schema.MakeLower();
   p_tablename.MakeLower();
@@ -496,13 +524,13 @@ SQLInfoPostgreSQL::GetCATALOGTableAttributes(CString p_schema,CString p_tablenam
                   "   AND sch.nspname <> 'information_schema'\n";
   if(!p_schema.IsEmpty())
   {
-    query += "    AND sch.name = '" + p_schema + "'\n";
+    query += "    AND sch.name = ?\n";
   }
   if(!p_tablename.IsEmpty())
   {
     query += "   AND tab.relname ";
-    query += p_tablename.Find('%') >= 0 ? "LIKE '" : "= '";
-    query += p_tablename + "'\n";
+    query += p_tablename.Find('%') >= 0 ? "LIKE" : "=";
+    query += " ?\n";
   }
   query += " ORDER BY 1,2,3";
                   
@@ -510,14 +538,14 @@ SQLInfoPostgreSQL::GetCATALOGTableAttributes(CString p_schema,CString p_tablenam
 }
 
 CString
-SQLInfoPostgreSQL::GetCATALOGTableSynonyms(CString /*p_schema*/,CString /*p_tablename*/) const
+SQLInfoPostgreSQL::GetCATALOGTableSynonyms(CString& /*p_schema*/,CString& /*p_tablename*/) const
 {
-  // MS-Access cannot do this
+  // PostgreSQL cannot do this
   return false;
 }
 
 CString
-SQLInfoPostgreSQL::GetCATALOGTableCatalog(CString p_schema,CString p_tablename) const
+SQLInfoPostgreSQL::GetCATALOGTableCatalog(CString& p_schema,CString& p_tablename) const
 {
   p_schema.MakeLower();
   p_tablename.MakeLower();
@@ -541,13 +569,13 @@ SQLInfoPostgreSQL::GetCATALOGTableCatalog(CString p_schema,CString p_tablename) 
                   "   AND sch.nspname <> 'pg_toast'\n";
   if(!p_schema.IsEmpty())
   {
-    query += "    AND sch.name = '" + p_schema + "'\n";
+    query += "    AND sch.name = ?\n";
   }
   if(!p_tablename.IsEmpty())
   {
     query += "   AND tab.relname ";
-    query += p_tablename.Find('%') >= 0 ? "LIKE '" : "= '";
-    query += p_tablename + "'\n";
+    query += p_tablename.Find('%') >= 0 ? "LIKE" : "=";
+    query += " ?\n";
   }
   query += " ORDER BY 1,2,3";
                   
@@ -555,9 +583,21 @@ SQLInfoPostgreSQL::GetCATALOGTableCatalog(CString p_schema,CString p_tablename) 
 }
 
 CString
-SQLInfoPostgreSQL::GetCATALOGTableCreate(MetaTable& /*p_table*/,MetaColumn& /*p_column*/) const
+SQLInfoPostgreSQL::GetCATALOGTableCreate(MetaTable& p_table,MetaColumn& /*p_column*/) const
 {
-  return "";
+  CString sql = "CREATE ";
+  if (p_table.m_temporary)
+  {
+    sql += "TEMPORARY ";
+  }
+  sql += "TABLE ";
+  if (!p_table.m_schema.IsEmpty())
+  {
+    sql += p_table.m_schema;
+    sql += ".";
+  }
+  sql += p_table.m_table;
+  return sql;
 }
 
 CString
@@ -569,14 +609,26 @@ SQLInfoPostgreSQL::GetCATALOGTableRename(CString p_schema,CString p_tablename,CS
 }
 
 CString
-SQLInfoPostgreSQL::GetCATALOGTableDrop(CString p_schema,CString p_tablename) const
+SQLInfoPostgreSQL::GetCATALOGTableDrop(CString p_schema,CString p_tablename,bool p_ifExist /*= false*/,bool p_restrict /*= false*/,bool p_cascade /*= false*/) const
 {
   CString sql("DROP TABLE ");
+  if (p_ifExist)
+  {
+    sql += "IF EXISTS ";
+  }
   if(!p_schema.IsEmpty())
   {
     sql += p_schema + ".";
   }
   sql += p_tablename;
+  if (p_restrict)
+  {
+    sql += " RESTRICT";
+  }
+  else if (p_cascade)
+  {
+    sql += " CASCADE";
+  }
   return sql;
 }
 
@@ -628,7 +680,7 @@ SQLInfoPostgreSQL::GetCATALOGColumnExists(CString p_schema,CString p_tablename,C
 }
 
 CString 
-SQLInfoPostgreSQL::GetCATALOGColumnList(CString p_schema,CString p_tablename) const
+SQLInfoPostgreSQL::GetCATALOGColumnList(CString& /*p_schema*/,CString& /*p_tablename*/) const
 {
   return "";
 //   p_schema.MakeLower();
@@ -710,8 +762,9 @@ SQLInfoPostgreSQL::GetCATALOGColumnList(CString p_schema,CString p_tablename) co
 }
 
 CString 
-SQLInfoPostgreSQL::GetCATALOGColumnAttributes(CString p_schema,CString p_tablename,CString p_columname) const
+SQLInfoPostgreSQL::GetCATALOGColumnAttributes(CString& /*p_schema*/,CString& /*p_tablename*/,CString& /*p_columnname*/) const
 {
+  // Standard ODBC driver suffices
   return "";
 }
 
@@ -787,7 +840,7 @@ SQLInfoPostgreSQL::GetCATALOGIndexExists(CString p_schema,CString p_tablename,CS
 }
 
 CString
-SQLInfoPostgreSQL::GetCATALOGIndexList(CString p_schema,CString p_tablename) const
+SQLInfoPostgreSQL::GetCATALOGIndexList(CString& p_schema,CString& p_tablename) const
 {
   p_schema.MakeLower();
   p_tablename.MakeLower();
@@ -803,8 +856,8 @@ SQLInfoPostgreSQL::GetCATALOGIndexList(CString p_schema,CString p_tablename) con
                    "      ,pg_index idx\n"
                    "      ,pg_class cli\n"
                    "      ,pg_attribute att\n"
-                   " WHERE sha.usename = '" + p_schema + "'\n"
-                   "   AND clr.relname = '" + p_tablename+ "'\n"
+                   " WHERE sha.usename = ?\n"
+                   "   AND clr.relname = ?\n"
                    "   AND sha.usesysid = clr.relowner\n"
                    "   AND clr.relkind = 'r'\n"
                    "   AND clr.oid = idx.indrelid\n"
@@ -816,7 +869,7 @@ SQLInfoPostgreSQL::GetCATALOGIndexList(CString p_schema,CString p_tablename) con
 }
 
 CString
-SQLInfoPostgreSQL::GetCATALOGIndexAttributes(CString p_schema,CString p_tablename,CString p_indexname) const
+SQLInfoPostgreSQL::GetCATALOGIndexAttributes(CString& /*p_schema*/,CString& /*p_tablename*/,CString& /*p_indexname*/) const
 {
   return "";
 }
@@ -833,7 +886,7 @@ SQLInfoPostgreSQL::GetCATALOGIndexCreate(MIndicesMap& p_indices) const
     {
       // New index
       query = "CREATE ";
-      if(index.m_unique)
+      if(index.m_nonunique == false)
       {
         query += "UNIQUE ";
       }
@@ -901,7 +954,7 @@ SQLInfoPostgreSQL::GetCATALOGPrimaryExists(CString p_schema,CString p_tablename)
 }
 
 CString
-SQLInfoPostgreSQL::GetCATALOGPrimaryAttributes(CString p_schema,CString p_tablename) const
+SQLInfoPostgreSQL::GetCATALOGPrimaryAttributes(CString& /*p_schema*/,CString& /*p_tablename*/) const
 {
 //   p_schema.MakeLower();
 //   p_tablename.MakeLower();
@@ -986,13 +1039,14 @@ SQLInfoPostgreSQL::GetCATALOGForeignExists(CString p_schema,CString p_tablename,
 }
 
 CString
-SQLInfoPostgreSQL::GetCATALOGForeignList(CString p_schema,CString p_tablename,int p_maxColumns /*=SQLINFO_MAX_COLUMNS*/) const
+SQLInfoPostgreSQL::GetCATALOGForeignList(CString& p_schema,CString& p_tablename,int p_maxColumns /*=SQLINFO_MAX_COLUMNS*/) const
 {
-  return GetCATALOGForeignAttributes(p_schema,p_tablename,"",p_maxColumns);
+  CString constraint;
+  return GetCATALOGForeignAttributes(p_schema,p_tablename,constraint,p_maxColumns);
 }
 
 CString
-SQLInfoPostgreSQL::GetCATALOGForeignAttributes(CString p_schema,CString p_tablename,CString p_constraint,bool p_referenced /*=false*/,int p_maxColumns /*=SQLINFO_MAX_COLUMNS*/) const
+SQLInfoPostgreSQL::GetCATALOGForeignAttributes(CString& p_schema,CString& p_tablename,CString& p_constraint,bool p_referenced /*=false*/,int p_maxColumns /*=SQLINFO_MAX_COLUMNS*/) const
 {
   p_schema.MakeLower();
   p_tablename.MakeLower();
@@ -1098,6 +1152,12 @@ SQLInfoPostgreSQL::GetCATALOGForeignAttributes(CString p_schema,CString p_tablen
     }
     query += part;
   }
+
+  // Do NOT bind as parameters
+  p_schema.Empty();
+  p_tablename.Empty();
+  p_constraint.Empty();
+
   return query;
 }
 
@@ -1253,13 +1313,14 @@ SQLInfoPostgreSQL::GetCATALOGTriggerExists(CString p_schema, CString p_tablename
 }
 
 CString
-SQLInfoPostgreSQL::GetCATALOGTriggerList(CString p_schema, CString p_tablename) const
+SQLInfoPostgreSQL::GetCATALOGTriggerList(CString& p_schema,CString& p_tablename) const
 {
-  return GetCATALOGTriggerAttributes(p_schema,p_tablename,"");
+  CString triggername;
+  return GetCATALOGTriggerAttributes(p_schema,p_tablename,triggername);
 }
 
 CString
-SQLInfoPostgreSQL::GetCATALOGTriggerAttributes(CString p_schema, CString p_tablename, CString p_triggername) const
+SQLInfoPostgreSQL::GetCATALOGTriggerAttributes(CString& p_schema,CString& p_tablename,CString& p_triggername) const
 {
   p_schema.MakeLower();
   p_tablename.MakeLower();
@@ -1295,17 +1356,17 @@ SQLInfoPostgreSQL::GetCATALOGTriggerAttributes(CString p_schema, CString p_table
         "  FROM information_schema.triggers\n";
   if(!p_schema.IsEmpty())
   {
-    sql += " WHERE event_object_schema = '" + p_schema + "'\n";
+    sql += " WHERE event_object_schema = ?\n";
   }
   if(!p_tablename.IsEmpty())
   {
     sql += p_schema.IsEmpty() ? " WHERE " : "   AND ";
-    sql += "event_object_table = '" + p_tablename + "'\n";
+    sql += "event_object_table = ?\n";
   }
   if(!p_triggername.IsEmpty())
   {
     sql += p_schema.IsEmpty() && p_tablename.IsEmpty() ? " WHERE " : "   AND ";
-    sql += "trigger_name = '" + p_triggername + "'\n";
+    sql += "trigger_name = ?\n";
   }
   sql += " ORDER BY 1,2,3,4";
   return sql;
@@ -1340,11 +1401,14 @@ SQLInfoPostgreSQL::GetCATALOGSequenceExists(CString p_schema, CString p_sequence
 }
 
 CString
-SQLInfoPostgreSQL::GetCATALOGSequenceList(CString p_schema,CString p_pattern) const
+SQLInfoPostgreSQL::GetCATALOGSequenceList(CString& p_schema,CString& p_pattern) const
 {
   p_schema.MakeLower();
   p_pattern.MakeLower();
-  p_pattern = "%" + p_pattern + "%";
+  if(!p_pattern.IsEmpty() && p_pattern.Compare("%"))
+  {
+    p_pattern = "%" + p_pattern + "%";
+  }
 
   CString sql = "SELECT ''              AS catalog_name\n"
                 "      ,sequence_schema AS schema_name\n"
@@ -1361,18 +1425,18 @@ SQLInfoPostgreSQL::GetCATALOGSequenceList(CString p_schema,CString p_pattern) co
                 "  FROM information_schema.sequences\n";
   if(!p_schema.IsEmpty())
   {
-    sql += " WHERE sequence_schema  = '" + p_schema + "'\n";
+    sql += " WHERE sequence_schema  = ?\n";
   }
   if(!p_pattern.IsEmpty())
   {
     sql += p_schema.IsEmpty() ? " WHERE " : "   AND ";
-    sql += "sequence_name LIKE '" + p_pattern + "'";
+    sql += "sequence_name LIKE ?";
   }
   return sql;
 }
 
 CString
-SQLInfoPostgreSQL::GetCATALOGSequenceAttributes(CString p_schema, CString p_sequence) const
+SQLInfoPostgreSQL::GetCATALOGSequenceAttributes(CString& p_schema,CString& p_sequence) const
 {
   p_schema.MakeLower();
   p_sequence.MakeLower();
@@ -1389,9 +1453,16 @@ SQLInfoPostgreSQL::GetCATALOGSequenceAttributes(CString p_schema, CString p_sequ
                 "                      else 0\n"
                 "       end             AS cycle\n"
                 "      ,0               AS ordering\n"
-                "  FROM information_schema.sequences\n"
-                " WHERE sequence_schema = '" + p_schema   + "'\n"
-                "   AND sequence_name   = '" + p_sequence + "'";
+                "  FROM information_schema.sequences\n";
+  if(!p_schema.IsEmpty())
+  {
+    sql += " WHERE sequence_schema = ?\n";
+  }
+  if(!p_sequence.IsEmpty())
+  {
+    sql += p_schema.IsEmpty() ? " WHERE " : "   AND ";
+    sql += "sequence_name   = ?";
+  }
   return sql;
 }
 
@@ -1425,24 +1496,24 @@ SQLInfoPostgreSQL::GetCATALOGSequenceDrop(CString p_schema, CString p_sequence) 
 // ALL VIEW FUNCTIONS
 
 CString 
-SQLInfoPostgreSQL::GetCATALOGViewExists(CString p_schema,CString p_viewname) const
+SQLInfoPostgreSQL::GetCATALOGViewExists(CString& p_schema,CString& p_viewname) const
 {
-  p_schema.MakeLower();
+  p_schema.Empty();  // do not bind as parameter
   p_viewname.MakeLower();
   CString sql("SELECT COUNT(*)\n"
               "  FROM pg_views\n" 
-              " WHERE view_name = '" + p_viewname + "'");
+              " WHERE view_name = ?");
   return sql;
 }
 
 CString 
-SQLInfoPostgreSQL::GetCATALOGViewList(CString p_schema,CString p_pattern) const
+SQLInfoPostgreSQL::GetCATALOGViewList(CString& p_schema,CString& p_pattern) const
 {
   return GetCATALOGViewAttributes(p_schema,p_pattern);
 }
 
 CString 
-SQLInfoPostgreSQL::GetCATALOGViewAttributes(CString p_schema,CString p_viewname) const
+SQLInfoPostgreSQL::GetCATALOGViewAttributes(CString& p_schema,CString& p_viewname) const
 {
   p_schema.MakeLower();
   p_viewname.MakeLower();
@@ -1464,13 +1535,13 @@ SQLInfoPostgreSQL::GetCATALOGViewAttributes(CString p_schema,CString p_viewname)
                   "   AND sch.nspname <> 'information_schema'\n";
   if(!p_schema.IsEmpty())
   {
-    query += "    AND sch.name = '" + p_schema + "'\n";
+    query += "    AND sch.name = ?\n";
   }
   if(!p_viewname.IsEmpty())
   {
     query += "   AND tab.relname ";
-    query += p_viewname.Find('%') >= 0 ? "LIKE '" : "= '";
-    query += p_viewname + "'\n";
+    query += p_viewname.Find('%') >= 0 ? "LIKE" : "=";
+    query += " ?\n";
   }
   query += " ORDER BY 1,2,3";
                   
@@ -1493,6 +1564,39 @@ SQLInfoPostgreSQL::GetCATALOGViewDrop(CString p_schema,CString p_viewname,CStrin
 {
   p_precursor.Empty();
   return "DROP VIEW " + p_schema + "." + p_viewname;
+}
+
+// All Privilege functions
+CString
+SQLInfoPostgreSQL::GetCATALOGTablePrivileges(CString& /*p_schema*/,CString& /*p_tablename*/) const
+{
+  return "";
+}
+
+CString 
+SQLInfoPostgreSQL::GetCATALOGColumnPrivileges(CString& /*p_schema*/,CString& /*p_tablename*/,CString& /*p_columnname*/) const
+{
+  return "";
+}
+
+CString 
+SQLInfoPostgreSQL::GetCatalogGrantPrivilege(CString p_schema,CString p_objectname,CString p_privilege,CString p_grantee,bool p_grantable)
+{
+  CString sql;
+  sql.Format("GRANT %s ON %s.%s TO %s",p_privilege.GetString(),p_schema.GetString(),p_objectname.GetString(),p_grantee.GetString());
+  if(p_grantable)
+  {
+    sql += " WITH GRANT OPTION";
+  }
+  return sql;
+}
+
+CString 
+SQLInfoPostgreSQL::GetCatalogRevokePrivilege(CString p_schema,CString p_objectname,CString p_privilege,CString p_grantee)
+{
+  CString sql;
+  sql.Format("REVOKE %s ON %s.%s FROM %s",p_privilege.GetString(),p_schema.GetString(),p_objectname.GetString(),p_grantee.GetString());
+  return sql;
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -1535,13 +1639,13 @@ SQLInfoPostgreSQL::GetPSMProcedureExists(CString p_schema, CString p_procedure) 
 }
 
 CString
-SQLInfoPostgreSQL::GetPSMProcedureList(CString p_schema) const
+SQLInfoPostgreSQL::GetPSMProcedureList(CString& /*p_schema*/) const
 {
   return "";
 }
 
 CString
-SQLInfoPostgreSQL::GetPSMProcedureAttributes(CString p_schema, CString p_procedure) const
+SQLInfoPostgreSQL::GetPSMProcedureAttributes(CString& /*p_schema*/,CString& /*p_procedure*/) const
 {
 //   p_schema.MakeLower();
 //   p_procedure.MakeLower();
@@ -1580,7 +1684,7 @@ SQLInfoPostgreSQL::GetPSMProcedureErrors(CString p_schema,CString p_procedure) c
 
 // And it's parameters
 CString
-SQLInfoPostgreSQL::GetPSMProcedureParameters(CString p_schema,CString p_procedure) const
+SQLInfoPostgreSQL::GetPSMProcedureParameters(CString& p_schema,CString& p_procedure) const
 {
   p_schema.MakeLower();
   p_procedure.MakeLower();
@@ -1616,11 +1720,11 @@ SQLInfoPostgreSQL::GetPSMProcedureParameters(CString p_schema,CString p_procedur
         "   AND par.specific_name    = fun.specific_name\n";
   if(!p_schema.IsEmpty())
   {
-    sql += "   AND fun.specific_schema = '" + p_schema + "'\n";
+    sql += "   AND fun.specific_schema = ?\n";
   }
   if(!p_procedure.IsEmpty())
   {
-    sql += "   AND fun.routine_name    = '" + p_procedure + "'\n";
+    sql += "   AND fun.routine_name    = ?\n";
   }
   sql += " ORDER BY 1,2,3,18";
 

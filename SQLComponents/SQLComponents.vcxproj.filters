@@ -178,6 +178,30 @@
     <ClCompile Include="SQLDriverManager.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="CrackURL.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="FileBuffer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="SQLInfoMariaDB.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="SQLMessage.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="XMLDataType.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="XMLRestriction.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="XMLTemporal.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Namespace.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="BasicExcel.h">
@@ -358,6 +382,30 @@
       <Filter>Headers Files</Filter>
     </ClInclude>
     <ClInclude Include="SQLDriverManager.h">
+      <Filter>Headers Files</Filter>
+    </ClInclude>
+    <ClInclude Include="CrackURL.h">
+      <Filter>Headers Files</Filter>
+    </ClInclude>
+    <ClInclude Include="FileBuffer.h">
+      <Filter>Headers Files</Filter>
+    </ClInclude>
+    <ClInclude Include="SQLComponentsVersion.h">
+      <Filter>Headers Files</Filter>
+    </ClInclude>
+    <ClInclude Include="SQLInfoMariaDB.h">
+      <Filter>Headers Files</Filter>
+    </ClInclude>
+    <ClInclude Include="SQLMessage.h">
+      <Filter>Headers Files</Filter>
+    </ClInclude>
+    <ClInclude Include="XMLRestriction.h">
+      <Filter>Headers Files</Filter>
+    </ClInclude>
+    <ClInclude Include="XMLTemporal.h">
+      <Filter>Headers Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Namespace.h">
       <Filter>Headers Files</Filter>
     </ClInclude>
   </ItemGroup>

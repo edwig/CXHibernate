@@ -1,21 +1,36 @@
 RELEASENOTES VERSIONS 1.X
 =========================
 
+Version 1.2.0 Date: 22-11-220
+-----------------------------
+1)  Update of SQLCompoentns from version 1.6.1 to 1.7.0
+    See https://github/Edwig/SQLComponents/Documentation for full 
+    details of this update. Main features are:
+    - Added MariaDB database support
+    - Support for WMI Messages in case of database problems
+    - Lots of performance fixes for Oracle/Firebird/PostgreSQL
+
+2)  Update of Marlin from version 5.1.1 to version 5.6.2
+    See https://github/Edwig/Marlin/Documentation for full 
+    details of this update. Main features are
+    - Stability feature for SSE messages
+    - Various JSON features
+
+
 Version 1.1.0 Date: 22-09-2019
 ------------------------------
 1)  Upgraded SQLComponents to from version 1.5.0 to version 1.6.1
 2)  Updated Marlin framework  from version 5.1.1 to version
 3)  Changed the link instrumentation from static linking to 
     dynamic linking with Microsoft DLL's. This is needed to be able
-	to work with the new Marlin Framework and IIS in order to prevent
-	memory crashes and leaking from within IIS
+    to work with the new Marlin Framework and IIS in order to prevent
+	  memory crashes and leaking from within IIS
 4)  Updated to Microsoft Visual Studio 2019
 5)  Added late binding to the definition of associations in the 
     hibernate.cfg.xml file. So it doesnt'matter in which order the
-	classes are defined.
+    classes are defined.
 5)  Added a testserver on Microsoft IIS webserver (TestServerIIS)
 6)  Review and completion of the documentation in "CXHibernate.docx"
-
 
 Version 1.0.0 Date: 07-08-2018
 ------------------------------

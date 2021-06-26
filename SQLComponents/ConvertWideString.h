@@ -2,9 +2,6 @@
 //
 // SourceFile: ConvertWideString.h
 //
-// From the project: Marlin Server: Internet server/client
-// See: https://github.com/edwig/Marlin
-// 
 // Copyright (c) 1998-2020 ir. W.E. Huisman
 // All rights reserved
 //
@@ -26,38 +23,44 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 //
-// Version number: See SQLComponents.h
-//
-#pragma once
-#include "SQLComponents.h"
+#ifndef __CONVERTWIDESTRING__
+#define __CONVERTWIDESTRING__
 
-namespace SQLComponents
-{
-  using uchar = unsigned char;
+enum class XMLEncoding;
+using uchar = unsigned char;
 
-  // Init the code page system
-  void    InitCodePageNames();
-  // Convert strings from/to Unicode
-  bool    TryConvertWideString(const uchar* p_buffer
-                               ,int          p_length
-                               ,CString      p_charset
-                               ,CString&     p_string
-                               ,bool&        p_foundBOM);
-  bool    TryCreateWideString(const CString& p_string
-                              ,const CString  p_charset
-                              ,const bool     p_doBom
-                              ,uchar**  p_buffer
-                              ,int&     p_length);
-  // Getting the codepage number from the charset
-  int     CharsetToCodepage(CString p_charset);
-  // Getting the name of the codepage
-  CString CodepageToCharset(int p_codepage);
-  // Getting the description of the codepage
-  CString CharsetToCodePageInfo(CString p_charset);
-  // Find the charset in the content-type header
-  CString FindCharsetInContentType(CString p_contentType);
-  // Find the mimetype in the content-type header
-  CString FindMimeTypeInContentType(CString p_contentType);
-  // Construct an UTF-8 Byte-Order-Mark
-  CString ConstructBOM();
-}
+// Init the code page system
+void    InitCodePageNames();
+// Convert strings from/to Unicode
+bool    TryConvertWideString(const uchar* p_buffer
+                            ,int          p_length
+                            ,CString      p_charset
+                            ,CString&     p_string
+                            ,bool&        p_foundBOM);
+bool    TryCreateWideString (const CString& p_string
+                            ,const CString  p_charset
+                            ,const bool     p_doBom
+                            ,      uchar**  p_buffer
+                            ,      int&     p_length);
+// Getting the codepage number from the charset
+int     CharsetToCodepage(CString p_charset);
+// Getting the name of the codepage
+CString CodepageToCharset(int p_codepage);
+// Getting the description of the codepage
+CString CharsetToCodePageInfo(CString p_charset);
+// Find the charset in the content-type header
+CString FindCharsetInContentType(CString p_contentType);
+// Find the mimetype in the content-type header
+CString FindMimeTypeInContentType(CString p_contentType);
+// Construct an UTF-8 Byte-Order-Mark
+CString ConstructBOM();
+// Construct a UTF-16 Byte-Order-Mark
+CString ConstructBOMUTF16();
+// Construct a BOM
+CString ConstructBOM(XMLEncoding p_encoding);
+// Decoding incoming strings from the internet. Defaults to UTF-8 encoding
+CString DecodeStringFromTheWire(CString p_string,CString p_charset = "utf-8");
+// Encode to string for internet. Defaults to UTF-8 encoding
+CString EncodeStringForTheWire (CString p_string,CString p_charset = "utf-8");
+
+#endif // __CONVERTWIDESTRING__

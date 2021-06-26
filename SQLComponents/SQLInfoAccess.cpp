@@ -135,6 +135,13 @@ SQLInfoAccess::GetRDBMSSupportsDatatypeInterval() const
   return false;
 }
 
+// Supports functions at the place of table columns in create/alter index statement
+bool
+SQLInfoAccess::GetRDBMSSupportsFunctionalIndexes() const
+{
+  return false;
+}
+
 // Gets the maximum length of an SQL statement
 unsigned long 
 SQLInfoAccess::GetRDBMSMaxStatementLength() const
@@ -185,6 +192,13 @@ CString
 SQLInfoAccess::GetKEYWORDQuoteCharacter() const
 {
   return "\'";
+}
+
+// Get quote character around reserved words as an identifier
+CString 
+SQLInfoAccess::GetKEYWORDReservedWordQuote() const
+{
+  return "\"";
 }
 
 // Get default NULL for parameter list input
@@ -257,6 +271,20 @@ CString
 SQLInfoAccess::GetKEYWORDStatementNVL(CString& p_test,CString& p_isnull) const
 {
   return CString("IIF(ISNULL(") + p_test + ")," + p_isnull + "," + p_test + ")";
+}
+
+// Gets the RDBMS definition of the datatype
+CString 
+SQLInfoAccess::GetKEYWORDDataType(MetaColumn* p_column)
+{
+  return p_column->m_typename;
+}
+
+// Connects to a default schema in the database/instance
+CString 
+SQLInfoAccess::GetSQLDefaultSchema(CString /*p_schema*/) const
+{
+  return "";
 }
 
 // Gets the construction for inline generating a key within an INSERT statement
@@ -430,44 +458,46 @@ SQLInfoAccess::GetCATALOGMetaTypes(int p_type) const
 
 // Get SQL to check if a table already exists in the database
 CString
-SQLInfoAccess::GetCATALOGTableExists(CString /*p_schema*/,CString /*p_tablename*/) const
+SQLInfoAccess::GetCATALOGTableExists(CString& /*p_schema*/,CString& /*p_tablename*/) const
 {
   // MS-Access cannot do this
   return "";
 }
 
 CString 
-SQLInfoAccess::GetCATALOGTablesList(CString /*p_schema*/,CString /*p_pattern*/) const
+SQLInfoAccess::GetCATALOGTablesList(CString& /*p_schema*/,CString& /*p_pattern*/) const
 {
   // MS-Access cannot do this
   return "";
 }
 
 CString 
-SQLInfoAccess::GetCATALOGTableAttributes(CString /*p_schema*/,CString /*p_tablename*/) const
+SQLInfoAccess::GetCATALOGTableAttributes(CString& /*p_schema*/,CString& /*p_tablename*/) const
 {
   // MS-Access cannot do this
   return false;
 }
 
 CString 
-SQLInfoAccess::GetCATALOGTableSynonyms(CString /*p_schema*/,CString /*p_tablename*/) const
+SQLInfoAccess::GetCATALOGTableSynonyms(CString& /*p_schema*/,CString& /*p_tablename*/) const
 {
   // MS-Access cannot do this
   return false;
 }
 
 CString 
-SQLInfoAccess::GetCATALOGTableCatalog(CString /*p_schema*/,CString /*p_tablename*/) const
+SQLInfoAccess::GetCATALOGTableCatalog(CString& /*p_schema*/,CString& /*p_tablename*/) const
 {
   // MS-Access cannot do this
   return false;
 }
 
 CString 
-SQLInfoAccess::GetCATALOGTableCreate(MetaTable& /*p_table*/,MetaColumn& /*p_column*/) const
+SQLInfoAccess::GetCATALOGTableCreate(MetaTable& p_table,MetaColumn& /*p_column*/) const
 {
-  return "";
+  CString sql = "CREATE TABLE ";
+  sql += p_table.m_table;
+  return sql;
 }
 
 // Rename a database table 
@@ -480,7 +510,7 @@ SQLInfoAccess::GetCATALOGTableRename(CString /*p_schema*/,CString p_tablename,CS
 }
 
 CString 
-SQLInfoAccess::GetCATALOGTableDrop(CString /*p_schema*/,CString p_tablename) const
+SQLInfoAccess::GetCATALOGTableDrop(CString /*p_schema*/,CString p_tablename,bool /*p_ifExist = false*/,bool /*p_restrict = false*/,bool /*p_cascade = false*/) const
 {
   return "DROP TABLE " + p_tablename;
 }
@@ -511,21 +541,21 @@ SQLInfoAccess::GetCATALOGTemptableDrop(CString /*p_schema*/,CString p_tablename)
 // ALL COLUMN FUNCTIONS
 
 CString 
-SQLInfoAccess::GetCATALOGColumnExists(CString /*p_schema*/,CString /*p_tablename*/,CString /*p_columname*/) const
+SQLInfoAccess::GetCATALOGColumnExists(CString /*p_schema*/,CString /*p_tablename*/,CString /*p_columnname*/) const
 {
   // MS-Access cannot do this
   return "";
 }
 
 CString 
-SQLInfoAccess::GetCATALOGColumnList(CString /*p_schema*/,CString /*p_tablename*/) const
+SQLInfoAccess::GetCATALOGColumnList(CString& /*p_schema*/,CString& /*p_tablename*/) const
 {
   // MS-Access cannot do this
   return "";
 }
 
 CString 
-SQLInfoAccess::GetCATALOGColumnAttributes(CString /*p_schema*/,CString /*p_tablename*/,CString /*p_columname*/) const
+SQLInfoAccess::GetCATALOGColumnAttributes(CString& /*p_schema*/,CString& /*p_tablename*/,CString& /*p_columnname*/) const
 {
   // MS-Access cannot do this
   return "";
@@ -598,14 +628,14 @@ SQLInfoAccess::GetCATALOGIndexExists(CString p_schema,CString p_tablename,CStrin
 }
 
 CString 
-SQLInfoAccess::GetCATALOGIndexList(CString p_schema,CString p_tablename)   const
+SQLInfoAccess::GetCATALOGIndexList(CString& /*p_schema*/,CString& /*p_tablename*/)   const
 {
   // Cannot query MS-Access for the index configuration
   return "";
 }
 
 CString 
-SQLInfoAccess::GetCATALOGIndexAttributes(CString p_schema,CString p_tablename,CString p_indexname)  const
+SQLInfoAccess::GetCATALOGIndexAttributes(CString& /*p_schema*/,CString& /*p_tablename*/,CString& /*p_indexname*/)  const
 {
   // Cannot query MS-Access for the index configuration
   return "";
@@ -623,7 +653,7 @@ SQLInfoAccess::GetCATALOGIndexCreate(MIndicesMap& p_indices) const
     {
       // New index
       query = "CREATE ";
-      if(index.m_unique)
+      if(index.m_nonunique == false)
       {
         query += "UNIQUE ";
       }
@@ -680,7 +710,7 @@ SQLInfoAccess::GetCATALOGPrimaryExists(CString p_schema,CString p_tablename) con
 }
 
 CString 
-SQLInfoAccess::GetCATALOGPrimaryAttributes(CString p_schema,CString p_tablename) const
+SQLInfoAccess::GetCATALOGPrimaryAttributes(CString& /*p_schema*/,CString& /*p_tablename*/) const
 {
   // MS Access cannot get this info
   return "";
@@ -733,14 +763,14 @@ SQLInfoAccess::GetCATALOGForeignExists(CString /*p_schema*/,CString /*p_tablenam
 }
 
 CString 
-SQLInfoAccess::GetCATALOGForeignList(CString /*p_schema*/,CString /*p_tablename*/,int /*p_maxColumns*/ /*=SQLINFO_MAX_COLUMNS*/) const
+SQLInfoAccess::GetCATALOGForeignList(CString& /*p_schema*/,CString& /*p_tablename*/,int /*p_maxColumns*/ /*=SQLINFO_MAX_COLUMNS*/) const
 { 
   // MS-Access cannot get this information, Use ODBC functions
   return "";
 }
 
 CString 
-SQLInfoAccess::GetCATALOGForeignAttributes(CString /*p_schema*/,CString /*p_tablename*/,CString /*p_constraintname*/,bool/* p_referenced = false*/,int /*p_maxColumns*/ /*=SQLINFO_MAX_COLUMNS*/) const
+SQLInfoAccess::GetCATALOGForeignAttributes(CString& /*p_schema*/,CString& /*p_tablename*/,CString& /*p_constraintname*/,bool/* p_referenced = false*/,int /*p_maxColumns*/ /*=SQLINFO_MAX_COLUMNS*/) const
 {
   // MS-Access cannot get this information, Use ODBC functions
   return "";
@@ -836,14 +866,14 @@ SQLInfoAccess::GetCATALOGTriggerExists(CString p_schema, CString p_tablename, CS
 }
 
 CString 
-SQLInfoAccess::GetCATALOGTriggerList(CString p_schema, CString p_tablename) const
+SQLInfoAccess::GetCATALOGTriggerList(CString& /*p_schema*/,CString& /*p_tablename*/) const
 {
   // No triggers in MS-Access
   return "";
 }
 
 CString 
-SQLInfoAccess::GetCATALOGTriggerAttributes(CString p_schema, CString p_tablename, CString p_triggername) const
+SQLInfoAccess::GetCATALOGTriggerAttributes(CString& /*p_schema*/,CString& /*p_tablename*/,CString& /*p_triggername*/) const
 {
   // No triggers in MS-Access
   return "";
@@ -874,14 +904,14 @@ SQLInfoAccess::GetCATALOGSequenceExists(CString /*p_schema*/,CString /*p_sequenc
 }
 
 CString 
-SQLInfoAccess::GetCATALOGSequenceList(CString /*p_schema*/,CString /*p_pattern*/) const
+SQLInfoAccess::GetCATALOGSequenceList(CString& /*p_schema*/,CString& /*p_pattern*/) const
 {
   // MS-Access does not have sequences
   return "";
 }
 
 CString 
-SQLInfoAccess::GetCATALOGSequenceAttributes(CString /*p_schema*/, CString /*p_sequence*/) const
+SQLInfoAccess::GetCATALOGSequenceAttributes(CString& /*p_schema*/,CString& /*p_sequence*/) const
 {
   // MS-Access does not have sequences
   return "";
@@ -905,21 +935,21 @@ SQLInfoAccess::GetCATALOGSequenceDrop(CString /*p_schema*/, CString /*p_sequence
 // ALL VIEW FUNCTIONS
 
 CString 
-SQLInfoAccess::GetCATALOGViewExists(CString p_schema,CString p_viewname) const
+SQLInfoAccess::GetCATALOGViewExists(CString& /*p_schema*/,CString& /*p_viewname*/) const
 {
   // Cannot query this, Use ODBC functions
   return "";
 }
 
 CString 
-SQLInfoAccess::GetCATALOGViewList(CString p_schema,CString p_pattern) const
+SQLInfoAccess::GetCATALOGViewList(CString& /*p_schema*/,CString& /*p_pattern*/) const
 {
   // Cannot query this, Use ODBC functions
   return "";
 }
 
 CString 
-SQLInfoAccess::GetCATALOGViewAttributes(CString p_schema,CString p_viewname) const
+SQLInfoAccess::GetCATALOGViewAttributes(CString& /*p_schema*/,CString& /*p_viewname*/) const
 {
   // Cannot query this, Use ODBC functions
   return "";
@@ -942,6 +972,39 @@ SQLInfoAccess::GetCATALOGViewDrop(CString /*p_schema*/,CString p_viewname,CStrin
 {
   p_precursor.Empty();
   return "DROP VIEW " + p_viewname;
+}
+
+// All Privilege functions
+CString 
+SQLInfoAccess::GetCATALOGTablePrivileges(CString& /*p_schema*/, CString& /*p_tablename*/) const
+{
+  return "";
+}
+
+CString 
+SQLInfoAccess::GetCATALOGColumnPrivileges(CString& /*p_schema*/,CString& /*p_tablename*/,CString& /*p_columnname*/) const
+{
+  return "";
+}
+
+CString 
+SQLInfoAccess::GetCatalogGrantPrivilege(CString /*p_schema*/,CString p_objectname,CString p_privilege,CString p_grantee,bool p_grantable)
+{
+  CString sql;
+  sql.Format("GRANT %s ON %s TO %s",p_privilege.GetString(),p_objectname.GetString(),p_grantee.GetString());
+  if(p_grantable)
+  {
+    sql += " WITH GRANT OPTION";
+  }
+  return sql;
+}
+
+CString 
+SQLInfoAccess::GetCatalogRevokePrivilege(CString p_schema,CString p_objectname,CString p_privilege,CString p_grantee)
+{
+  CString sql;
+  sql.Format("REVOKE %s ON %s FROM %s",p_privilege.GetString(),p_objectname.GetString(),p_grantee.GetString());
+  return sql;
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -981,14 +1044,14 @@ SQLInfoAccess::GetPSMProcedureExists(CString p_schema,CString p_procedure) const
 }
   
 CString 
-SQLInfoAccess::GetPSMProcedureList(CString p_schema) const
+SQLInfoAccess::GetPSMProcedureList(CString& /*p_schema*/) const
 {
   // MS-Access does not support PSM
   return "";
 }
   
 CString 
-SQLInfoAccess::GetPSMProcedureAttributes(CString p_schema, CString p_procedure) const
+SQLInfoAccess::GetPSMProcedureAttributes(CString& /*p_schema*/,CString& /*p_procedure*/) const
 {
   // MS-Access does not support PSM
   return "";
@@ -1024,7 +1087,7 @@ SQLInfoAccess::GetPSMProcedureErrors(CString p_schema,CString p_procedure) const
 
 // And it's parameters
 CString 
-SQLInfoAccess::GetPSMProcedureParameters(CString p_schema,CString p_procedure) const
+SQLInfoAccess::GetPSMProcedureParameters(CString& /*p_schema*/,CString& /*p_procedure*/) const
 {
   // MS-Access does not support PSM
   return "";

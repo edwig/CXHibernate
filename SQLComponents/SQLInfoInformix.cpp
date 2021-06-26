@@ -151,6 +151,13 @@ SQLInfoInformix::GetRDBMSSupportsDatatypeInterval() const
   return true;
 }
 
+// Supports functions at the place of table columns in create/alter index statement
+bool
+SQLInfoInformix::GetRDBMSSupportsFunctionalIndexes() const
+{
+  return false;
+}
+
 // Gets the maximum length of an SQL statement
 unsigned long 
 SQLInfoInformix::GetRDBMSMaxStatementLength() const
@@ -202,6 +209,13 @@ CString
 SQLInfoInformix::GetKEYWORDQuoteCharacter() const
 {
   return "\'";
+}
+
+// Get quote character around reserved words as an identifier
+CString
+SQLInfoInformix::GetKEYWORDReservedWordQuote() const
+{
+  return "\"";
 }
 
 // Get default NULL for parameter list input
@@ -275,6 +289,20 @@ CString
 SQLInfoInformix::GetKEYWORDStatementNVL(CString& p_test,CString& p_isnull) const
 {
   return CString("NVL(") + p_test + "," + p_isnull + ")";
+}
+
+// Gets the RDBMS definition of the datatype
+CString
+SQLInfoInformix::GetKEYWORDDataType(MetaColumn* p_column)
+{
+  return p_column->m_typename;
+}
+
+// Connects to a default schema in the database/instance
+CString
+SQLInfoInformix::GetSQLDefaultSchema(CString /*p_schema*/) const
+{
+  return "";
 }
 
 // Gets the construction for inline generating a key within an INSERT statement
@@ -471,30 +499,31 @@ SQLInfoInformix::GetCATALOGMetaTypes(int p_type) const
 
 // Get SQL to check if a table already exists in the database
 CString
-SQLInfoInformix::GetCATALOGTableExists(CString /*p_schema*/,CString p_tablename) const
+SQLInfoInformix::GetCATALOGTableExists(CString& p_schema,CString& p_tablename) const
 {
+  p_schema.Empty(); // Do not bind as a parameter
   p_tablename.MakeLower();
   CString query = "SELECT count(*)\n"
                   "  FROM systables\n"
-                  " WHERE tabname = '" + p_tablename + "'";
+                  " WHERE tabname = ?";
   return query;
 }
 
 CString
-SQLInfoInformix::GetCATALOGTablesList(CString p_schema,CString p_pattern) const
+SQLInfoInformix::GetCATALOGTablesList(CString& p_schema,CString& p_pattern) const
 {
   return GetCATALOGTableAttributes(p_schema,p_pattern);
 }
 
 CString
-SQLInfoInformix::GetCATALOGTableAttributes(CString /*p_schema*/,CString /*p_tablename*/) const
+SQLInfoInformix::GetCATALOGTableAttributes(CString& /*p_schema*/,CString& /*p_tablename*/) const
 {
   // Getting the temp table status
   return "";
 }
 
 CString
-SQLInfoInformix::GetCATALOGTableSynonyms(CString p_schema,CString p_tablename) const
+SQLInfoInformix::GetCATALOGTableSynonyms(CString& p_schema,CString& p_tablename) const
 {
   p_schema.MakeLower();
   p_tablename.MakeLower();
@@ -510,28 +539,34 @@ SQLInfoInformix::GetCATALOGTableSynonyms(CString p_schema,CString p_tablename) c
                 " WHERE tabtype = 'S'\n";
   if(!p_schema.IsEmpty())
   {
-    sql += "   AND owner = '" + p_schema + "'\n";
+    sql += "   AND owner = ?\n";
   }
   if(!p_tablename.IsEmpty())
   {
     sql += "   and tabname ";
-    sql += p_tablename.Find('%') >= 0 ? "LIKE '" : "= '";
-    sql += p_tablename + "'\n";
+    sql += p_tablename.Find('%') >= 0 ? "LIKE" : "=";
+    sql += " ?\n";
   }
   sql += " ORDER BY 1,2,3";
   return sql;
 }
 
 CString
-SQLInfoInformix::GetCATALOGTableCatalog(CString /*p_schema*/,CString /*p_tablename*/) const
+SQLInfoInformix::GetCATALOGTableCatalog(CString& /*p_schema*/,CString& /*p_tablename*/) const
 {
   return "";
 }
 
 CString
-SQLInfoInformix::GetCATALOGTableCreate(MetaTable& /*p_table*/,MetaColumn& /*p_column*/) const
+SQLInfoInformix::GetCATALOGTableCreate(MetaTable& p_table,MetaColumn& /*p_column*/) const
 {
-  return "";
+  CString sql = "CREATE ";
+  if (p_table.m_temporary)
+  {
+    sql += "TEMPORARY ";
+  }
+  sql += "TABLE " + p_table.m_table;
+  return sql;
 }
 
 // Rename a database table 
@@ -544,9 +579,23 @@ SQLInfoInformix::GetCATALOGTableRename(CString /*p_schema*/,CString p_tablename,
 }
 
 CString
-SQLInfoInformix::GetCATALOGTableDrop(CString /*p_schema*/,CString p_tablename) const
+SQLInfoInformix::GetCATALOGTableDrop(CString /*p_schema*/,CString p_tablename,bool p_ifExist /*= false*/,bool p_restrict /*= false*/,bool p_cascade /*= false*/) const
 {
-  return "DROP TABLE " + p_tablename;
+  CString sql("DROP TABLE ");
+  if(p_ifExist)
+  {
+    sql += "IF EXISTS ";
+  }
+  sql += p_tablename;
+  if(p_restrict)
+  {
+    sql += " RESTRICT";
+  }
+  else if (p_cascade)
+  {
+    sql += " CASCADE";
+  }
+  return sql;
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -588,38 +637,17 @@ SQLInfoInformix::GetCATALOGColumnExists(CString p_schema,CString p_tablename,CSt
 }
 
 CString 
-SQLInfoInformix::GetCATALOGColumnList(CString p_schema,CString p_tablename) const
+SQLInfoInformix::GetCATALOGColumnList(CString& /*p_schema*/,CString& /*p_tablename*/) const
 {
+  // Standard ODBC driver suffices
   return "";
-//   CString sql = GetCATALOGColumnAttributes(p_schema,p_tablename,"");
-// 
-//   int pos = sql.ReverseFind('\n');
-//   sql = sql.Mid(pos + 1) + " ORDER BY col.colno";
-// 
-//   return sql;
 }
 
 CString 
-SQLInfoInformix::GetCATALOGColumnAttributes(CString /*p_schema*/,CString p_tablename,CString p_columnname) const
+SQLInfoInformix::GetCATALOGColumnAttributes(CString& /*p_schema*/,CString& /*p_tablename*/,CString& /*p_columnname*/) const
 {
+  // Standard ODBC driver suffices
   return "";
-//   p_tablename.MakeLower();
-//   p_columnname.MakeLower();
-//   CString select = "SELECT col.colname\n"       // 1 -> Name
-//                    "      ,col.colno\n"         // 2 -> Position
-//                    "      ,col.coltype\n"       // 3 -> datatype
-//                    "      ,col.collength\n"     // 4 -> Length
-//                    "      ,def.default\n"       // 5 -> Default
-//                    "  FROM systables   tab\n"
-//                    "      ,syscolumns  col\n"
-//                    "      ,sysdefaults def\n"
-//                    " WHERE col.tabid   = tab.tabid\n"
-//                    "   AND def.tabid   = tab.tabid\n"
-//                    "   AND def.colno   = col.colno\n"
-//                    "   AND tab.tabname = '" + p_tablename  + "'\n"
-//                    "   AND col.colname = '" + p_columnname + "'";
-//                    // Beware: columnname filter must be last for previous method!
-//   return select;
 }
 
 CString 
@@ -678,9 +706,10 @@ SQLInfoInformix::GetCATALOGIndexExists(CString p_schema,CString p_tablename,CStr
 }
 
 CString
-SQLInfoInformix::GetCATALOGIndexList(CString p_schema,CString p_tablename)   const
+SQLInfoInformix::GetCATALOGIndexList(CString& p_schema,CString& p_tablename)   const
 {
   CString query;
+  p_schema.Empty(); // Do not use
   p_tablename.MakeLower();
 
   // Reads all current indices in the database in a list
@@ -712,11 +741,14 @@ SQLInfoInformix::GetCATALOGIndexList(CString p_schema,CString p_tablename)   con
                        ,p_tablename.GetString()
                        ,ind);
   }
+
+  // Cannot use bounded parameters
+  p_tablename.Empty();
   return query;
 }
 
 CString
-SQLInfoInformix::GetCATALOGIndexAttributes(CString p_schema,CString p_tablename,CString p_indexname) const
+SQLInfoInformix::GetCATALOGIndexAttributes(CString& /*p_schema*/,CString& /*p_tablename*/,CString& /*p_indexname*/) const
 {
   return "";
 }
@@ -733,7 +765,7 @@ SQLInfoInformix::GetCATALOGIndexCreate(MIndicesMap& p_indices) const
     {
       // New index
       query = "CREATE ";
-      if(index.m_unique)
+      if(index.m_nonunique == false)
       {
         query += "UNIQUE ";
       }
@@ -796,7 +828,7 @@ SQLInfoInformix::GetCATALOGPrimaryExists(CString /*p_schema*/,CString p_tablenam
 }
 
 CString
-SQLInfoInformix::GetCATALOGPrimaryAttributes(CString p_schema,CString p_tablename) const
+SQLInfoInformix::GetCATALOGPrimaryAttributes(CString& /*p_schema*/,CString& /*p_tablename*/) const
 {
 //   p_tablename.MakeLower();
 //   CString sql = "SELECT constrname\n"
@@ -874,18 +906,19 @@ SQLInfoInformix::GetCATALOGForeignExists(CString /*p_schema*/,CString p_tablenam
 
 // Get all attributes in order of MetaForeign for ALL FK constraints
 CString
-SQLInfoInformix::GetCATALOGForeignList(CString p_schema,CString p_tablename,int p_maxColumns /*=SQLINFO_MAX_COLUMNS*/) const
+SQLInfoInformix::GetCATALOGForeignList(CString& p_schema,CString& p_tablename,int p_maxColumns /*=SQLINFO_MAX_COLUMNS*/) const
 {
-  return GetCATALOGForeignAttributes(p_schema,p_tablename,"",p_maxColumns);
+  CString constraint;
+  return GetCATALOGForeignAttributes(p_schema,p_tablename,constraint,p_maxColumns);
 }
 
 // Get all attributes in order of MetaForeign for 1 FK constraint
 CString
-SQLInfoInformix::GetCATALOGForeignAttributes(CString p_schema
-                                            ,CString p_tablename
-                                            ,CString p_constraint
-                                            ,bool    p_referenced /*= false*/
-                                            ,int     p_maxColumns /*=SQLINFO_MAX_COLUMNS*/) const
+SQLInfoInformix::GetCATALOGForeignAttributes(CString& p_schema
+                                            ,CString& p_tablename
+                                            ,CString& p_constraint
+                                            ,bool     p_referenced /*= false*/
+                                            ,int      p_maxColumns /*=SQLINFO_MAX_COLUMNS*/) const
 {
   CString query;
   p_schema.MakeLower();
@@ -992,6 +1025,11 @@ SQLInfoInformix::GetCATALOGForeignAttributes(CString p_schema
 
   // Add ordering up to column number
   query += " ORDER BY 1,2,3,4,5,6,7,8,9";
+
+  // Do not bind as parameters
+  p_schema.Empty();
+  p_tablename.Empty();
+  p_constraint.Empty();
 
   return query;
 }
@@ -1105,13 +1143,14 @@ SQLInfoInformix::GetCATALOGTriggerExists(CString p_schema, CString p_tablename, 
 }
 
 CString
-SQLInfoInformix::GetCATALOGTriggerList(CString p_schema, CString p_tablename) const
+SQLInfoInformix::GetCATALOGTriggerList(CString& p_schema,CString& p_tablename) const
 {
-  return GetCATALOGTriggerAttributes(p_schema,p_tablename,"");
+  CString triggername;
+  return GetCATALOGTriggerAttributes(p_schema,p_tablename,triggername);
 }
 
 CString
-SQLInfoInformix::GetCATALOGTriggerAttributes(CString p_schema, CString p_tablename, CString p_triggername) const
+SQLInfoInformix::GetCATALOGTriggerAttributes(CString& p_schema,CString& p_tablename,CString& p_triggername) const
 {
   p_schema.MakeLower();
   p_tablename.MakeLower();
@@ -1139,18 +1178,17 @@ SQLInfoInformix::GetCATALOGTriggerAttributes(CString p_schema, CString p_tablena
         " WHERE tab.tabid = tri.tabid\n";
   if(!p_schema.IsEmpty())
   {
-    sql += "   AND tri.owner = '" + p_schema + "'\n";
+    sql += "   AND tri.owner = ?\n";
   }
   if(!p_tablename.IsEmpty())
   {
-    sql += "   AND tab.tabname = '";
-    sql += p_tablename + "'\n";
+    sql += "   AND tab.tabname = ?\n";
   }
   if(!p_triggername.IsEmpty())
   {
     sql += "   AND tri.trigname ";
-    sql += p_triggername.Find('%') >= 0 ? "LIKE '" : "= '";
-    sql += p_triggername + "'\n";
+    sql += p_triggername.Find('%') >= 0 ? "LIKE" : "=";
+    sql += " ?\n";
   }
   sql += " ORDER BY 1,2,3,4";
   return sql;
@@ -1187,13 +1225,13 @@ SQLInfoInformix::GetCATALOGSequenceExists(CString p_schema, CString p_sequence) 
 }
 
 CString
-SQLInfoInformix::GetCATALOGSequenceList(CString p_schema,CString p_pattern) const
+SQLInfoInformix::GetCATALOGSequenceList(CString& p_schema,CString& p_pattern) const
 {
   return GetCATALOGSequenceAttributes(p_schema,p_pattern);
 }
 
 CString
-SQLInfoInformix::GetCATALOGSequenceAttributes(CString p_schema, CString p_sequence) const
+SQLInfoInformix::GetCATALOGSequenceAttributes(CString& p_schema,CString& p_sequence) const
 {
   p_schema.MakeLower();
   p_sequence.MakeLower();
@@ -1212,13 +1250,13 @@ SQLInfoInformix::GetCATALOGSequenceAttributes(CString p_schema, CString p_sequen
                 "   AND tab.tabtype = 'Q'\n";
   if(!p_schema.IsEmpty())
   {
-    sql += "   AND tab.owner = '" + p_schema + "'\n";
+    sql += "   AND tab.owner = ?\n";
   }
   if(!p_sequence.IsEmpty())
   {
     sql += "   AND tab.tabname ";
-    sql += p_sequence.Find('%') >= 0 ? "LIKE '" : "= '";
-    sql += p_sequence + "'\n";
+    sql += p_sequence.Find('%') >= 0 ? "LIKE" : "=";
+    sql += " ? \n";
   }
   return sql;
 }
@@ -1260,24 +1298,25 @@ SQLInfoInformix::GetCATALOGSequenceDrop(CString /*p_schema*/, CString p_sequence
 // ALL VIEW FUNCTIONS
 
 CString 
-SQLInfoInformix::GetCATALOGViewExists(CString /*p_schema*/,CString p_viewname) const
+SQLInfoInformix::GetCATALOGViewExists(CString& p_schema,CString& p_viewname) const
 {
+  p_schema.Empty(); // do not bind as a parameter
   p_viewname.MakeLower();
 
   CString sql = "SELECT count(*)\n"
                 "  FROM sysviews\n"
-                " WHERE viewname = '" + p_viewname + "'";
+                " WHERE viewname = ?";
   return sql;
 }
 
 CString 
-SQLInfoInformix::GetCATALOGViewList(CString p_schema,CString p_pattern) const
+SQLInfoInformix::GetCATALOGViewList(CString& /*p_schema*/,CString& /*p_pattern*/) const
 {
   return "";
 }
 
 CString 
-SQLInfoInformix::GetCATALOGViewAttributes(CString p_schema,CString p_viewname) const
+SQLInfoInformix::GetCATALOGViewAttributes(CString& /*p_schema*/,CString& /*p_viewname*/) const
 {
   return "";
 }
@@ -1299,6 +1338,39 @@ SQLInfoInformix::GetCATALOGViewDrop(CString /*p_schema*/,CString p_viewname,CStr
 {
   p_precursor.Empty();
   return "DROP VIEW " + p_viewname;
+}
+
+// All Privilege functions
+CString
+SQLInfoInformix::GetCATALOGTablePrivileges(CString& /*p_schema*/,CString& /*p_tablename*/) const
+{
+  return "";
+}
+
+CString 
+SQLInfoInformix::GetCATALOGColumnPrivileges(CString& /*p_schema*/,CString& /*p_tablename*/,CString& /*p_columnname*/) const
+{
+  return "";
+}
+
+CString 
+SQLInfoInformix::GetCatalogGrantPrivilege(CString /*p_schema*/,CString p_objectname,CString p_privilege,CString p_grantee,bool p_grantable)
+{
+  CString sql;
+  sql.Format("GRANT %s ON %s TO %s",p_privilege.GetString(),p_objectname.GetString(),p_grantee.GetString());
+  if(p_grantable)
+  {
+    sql += " WITH GRANT OPTION";
+  }
+  return sql;
+}
+
+CString
+SQLInfoInformix::GetCatalogRevokePrivilege(CString p_schema,CString p_objectname,CString p_privilege,CString p_grantee)
+{
+  CString sql;
+  sql.Format("REVOKE %s ON %s FROM %s",p_privilege.GetString(),p_objectname.GetString(),p_grantee.GetString());
+  return sql;
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -1340,13 +1412,13 @@ SQLInfoInformix::GetPSMProcedureExists(CString /*p_schema*/, CString p_procedure
 }
 
 CString
-SQLInfoInformix::GetPSMProcedureList(CString p_schema) const
+SQLInfoInformix::GetPSMProcedureList(CString& /*p_schema*/) const
 {
   return "";
 }
 
 CString
-SQLInfoInformix::GetPSMProcedureAttributes(CString /*p_schema*/, CString p_procedure) const
+SQLInfoInformix::GetPSMProcedureAttributes(CString& /*p_schema*/,CString& /*p_procedure*/) const
 {
   return "";
 //   p_procedure.MakeLower();
@@ -1427,7 +1499,7 @@ SQLInfoInformix::GetPSMProcedureErrors(CString p_schema,CString p_procedure) con
 
 // And it's parameters
 CString
-SQLInfoInformix::GetPSMProcedureParameters(CString p_schema,CString p_procedure) const
+SQLInfoInformix::GetPSMProcedureParameters(CString& p_schema,CString& p_procedure) const
 {
   p_schema.MakeLower();
   p_procedure.MakeLower();
@@ -1548,13 +1620,13 @@ SQLInfoInformix::GetPSMProcedureParameters(CString p_schema,CString p_procedure)
         " WHERE pro.procid   = col.procid\n";
   if(!p_schema.IsEmpty())
   {
-    sql += "   AND pro.owner    = '" + p_schema + "'\n";
+    sql += "   AND pro.owner    = ?\n";
   }
   if(!p_procedure.IsEmpty())
   {
     sql += "   AND pro.procname ";
-    sql += p_procedure.Find('%') >= 0 ? "LIKE '" : "= '";
-    sql += p_procedure + "'\n";
+    sql += p_procedure.Find('%') >= 0 ? "LIKE" : "=";
+    sql += " ?\n";
   }
   sql += " ORDER BY 1,2,3,18";
   return sql;
@@ -1873,3 +1945,4 @@ SQLInfoInformix::DoSQLCallNamedParameters(SQLQuery* /*p_query*/,CString& /*p_sch
 
 // End of namespace
 }
+

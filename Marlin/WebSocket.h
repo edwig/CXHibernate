@@ -167,6 +167,7 @@ public:
   virtual bool WriteFragment(BYTE* p_buffer,DWORD p_length,Opcode p_opcode,bool p_last = true) = 0;
   // Register the server request for sending info
   virtual bool RegisterSocket(HTTPMessage* p_message) = 0;
+
   // Decoded close connection (use in 'OnClose')
   bool GetCloseSocket(USHORT& p_code,CString& p_reason);
   // Socket still open?

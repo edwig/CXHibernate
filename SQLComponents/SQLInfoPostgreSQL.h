@@ -74,6 +74,9 @@ public:
   // If the database does not support the datatype INTERVAL, it can be implemented as a DECIMAL
   bool    GetRDBMSSupportsDatatypeInterval() const;
 
+  // Supports functions at the place of table columns in create/alter index statement
+  bool    GetRDBMSSupportsFunctionalIndexes() const;
+
   // Gets the maximum length of an SQL statement
   unsigned long GetRDBMSMaxStatementLength() const;
 
@@ -96,6 +99,9 @@ public:
 
   // Get quote character for strings
   CString GetKEYWORDQuoteCharacter() const;
+
+  // Get quote character around reserved words as an identifier
+  CString GetKEYWORDReservedWordQuote() const;
 
   // Get default NULL for parameter list input
   CString GetKEYWORDParameterDefaultNULL() const;
@@ -128,7 +134,13 @@ public:
   // Gets the Not-NULL-Value statement of the database
   CString GetKEYWORDStatementNVL(CString& p_test,CString& p_isnull) const;
 
+  // Gets the RDBMS definition of the datatype
+  CString GetKEYWORDDataType(MetaColumn* p_column);
+
   // SQL
+
+  // Connects to a default schema in the database/instance
+  CString GetSQLDefaultSchema(CString p_schema) const;
 
   // Gets the construction for inline generating a key within an INSERT statement
   CString GetSQLNewSerial(CString p_table, CString p_sequence) const;
@@ -205,64 +217,69 @@ public:
   // Meta info about meta types
   CString GetCATALOGMetaTypes(int p_type) const;
   // All table functions
-  CString GetCATALOGTableExists       (CString p_schema,CString p_tablename) const;
-  CString GetCATALOGTablesList        (CString p_schema,CString p_pattern)   const;
-  CString GetCATALOGTableAttributes   (CString p_schema,CString p_tablename) const;
-  CString GetCATALOGTableSynonyms     (CString p_schema,CString p_tablename) const;
-  CString GetCATALOGTableCatalog      (CString p_schema,CString p_tablename) const;
-  CString GetCATALOGTableCreate       (MetaTable& p_table,MetaColumn& p_column) const;
-  CString GetCATALOGTableRename       (CString p_schema,CString p_tablename,CString p_newname) const;
-  CString GetCATALOGTableDrop         (CString p_schema,CString p_tablename) const;
+  CString GetCATALOGTableExists     (CString& p_schema,CString& p_tablename) const;
+  CString GetCATALOGTablesList      (CString& p_schema,CString& p_pattern)   const;
+  CString GetCATALOGTableAttributes (CString& p_schema,CString& p_tablename) const;
+  CString GetCATALOGTableSynonyms   (CString& p_schema,CString& p_tablename) const;
+  CString GetCATALOGTableCatalog    (CString& p_schema,CString& p_tablename) const;
+  CString GetCATALOGTableCreate     (MetaTable& p_table,MetaColumn& p_column) const;
+  CString GetCATALOGTableRename     (CString  p_schema,CString  p_tablename,CString p_newname) const;
+  CString GetCATALOGTableDrop       (CString  p_schema,CString  p_tablename,bool p_ifExist = false,bool p_restrict = false,bool p_cascade = false) const;
   // All Temporary table functions
-  CString GetCATALOGTemptableCreate   (CString p_schema,CString p_tablename,CString p_select) const;
-  CString GetCATALOGTemptableIntoTemp (CString p_schema,CString p_tablename,CString p_select) const;
-  CString GetCATALOGTemptableDrop     (CString p_schema,CString p_tablename) const;
+  CString GetCATALOGTemptableCreate  (CString p_schema,CString p_tablename,CString p_select) const;
+  CString GetCATALOGTemptableIntoTemp(CString p_schema,CString p_tablename,CString p_select) const;
+  CString GetCATALOGTemptableDrop    (CString p_schema,CString p_tablename) const;
   // All column functions
-  CString GetCATALOGColumnExists    (CString p_schema,CString p_tablename,CString p_columname) const;
-  CString GetCATALOGColumnList      (CString p_schema,CString p_tablename) const;
-  CString GetCATALOGColumnAttributes(CString p_schema,CString p_tablename,CString p_columname) const;
+  CString GetCATALOGColumnExists    (CString  p_schema,CString  p_tablename,CString  p_columnname) const;
+  CString GetCATALOGColumnList      (CString& p_schema,CString& p_tablename) const;
+  CString GetCATALOGColumnAttributes(CString& p_schema,CString& p_tablename,CString& p_columnname) const;
   CString GetCATALOGColumnCreate    (MetaColumn& p_column) const;
   CString GetCATALOGColumnAlter     (MetaColumn& p_column) const;
-  CString GetCATALOGColumnRename    (CString p_schema,CString p_tablename,CString p_columnname,CString p_newname,CString p_datatype) const;
-  CString GetCATALOGColumnDrop      (CString p_schema,CString p_tablename,CString p_columname) const;
+  CString GetCATALOGColumnRename    (CString  p_schema,CString  p_tablename,CString  p_columnname,CString p_newname,CString p_datatype) const;
+  CString GetCATALOGColumnDrop      (CString  p_schema,CString  p_tablename,CString  p_columnname) const;
   // All index functions
-  CString GetCATALOGIndexExists     (CString p_schema,CString p_tablename,CString p_indexname) const;
-  CString GetCATALOGIndexList       (CString p_schema,CString p_tablename) const;
-  CString GetCATALOGIndexAttributes (CString p_schema,CString p_tablename,CString p_indexname) const;
+  CString GetCATALOGIndexExists     (CString  p_schema,CString  p_tablename,CString  p_indexname) const;
+  CString GetCATALOGIndexList       (CString& p_schema,CString& p_tablename) const;
+  CString GetCATALOGIndexAttributes (CString& p_schema,CString& p_tablename,CString& p_indexname) const;
   CString GetCATALOGIndexCreate     (MIndicesMap& p_index) const;
-  CString GetCATALOGIndexDrop       (CString p_schema,CString p_tablename,CString p_indexname) const;
+  CString GetCATALOGIndexDrop       (CString  p_schema,CString  p_tablename,CString  p_indexname) const;
   CString GetCATALOGIndexFilter     (MetaIndex& p_index) const;
   // All primary key functions
-  CString GetCATALOGPrimaryExists    (CString p_schema,CString p_tablename) const;
-  CString GetCATALOGPrimaryAttributes(CString p_schema,CString p_tablename) const;
+  CString GetCATALOGPrimaryExists    (CString  p_schema,CString  p_tablename) const;
+  CString GetCATALOGPrimaryAttributes(CString& p_schema,CString& p_tablename) const;
   CString GetCATALOGPrimaryCreate    (MPrimaryMap& p_primaries) const;
-  CString GetCATALOGPrimaryDrop      (CString p_schema,CString p_tablename,CString p_constraintname) const;
+  CString GetCATALOGPrimaryDrop      (CString  p_schema,CString  p_tablename,CString p_constraintname) const;
     // All foreign key functions
-  CString GetCATALOGForeignExists    (CString p_schema,CString p_tablename,CString p_constraintname) const;
-  CString GetCATALOGForeignList      (CString p_schema,CString p_tablename,int p_maxColumns = SQLINFO_MAX_COLUMNS) const;
-  CString GetCATALOGForeignAttributes(CString p_schema,CString p_tablename,CString p_constraintname,bool p_referenced = false,int p_maxColumns = SQLINFO_MAX_COLUMNS) const;
+  CString GetCATALOGForeignExists    (CString  p_schema,CString  p_tablename,CString  p_constraintname) const;
+  CString GetCATALOGForeignList      (CString& p_schema,CString& p_tablename,int p_maxColumns = SQLINFO_MAX_COLUMNS) const;
+  CString GetCATALOGForeignAttributes(CString& p_schema,CString& p_tablename,CString& p_constraintname,bool p_referenced = false,int p_maxColumns = SQLINFO_MAX_COLUMNS) const;
   CString GetCATALOGForeignCreate    (MForeignMap& p_foreigns) const;
   CString GetCATALOGForeignAlter     (MForeignMap& p_original,MForeignMap& p_requested) const;
-  CString GetCATALOGForeignDrop      (CString p_schema,CString p_tablename,CString p_constraintname) const;
+  CString GetCATALOGForeignDrop      (CString  p_schema,CString  p_tablename,CString  p_constraintname) const;
   // All trigger functions
-  CString GetCATALOGTriggerExists    (CString p_schema,CString p_tablename,CString p_triggername) const;
-  CString GetCATALOGTriggerList      (CString p_schema,CString p_tablename) const;
-  CString GetCATALOGTriggerAttributes(CString p_schema,CString p_tablename,CString p_triggername) const;
+  CString GetCATALOGTriggerExists    (CString  p_schema,CString  p_tablename,CString  p_triggername) const;
+  CString GetCATALOGTriggerList      (CString& p_schema,CString& p_tablename) const;
+  CString GetCATALOGTriggerAttributes(CString& p_schema,CString& p_tablename,CString& p_triggername) const;
   CString GetCATALOGTriggerCreate    (MetaTrigger& p_trigger) const;
-  CString GetCATALOGTriggerDrop      (CString p_schema,CString p_tablename,CString p_triggername) const;
+  CString GetCATALOGTriggerDrop      (CString  p_schema,CString  p_tablename,CString  p_triggername) const;
   // All sequence functions
-  CString GetCATALOGSequenceExists    (CString p_schema,CString p_sequence) const;
-  CString GetCATALOGSequenceList      (CString p_schema,CString p_pattern)  const;
-  CString GetCATALOGSequenceAttributes(CString p_schema,CString p_sequence) const;
+  CString GetCATALOGSequenceExists    (CString  p_schema,CString  p_sequence) const;
+  CString GetCATALOGSequenceList      (CString& p_schema,CString& p_pattern)  const;
+  CString GetCATALOGSequenceAttributes(CString& p_schema,CString& p_sequence) const;
   CString GetCATALOGSequenceCreate    (MetaSequence& p_sequence) const;
-  CString GetCATALOGSequenceDrop      (CString p_schema,CString p_sequence) const;
+  CString GetCATALOGSequenceDrop      (CString  p_schema,CString  p_sequence) const;
   // All view functions
-  CString GetCATALOGViewExists       (CString p_schema,CString p_viewname) const;
-  CString GetCATALOGViewList         (CString p_schema,CString p_pattern)  const;
-  CString GetCATALOGViewAttributes   (CString p_schema,CString p_viewname) const;
-  CString GetCATALOGViewCreate       (CString p_schema,CString p_viewname,CString p_contents)   const;
-  CString GetCATALOGViewRename       (CString p_schema,CString p_viewname,CString p_newname)    const;
-  CString GetCATALOGViewDrop         (CString p_schema,CString p_viewname,CString& p_precursor) const;
+  CString GetCATALOGViewExists       (CString& p_schema,CString& p_viewname) const;
+  CString GetCATALOGViewList         (CString& p_schema,CString& p_pattern)  const;
+  CString GetCATALOGViewAttributes   (CString& p_schema,CString& p_viewname) const;
+  CString GetCATALOGViewCreate       (CString  p_schema,CString  p_viewname,CString p_contents)   const;
+  CString GetCATALOGViewRename       (CString  p_schema,CString  p_viewname,CString p_newname)    const;
+  CString GetCATALOGViewDrop         (CString  p_schema,CString  p_viewname,CString& p_precursor) const;
+  // All Privilege functions
+  CString GetCATALOGTablePrivileges  (CString& p_schema,CString& p_tablename) const;
+  CString GetCATALOGColumnPrivileges (CString& p_schema,CString& p_tablename,CString& p_columnname) const;
+  CString GetCatalogGrantPrivilege   (CString  p_schema,CString  p_objectname,CString p_privilege,CString p_grantee,bool p_grantable);
+  CString GetCatalogRevokePrivilege  (CString  p_schema,CString  p_objectname,CString p_privilege,CString p_grantee);
 
   //////////////////////////////////////////////////////////////////////////
   //
@@ -294,15 +311,15 @@ public:
   //////////////////////////////////////////////////////////////////////////
 
   // All procedure functions
-  CString GetPSMProcedureExists    (CString p_schema,CString p_procedure) const;
-  CString GetPSMProcedureList      (CString p_schema) const;
-  CString GetPSMProcedureAttributes(CString p_schema,CString p_procedure) const;
-  CString GetPSMProcedureSourcecode(CString p_schema,CString p_procedure) const;
+  CString GetPSMProcedureExists    (CString  p_schema,CString  p_procedure) const;
+  CString GetPSMProcedureList      (CString& p_schema) const;
+  CString GetPSMProcedureAttributes(CString& p_schema,CString& p_procedure) const;
+  CString GetPSMProcedureSourcecode(CString  p_schema,CString  p_procedure) const;
   CString GetPSMProcedureCreate    (MetaProcedure& p_procedure) const;
-  CString GetPSMProcedureDrop      (CString p_schema,CString p_procedure) const;
-  CString GetPSMProcedureErrors    (CString p_schema,CString p_procedure) const;
+  CString GetPSMProcedureDrop      (CString  p_schema,CString  p_procedure) const;
+  CString GetPSMProcedureErrors    (CString  p_schema,CString  p_procedure) const;
   // And it's parameters
-  CString GetPSMProcedureParameters(CString p_schema,CString p_procedure) const;
+  CString GetPSMProcedureParameters(CString& p_schema,CString& p_procedure) const;
 
   // All Language elements
   CString GetPSMDeclaration(bool p_first,CString p_variable,int p_datatype,int p_precision = 0,int p_scale = 0,

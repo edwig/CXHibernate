@@ -1,3 +1,28 @@
+/////////////////////////////////////////////////////////////////////////////////
+//
+// SourceFile: bcd.h
+//
+// Copyright (c) 2015-2020 ir. W.E. Huisman
+// All rights reserved
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files(the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and / or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions :
+//
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+// THE SOFTWARE.
+//
 //////////////////////////////////////////////////////////////////////////
 //
 // BCD
@@ -7,19 +32,11 @@
 // Numbers are stored in 1E8 based mantissa with a digital . implied at the second position
 // The mantissa array exists of a series of integers with 8 functional digits each
 //
-// Copyright (c) 1998-2019 ir W. E. Huisman
+// Version 1.2 of 18-12-2019
 //
-// Version number: See SQLComponents.h
-//
-#pragma once
+#ifndef __BCD__
+#define __BCD__
 #include <sqltypes.h>   // Needed for conversions of SQL_NUMERIC_STRUCT
-
-#ifdef COMPILED_TOGETHER_WITH_MARLIN
-#include "..\Marlin\bcd.h"
-#else
-
-namespace SQLComponents
-{
 
 // The ODBC standard has a maximum of 38 decimal places
 // At least one database (Oracle) implements these numbers
@@ -77,6 +94,18 @@ bcd asin (bcd p_number);
 bcd acos (bcd p_number);
 bcd atan (bcd p_number);
 bcd atan2(bcd p_y,bcd p_x);
+
+// One-time initialization for printing numbers in the current locale
+void InitValutaString();
+
+// string format number and money format functions
+extern bool g_locale_valutaInit;
+extern char g_locale_decimalSep[];
+extern char g_locale_thousandSep[];
+extern char g_locale_strCurrency[];
+extern int  g_locale_decimalSepLen;
+extern int  g_locale_thousandSepLen;
+extern int  g_locale_strCurrencyLen;
 
 //////////////////////////////////////////////////////////////////////////
 //
@@ -140,9 +169,6 @@ public:
 
   // BCD from a SQL_NUMERIC_STRUCT
   bcd(const SQL_NUMERIC_STRUCT* p_numeric);
-
-  // Destructor of class bcd.
-  ~bcd();
 
   // CONSTANTS
 
@@ -216,6 +242,7 @@ public:
   bcd& operator=(const int    p_value);
   bcd& operator=(const double   p_value);
   bcd& operator=(const char*  p_value);
+  bcd& operator=(const __int64 p_value);
 
   // comparison operators
   bool operator==(const bcd& p_value) const;
@@ -430,7 +457,4 @@ private:
   long   m_mantissa[bcdLength]; // Up to (bcdDigits * bcdLength) digits
 };
 
-// End of namespace
-}
-
-#endif // COMPILED_TOGETHER_WITH_MARLIN
+#endif // __BCD__

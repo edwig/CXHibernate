@@ -539,6 +539,20 @@ SQLQuery::SetParameterName(int p_param,CString p_name)
   m_nameMap.insert(std::make_pair(p_name,var));
 }
 
+// Set parameters from another SQLQuery
+void
+SQLQuery::SetParameters(VarMap* p_map)
+{
+  if(p_map)
+  {
+    m_parameters = *p_map;
+  }
+  else
+  {
+    m_parameters.clear();
+  }
+}
+
 //////////////////////////////////////////////////////////////////////////
 //
 // STATEMENTS
@@ -770,7 +784,7 @@ SQLQuery::DoSQLStatementBatch(CString p_statements)
       }
       else
       {
-        DoSQLStatement(statement);
+        DoSQLStatement(statement); 
       }
     }
     // Find next statement
@@ -970,6 +984,22 @@ SQLQuery::BindParameters()
 
     // Check rebinds to do for scripting 
     sqlDatatype = RebindParameter(sqlDatatype);
+
+    // Check minimum for an input type
+    if(paramType == SQL_PARAM_TYPE_UNKNOWN)
+    {
+      paramType = SQL_PARAM_INPUT;
+      var->SetParameterType(SQLParamType::P_SQL_PARAM_INPUT);
+    }
+
+    // Ugly hack!!
+    if(m_database->GetDatabaseType() == RDBMS_SQLSERVER)
+    {
+      if(sqlDatatype == SQL_CHAR && columnSize > 8000)
+      {
+        columnSize = 8000;
+      }
+    }
 
     // Log what we bind here
     if(logging)
@@ -1224,21 +1254,22 @@ SQLQuery::BindColumnNumeric(SQLSMALLINT p_column,SQLVariant* p_var,int p_type)
   SQLINTEGER attribute = (p_type == SQL_RESULT_COL) ? SQL_ATTR_APP_ROW_DESC : SQL_ATTR_APP_PARAM_DESC;
 
   // Getting the ROW descriptor and set the precision/scale fields
-  m_retCode = SqlGetStmtAttr(m_hstmt,attribute,&rowdesc,SQL_IS_POINTER,NULL);
+  m_retCode = SqlGetStmtAttr(m_hstmt,attribute,&rowdesc,SQL_IS_POINTER,nullptr);
   if(SQL_SUCCEEDED(m_retCode))
   {
     int     precision = p_var->GetNumericPrecision();
     int     scale     = p_var->GetNumericScale();
-    RETCODE retCode1  = SqlSetDescField(rowdesc,p_column,SQL_DESC_PRECISION,(SQLPOINTER)(DWORD_PTR)precision,NULL);
-    RETCODE retCode2  = SqlSetDescField(rowdesc,p_column,SQL_DESC_SCALE,    (SQLPOINTER)(DWORD_PTR)scale,    NULL);
+    RETCODE retCode1  = SqlSetDescField(rowdesc,p_column,SQL_DESC_TYPE,     (SQLPOINTER)(DWORD_PTR)SQL_C_NUMERIC,SQL_IS_INTEGER);
+    RETCODE retCode2  = SqlSetDescField(rowdesc,p_column,SQL_DESC_PRECISION,(SQLPOINTER)(DWORD_PTR)precision,    SQL_IS_INTEGER);
+    RETCODE retCode3  = SqlSetDescField(rowdesc,p_column,SQL_DESC_SCALE,    (SQLPOINTER)(DWORD_PTR)scale,        SQL_IS_INTEGER);
 
-    if(SQL_SUCCEEDED(retCode1) && SQL_SUCCEEDED(retCode2))
+    if(SQL_SUCCEEDED(retCode1) && SQL_SUCCEEDED(retCode2) && SQL_SUCCEEDED(retCode3))
     {
       // Now trigger the reset and check of the descriptor record, by re-supplying the data pointer again.
       // Very covertly described in the ODBC documentation. But if you do not do this one last step
       // results will be very different - and faulty - depending on your RDBMS
       SQLPOINTER pointer = p_var->GetDataPointer();
-      m_retCode = SqlSetDescField(rowdesc,p_column,SQL_DESC_DATA_PTR,pointer,NULL);
+      m_retCode = SqlSetDescField(rowdesc,p_column,SQL_DESC_DATA_PTR,pointer,SQL_IS_POINTER);
       if(SQL_SUCCEEDED(m_retCode))
       {
         // All went well, we are done
@@ -1258,13 +1289,15 @@ SQLQuery::ProvideAtExecData()
   {
     return SQL_SUCCESS;
   }
-  int value;
   do 
   {
-    m_retCode = SqlParamData(m_hstmt,(SQLPOINTER*)&value);
+    // Find the parameter that needs the data
+    SQLLEN parameter = NULL;
+    m_retCode = SqlParamData(m_hstmt,(SQLPOINTER*)&parameter);
+
     if(m_retCode == SQL_NEED_DATA)
     {
-      VarMap::iterator it = m_parameters.find(value);
+      VarMap::iterator it = m_parameters.find((int)parameter);
       if(it != m_parameters.end())
       {
         SQLVariant* var  = it->second;
@@ -1298,6 +1331,7 @@ SQLQuery::ProvideAtExecData()
         }
       }
       // Force SQLParamData one more time
+      // See if there are other parameters that are in need of data
       m_retCode = SQL_NEED_DATA;
     }
   } 
@@ -1345,6 +1379,42 @@ SQLQuery::GetMaxColumnLength()
     m_maxColumnLength = 0;
   }
   return m_maxColumnLength;
+}
+
+// POST PROCESSING of the query result
+
+// Truncate the char fields in the gotten buffer
+void
+SQLQuery::TruncateCharFields()
+{
+  for(auto& column : m_numMap)
+  {
+    // Get variable
+    SQLVariant* var = column.second;
+    // We try to truncate the CHAR/VARCHAR fields
+    if(var->GetDataType() == SQL_C_CHAR)
+    {
+      var->TruncateCharacter();
+    }
+  }
+}
+
+// Truncate the timestamps to a number of decimals (0 - 6)
+void
+SQLQuery::TruncateTimestamps(int p_decimals /*= 0*/)
+{
+  for(auto& column : m_numMap)
+  {
+    // Get variable
+    SQLVariant* var = column.second;
+
+    if(var->GetDataType() == SQL_C_TIMESTAMP || 
+       var->GetDataType() == SQL_C_TYPE_TIMESTAMP)
+    {
+      // We truncate the TIMESTAMP fields
+      var->TruncateTimestamp(p_decimals);
+    }
+  }
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -1709,7 +1779,7 @@ SQLQuery::GetColumnLength(int p_column)
   UCHAR	      characters[1] = "";
   SQLSMALLINT inputSize = 1;
   SQLSMALLINT outputSize;
-  SQLINTEGER  integerValue = 0;
+  SQLLEN     integerValue = 0;
 
   if(p_column <= m_numColumns)
   {
@@ -1964,7 +2034,6 @@ SQLQuery::ConstructSQLForCall(CString& p_schema,CString& p_procedure,bool p_hasR
       if(param.first > 1) sql += ",";
       sql += "?";
     }
-
     // Closing parenthesis
     sql += ")";
   }

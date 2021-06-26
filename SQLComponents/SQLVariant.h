@@ -142,6 +142,9 @@ public:
    void    ReserveSpace(int p_type,int p_space);
    void    ShrinkSpace();
    void    TruncateSpace(unsigned p_length);
+   // Truncation of a field
+   void    TruncateCharacter();
+   void    TruncateTimestamp(int p_decimals = 0);
 
    // General access
    bool                 SetData(int p_type,const char* p_data);

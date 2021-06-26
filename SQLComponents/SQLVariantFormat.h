@@ -26,6 +26,7 @@
 #pragma once
 #include "SQLVariant.h"
 #include "SQLDatabase.h"
+#include "bcd.h"
 
 namespace SQLComponents
 {
@@ -33,18 +34,6 @@ namespace SQLComponents
 // User status
 #define USER_DISPLAY		   1
 #define NUMBER_BUFFER_SIZE 100
-
-// string format number and money format functions
-extern bool g_locale_valutaInit;
-extern char g_locale_decimalSep [];
-extern char g_locale_thousandSep[];
-extern char g_locale_strCurrency[];
-extern int  g_locale_decimalSepLen;
-extern int  g_locale_thousandSepLen;
-extern int  g_locale_strCurrencyLen;
-
-// Initialize the above global locale variables!
-void InitValutaString();
 
 class SQLVariantFormat
 {

@@ -145,6 +145,13 @@ SQLInfoSQLServer::GetRDBMSSupportsDatatypeInterval() const
   return false;
 }
 
+// Supports functions at the place of table columns in create/alter index statement
+bool
+SQLInfoSQLServer::GetRDBMSSupportsFunctionalIndexes() const
+{
+  return false;
+}
+
 // Gets the maximum length of an SQL statement
 unsigned long
 SQLInfoSQLServer::GetRDBMSMaxStatementLength() const
@@ -195,6 +202,13 @@ CString
 SQLInfoSQLServer::GetKEYWORDQuoteCharacter() const
 {
   return "\'";
+}
+
+// Get quote character around reserved words as an identifier
+CString
+SQLInfoSQLServer::GetKEYWORDReservedWordQuote() const
+{
+  return "\"";
 }
 
 // Get default NULL for parameter list input
@@ -266,6 +280,91 @@ CString
 SQLInfoSQLServer::GetKEYWORDStatementNVL(CString& p_test,CString& p_isnull) const
 {
   return CString("NVL(") + p_test + "," + p_isnull + ")";
+}
+
+// Gets the RDBMS definition of the datatype
+CString
+SQLInfoSQLServer::GetKEYWORDDataType(MetaColumn* p_column)
+{
+  CString type;
+  switch(p_column->m_datatype)
+  {
+    case SQL_CHAR:                      // fall through
+    case SQL_VARCHAR:                   // fall through
+    case SQL_WCHAR:                     // fall through
+    case SQL_WVARCHAR:                  type = "VARCHAR";  break;
+    case SQL_LONGVARCHAR:               // fall through
+    case SQL_WLONGVARCHAR:              type = "VARBINARY";break;
+    case SQL_NUMERIC:                   type = "NUMERIC";  break;
+    case SQL_DECIMAL:                   type = "DECIMAL";  break;
+    case SQL_INTEGER:                   type = "INT";      break;
+    case SQL_SMALLINT:                  type = "SMALLINT"; break;
+    case SQL_FLOAT:                     if(p_column->m_columnSize == 38)
+										                    {
+											                    type = "INT";
+											                    p_column->m_columnSize    = 0;
+											                    p_column->m_decimalDigits = 0;
+										                    }
+										                    else
+										                    {
+											                    type = "FLOAT";
+										                    }
+										                    break;
+    case SQL_REAL:                      // fall through
+    case SQL_DOUBLE:                    type = "REAL";     break;
+    case SQL_BIGINT:                    type = "BIGINT";   break;
+    case SQL_TINYINT:                   type = "TINYINT";  break;
+    case SQL_BIT:                       type = "TINYINT";
+                                        p_column->m_columnSize    = 0;
+                                        p_column->m_decimalDigits = 0;
+                                        break;
+  //case SQL_DATE:
+    case SQL_DATETIME:                  // fall through
+    case SQL_TYPE_DATE:                 // fall through
+    case SQL_TIMESTAMP:                 // fall through
+    case SQL_TYPE_TIMESTAMP:            type = "DATETIME";
+                                        p_column->m_columnSize    = 0;
+                                        p_column->m_decimalDigits = 0;
+                                        break;
+    case SQL_TIME:                      // fall through
+    case SQL_TYPE_TIME:                 type = "TIME";
+                                        p_column->m_columnSize    = 0;
+                                        p_column->m_decimalDigits = 0;
+                                        break;
+    case SQL_BINARY:                    type = "BINARY";        break;
+    case SQL_VARBINARY:                 type = "VARBINARY";     break;
+    case SQL_LONGVARBINARY:             type = "VARBINARY";     break;
+    case SQL_GUID:                      type = "UNIQUEIDENTIFIER"; break;
+    case SQL_INTERVAL_YEAR:             // fall through
+    case SQL_INTERVAL_YEAR_TO_MONTH:    // fall through
+    case SQL_INTERVAL_MONTH:            type = "VARCHAR";
+                                        p_column->m_columnSize    = 80;
+                                        p_column->m_decimalDigits = 0;
+                                        break;
+    case SQL_INTERVAL_DAY:              // fall through
+    case SQL_INTERVAL_HOUR:             // fall through
+    case SQL_INTERVAL_MINUTE:           // fall through
+    case SQL_INTERVAL_SECOND:           // fall through
+    case SQL_INTERVAL_DAY_TO_HOUR:      // fall through
+    case SQL_INTERVAL_DAY_TO_MINUTE:    // fall through
+    case SQL_INTERVAL_HOUR_TO_MINUTE:   // fall through
+    case SQL_INTERVAL_HOUR_TO_SECOND:   // fall through
+    case SQL_INTERVAL_MINUTE_TO_SECOND: // fall through
+    case SQL_INTERVAL_DAY_TO_SECOND:    type = "VARCHAR";
+                                        p_column->m_columnSize    = 80;
+                                        p_column->m_decimalDigits = 0;
+                                        break;
+    case SQL_UNKNOWN_TYPE:              // fall through
+    default:                            break;
+  }
+  return type;
+}
+
+// Connects to a default schema in the database/instance
+CString
+SQLInfoSQLServer::GetSQLDefaultSchema(CString p_schema) const
+{
+  return "EXECUTE AS " + p_schema;
 }
 
 // Gets the construction for inline generating a key within an INSERT statement
@@ -455,21 +554,21 @@ SQLInfoSQLServer::GetCATALOGMetaTypes(int p_type) const
 
 // Get SQL to check if a table already exists in the database
 CString
-SQLInfoSQLServer::GetCATALOGTableExists(CString p_schema,CString p_tablename) const
+SQLInfoSQLServer::GetCATALOGTableExists(CString& p_schema,CString& p_tablename) const
 {
   p_schema.MakeLower();
   p_tablename.MakeLower();
   CString query = "SELECT count(*)\n"
                   "  FROM dbo.sysobjects tab\n"
                   "      ,dbo.sysschemas sch\n"
-                  " WHERE sch.name = '" + p_schema    + "'\n"
-                  "   AND tab.name = '" + p_tablename + "'\n"
+                  " WHERE sch.name = ?\n"
+                  "   AND tab.name = ?\n"
                   "   AND tab.schema_id = sch.schema_id\n";
   return query;
 }
 
 CString
-SQLInfoSQLServer::GetCATALOGTablesList(CString p_schema,CString p_pattern) const
+SQLInfoSQLServer::GetCATALOGTablesList(CString& p_schema,CString& p_pattern) const
 {
   p_schema.MakeLower();
   p_pattern.MakeLower();
@@ -488,32 +587,32 @@ SQLInfoSQLServer::GetCATALOGTablesList(CString p_schema,CString p_pattern) const
                   "   AND obj.uid = usr.uid\n";
   if (!p_schema.IsEmpty())
   {
-    query += "   AND usr.name = '" + p_schema + "'\n";
+    query += "   AND usr.name = ?\n";
   }
   if (!p_pattern.IsEmpty())
   {
     query += "   AND tab.name ";
-    query += p_pattern.Find('%') >= 0 ? "LIKE '" : "= '";
-    query += p_pattern + "'\n";
+    query += p_pattern.Find('%') >= 0 ? "LIKE" : "=";
+    query += " ?\n";
   }
   query += " ORDER BY 1,2,3";
   return query;
 }
 
 CString
-SQLInfoSQLServer::GetCATALOGTableAttributes(CString /*p_schema*/,CString /*p_tablename*/) const
+SQLInfoSQLServer::GetCATALOGTableAttributes(CString& /*p_schema*/,CString& /*p_tablename*/) const
 {
   return "";
 }
 
 CString
-SQLInfoSQLServer::GetCATALOGTableSynonyms(CString /*p_schema*/,CString /*p_tablename*/) const
+SQLInfoSQLServer::GetCATALOGTableSynonyms(CString& /*p_schema*/,CString& /*p_tablename*/) const
 {
   return "";
 }
 
 CString
-SQLInfoSQLServer::GetCATALOGTableCatalog(CString p_schema,CString p_tablename) const
+SQLInfoSQLServer::GetCATALOGTableCatalog(CString& p_schema,CString& p_tablename) const
 {
   p_schema.MakeLower();
   p_tablename.MakeLower();
@@ -532,22 +631,34 @@ SQLInfoSQLServer::GetCATALOGTableCatalog(CString p_schema,CString p_tablename) c
                   "   AND obj.uid = usr.uid\n";
   if(!p_schema.IsEmpty())
   {
-    query += "   AND usr.name      = '" + p_schema + "'\n";
+    query += "   AND usr.name      = ?\n";
   }
   if(!p_tablename.IsEmpty())
   {
     query += "   AND tab.name ";
-    query += p_tablename.Find('%') >= 0 ? "LIKE '" : "= '";
-    query += p_tablename + "'\n";
+    query += p_tablename.Find('%') >= 0 ? "LIKE" : "=";
+    query += " ?\n";
   }
   query += " ORDER BY 1,2,3";
   return query;
 }
 
 CString
-SQLInfoSQLServer::GetCATALOGTableCreate(MetaTable& /*p_table*/,MetaColumn& /*p_column*/) const
+SQLInfoSQLServer::GetCATALOGTableCreate(MetaTable& p_table,MetaColumn& /*p_column*/) const
 {
-  return "";
+  CString sql = "CREATE ";
+  if (p_table.m_temporary)
+  {
+    sql += "TEMPORARY ";
+  }
+  sql += "TABLE ";
+  if (!p_table.m_schema.IsEmpty())
+  {
+    sql += p_table.m_schema;
+    sql += ".";
+  }
+  sql += p_table.m_table;
+  return sql;
 }
 
 CString
@@ -559,9 +670,19 @@ SQLInfoSQLServer::GetCATALOGTableRename(CString p_schema,CString p_tablename,CSt
 }
 
 CString
-SQLInfoSQLServer::GetCATALOGTableDrop(CString /*p_schema*/,CString p_tablename) const
+SQLInfoSQLServer::GetCATALOGTableDrop(CString p_schema,CString p_tablename,bool p_ifExist /*= false*/,bool /*p_restrict = false*/,bool /*p_cascade = false*/) const
 {
-  return "DROP TABLE " + p_tablename;
+  CString sql("DROP TABLE "); 
+  if (p_ifExist)
+  {
+    sql += "IF EXISTS ";
+  }
+  if(!p_schema.IsEmpty())
+  {
+    sql += p_schema + ".";
+  }
+  sql += p_tablename;
+  return sql;
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -612,46 +733,17 @@ SQLInfoSQLServer::GetCATALOGColumnExists(CString p_schema,CString p_tablename,CS
 }
 
 CString 
-SQLInfoSQLServer::GetCATALOGColumnList(CString p_schema,CString p_tablename) const
+SQLInfoSQLServer::GetCATALOGColumnList(CString& /*p_schema*/,CString& /*p_tablename*/) const
 {
+  // Standard ODBC driver suffices
   return "";
-//   CString sql = GetCATALOGColumnAttributes(p_schema,p_tablename,"");
-// 
-//   int pos = sql.ReverseFind('\n');
-//   sql = sql.Mid(pos + 1) + " ORDER BY col.colid";
-// 
-//   return sql;
 }
 
 CString 
-SQLInfoSQLServer::GetCATALOGColumnAttributes(CString p_schema,CString p_tablename,CString p_columnname) const
+SQLInfoSQLServer::GetCATALOGColumnAttributes(CString& /*p_schema*/,CString& /*p_tablename*/,CString& /*p_columnname*/) const
 {
+  // Standard ODBC driver suffices
   return "";
-//   p_schema.MakeLower();
-//   p_tablename.MakeLower();
-//   p_columnname.MakeLower();
-// 
-//   CString sql = "SELECT col.name\n"         // 1 -> column name
-//                 "      ,col.colid\n"        // 2 -> position
-//                 "      ,typ.name\n"         // 3 -> typename
-//                 "      ,col.length\n"       // 4 -> length
-//                 "      ,col.isnullable\n"   // 5 -> Nullable
-//                 "      ,col.prec\n"         // 6 -> Precision
-//                 "      ,col.scale\n"        // 7 -> Scale
-//                 "      ,replace(replace('#' + com.text + '#', '#(', ''), ')#', '')\n" // 8 -> Default
-//                 "  FROM sys.sysobjects  obj\n"
-//                 "      ,sys.schemas     sch\n"
-//                 "      ,sys.syscolumns  col\n"
-//                 "      ,sys.systypes    typ\n"
-//                 "      ,sys.syscomments com\n"
-//                 " WHERE obj.schema_id = sch.schema_id\n"
-//                 "   AND obj.Id        = col.id\n"
-//                 "   AND col.xtype     = typ.xtype\n"
-//                 "   AND col.cdefault  = com.id\n"
-//                 "   AND sch.name      = '" + p_schema     + "'\n"
-//                 "   AND obj.name      = '" + p_tablename  + "'\n"
-//                 "   AND col.name      = '" + p_columnname + "'";
-//   return sql;
 }
 
 CString 
@@ -711,8 +803,9 @@ SQLInfoSQLServer::GetCATALOGIndexExists(CString p_schema,CString p_tablename,CSt
 }
 
 CString
-SQLInfoSQLServer::GetCATALOGIndexList(CString p_schema,CString p_tablename) const
+SQLInfoSQLServer::GetCATALOGIndexList(CString& p_schema,CString& p_tablename) const
 {
+  p_schema.Empty(); // Do not use
   p_tablename.MakeLower();
   CString query = "SELECT idx.name\n"
                   "      ,col.name\n"
@@ -724,7 +817,7 @@ SQLInfoSQLServer::GetCATALOGIndexList(CString p_schema,CString p_tablename) cons
                   "      ,dbo.sysindexkeys ixk\n"
                   "      ,dbo.sysobjects obj\n"
                   "      ,dbo.syscolumns col\n"
-                  " WHERE obj.name = '" + p_tablename + "'\n"
+                  " WHERE obj.name = ?\n"  // <== PARAMETER
                   "   AND obj.Id = idx.id\n"
                   "   AND obj.Id = ixk.id\n"
                   "   AND idx.indid = ixk.indid\n"
@@ -738,7 +831,7 @@ SQLInfoSQLServer::GetCATALOGIndexList(CString p_schema,CString p_tablename) cons
 }
 
 CString
-SQLInfoSQLServer::GetCATALOGIndexAttributes(CString p_schema,CString p_tablename,CString p_indexname) const
+SQLInfoSQLServer::GetCATALOGIndexAttributes(CString& /*p_schema*/,CString& /*p_tablename*/,CString& /*p_indexname*/) const
 {
   return "";
 }
@@ -756,7 +849,7 @@ SQLInfoSQLServer::GetCATALOGIndexCreate(MIndicesMap& p_indices) const
     {
       // New index
       query = "CREATE ";
-      if(index.m_unique)
+      if(index.m_nonunique == false)
       {
         query += "UNIQUE ";
       }
@@ -821,7 +914,7 @@ SQLInfoSQLServer::GetCATALOGPrimaryExists(CString p_schema,CString p_tablename) 
 }
 
 CString
-SQLInfoSQLServer::GetCATALOGPrimaryAttributes(CString p_schema,CString p_tablename) const
+SQLInfoSQLServer::GetCATALOGPrimaryAttributes(CString& /*p_schema*/,CString& /*p_tablename*/) const
 {
   // TO BE IMPLEMENTED
   return "";
@@ -891,17 +984,18 @@ SQLInfoSQLServer::GetCATALOGForeignExists(CString p_schema,CString p_tablename,C
 }
 
 CString
-SQLInfoSQLServer::GetCATALOGForeignList(CString p_schema,CString p_tablename,int p_maxColumns /*=SQLINFO_MAX_COLUMNS*/) const
+SQLInfoSQLServer::GetCATALOGForeignList(CString& p_schema,CString& p_tablename,int p_maxColumns /*=SQLINFO_MAX_COLUMNS*/) const
 {
-  return GetCATALOGForeignAttributes(p_schema,p_tablename,"",p_maxColumns);
+  CString constraint;
+  return GetCATALOGForeignAttributes(p_schema,p_tablename,constraint,p_maxColumns);
 }
 
 CString
-SQLInfoSQLServer::GetCATALOGForeignAttributes(CString p_schema
-                                             ,CString p_tablename
-                                             ,CString p_constraint
-                                             ,bool    p_referenced /*=false*/
-                                             ,int   /*p_maxColumns*/ /*=SQLINFO_MAX_COLUMNS*/) const
+SQLInfoSQLServer::GetCATALOGForeignAttributes(CString& p_schema
+                                             ,CString& p_tablename
+                                             ,CString& p_constraint
+                                             ,bool     p_referenced /*=false*/
+                                             ,int    /*p_maxColumns*/ /*=SQLINFO_MAX_COLUMNS*/) const
 {
   p_schema.MakeLower();
   p_tablename.MakeLower();
@@ -945,28 +1039,28 @@ SQLInfoSQLServer::GetCATALOGForeignAttributes(CString p_schema
                   "   AND prk.type                 = 'K '\n";
   if(!p_schema.IsEmpty())
   {
-    query += "   AND sch.name = '" + p_schema + "'\n";
+    query += "   AND sch.name = ?\n";
   }
   if(!p_tablename.IsEmpty())
   {
     if(p_referenced)
     {
-      query += "   AND pri.name = '" + p_tablename + "'\n";
+      query += "   AND pri.name = ?\n";
     }
     else
     {
-      query += "   AND tab.name = '" + p_tablename + "'\n";
+      query += "   AND tab.name = ?\n";
     }
   }
   if(!p_constraint.IsEmpty())
   {
     if(p_referenced)
     {
-      query += "   AND prk.name = '" + p_constraint + "'\n";
+      query += "   AND prk.name = ?\n";
     }
     else
     {
-      query += "   AND fok.name = '" + p_constraint + "'\n";
+      query += "   AND fok.name = ?\n";
     }
   }
   // Order up to column number
@@ -1092,13 +1186,14 @@ SQLInfoSQLServer::GetCATALOGTriggerExists(CString p_schema, CString p_tablename,
 }
 
 CString
-SQLInfoSQLServer::GetCATALOGTriggerList(CString p_schema, CString p_tablename) const
+SQLInfoSQLServer::GetCATALOGTriggerList(CString& p_schema,CString& p_tablename) const
 {
-  return GetCATALOGTriggerAttributes(p_schema,p_tablename,"");
+  CString triggername;
+  return GetCATALOGTriggerAttributes(p_schema,p_tablename,triggername);
 }
 
 CString
-SQLInfoSQLServer::GetCATALOGTriggerAttributes(CString p_schema, CString p_tablename, CString p_triggername) const
+SQLInfoSQLServer::GetCATALOGTriggerAttributes(CString& p_schema,CString& p_tablename,CString& p_triggername) const
 {
   p_schema.MakeLower();
   p_tablename.MakeLower();
@@ -1138,17 +1233,17 @@ SQLInfoSQLServer::GetCATALOGTriggerAttributes(CString p_schema, CString p_tablen
               "   AND tab.schema_id = sch.schema_id\n");
   if(!p_schema.IsEmpty())
   {
-    sql += "   AND sch.name = '" + p_schema + "'\n";
+    sql += "   AND sch.name = ?\n";
   }
   if(!p_tablename.IsEmpty())
   {
     sql += "   AND tab.name ";
-    sql += p_tablename.Find('%') >= 0 ? "LIKE '" : "= '";
-    sql += p_tablename + "'\n";
+    sql += p_tablename.Find('%') >= 0 ? "LIKE" : "=";
+    sql += " ?\n";
   }
   if(!p_triggername.IsEmpty())
   {
-    sql += "   AND trg.name = '" + p_triggername + "'";
+    sql += "   AND trg.name = ?";
   }
   return sql;
 }
@@ -1192,11 +1287,11 @@ SQLInfoSQLServer::GetCATALOGSequenceExists(CString p_schema, CString p_sequence)
 }
 
 CString
-SQLInfoSQLServer::GetCATALOGSequenceList(CString p_schema,CString p_pattern) const
+SQLInfoSQLServer::GetCATALOGSequenceList(CString& p_schema,CString& p_pattern) const
 {
   p_schema.MakeLower();
   p_pattern.MakeLower();
-  if(p_pattern != "%")
+  if(!p_pattern.IsEmpty() && p_pattern != "%")
   {
     p_pattern = "%" + p_pattern + "%";
   }
@@ -1211,18 +1306,21 @@ SQLInfoSQLServer::GetCATALOGSequenceList(CString p_schema,CString p_pattern) con
                 "      ,0 ordering\n"
                 "  FROM sys.sequences seq\n"
                 "      ,sys.schemas   sch\n"
-                " WHERE sch.schema_id = seq.schema_id\n"
-                "   AND seq.name LIKE '" + p_pattern + "'\n";
+                " WHERE sch.schema_id = seq.schema_id\n";
   if(!p_schema.IsEmpty())
   {
-    sql += "   AND sch.name = '" + p_schema + "'\n";
+    sql += "   AND sch.name = ?\n";
+  }
+  if(!p_pattern.IsEmpty())
+  {
+    sql += "   AND seq.name LIKE ?\n";
   }
   sql += " ORDER BY 1,2,3";
   return sql;
 }
 
 CString
-SQLInfoSQLServer::GetCATALOGSequenceAttributes(CString p_schema, CString p_sequence) const
+SQLInfoSQLServer::GetCATALOGSequenceAttributes(CString& p_schema,CString& p_sequence) const
 {
   p_schema.MakeLower();
   p_sequence.MakeLower();
@@ -1240,13 +1338,12 @@ SQLInfoSQLServer::GetCATALOGSequenceAttributes(CString p_schema, CString p_seque
                 " WHERE sch.schema_id = seq.schema_id\n";
   if(!p_schema.IsEmpty())
   {
-    sql += "   AND sch.name = '" + p_schema + "'\n";
+    sql += "   AND sch.name = ?\n";
   }
   if(!p_sequence.IsEmpty())
   {
-    sql += "   AND seq.name = '" + p_sequence + "'\n";
+    sql += "   AND seq.name = ?\n";
   }
-  sql += " ORDER BY 1,2,3";
   return sql;
 }
 
@@ -1285,19 +1382,19 @@ SQLInfoSQLServer::GetCATALOGSequenceDrop(CString p_schema, CString p_sequence) c
 // ALL VIEW FUNCTIONS
 
 CString 
-SQLInfoSQLServer::GetCATALOGViewExists(CString p_schema,CString p_viewname) const
+SQLInfoSQLServer::GetCATALOGViewExists(CString& /*p_schema*/,CString& /*p_viewname*/) const
 {
   return "";
 }
 
 CString 
-SQLInfoSQLServer::GetCATALOGViewList(CString p_schema,CString p_pattern) const
+SQLInfoSQLServer::GetCATALOGViewList(CString& p_schema,CString& p_pattern) const
 {
   return GetCATALOGViewAttributes(p_schema, p_pattern);
 }
 
 CString 
-SQLInfoSQLServer::GetCATALOGViewAttributes(CString p_schema,CString p_viewname) const
+SQLInfoSQLServer::GetCATALOGViewAttributes(CString& p_schema,CString& p_viewname) const
 {
   p_schema.MakeLower();
   p_viewname.MakeLower();
@@ -1316,13 +1413,13 @@ SQLInfoSQLServer::GetCATALOGViewAttributes(CString p_schema,CString p_viewname) 
                   "   AND obj.uid = usr.uid\n";
   if (!p_schema.IsEmpty())
   {
-    query += "   AND usr.name = '" + p_schema + "'\n";
+    query += "   AND usr.name = ?\n";
   }
   if (!p_viewname.IsEmpty())
   {
     query += "   AND tab.name ";
-    query += p_viewname.Find('%') >= 0 ? "LIKE '" : "= '";
-    query += p_viewname + "'\n";
+    query += p_viewname.Find('%') >= 0 ? "LIKE" : "=";
+    query += " ?\n";
   }
   query += " ORDER BY 1,2,3";
   return query;}
@@ -1344,6 +1441,39 @@ SQLInfoSQLServer::GetCATALOGViewDrop(CString p_schema,CString p_viewname,CString
 {
   p_precursor.Empty();
   return "DROP VIEW " + p_schema + "." + p_viewname;
+}
+
+// All Privilege functions
+CString
+SQLInfoSQLServer::GetCATALOGTablePrivileges(CString& /*p_schema*/,CString& /*p_tablename*/) const
+{
+  return "";
+}
+
+CString
+SQLInfoSQLServer::GetCATALOGColumnPrivileges(CString& /*p_schema*/,CString& /*p_tablename*/,CString& /*p_columnname*/) const
+{
+  return "";
+}
+
+CString 
+SQLInfoSQLServer::GetCatalogGrantPrivilege(CString p_schema,CString p_objectname,CString p_privilege,CString p_grantee,bool p_grantable)
+{
+  CString sql;
+  sql.Format("GRANT %s ON %s.%s TO %s",p_privilege.GetString(),p_schema.GetString(),p_objectname.GetString(),p_grantee.GetString());
+  if(p_grantable)
+  {
+    sql += " WITH GRANT OPTION";
+  }
+  return sql;
+}
+
+CString 
+SQLInfoSQLServer::GetCatalogRevokePrivilege(CString p_schema,CString p_objectname,CString p_privilege,CString p_grantee)
+{
+  CString sql;
+  sql.Format("REVOKE %s ON %s.%s FROM %s",p_privilege.GetString(),p_schema.GetString(),p_objectname.GetString(),p_grantee.GetString());
+  return sql;
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -1386,13 +1516,13 @@ SQLInfoSQLServer::GetPSMProcedureExists(CString p_schema, CString p_procedure) c
 }
 
 CString
-SQLInfoSQLServer::GetPSMProcedureList(CString p_schema) const
+SQLInfoSQLServer::GetPSMProcedureList(CString& /*p_schema*/) const
 {
   return "";
 }
 
 CString
-SQLInfoSQLServer::GetPSMProcedureAttributes(CString p_schema, CString p_procedure) const
+SQLInfoSQLServer::GetPSMProcedureAttributes(CString& /*p_schema*/,CString& /*p_procedure*/) const
 {
   return "";
 }
@@ -1424,7 +1554,7 @@ SQLInfoSQLServer::GetPSMProcedureErrors(CString p_schema,CString p_procedure) co
 
 // And it's parameters
 CString
-SQLInfoSQLServer::GetPSMProcedureParameters(CString p_schema,CString p_procedure) const
+SQLInfoSQLServer::GetPSMProcedureParameters(CString& /*p_schema*/,CString& /*p_procedure*/) const
 {
   return "";
 }

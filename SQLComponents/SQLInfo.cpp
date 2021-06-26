@@ -29,6 +29,7 @@
 #include "SQLQuery.h"
 #include "SQLInfo.h"
 #include "SQLWrappers.h"
+#include "SQLMessage.h"
 #include <sqlext.h>
 #include <atltrace.h>
 #include <map>
@@ -241,7 +242,7 @@ SQLInfo::Init()
 void
 SQLInfo::InfoMessageBox(CString p_message,UINT p_type /*= MB_OK*/)
 {
-  ::MessageBox(NULL,p_message,"ODBC Driver info",p_type);
+  SQLMessage(NULL,p_message,"ODBC Driver info",p_type);
 }
 
 // Add an ODBC SQL Keyword
@@ -734,16 +735,25 @@ SQLInfo::ReadingDataTypes()
 
 // Getting datatype info
 TypeInfo* 
-SQLInfo::GetTypeInfo(int p_sqlDatatype) const
+SQLInfo::GetTypeInfo(int p_sqlDatatype,CString p_typename /*=""*/) const
 {
+  TypeInfo* result = nullptr;
+
   for(auto& type : m_dataTypes)
   {
     if(type.second->m_data_type == p_sqlDatatype)
     {
-      return type.second;
+      result = type.second;
+      if(p_typename.GetLength())
+      {
+        if(type.second->m_type_name.CompareNoCase(p_typename) == 0)
+        {
+          return type.second;
+        }
+      }
     }
   }
-  return nullptr;
+  return result;
 }
 
 // Returns the fact whether an API function is supported
@@ -1522,8 +1532,8 @@ SQLInfo::MakeInfoTableColumns(MColumnMap& p_columns
                              ,CString&    p_errors
                              ,CString     p_schema
                              ,CString     p_tablename
-                             ,CString     p_columname /*=""*/)
-  {
+                             ,CString     p_columnname /*=""*/)
+{
   SQLCHAR      szCatalogName [SQL_MAX_BUFFER+1];
   SQLLEN       cbCatalogName = 0;
   SQLCHAR      szSchemaName  [SQL_MAX_BUFFER+1];
@@ -1571,7 +1581,7 @@ SQLInfo::MakeInfoTableColumns(MColumnMap& p_columns
   szCatalogName[0] = 0;
   strcpy_s((char*)szSchemaName,SQL_MAX_BUFFER,p_schema.GetString());
   strcpy_s((char*)szTableName, SQL_MAX_BUFFER,p_tablename.GetString());
-  strcpy_s((char*)szColumnName,SQL_MAX_BUFFER,p_columname.GetString());
+  strcpy_s((char*)szColumnName,SQL_MAX_BUFFER,p_columnname.GetString());
 
   CloseStatement();
   bool meta = GetStatement(false);
@@ -1649,10 +1659,10 @@ SQLInfo::MakeInfoTableColumns(MColumnMap& p_columns
          {
            theColumn.m_datatype = DataType;                            // 5
            type = ODBCDataType(DataType);
-         if(cbTypeName > 0)
-         {
-           if(type.CompareNoCase((char*)szTypeName))
+           if(cbTypeName > 0)
            {
+             if(type.CompareNoCase((char*)szTypeName))
+             {
                type = szTypeName;                                      // 6
              }
            }
@@ -2039,7 +2049,7 @@ SQLInfo::MakeInfoTableStatistics(MIndicesMap& p_statistics
         if(cbFilter      > 0) stat.m_filter      = szFilter;
         if(cbAscDesc     > 0) stat.m_ascending   = AscDesc;
         // Numbers
-        stat.m_unique      = cbNonUnique   > 0 ? !NonUnique  : false;
+        stat.m_nonunique   = cbNonUnique   > 0 ? NonUnique   : false;
         stat.m_indexType   = cbIndexType   > 0 ? IndexType   : 0;
         stat.m_position    = cbOrdinalPos  > 0 ? OrdinalPos  : 0;
         stat.m_cardinality = cbCardinality > 0 ? Cardinality : 0;
@@ -2287,6 +2297,122 @@ SQLInfo::MakeInfoTablePrivileges(MPrivilegeMap& p_privileges
   {
     p_errors  = "Driver not capable to find privileges for: ";
     p_errors += MakeObjectName(catalog,schema,table,(SQLCHAR*)"");
+    p_errors += ". Error in ODBC statement: ";
+    p_errors += m_database->GetErrorString(m_hstmt);
+  }
+  CloseStatement();
+  return p_privileges.size() > 0;
+}
+
+bool 
+SQLInfo::MakeInfoColumnPrivileges(MPrivilegeMap&  p_privileges
+                                 ,CString&        p_errors
+                                 ,CString         p_schema
+                                 ,CString         p_tablename
+                                 ,CString         p_columnname /*= ""*/)
+{
+  SQLCHAR      szCatalogName [SQL_MAX_BUFFER];
+  SQLLEN       cbCatalogName = 0;
+  SQLCHAR      szSchemaName  [SQL_MAX_BUFFER];
+  SQLLEN       cbSchemaName  = 0;
+  SQLCHAR      szTableName   [SQL_MAX_BUFFER];
+  SQLLEN       cbTableName   = 0;
+  SQLCHAR      szColumnName  [SQL_MAX_BUFFER];
+  SQLLEN       cbColumnName  = 0;
+  SQLCHAR      szGrantor     [SQL_MAX_BUFFER];
+  SQLLEN       cbGrantor     = 0;
+  SQLCHAR      szGrantee     [SQL_MAX_BUFFER];
+  SQLLEN       cbGrantee     = 0;
+  SQLCHAR      szPrivilege   [SQL_MAX_BUFFER];
+  SQLLEN       cbPrivilege   = 0;
+  SQLCHAR      szGrantable   [10];
+  SQLLEN       cbGrantable   = 0;
+
+  // Check whether we can do this
+  if(!SupportedFunction(SQL_API_SQLCOLUMNPRIVILEGES))
+  {
+    p_errors = "SQLColumnPrivileges unsupported. Get a better ODBC driver!";
+    return false;
+  }
+  szCatalogName[0] = 0;
+  strcpy_s((char*)szSchemaName, SQL_MAX_BUFFER,p_schema.GetString());
+  strcpy_s((char*)szTableName,  SQL_MAX_BUFFER,p_tablename.GetString());
+  strcpy_s((char*)szColumnName, SQL_MAX_BUFFER,p_columnname.GetString());
+
+  CloseStatement();
+  bool meta = GetStatement(false);
+
+  unsigned char* catalog = GetMetaPointer(szCatalogName,meta);
+  unsigned char* schema  = GetMetaPointer(szSchemaName, meta);
+  unsigned char* table   = GetMetaPointer(szTableName,  meta);
+  unsigned char* column  = GetMetaPointer(szColumnName, meta);
+
+  m_retCode = SQL_ERROR;
+  ODBC_CALL_ONCE(SQLColumnPrivileges(m_hstmt
+                                    ,catalog                  // Catalog name to search for
+                                    ,catalog ? SQL_NTS : 0    // Catalog name length
+                                    ,schema                   // Schema name to search for
+                                    ,schema  ? SQL_NTS : 0    // Schema name length
+                                    ,table                    // Table Name to search for
+                                    ,table   ? SQL_NTS : 0    // Table name length
+                                    ,column                   // Column name to search for
+                                    ,column  ? SQL_NTS : 0    // Column name length
+                                   ));
+  if(m_retCode == SQL_SUCCESS)
+  {
+     SQLBindCol(m_hstmt, 1, SQL_C_CHAR, szCatalogName,SQL_MAX_BUFFER, &cbCatalogName);
+     SQLBindCol(m_hstmt, 2, SQL_C_CHAR, szSchemaName, SQL_MAX_BUFFER, &cbSchemaName);
+     SQLBindCol(m_hstmt, 3, SQL_C_CHAR, szTableName,  SQL_MAX_BUFFER, &cbTableName);
+     SQLBindCol(m_hstmt, 4, SQL_C_CHAR, szColumnName, SQL_MAX_BUFFER, &cbColumnName);
+     SQLBindCol(m_hstmt, 5, SQL_C_CHAR, szGrantor,    SQL_MAX_BUFFER, &cbGrantor);
+     SQLBindCol(m_hstmt, 6, SQL_C_CHAR, szGrantee,    SQL_MAX_BUFFER, &cbGrantee);
+     SQLBindCol(m_hstmt, 7, SQL_C_CHAR, szPrivilege,  SQL_MAX_BUFFER, &cbPrivilege);
+     SQLBindCol(m_hstmt, 8, SQL_C_CHAR, szGrantable,  SQL_MAX_BUFFER, &cbGrantable);
+     while(true)
+     {
+       m_retCode = SqlFetch(m_hstmt);
+       if(m_retCode == SQL_ERROR || m_retCode == SQL_SUCCESS_WITH_INFO)
+       {
+         CString err = m_database->GetErrorString(m_hstmt);
+         InfoMessageBox(err,MB_OK);
+         if(m_retCode == SQL_ERROR)
+         {
+           break;
+         }
+       }
+       if(m_retCode == SQL_SUCCESS || m_retCode == SQL_SUCCESS_WITH_INFO)
+       {
+         MetaPrivilege priv;
+
+         if(cbCatalogName > 0) priv.m_catalogName = szCatalogName;
+         if(cbSchemaName  > 0) priv.m_schemaName  = szSchemaName;
+         if(cbTableName   > 0) priv.m_tableName   = szTableName;
+         if(cbColumnName  > 0) priv.m_columnName  = szColumnName;
+         if(cbGrantor     > 0) priv.m_grantor     = szGrantor;
+         if(cbGrantee     > 0) priv.m_grantee     = szGrantee;
+         if(cbPrivilege   > 0) priv.m_privilege   = szPrivilege;
+
+         priv.m_grantable = false;
+         if(cbGrantable > 0)
+         {
+           if(_stricmp((char*)szGrantable,"YES") == 0)
+           {
+             priv.m_grantable = true;
+           }
+         }
+         // Keep record
+         p_privileges.push_back(priv);
+       }
+       else
+       {
+         break;
+       }
+     }
+  }
+  else
+  {
+    p_errors  = "Driver not capable to find privileges for: ";
+    p_errors += MakeObjectName(catalog,schema,table,column);
     p_errors += ". Error in ODBC statement: ";
     p_errors += m_database->GetErrorString(m_hstmt);
   }

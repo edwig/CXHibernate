@@ -1165,7 +1165,7 @@ int ZEXPORT inflate(z_streamp strm,int flush)
                 out -= left;
                 strm->total_out += out;
                 state->total += out;
-                if (out)
+                if(out)
                 {
                   state->check = UPDATE(state->check,put - out,out);
                   strm->adler = state->check;
@@ -1230,7 +1230,7 @@ int ZEXPORT inflate(z_streamp strm,int flush)
     strm->total_in += in;
     strm->total_out += out;
     state->total += out;
-    if (state->wrap && out)
+    if(state->wrap && out)
     {
       state->check = UPDATE(state->check,strm->next_out - out,out);
       strm->adler  = state->check;

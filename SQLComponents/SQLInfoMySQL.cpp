@@ -139,6 +139,13 @@ SQLInfoMySQL::GetRDBMSSupportsDatatypeInterval() const
   return false;
 }
 
+// Supports functions at the place of table columns in create/alter index statement
+bool
+SQLInfoMySQL::GetRDBMSSupportsFunctionalIndexes() const
+{
+  return true;
+}
+
 // Gets the maximum length of an SQL statement
 unsigned long
 SQLInfoMySQL::GetRDBMSMaxStatementLength() const
@@ -191,6 +198,13 @@ CString
 SQLInfoMySQL::GetKEYWORDQuoteCharacter() const
 {
   return "\'";
+}
+
+// Get quote character around reserved words as an identifier
+CString
+SQLInfoMySQL::GetKEYWORDReservedWordQuote() const
+{
+  return "`";
 }
 
 // Get default NULL for parameter list input
@@ -264,6 +278,20 @@ CString
 SQLInfoMySQL::GetKEYWORDStatementNVL(CString& p_test,CString& p_isnull) const
 {
   return "{fn IFNULL(" + p_test + "," + p_isnull + ")}";
+}
+
+// Gets the RDBMS definition of the datatype
+CString
+SQLInfoMySQL::GetKEYWORDDataType(MetaColumn* p_column)
+{
+  return p_column->m_typename;
+}
+
+// Connects to a default schema in the database/instance
+CString
+SQLInfoMySQL::GetSQLDefaultSchema(CString p_schema) const
+{
+  return "USE " + p_schema;
 }
 
 // Gets the construction for inline generating a key within an INSERT statement
@@ -457,20 +485,20 @@ SQLInfoMySQL::GetCATALOGMetaTypes(int p_type) const
 
 // Get SQL to check if a table already exists in the database
 CString
-SQLInfoMySQL::GetCATALOGTableExists(CString /*p_schema*/,CString p_tablename) const
+SQLInfoMySQL::GetCATALOGTableExists(CString& /*p_schema*/,CString& /*p_tablename*/) const
 {
   // Still to do in MySQL
   return "";
 }
 
 CString
-SQLInfoMySQL::GetCATALOGTablesList(CString p_schema,CString p_pattern) const
+SQLInfoMySQL::GetCATALOGTablesList(CString& p_schema,CString& p_pattern) const
 {
   return GetCATALOGTableAttributes(p_schema,p_pattern);
 }
 
 CString
-SQLInfoMySQL::GetCATALOGTableAttributes(CString p_schema,CString p_tablename) const
+SQLInfoMySQL::GetCATALOGTableAttributes(CString& p_schema,CString& p_tablename) const
 {
   CString sql;
   sql = "SELECT table_catalog\n"
@@ -489,28 +517,30 @@ SQLInfoMySQL::GetCATALOGTableAttributes(CString p_schema,CString p_tablename) co
         "   AND table_schema NOT IN ('mysql','sys','performance_schema')\n";
   if(!p_schema)
   {
-    sql += "   AND table_schema = '" + p_schema + "'\n";
+    sql += "   AND table_schema = ?\n";
   }
   if(!p_tablename.IsEmpty())
   {
     sql += "   AND table_name ";
-    sql += p_tablename.Find('%') >= 0 ? "LIKE '" : "= '";
-    sql += p_tablename + "'\n";
+    sql += p_tablename.Find('%') >= 0 ? "LIKE" : "=";
+    sql += " ?\n";
   }
   sql += " ORDER BY 1,2,3";
   return sql;
 }
 
 CString
-SQLInfoMySQL::GetCATALOGTableSynonyms(CString /*p_schema*/,CString /*p_tablename*/) const
+SQLInfoMySQL::GetCATALOGTableSynonyms(CString& /*p_schema*/,CString& /*p_tablename*/) const
 {
   // MS-Access cannot do this
   return false;
 }
 
 CString
-SQLInfoMySQL::GetCATALOGTableCatalog(CString /*p_schema*/,CString p_tablename) const
+SQLInfoMySQL::GetCATALOGTableCatalog(CString& p_schema,CString& p_tablename) const
 {
+  p_schema.Empty(); // do not bind as a parameter
+
   CString sql;
   sql = "SELECT table_catalog\n"
         "      ,table_schema\n"
@@ -526,16 +556,22 @@ SQLInfoMySQL::GetCATALOGTableCatalog(CString /*p_schema*/,CString p_tablename) c
   if(!p_tablename.IsEmpty())
   {
     sql += "   AND table_name ";
-    sql += p_tablename.Find('%') >= 0 ? "LIKE '" : "= '";
-    sql += p_tablename + "'\n";
+    sql += p_tablename.Find('%') >= 0 ? "LIKE" : "=";
+    sql += " ?\n";
   }
   sql += " ORDER BY 1,2,3";
   return sql;}
 
 CString
-SQLInfoMySQL::GetCATALOGTableCreate(MetaTable& /*p_table*/,MetaColumn& /*p_column*/) const
+SQLInfoMySQL::GetCATALOGTableCreate(MetaTable& p_table,MetaColumn& /*p_column*/) const
 {
-  return "";
+  CString sql = "CREATE ";
+  if (p_table.m_temporary)
+  {
+    sql += "TEMPORARY ";
+  }
+  sql += "TABLE " + p_table.m_table;
+  return sql;
 }
 
 CString
@@ -546,9 +582,22 @@ SQLInfoMySQL::GetCATALOGTableRename(CString /*p_schema*/,CString p_tablename,CSt
 }
 
 CString
-SQLInfoMySQL::GetCATALOGTableDrop(CString /*p_schema*/,CString p_tablename) const
+SQLInfoMySQL::GetCATALOGTableDrop(CString /*p_schema*/,CString p_tablename,bool p_ifExist /*= false*/,bool p_restrict /*= false*/,bool p_cascade /*= false*/) const
 {
-  CString sql("DROP TABLE " + p_tablename);
+  CString sql("DROP TABLE ");
+  if (p_ifExist)
+  {
+    sql += "IF EXISTS ";
+  }
+  sql += p_tablename;
+  if (p_restrict)
+  {
+    sql += " RESTRICT";
+  }
+  else if (p_cascade)
+  {
+    sql += " CASCADE";
+  }
   return sql;
 }
 
@@ -578,20 +627,22 @@ SQLInfoMySQL::GetCATALOGTemptableDrop(CString /*p_schema*/,CString p_tablename) 
 // ALL COLUMN FUNCTIONS
 
 CString 
-SQLInfoMySQL::GetCATALOGColumnExists(CString /*p_schema*/,CString p_tablename,CString p_columname) const
+SQLInfoMySQL::GetCATALOGColumnExists(CString /*p_schema*/,CString p_tablename,CString p_columnname) const
 {
   return "";
 }
 
 CString 
-SQLInfoMySQL::GetCATALOGColumnList(CString /*p_schema*/,CString p_tablename) const
+SQLInfoMySQL::GetCATALOGColumnList(CString& /*p_schema*/,CString& /*p_tablename*/) const
 {
+  // Standard ODBC driver suffices
   return "";
 }
 
 CString 
-SQLInfoMySQL::GetCATALOGColumnAttributes(CString /*p_schema*/,CString p_tablename,CString p_columname) const
+SQLInfoMySQL::GetCATALOGColumnAttributes(CString& /*p_schema*/,CString& /*p_tablename*/,CString& /*p_columnname*/) const
 {
+  // Standard ODBC driver suffices
   return "";
 }
 
@@ -653,7 +704,7 @@ SQLInfoMySQL::GetCATALOGIndexExists(CString /*p_schema*/,CString p_tablename,CSt
 }
 
 CString
-SQLInfoMySQL::GetCATALOGIndexList(CString /*p_schema*/,CString p_tablename) const
+SQLInfoMySQL::GetCATALOGIndexList(CString& /*p_schema*/,CString& /*p_tablename*/) const
 {
   // Cannot be implemented for generic ODBC
   // Use SQLStatistics instead (see SQLInfo class)
@@ -661,7 +712,7 @@ SQLInfoMySQL::GetCATALOGIndexList(CString /*p_schema*/,CString p_tablename) cons
 }
 
 CString
-SQLInfoMySQL::GetCATALOGIndexAttributes(CString /*p_schema*/,CString p_tablename,CString p_indexname) const
+SQLInfoMySQL::GetCATALOGIndexAttributes(CString& /*p_schema*/,CString& /*p_tablename*/,CString& /*p_indexname*/) const
 {
   // Cannot be implemented for generic ODBC
   // Use SQLStatistics instead (see SQLInfo class)
@@ -680,7 +731,7 @@ SQLInfoMySQL::GetCATALOGIndexCreate(MIndicesMap& p_indices) const
     {
       // New index
       query = "CREATE ";
-      if(index.m_unique)
+      if(index.m_nonunique == false)
       {
         query += "UNIQUE ";
       }
@@ -733,7 +784,7 @@ SQLInfoMySQL::GetCATALOGPrimaryExists(CString /*p_schema*/,CString p_tablename) 
 }
 
 CString
-SQLInfoMySQL::GetCATALOGPrimaryAttributes(CString /*p_schema*/,CString p_tablename) const
+SQLInfoMySQL::GetCATALOGPrimaryAttributes(CString& /*p_schema*/,CString& /*p_tablename*/) const
 {
   // To be implemented
   return "";
@@ -783,7 +834,7 @@ SQLInfoMySQL::GetCATALOGForeignExists(CString /*p_schema*/,CString p_tablename,C
 }
 
 CString
-SQLInfoMySQL::GetCATALOGForeignList(CString /*p_schema*/,CString p_tablename,int /*p_maxColumns*/ /*=SQLINFO_MAX_COLUMNS*/) const
+SQLInfoMySQL::GetCATALOGForeignList(CString& /*p_schema*/,CString& /*p_tablename*/,int /*p_maxColumns*/ /*=SQLINFO_MAX_COLUMNS*/) const
 {
   // Cannot be implemented for generic ODBC
   // Use SQLForeignKeys instead (see SQLInfo class)
@@ -791,7 +842,7 @@ SQLInfoMySQL::GetCATALOGForeignList(CString /*p_schema*/,CString p_tablename,int
 }
 
 CString
-SQLInfoMySQL::GetCATALOGForeignAttributes(CString /*p_schema*/,CString p_tablename,CString p_constraintname,bool /*p_referenced = false*/,int /*p_maxColumns*/ /*=SQLINFO_MAX_COLUMNS*/) const
+SQLInfoMySQL::GetCATALOGForeignAttributes(CString& /*p_schema*/,CString& /*p_tablename*/,CString& /*p_constraintname*/,bool /*p_referenced = false*/,int /*p_maxColumns*/ /*=SQLINFO_MAX_COLUMNS*/) const
 {
   // Cannot be implemented for generic ODBC
   // Use SQLForeignKeys instead (see SQLInfo class)
@@ -951,13 +1002,14 @@ SQLInfoMySQL::GetCATALOGTriggerExists(CString /*p_schema*/, CString p_tablename,
 }
 
 CString
-SQLInfoMySQL::GetCATALOGTriggerList(CString p_schema, CString p_tablename) const
+SQLInfoMySQL::GetCATALOGTriggerList(CString& p_schema,CString& p_tablename) const
 {
-  return GetCATALOGTriggerAttributes(p_schema,p_tablename,"");
+  CString triggername;
+  return GetCATALOGTriggerAttributes(p_schema,p_tablename,triggername);
 }
 
 CString
-SQLInfoMySQL::GetCATALOGTriggerAttributes(CString p_schema, CString p_tablename, CString p_triggername) const
+SQLInfoMySQL::GetCATALOGTriggerAttributes(CString& p_schema,CString& p_tablename,CString& p_triggername) const
 {
   CString sql;
   sql = "SELECT event_object_catalog\n"
@@ -988,17 +1040,17 @@ SQLInfoMySQL::GetCATALOGTriggerAttributes(CString p_schema, CString p_tablename,
         "  FROM information_schema.triggers\n";
   if(!p_schema.IsEmpty())
   {
-    sql += " WHERE event_object_schema = '" + p_schema + "'\n";
+    sql += " WHERE event_object_schema = ?\n";
   }
   if(!p_tablename.IsEmpty())
   {
     sql += p_schema.IsEmpty() ? " WHERE " : "   AND ";
-    sql += "event_object_table = '" + p_tablename + "'\n";
+    sql += "event_object_table = ?\n";
   }
   if(!p_triggername.IsEmpty())
   {
     sql += p_schema.IsEmpty() && p_tablename.IsEmpty() ? " WHERE " : "   AND ";
-    sql += "trigger_name = '" + p_triggername + "'\n";
+    sql += "trigger_name = ?\n";
   }
   sql += " ORDER BY 1,2,3,4";
   return sql;
@@ -1026,13 +1078,13 @@ SQLInfoMySQL::GetCATALOGSequenceExists(CString /*p_schema*/, CString p_sequence)
 }
 
 CString
-SQLInfoMySQL::GetCATALOGSequenceList(CString p_schema,CString p_pattern) const
+SQLInfoMySQL::GetCATALOGSequenceList(CString& /*p_schema*/,CString& /*p_pattern*/) const
 {
   return "";
 }
 
 CString
-SQLInfoMySQL::GetCATALOGSequenceAttributes(CString /*p_schema*/, CString p_sequence) const
+SQLInfoMySQL::GetCATALOGSequenceAttributes(CString& /*p_schema*/,CString& /*p_sequence*/) const
 {
   return "";
 }
@@ -1053,19 +1105,19 @@ SQLInfoMySQL::GetCATALOGSequenceDrop(CString /*p_schema*/, CString p_sequence) c
 // ALL VIEW FUNCTIONS
 
 CString 
-SQLInfoMySQL::GetCATALOGViewExists(CString p_schema,CString p_viewname) const
+SQLInfoMySQL::GetCATALOGViewExists(CString& /*p_schema*/,CString& /*p_viewname*/) const
 {
   return "";
 }
 
 CString 
-SQLInfoMySQL::GetCATALOGViewList(CString p_schema,CString p_pattern) const
+SQLInfoMySQL::GetCATALOGViewList(CString& p_schema,CString& p_pattern) const
 {
   return GetCATALOGViewAttributes(p_schema,p_pattern);
 }
 
 CString 
-SQLInfoMySQL::GetCATALOGViewAttributes(CString p_schema,CString p_viewname) const
+SQLInfoMySQL::GetCATALOGViewAttributes(CString& p_schema,CString& p_viewname) const
 {
   CString sql;
   sql = "SELECT table_catalog\n"
@@ -1081,13 +1133,13 @@ SQLInfoMySQL::GetCATALOGViewAttributes(CString p_schema,CString p_viewname) cons
         "   AND table_schema NOT IN ('mysql','sys','performance_schema')\n";
   if(!p_schema)
   {
-    sql += "   AND table_schema = '" + p_schema + "'\n";
+    sql += "   AND table_schema = ?\n";
   }
   if(!p_viewname.IsEmpty())
   {
     sql += "   AND table_name ";
-    sql += p_viewname.Find('%') >= 0 ? "LIKE '" : "= '";
-    sql += p_viewname + "'\n";
+    sql += p_viewname.Find('%') >= 0 ? "LIKE" : "=";
+    sql += " ?\n";
   }
   sql += " ORDER BY 1,2,3";
   return sql;
@@ -1110,6 +1162,51 @@ SQLInfoMySQL::GetCATALOGViewDrop(CString /*p_schema*/,CString p_viewname,CString
 {
   p_precursor.Empty();
   return "DROP VIEW " + p_viewname;
+}
+
+// All Privilege functions
+CString
+SQLInfoMySQL::GetCATALOGTablePrivileges(CString& /*p_schema*/,CString& /*p_tablename*/) const
+{
+  return "";
+}
+
+CString 
+SQLInfoMySQL::GetCATALOGColumnPrivileges(CString& /*p_schema*/,CString& /*p_tablename*/,CString& /*p_columnname*/) const
+{
+  return "";
+}
+
+CString 
+SQLInfoMySQL::GetCatalogGrantPrivilege(CString /*p_schema*/,CString p_objectname,CString p_privilege,CString p_grantee,bool p_grantable)
+{
+  CString sql;
+  p_grantee.MakeLower();
+
+  // MySQL does not know the concept of "PUBLIC"
+  if(p_grantee.Compare("public"))
+  {
+    sql.Format("GRANT %s ON %s TO %s",p_privilege.GetString(),p_objectname.GetString(),p_grantee.GetString());
+    if(p_grantable)
+    {
+      sql += " WITH GRANT OPTION";
+    }
+  }
+  return sql;
+}
+
+CString 
+SQLInfoMySQL::GetCatalogRevokePrivilege(CString /*p_schema*/,CString p_objectname,CString p_privilege,CString p_grantee)
+{
+  CString sql;
+  p_grantee.MakeLower();
+
+  // MySQL does not know the concept of "PUBLIC"
+  if(p_grantee.Compare("public"))
+  {
+    sql.Format("REVOKE %s ON %s FROM %s", p_privilege.GetString(), p_objectname.GetString(), p_grantee.GetString());
+  }
+  return sql;
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -1159,7 +1256,7 @@ SQLInfoMySQL::GetPSMProcedureExists(CString p_schema, CString p_procedure) const
 }
 
 CString
-SQLInfoMySQL::GetPSMProcedureList(CString p_schema) const
+SQLInfoMySQL::GetPSMProcedureList(CString& p_schema) const
 {
   CString sql;
   sql = "SELECT routine_catalog\n"
@@ -1168,7 +1265,7 @@ SQLInfoMySQL::GetPSMProcedureList(CString p_schema) const
         "  FROM information_schema.routines fun\n";
   if (!p_schema.IsEmpty())
   {
-    sql += " WHERE routine_schema = '" + p_schema + "'\n";
+    sql += " WHERE routine_schema = ?\n";
   }
   sql += " ORDER BY 1,2,3";
 
@@ -1176,7 +1273,7 @@ SQLInfoMySQL::GetPSMProcedureList(CString p_schema) const
 }
 
 CString
-SQLInfoMySQL::GetPSMProcedureAttributes(CString p_schema, CString p_procedure) const
+SQLInfoMySQL::GetPSMProcedureAttributes(CString& p_schema,CString& p_procedure) const
 {
   CString sql;
   sql = "SELECT routine_catalog\n"
@@ -1210,14 +1307,14 @@ SQLInfoMySQL::GetPSMProcedureAttributes(CString p_schema, CString p_procedure) c
         "  FROM information_schema.routines fun\n";
   if(!p_schema.IsEmpty())
   { 
-    sql += " WHERE routine_schema = '" + p_schema + "'\n";
+    sql += " WHERE routine_schema = ?\n";
   }
   if(!p_procedure.IsEmpty())
   {
     sql += p_schema.IsEmpty() ? " WHERE " : "   AND ";
     sql += "routine_name ";
-    sql += p_procedure.Find('%') >= 0 ? "LIKE '" : "= '";
-    sql += p_procedure + "'\n";
+    sql += p_procedure.Find('%') >= 0 ? "LIKE" : "=";
+    sql += " ?\n";
   }
   sql += " ORDER BY 1,2,3";
   return sql;
@@ -1250,7 +1347,7 @@ SQLInfoMySQL::GetPSMProcedureErrors(CString p_schema,CString p_procedure) const
 
 // And it's parameters
 CString
-SQLInfoMySQL::GetPSMProcedureParameters(CString p_schema,CString p_procedure) const
+SQLInfoMySQL::GetPSMProcedureParameters(CString& p_schema,CString& p_procedure) const
 {
   CString sql;
 
@@ -1294,11 +1391,11 @@ SQLInfoMySQL::GetPSMProcedureParameters(CString p_schema,CString p_procedure) co
         "   AND par.specific_name    = fun.specific_name\n";
   if(!p_schema.IsEmpty())
   {
-    sql += "   AND fun.routine_schema = '" + p_schema + "'\n";
+    sql += "   AND fun.routine_schema = ?\n";
   }
   if(!p_procedure.IsEmpty())
   {
-    sql += "   AND fun.routine_name    = '" + p_procedure + "'\n";
+    sql += "   AND fun.routine_name    = ?\n";
   }
   sql += " ORDER BY 1,2,3,18";
 

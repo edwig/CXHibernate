@@ -895,7 +895,6 @@ MarlinModule::OnResolveRequestCache(IN IHttpContext*       p_context,
       }
     }
   }
-
   // Finding the raw HTT_REQUEST from the HTTPServer API 2.0
   const PHTTP_REQUEST rawRequest = request->GetRawHttpRequest();
   if(rawRequest == nullptr)

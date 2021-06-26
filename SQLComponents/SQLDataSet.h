@@ -161,6 +161,7 @@ public:
   // Set primary key column name (for updates)
   virtual void SetPrimaryKeyColumn(CString p_name);
   virtual void SetPrimaryKeyColumn(WordList& p_list);
+
   // Setting the sequence/generator name to something different than "<tablename>_seq"
   void         SetSequenceName(CString p_sequence);
   // Set parameter for a query
@@ -231,6 +232,7 @@ protected:
   virtual CString ParseSelection(SQLQuery& p_query);
   // Parse the filters
   virtual CString ParseFilters(SQLQuery& p_query,CString p_sql);
+
   // Get the variant of a parameter
   SQLVariant*  GetParameter(CString& p_name);
   // Get all the columns of the record

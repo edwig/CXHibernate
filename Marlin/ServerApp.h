@@ -154,4 +154,3 @@ public:
 };
 
 extern ServerAppFactory* appFactory;
-

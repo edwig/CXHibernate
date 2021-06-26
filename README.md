@@ -3,6 +3,11 @@
 C++ Hibernate Framework after the example of the Java Hibernate
 and the C# .NET NHibernate projects.
 
+### Version 1.2.0
+- Support for MariaDB has been added
+- Marlin Upgraded to version 6.5
+- SQLComponents upgraded to version 1.7.0
+
 ### Version 1.1.0
 (Also see the 'Releasenotes.txt' file)
 Higher versions of the Marlin and SQLComponents framework and a 

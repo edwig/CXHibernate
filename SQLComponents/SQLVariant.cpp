@@ -2266,6 +2266,63 @@ SQLVariant::SetSizeIndicator(bool p_realSize)
   }
 }
 
+// Truncation of a char field
+void
+SQLVariant::TruncateCharacter()
+{
+  // Only non-null char data and not streaming mode
+  if((m_datatype !=  SQL_C_CHAR)   || m_useAtExec || 
+      m_indicator == SQL_NULL_DATA ||
+      m_indicator < 0)
+  {
+    return;
+  }
+  // Loop over the char data, truncating from right-to-left
+  // data size is in WCHAR !!
+  char*  dataPointer = m_data.m_dataCHAR;
+  SQLLEN dataLength  = m_indicator;
+  while(dataLength > 0)
+  {
+    if(dataPointer[dataLength - 1] == ' ')
+    {
+      dataPointer[--dataLength] = 0;
+    }
+    else
+    {
+      break;
+    }
+  }
+  // For non-null columns leave always a minimum of 1 space
+  if(dataLength == 0)
+  {
+    dataPointer[0] = ' ';
+    dataPointer[1] = 0;
+  }
+  m_indicator = dataLength;
+}
+
+// Truncating the TIMESTAMP fraction
+// Done for conversions between databases
+// Truncate the timestamps to a number of decimals (0 - 6)
+void
+SQLVariant::TruncateTimestamp(int p_decimals /*=0*/)
+{
+  if(m_datatype != SQL_C_TIMESTAMP && m_datatype != SQL_C_TYPE_TIMESTAMP)
+  {
+    return;
+  }
+  if(p_decimals > 0 && p_decimals <= 6)
+  {
+    // Rounding to this number of decimals
+    int val = static_cast<int>(pow(10,(6 - p_decimals)));
+    m_data.m_dataTIMESTAMP.fraction -= m_data.m_dataTIMESTAMP.fraction % val;
+  }
+  else
+  {
+    m_data.m_dataTIMESTAMP.fraction = 0;
+  }
+}
+
 bool    
 SQLVariant::SetData(int p_type,const char* p_data)
 {

@@ -25,6 +25,7 @@
 //
 #include "stdafx.h"
 #include "SQLGetExePath.h"
+#include "SQLMessage.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -90,18 +91,16 @@ SQLTerminateWithoutCleanup(int p_exitcode)
 }
 
 // Check the renaming of the runtimer (exe, dll, or whatever)
-// Cannot be called from within IIS (because of the MessageBox) !!
 void
 SQLCheckExePath(CString p_runtimer)
 {
-  char buffer   [_MAX_PATH ];
   char drive    [_MAX_DRIVE];
   char directory[_MAX_DIR  ];
   char filename [_MAX_FNAME];
   char extension[_MAX_EXT  ];
 
-  GetModuleFileName(GetModuleHandle(NULL),buffer,_MAX_PATH);
-  _splitpath_s(buffer,drive,_MAX_DRIVE,directory,_MAX_DIR,filename,_MAX_FNAME,extension,_MAX_EXT);
+  CString program = SQLGetExeFile();
+  _splitpath_s(program.GetString(),drive,_MAX_DRIVE,directory,_MAX_DIR,filename,_MAX_FNAME,extension,_MAX_EXT);
 
   CString runtimer = CString(filename) + CString(extension);
   if(runtimer.CompareNoCase(p_runtimer))
@@ -115,7 +114,7 @@ SQLCheckExePath(CString p_runtimer)
                  "Fix the installation of the program and retry this operation."
                 ,  runtimer.GetString()
                 ,p_runtimer.GetString());
-    MessageBox(NULL,error,"Installation",MB_OK|MB_ICONERROR);
+    SQLMessage(NULL,error,"Installation",MB_OK|MB_ICONERROR);
     SQLTerminateWithoutCleanup(-4);
   }
 }

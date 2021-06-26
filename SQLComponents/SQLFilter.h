@@ -325,5 +325,4 @@ private:
 
 typedef SQLFilter Filter;
 
-
 }

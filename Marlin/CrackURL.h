@@ -2,8 +2,6 @@
 //
 // SourceFile: CrackURL.h
 //
-// Marlin Server: Internet server/client
-// 
 // Copyright (c) 2015-2018 ir. W.E. Huisman
 // All rights reserved
 //
@@ -32,7 +30,8 @@
 //
 //////////////////////////////////////////////////////////////////////////
 
-#pragma once
+#ifndef __CRACKURL__
+#define __CRACKURL__
 #include <winhttp.h>
 #include <vector>
 
@@ -59,6 +58,8 @@ public:
 
   // Resulting URL
   CString   URL();
+  // Safe URL (without the userinfo)
+  CString   SafeURL();
   // Resulting absolute path, including parameters & anchor
   CString   AbsolutePath();
   // Resulting absolute designated resource
@@ -128,3 +129,5 @@ CrackedURL::GetExtension()
 {
   return m_extension;
 }
+
+#endif

@@ -51,25 +51,19 @@ DDLCreateTable::GetTableDDL(CString p_tableName)
 DDLS
 DDLCreateTable::GetTableStatements(CString p_tableName)
 {
-  // Remember what was asked of us
-  m_tableName = p_tableName;
+  // Split schema name and table name
+  FindSchemaName(p_tableName);
 
-  try
-  {
-    GetTableInfo();
-    GetColumnInfo();
-    GetIndexInfo();
-    GetPrimaryKeyInfo();
-    GetForeignKeyInfo();
-    GetTriggerInfo();
-    GetSequenceInfo();
-    GetAccessInfo();
-  }
-  catch(StdException& error)
-  {
-    m_statements.clear();
-    throw error;
-  }
+  GetTableInfo();
+  GetColumnInfo();
+  GetOptionsInfo();
+  GetIndexInfo();
+  GetPrimaryKeyInfo();
+  GetForeignKeyInfo();
+  GetTriggerInfo();
+  GetSequenceInfo();
+  GetAccessInfo();
+
   return m_statements;
 }
 
@@ -148,6 +142,72 @@ DDLCreateTable::SetTableInfoPrivilege(MPrivilegeMap& p_info)
   m_hasPrivileges = true;
 }
 
+// Set to a different SQLInfoDB to create tables
+// for another database. Use with extreme care!!
+void
+DDLCreateTable::SetInfoDB(SQLInfoDB* p_info)
+{
+  if (p_info)
+  {
+    m_info = p_info;
+    m_statements.clear();
+  }
+}
+
+// Change the schema of the table
+void
+DDLCreateTable::SetTablesSchema(CString p_schema)
+{
+  for(auto& table : m_tables)
+  {
+    table.m_schema = p_schema;
+  }
+  for(auto& column : m_columns)
+  {
+    column.m_schema = p_schema;
+  }
+  for(auto& index : m_indices)
+  {
+    index.m_schemaName = p_schema;
+  }
+  for(auto& primary : m_primaries)
+  {
+    primary.m_schema = p_schema;
+  }
+  for(auto& foreign : m_foreigns)
+  {
+    foreign.m_fkSchemaName = p_schema;
+    foreign.m_pkSchemaName = p_schema;
+  }
+  for(auto& trigger : m_triggers)
+  {
+    trigger.m_schemaName = p_schema;
+  }
+  for(auto& sequence : m_sequences)
+  {
+    sequence.m_schemaName = p_schema;
+  }
+  for(auto& access : m_access)
+  {
+    access.m_schemaName = p_schema;
+  }
+}
+
+void
+DDLCreateTable::SetTableTablespace(CString p_tablespace)
+{
+  for (auto& table : m_tables)
+  {
+    table.m_tablespace = p_tablespace;
+  }
+}
+
+void
+DDLCreateTable::SetIndexTablespace(CString p_tablespace)
+{
+  m_indexTablespace = p_tablespace;
+}
+
 //////////////////////////////////////////////////////////////////////////
 
 void   
@@ -161,10 +221,11 @@ DDLCreateTable::GetTableInfo()
   {
     // Find table info
     m_tables.clear();
-    if(!m_info->MakeInfoTableTable(m_tables,errors,"",m_tableName) || m_tables.empty())
+    if(!m_info->MakeInfoTableTable(m_tables,errors,m_schema,m_tableName) || m_tables.empty())
     {
       throw StdException(CString("Cannot find table: ") + m_tableName + " : " + errors);
     }
+    m_hasTable = !m_tables.empty();
   }
 
   // Some engines get a synonym AND a table/view record
@@ -172,11 +233,10 @@ DDLCreateTable::GetTableInfo()
   MetaTable& table = m_tables.back();
 
   // Construct table name
-  if(!table.m_schema.IsEmpty())
+  if(m_schema.IsEmpty() && !table.m_schema.IsEmpty())
   {
     m_schema = table.m_schema;
   }
-  m_tableName = table.m_table;
 
   // Optional remarks to begin with
   if(!table.m_remarks.IsEmpty())
@@ -185,13 +245,9 @@ DDLCreateTable::GetTableInfo()
   }
 
   // Do our DDL part
-  ddl += "CREATE " + table.m_objectType + " ";
-  if(!m_schema.IsEmpty())
-  {
-    ddl += m_schema + ".";
-  }
-  ddl += m_tableName;
-  ddl += "\n(\n";
+  MetaColumn column;
+  ddl += m_info->GetCATALOGTableCreate(table,column);
+  ddl += "\n";
 
   m_createDDL = ddl;
 }
@@ -210,12 +266,15 @@ DDLCreateTable::GetColumnInfo()
     {
       throw StdException(CString("Cannot find columns for table: ") + m_tableName + " : " + errors);
     }
+    m_hasColumns = !m_columns.empty();
   }
 
   // Calculate max length of a column
   int length = CalculateColumnLength(m_columns);
 
   // Add columns
+  m_createDDL += "(\n";
+
   for(auto& column : m_columns)
   {
     CString line("   ");
@@ -226,7 +285,8 @@ DDLCreateTable::GetColumnInfo()
     line += " ";
     line += column.m_typename;
 
-    TypeInfo* type = m_info->GetTypeInfo(column.m_datatype);
+    m_info->GetInfo();
+    TypeInfo* type = m_info->GetTypeInfo(column.m_datatype,column.m_typename);
     if(type)
     {
       line += ReplaceLengthPrecScale(type->m_create_params
@@ -266,9 +326,28 @@ DDLCreateTable::GetColumnInfo()
     first = false;
   }
   m_createDDL += ")";
+}
+
+void
+DDLCreateTable::GetOptionsInfo()
+{
+  DatabaseType type = m_info->GetRDBMSDatabaseType();
+  if(type == RDBMS_ORACLE     ||
+     type == RDBMS_POSTGRESQL ||
+     type == RDBMS_MARIADB    ||
+     type == RDBMS_MYSQL       )
+  {
+    CString tablespace = m_tables[0].m_tablespace;
+    if(!tablespace.IsEmpty())
+    {
+      m_createDDL += CString("\nTABLESPACE ") + tablespace;
+    }
+  }
+
   StashTheLine(m_createDDL);
   m_createDDL.Empty();
 }
+
 
 void
 DDLCreateTable::GetIndexInfo()
@@ -285,6 +364,7 @@ DDLCreateTable::GetIndexInfo()
     {
       throw StdException(CString("Cannot find indices for table: ") + m_tableName + " : " + errors);
     }
+    m_hasIndices = !m_indices.empty();
   }
 
   // Walk the list of indices
@@ -333,6 +413,7 @@ DDLCreateTable::GetPrimaryKeyInfo()
     {
       throw StdException(CString("Cannot find the primary key for table: ") + m_tableName + " : " + errors);
     }
+    m_hasPrimary = !m_primaries.empty();
   }
 
   if(!m_primaries.empty())
@@ -358,6 +439,7 @@ DDLCreateTable::GetForeignKeyInfo()
     {
       throw StdException(CString("Cannot find the foreign keys for table: ") + m_tableName + " : " + errors);
     }
+    m_hasForeigns = !m_foreigns.empty();
   }
 
   // Do all foreign keys
@@ -400,6 +482,7 @@ DDLCreateTable::GetTriggerInfo()
     {
       throw StdException(CString("Cannot find the triggers for table: ") + m_tableName + " : " + errors);
     }
+    m_hasTriggers = !m_triggers.empty();
   }
 
   // Print all triggers
@@ -424,6 +507,7 @@ DDLCreateTable::GetSequenceInfo()
     {
       throw StdException(CString("Cannot find the sequences for table: ") + m_tableName + " : " + errors);
     }
+    m_hasSequence = !m_sequences.empty();
   }
 
   // Print all found sequences
@@ -449,28 +533,22 @@ DDLCreateTable::GetAccessInfo()
     {
       throw StdException(CString("Cannot find the privileges for table: ") + m_tableName + " : " + errors);
     }
+    m_hasPrivileges = !m_access.empty();
   }
+
+  bool strict = m_info->GetPreferODBC();
 
   // Print all privileges
   for(auto& priv : m_access)
   {
-    CString object;
-    if(priv.m_schemaName.IsEmpty())
+    if(!strict || IsStrictODBCPrivilege(priv.m_privilege))
     {
-      object = priv.m_tableName;
+      line = m_info->GetCatalogGrantPrivilege(priv.m_schemaName,priv.m_tableName,priv.m_privilege,priv.m_grantee,priv.m_grantable);
+      if(!line.IsEmpty())
+      {
+        StashTheLine(line);
+      }
     }
-    else
-    {
-      object = priv.m_schemaName + "." + priv.m_tableName;
-    }
-
-    // Primary privilege
-    line.Format("GRANT %s ON %s TO %s",priv.m_privilege.GetString(),object.GetString(),priv.m_grantee.GetString());
-    if(priv.m_grantable)
-    {
-      line += " WITH GRANT OPTION";
-    }
-    StashTheLine(line);
   }
 }
 
@@ -479,6 +557,21 @@ DDLCreateTable::GetAccessInfo()
 // SERVICE ROUTINES
 //
 //////////////////////////////////////////////////////////////////////////
+
+bool
+DDLCreateTable::FindSchemaName(CString p_tableName)
+{
+  int pos = p_tableName.Find('.');
+  if (pos > 0)
+  {
+    m_schema    = p_tableName.Left(pos);
+    m_tableName = p_tableName.Mid(pos + 1);
+    return true;
+  }
+  m_tableName = p_tableName;
+  return false;
+}
+
 
 void
 DDLCreateTable::StashTheLine(CString p_line)
@@ -531,7 +624,25 @@ DDLCreateTable::ReplaceLengthPrecScale(CString p_template
 CString
 DDLCreateTable::FormatColumnName(CString p_column,int p_length)
 {
-  while(p_column.GetLength() < p_length)
+  // Adhere to catalog storage
+  if(m_info->GetRDBMSIsCatalogUpper())
+  {
+    p_column.MakeUpper();
+  }
+  else
+  {
+    p_column.MakeLower();
+  }
+
+  // Circumvent locally reserved words
+  if(!m_info->IsCorrectName(p_column))
+  {
+    CString quote = m_info->GetKEYWORDReservedWordQuote();
+    p_column = quote + p_column + quote;
+  }
+
+  // Pretty-print adjust datatypes
+  while (p_column.GetLength() < p_length)
   {
     p_column += " ";
   }
@@ -556,6 +667,12 @@ DDLCreateTable::CalculateColumnLength(MColumnMap& p_columns)
 void
 DDLCreateTable::FindIndexFilter(MetaIndex& p_index)
 {
+  // Index already found
+  if(!p_index.m_filter.IsEmpty())
+  {
+    return;
+  }
+
   // See if column name in index exists in the table
   for(auto& column : m_columns)
   {
@@ -566,6 +683,20 @@ DDLCreateTable::FindIndexFilter(MetaIndex& p_index)
   }
   // Not existing column. Find index filter
   p_index.m_filter = m_info->GetCATALOGIndexFilter(p_index);
+}
+
+bool
+DDLCreateTable::IsStrictODBCPrivilege(CString p_privilege)
+{
+  if(p_privilege.CompareNoCase("SELECT")     == 0) return true;
+  if(p_privilege.CompareNoCase("INSERT")     == 0) return true;
+  if(p_privilege.CompareNoCase("UPDATE")     == 0) return true;
+  if(p_privilege.CompareNoCase("DELETE")     == 0) return true;
+  if(p_privilege.CompareNoCase("CREATE")     == 0) return true;
+  if(p_privilege.CompareNoCase("REFERENCES") == 0) return true;
+  if(p_privilege.CompareNoCase("INDEX")      == 0) return true;
+
+  return false;
 }
 
 };

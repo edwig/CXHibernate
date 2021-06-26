@@ -253,6 +253,7 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="StdException.cpp" />
+    <ClCompile Include="StoreMessage.cpp" />
     <ClCompile Include="ThreadPool.cpp" />
     <ClCompile Include="ThreadPoolED.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
@@ -278,6 +279,7 @@
     <ClCompile Include="XMLMessage.cpp" />
     <ClCompile Include="XMLParser.cpp" />
     <ClCompile Include="XMLParserImport.cpp" />
+    <ClCompile Include="XMLParserJSON.cpp" />
     <ClCompile Include="XMLRestriction.cpp" />
     <ClCompile Include="XMLTemporal.cpp" />
     <ClCompile Include="ZLib\adler32.c">
@@ -423,6 +425,7 @@
     <ClInclude Include="StackTrace.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="StdException.h" />
+    <ClInclude Include="StoreMessage.h" />
     <ClInclude Include="targetver.h" />
     <ClInclude Include="ThreadPool.h" />
     <ClInclude Include="ThreadPoolED.h" />
@@ -443,6 +446,7 @@
     <ClInclude Include="XMLMessage.h" />
     <ClInclude Include="XMLParser.h" />
     <ClInclude Include="XMLParserImport.h" />
+    <ClInclude Include="XMLParserJSON.h" />
     <ClInclude Include="XMLRestriction.h" />
     <ClInclude Include="XMLTemporal.h" />
     <ClInclude Include="ZLib\crc32.h" />

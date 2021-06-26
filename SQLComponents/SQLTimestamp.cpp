@@ -32,7 +32,6 @@
 #include "SQLDatabase.h"
 #include "SQLLanguage.h"
 #include <math.h>
-#include <strstream>
 #include <ctime>
 
 #ifdef _DEBUG

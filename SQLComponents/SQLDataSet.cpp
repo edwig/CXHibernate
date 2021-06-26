@@ -517,6 +517,7 @@ SQLDataSet::ParseSelection(SQLQuery& p_query)
       p_query.SetParameter(++number,&(it->m_value));
     }
   }
+
   return sql;
 }
 

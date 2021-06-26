@@ -4804,6 +4804,7 @@ ULONG Worksheet::CellTable::RowBlock::CellBlock::RecordSize()
     default: abort();
   }
 }
+
 USHORT Worksheet::CellTable::RowBlock::CellBlock::RowIndex()
 {
   switch(type_) 

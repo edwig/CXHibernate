@@ -515,7 +515,6 @@ ErrorReport::DoReport(const CString&    p_subject
   ErrorReportWriteToFile(filename,message,p_webroot,p_url);
 }
 
-
 //////////////////////////////////////////////////////////////////////////
 //
 // Tinkering with the standard signal handlers

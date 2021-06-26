@@ -1,3 +1,28 @@
+/////////////////////////////////////////////////////////////////////////////////
+//
+// SourceFile: bcd.cpp
+//
+// Copyright (c) 2015-2020 ir. W.E. Huisman
+// All rights reserved
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files(the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and / or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions :
+//
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+// THE SOFTWARE.
+//
 //////////////////////////////////////////////////////////////////////////
 //
 //  BCD
@@ -8,7 +33,6 @@
 //  And is always stored in normalized mode after an operation or conversion
 //  with an implied decimal point between the first and second position
 //
-// Copyright (c) 1998-2020 ir. W.E. Huisman
 // Version 1.2 of 18-12-2019
 //
 //  Examples:
@@ -21,7 +45,6 @@
 #include "Stdafx.h"           // MFC is a requirement
 #include "bcd.h"              // OUR INTERFACE
 #include "StdException.h"     // Throwing exceptions
-#include "SQLVariantFormat.h" // Decimal and thousand separators
 #include <math.h>             // Still needed for conversions of double
 #include <intsafe.h>          // Min/Max sizes of integer datatypes
 #include <locale.h>         
@@ -32,10 +55,36 @@
 static char THIS_FILE[] = __FILE__;
 #endif
 
-#ifndef COMPILED_TOGETHER_WITH_MARLIN
+// Theoretical maximum of numerical separators
+#define SEP_LEN 10
 
-namespace SQLComponents
+// string format number and money format functions
+bool g_locale_valutaInit = false;
+char g_locale_decimalSep [SEP_LEN + 1];
+char g_locale_thousandSep[SEP_LEN + 1];
+char g_locale_strCurrency[SEP_LEN + 1];
+int  g_locale_decimalSepLen   = 0;
+int  g_locale_thousandSepLen  = 0;
+int  g_locale_strCurrencyLen  = 0;
+
+// One-time initialization for printing numbers in the current locale
+void 
+InitValutaString()
 {
+  if(g_locale_valutaInit == false)
+  {
+    setlocale(LC_NUMERIC,"C");
+
+    GetLocaleInfo(LOCALE_USER_DEFAULT, LOCALE_SDECIMAL,  g_locale_decimalSep, SEP_LEN);
+    GetLocaleInfo(LOCALE_USER_DEFAULT, LOCALE_STHOUSAND, g_locale_thousandSep,SEP_LEN);
+    GetLocaleInfo(LOCALE_USER_DEFAULT, LOCALE_SCURRENCY, g_locale_strCurrency,SEP_LEN);
+    g_locale_decimalSepLen  = (int)strlen(g_locale_decimalSep);
+    g_locale_thousandSepLen = (int)strlen(g_locale_thousandSep);
+    g_locale_strCurrencyLen = (int)strlen(g_locale_strCurrency);
+
+    g_locale_valutaInit = true;
+  }
+}
 
 //////////////////////////////////////////////////////////////////////////
 //
@@ -170,14 +219,6 @@ bcd::bcd(const char* p_string,bool p_fromDB /*= false*/)
 bcd::bcd(const SQL_NUMERIC_STRUCT* p_numeric)
 {
   SetValueNumeric(p_numeric);
-}
-
-// bcd::~bcd
-// Description: Destructor of class bcd.
-//
-bcd::~bcd()
-{
-  // Nothing interesting here :-)
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -653,6 +694,15 @@ bcd&
 bcd::operator=(const char* p_value)
 {
   SetValueString(p_value);
+  return *this;
+}
+
+// bcd::=
+// Description: Assignment operator from an __int64
+bcd&
+bcd::operator=(const __int64 p_value)
+{
+  SetValueInt64(p_value,0);
   return *this;
 }
 
@@ -3993,7 +4043,3 @@ bcd::ReadFromFile(FILE* p_fp)
 // END OF BCD IMPLEMENTATION
 //
 //////////////////////////////////////////////////////////////////////////
-
-}
-
-#endif // Compiled with Marlin

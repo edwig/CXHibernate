@@ -1324,7 +1324,7 @@ CXClass::FillTableInfoFromClassInfo()
       ind.m_tableName  = GetTable()->GetTableName();
       ind.m_indexName  = index->m_name;
       ind.m_columnName = col->GetDatabaseColumn();
-      ind.m_unique     = index->m_unique;
+      ind.m_nonunique  = ! index->m_unique;
       ind.m_ascending  = index->m_ascending ? 'A' : 'D';
       ind.m_position   = position++;
       ind.m_filter     = index->m_filter;

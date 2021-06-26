@@ -393,7 +393,6 @@ ServerApp::GetSiteConfig(int ind)
   return nullptr;
 }
 
-
 // Start our sites from the IIS configuration
 void 
 ServerApp::LoadSites(IHttpApplication* p_app,CString p_physicalPath)
@@ -435,10 +434,11 @@ ServerApp::LoadSites(IHttpApplication* p_app,CString p_physicalPath)
           if(LoadSite(*iisConfig))
           {
             DETAILLOGV("Loaded IIS Site: %s",config.GetString());
+            // Save the site config
+            m_sites.push_back(iisConfig);
+            return;
           }
         }
-        // Save the site config
-        m_sites.push_back(iisConfig);
       }
     }
   }

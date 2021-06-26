@@ -56,31 +56,38 @@ public:
 
   // DB INTERFACE
 
+  // Default list of granted users on a created object
   void    SetGrantedUsers(CString p_users);
   CString GetGrantedUsers() const;
+  // We prefer the strict 'standard' ODBC drivers meta queries
+  void    SetPreferODBC(bool p_prefer);
+  bool    GetPreferODBC();
 
   // OVERRIDES AND EXTRAS OF THE ODBC MakeInfo<object> functions
 
-  // Meta info about meta types
-  bool    MakeInfoMetaTypes      (MMetaMap&     p_objects,  CString& p_errors,int p_type);
+  // Meta info about meta types: META_CATALOGS/META_SCHEMAS/META_TABLES
+  virtual bool    MakeInfoMetaTypes       (MMetaMap&      p_objects,   CString& p_errors,int p_type) override;
   // Tables
-  bool    MakeInfoTableObject    (MTableMap&    p_tables,   CString& p_errors,CString p_schema,CString p_tablename);  // Not known which type!
-  bool    MakeInfoTableTable     (MTableMap&    p_tables,   CString& p_errors,CString p_schema,CString p_tablename);  // TABLE   only
-  bool    MakeInfoTableView      (MTableMap&    p_tables,   CString& p_errors,CString p_schema,CString p_tablename);  // VIEW    only
-  bool    MakeInfoTableSynonyms  (MTableMap&    p_tables,   CString& p_errors,CString p_schema,CString p_tablename);  // SYNONYM only
-  bool    MakeInfoTableCatalog   (MTableMap&    p_tables,   CString& p_errors,CString p_schema,CString p_tablename);  // CATALOG only
+  virtual bool    MakeInfoTableObject     (MTableMap&     p_tables,    CString& p_errors,CString p_schema,CString p_tablename);  // Not known which type!
+  virtual bool    MakeInfoTableTable      (MTableMap&     p_tables,    CString& p_errors,CString p_schema,CString p_tablename);  // TABLE   only
+  virtual bool    MakeInfoTableView       (MTableMap&     p_tables,    CString& p_errors,CString p_schema,CString p_tablename);  // VIEW    only
+  virtual bool    MakeInfoTableSynonyms   (MTableMap&     p_tables,    CString& p_errors,CString p_schema,CString p_tablename);  // SYNONYM only
+  virtual bool    MakeInfoTableCatalog    (MTableMap&     p_tables,    CString& p_errors,CString p_schema,CString p_tablename);  // CATALOG only
   // Attributes of a table
-  bool    MakeInfoTableColumns   (MColumnMap&   p_columns,  CString& p_errors,CString p_schema,CString p_tablename,CString p_columname = "") override;
-  bool    MakeInfoTablePrimary   (MPrimaryMap&  p_primary,  CString& p_errors,CString p_schema,CString p_tablename)                          override;
-  bool    MakeInfoTableForeign   (MForeignMap&  p_foreigns, CString& p_errors,CString p_schema,CString p_tablename,bool p_referenced   = false) override;
-  bool    MakeInfoTableStatistics(MIndicesMap&  p_indices,  CString& p_errors,CString p_schema,CString p_tablename,MPrimaryMap* p_keymap,bool p_all = true) override;
-  bool    MakeInfoTableTriggers  (MTriggerMap&  p_triggers, CString& p_errors,CString p_schema,CString p_tablename,CString p_trigger   = "");
-  bool    MakeInfoTableSequences (MSequenceMap& p_sequences,CString& p_errors,CString p_schema,CString p_tablename);
+  virtual bool    MakeInfoTableColumns    (MColumnMap&    p_columns,   CString& p_errors,CString p_schema,CString p_tablename,CString p_columnname = "") override;
+  virtual bool    MakeInfoTablePrimary    (MPrimaryMap&   p_primary,   CString& p_errors,CString p_schema,CString p_tablename)                          override;
+  virtual bool    MakeInfoTableForeign    (MForeignMap&   p_foreigns,  CString& p_errors,CString p_schema,CString p_tablename,bool p_referenced   = false) override;
+  virtual bool    MakeInfoTableStatistics (MIndicesMap&   p_indices,   CString& p_errors,CString p_schema,CString p_tablename,MPrimaryMap* p_keymap,bool p_all = true) override;
+  virtual bool    MakeInfoTableTriggers   (MTriggerMap&   p_triggers,  CString& p_errors,CString p_schema,CString p_tablename,CString p_trigger   = "");
+  virtual bool    MakeInfoTableSequences  (MSequenceMap&  p_sequences, CString& p_errors,CString p_schema,CString p_tablename);
+  virtual bool    MakeInfoTablePrivileges (MPrivilegeMap& p_privileges,CString& p_errors,CString p_schema,CString p_tablename);
+  virtual bool    MakeInfoColumnPrivileges(MPrivilegeMap& p_privileges,CString& p_errors,CString p_schema,CString p_tablename,CString p_columnname = "");
+
   // Procedures
-  bool    MakeInfoPSMProcedures(MProcedureMap& p_procedures,CString& p_errors,CString p_schema,CString p_procedure) override;
-  bool    MakeInfoPSMParameters(MParameterMap& p_parameters,CString& p_errors,CString p_schema,CString p_procedure) override;
+  virtual bool    MakeInfoPSMProcedures(MProcedureMap& p_procedures,CString& p_errors,CString p_schema,CString p_procedure) override;
+  virtual bool    MakeInfoPSMParameters(MParameterMap& p_parameters,CString& p_errors,CString p_schema,CString p_procedure) override;
   // Read extra source code for database that can only do it by an extra procedure
-  CString MakeInfoPSMSourcecode(CString p_schema, CString p_procedure);
+  virtual CString MakeInfoPSMSourcecode(CString p_schema, CString p_procedure);
 
   // PURE VIRTUAL INTERFACE
 
@@ -129,6 +136,9 @@ public:
   // BEWARE BOOL INVERTED!!
   virtual bool GetRDBMSSupportsDatatypeInterval() const = 0;
 
+  // Supports functions at the place of table columns in create/alter index statement
+  virtual bool GetRDBMSSupportsFunctionalIndexes() const = 0;
+
   // Gets the maximum length of an SQL statement
   virtual unsigned long GetRDBMSMaxStatementLength() const = 0;
 
@@ -152,6 +162,9 @@ public:
 
   // Get quote character for strings
   virtual CString GetKEYWORDQuoteCharacter() const = 0;
+
+  // Get quote character around reserved words as an identifier
+  virtual CString GetKEYWORDReservedWordQuote() const = 0;
 
   // Get default NULL for parameter list input
   virtual CString GetKEYWORDParameterDefaultNULL() const = 0;
@@ -184,8 +197,14 @@ public:
   // Gets the Not-NULL-Value statement of the database
   virtual CString GetKEYWORDStatementNVL(CString& p_test,CString& p_isnull) const = 0;
 
+  // Gets the RDBMS definition of the datatype
+  virtual CString GetKEYWORDDataType(MetaColumn* p_column) = 0;
+
   //////////////////////////////////////////////////////////////////////////
   // SQL FOR SUB-PROCESSING
+
+  // Connects to a default schema in the database/instance
+  virtual CString GetSQLDefaultSchema(CString p_schema) const = 0;
 
   // Gets the construction for inline generating a key within an INSERT statement
   virtual CString GetSQLNewSerial(CString p_table,CString p_sequence) const = 0;
@@ -248,6 +267,7 @@ public:
   //   - Sequence
   //   - TemporaryTable 
   //   - View
+  //   - Privileges
   //  Functions per object type
   //   - Exists
   //   - List
@@ -262,64 +282,69 @@ public:
   // Meta info about meta types
   virtual CString GetCATALOGMetaTypes(int p_type) const = 0;
   // All table functions
-  virtual CString GetCATALOGTableExists       (CString p_schema,CString p_tablename) const = 0;
-  virtual CString GetCATALOGTablesList        (CString p_schema,CString p_pattern)   const = 0;
-  virtual CString GetCATALOGTableAttributes   (CString p_schema,CString p_tablename) const = 0;
-  virtual CString GetCATALOGTableSynonyms     (CString p_schema,CString p_tablename) const = 0;
-  virtual CString GetCATALOGTableCatalog      (CString p_schema,CString p_tablename) const = 0;
+  virtual CString GetCATALOGTableExists       (CString& p_schema,CString& p_tablename) const = 0;
+  virtual CString GetCATALOGTablesList        (CString& p_schema,CString& p_pattern)   const = 0;
+  virtual CString GetCATALOGTableAttributes   (CString& p_schema,CString& p_tablename) const = 0;
+  virtual CString GetCATALOGTableSynonyms     (CString& p_schema,CString& p_tablename) const = 0;
+  virtual CString GetCATALOGTableCatalog      (CString& p_schema,CString& p_tablename) const = 0;
   virtual CString GetCATALOGTableCreate       (MetaTable& p_table,MetaColumn& p_column) const = 0;
-  virtual CString GetCATALOGTableRename       (CString p_schema,CString p_tablename,CString p_newname) const = 0;
-  virtual CString GetCATALOGTableDrop         (CString p_schema,CString p_tablename) const = 0;
+  virtual CString GetCATALOGTableRename       (CString  p_schema,CString  p_tablename,CString p_newname) const = 0;
+  virtual CString GetCATALOGTableDrop         (CString  p_schema,CString  p_tablename,bool p_ifExist = false,bool p_restrict = false,bool p_cascade = false) const = 0;
   // All Temporary table functions
   virtual CString GetCATALOGTemptableCreate   (CString p_schema,CString p_tablename,CString p_select) const = 0;
   virtual CString GetCATALOGTemptableIntoTemp (CString p_schema,CString p_tablename,CString p_select) const = 0;
   virtual CString GetCATALOGTemptableDrop     (CString p_schema,CString p_tablename) const = 0;
   // All column functions
-  virtual CString GetCATALOGColumnExists      (CString p_schema,CString p_tablename,CString p_columname) const = 0;
-  virtual CString GetCATALOGColumnList        (CString p_schema,CString p_tablename) const = 0;
-  virtual CString GetCATALOGColumnAttributes  (CString p_schema,CString p_tablename,CString p_columname) const = 0;
+  virtual CString GetCATALOGColumnExists      (CString  p_schema,CString  p_tablename,CString  p_columnname) const = 0;
+  virtual CString GetCATALOGColumnList        (CString& p_schema,CString& p_tablename) const = 0;
+  virtual CString GetCATALOGColumnAttributes  (CString& p_schema,CString& p_tablename,CString& p_columnname) const = 0;
   virtual CString GetCATALOGColumnCreate      (MetaColumn& p_column) const = 0;
   virtual CString GetCATALOGColumnAlter       (MetaColumn& p_column) const = 0;
-  virtual CString GetCATALOGColumnRename      (CString p_schema,CString p_tablename,CString p_columnname,CString p_newname,CString p_datatype) const = 0;
-  virtual CString GetCATALOGColumnDrop        (CString p_schema,CString p_tablename,CString p_columnname) const = 0;
+  virtual CString GetCATALOGColumnRename      (CString  p_schema,CString  p_tablename,CString  p_columnname,CString p_newname,CString p_datatype) const = 0;
+  virtual CString GetCATALOGColumnDrop        (CString  p_schema,CString  p_tablename,CString  p_columnname) const = 0;
   // All index functions
-  virtual CString GetCATALOGIndexExists       (CString p_schema,CString p_tablename,CString p_indexname) const = 0;
-  virtual CString GetCATALOGIndexList         (CString p_schema,CString p_tablename)                     const = 0;
-  virtual CString GetCATALOGIndexAttributes   (CString p_schema,CString p_tablename,CString p_indexname) const = 0;
+  virtual CString GetCATALOGIndexExists       (CString  p_schema,CString  p_tablename,CString  p_indexname) const = 0;
+  virtual CString GetCATALOGIndexList         (CString& p_schema,CString& p_tablename)                      const = 0;
+  virtual CString GetCATALOGIndexAttributes   (CString& p_schema,CString& p_tablename,CString& p_indexname) const = 0;
   virtual CString GetCATALOGIndexCreate       (MIndicesMap& p_index) const = 0;
-  virtual CString GetCATALOGIndexDrop         (CString p_schema,CString p_tablename,CString p_indexname) const = 0;
+  virtual CString GetCATALOGIndexDrop         (CString  p_schema,CString  p_tablename,CString  p_indexname) const = 0;
   virtual CString GetCATALOGIndexFilter       (MetaIndex& p_index) const = 0;
   // All primary key functions
-  virtual CString GetCATALOGPrimaryExists     (CString p_schema,CString p_tablename) const = 0;
-  virtual CString GetCATALOGPrimaryAttributes (CString p_schema,CString p_tablename) const = 0;
+  virtual CString GetCATALOGPrimaryExists     (CString  p_schema,CString  p_tablename) const = 0;
+  virtual CString GetCATALOGPrimaryAttributes (CString& p_schema,CString& p_tablename) const = 0;
   virtual CString GetCATALOGPrimaryCreate     (MPrimaryMap& p_primaries) const = 0;
-  virtual CString GetCATALOGPrimaryDrop       (CString p_schema,CString p_tablename,CString p_constraintname) const = 0;
+  virtual CString GetCATALOGPrimaryDrop       (CString  p_schema,CString  p_tablename,CString p_constraintname) const = 0;
   // All foreign key functions
-  virtual CString GetCATALOGForeignExists     (CString p_schema,CString p_tablename,CString p_constraintname) const = 0;
-  virtual CString GetCATALOGForeignList       (CString p_schema,CString p_tablename,int p_maxColumns = SQLINFO_MAX_COLUMNS) const = 0;
-  virtual CString GetCATALOGForeignAttributes (CString p_schema,CString p_tablename,CString p_constraintname,bool p_referenced = false,int p_maxColumns = SQLINFO_MAX_COLUMNS) const = 0;
+  virtual CString GetCATALOGForeignExists     (CString  p_schema,CString  p_tablename,CString  p_constraintname) const = 0;
+  virtual CString GetCATALOGForeignList       (CString& p_schema,CString& p_tablename,int p_maxColumns = SQLINFO_MAX_COLUMNS) const = 0;
+  virtual CString GetCATALOGForeignAttributes (CString& p_schema,CString& p_tablename,CString& p_constraintname,bool p_referenced = false,int p_maxColumns = SQLINFO_MAX_COLUMNS) const = 0;
   virtual CString GetCATALOGForeignCreate     (MForeignMap& p_foreigns) const = 0;
   virtual CString GetCATALOGForeignAlter      (MForeignMap& p_original,MForeignMap& p_requested) const = 0;
-  virtual CString GetCATALOGForeignDrop       (CString p_schema,CString p_tablename,CString p_constraintname) const = 0;
+  virtual CString GetCATALOGForeignDrop       (CString  p_schema,CString  p_tablename,CString  p_constraintname) const = 0;
   // All trigger functions
-  virtual CString GetCATALOGTriggerExists     (CString p_schema,CString p_tablename,CString p_triggername) const = 0;
-  virtual CString GetCATALOGTriggerList       (CString p_schema,CString p_tablename) const = 0;
-  virtual CString GetCATALOGTriggerAttributes (CString p_schema,CString p_tablename,CString p_triggername) const = 0;
+  virtual CString GetCATALOGTriggerExists     (CString  p_schema,CString  p_tablename,CString  p_triggername) const = 0;
+  virtual CString GetCATALOGTriggerList       (CString& p_schema,CString& p_tablename) const = 0;
+  virtual CString GetCATALOGTriggerAttributes (CString& p_schema,CString& p_tablename,CString& p_triggername) const = 0;
   virtual CString GetCATALOGTriggerCreate     (MetaTrigger& p_trigger) const = 0;
-  virtual CString GetCATALOGTriggerDrop       (CString p_schema,CString p_tablename,CString p_triggername) const = 0;
+  virtual CString GetCATALOGTriggerDrop       (CString  p_schema,CString  p_tablename,CString  p_triggername) const = 0;
   // All sequence functions
-  virtual CString GetCATALOGSequenceExists    (CString p_schema,CString p_sequence) const = 0;
-  virtual CString GetCATALOGSequenceList      (CString p_schema,CString p_pattern)  const = 0;
-  virtual CString GetCATALOGSequenceAttributes(CString p_schema,CString p_sequence) const = 0;
+  virtual CString GetCATALOGSequenceExists    (CString  p_schema,CString  p_sequence) const = 0;
+  virtual CString GetCATALOGSequenceList      (CString& p_schema,CString& p_pattern)  const = 0;
+  virtual CString GetCATALOGSequenceAttributes(CString& p_schema,CString& p_sequence) const = 0;
   virtual CString GetCATALOGSequenceCreate    (MetaSequence& p_sequence) const = 0;
-  virtual CString GetCATALOGSequenceDrop      (CString p_schema,CString p_sequence) const = 0;
+  virtual CString GetCATALOGSequenceDrop      (CString  p_schema,CString  p_sequence) const = 0;
   // All view functions
-  virtual CString GetCATALOGViewExists        (CString p_schema,CString p_viewname) const = 0;
-  virtual CString GetCATALOGViewList          (CString p_schema,CString p_pattern)  const = 0;
-  virtual CString GetCATALOGViewAttributes    (CString p_schema,CString p_viewname) const = 0;
-  virtual CString GetCATALOGViewCreate        (CString p_schema,CString p_viewname,CString p_contents)   const = 0;
-  virtual CString GetCATALOGViewRename        (CString p_schema,CString p_viewname,CString p_newname)    const = 0;
-  virtual CString GetCATALOGViewDrop          (CString p_schema,CString p_viewname,CString& p_precursor) const = 0;
+  virtual CString GetCATALOGViewExists        (CString& p_schema,CString& p_viewname) const = 0;
+  virtual CString GetCATALOGViewList          (CString& p_schema,CString& p_pattern)  const = 0;
+  virtual CString GetCATALOGViewAttributes    (CString& p_schema,CString& p_viewname) const = 0;
+  virtual CString GetCATALOGViewCreate        (CString  p_schema,CString  p_viewname,CString p_contents)   const = 0;
+  virtual CString GetCATALOGViewRename        (CString  p_schema,CString  p_viewname,CString p_newname)    const = 0;
+  virtual CString GetCATALOGViewDrop          (CString  p_schema,CString  p_viewname,CString& p_precursor) const = 0;
+  // All Privilege functions
+  virtual CString GetCATALOGTablePrivileges   (CString& p_schema,CString& p_tablename) const = 0;
+  virtual CString GetCATALOGColumnPrivileges  (CString& p_schema,CString& p_tablename,CString& p_columnname) const = 0;
+  virtual CString GetCatalogGrantPrivilege    (CString  p_schema,CString  p_objectname,CString p_privilege,CString p_grantee,bool p_grantable) = 0;
+  virtual CString GetCatalogRevokePrivilege   (CString  p_schema,CString  p_objectname,CString p_privilege,CString p_grantee) = 0;
 
   //////////////////////////////////////////////////////////////////////////
   //
@@ -351,15 +376,15 @@ public:
   //////////////////////////////////////////////////////////////////////////
 
   // All procedure functions
-  virtual CString GetPSMProcedureExists    (CString p_schema,CString p_procedure) const = 0;
-  virtual CString GetPSMProcedureList      (CString p_schema) const = 0;
-  virtual CString GetPSMProcedureAttributes(CString p_schema,CString p_procedure) const = 0;
-  virtual CString GetPSMProcedureSourcecode(CString p_schema,CString p_procedure) const = 0;
+  virtual CString GetPSMProcedureExists    (CString  p_schema,CString  p_procedure) const = 0;
+  virtual CString GetPSMProcedureList      (CString& p_schema) const = 0;
+  virtual CString GetPSMProcedureAttributes(CString& p_schema,CString& p_procedure) const = 0;
+  virtual CString GetPSMProcedureSourcecode(CString  p_schema,CString  p_procedure) const = 0;
   virtual CString GetPSMProcedureCreate    (MetaProcedure& p_procedure) const = 0;
-  virtual CString GetPSMProcedureDrop      (CString p_schema,CString p_procedure) const = 0;
-  virtual CString GetPSMProcedureErrors    (CString p_schema,CString p_procedure) const = 0;
+  virtual CString GetPSMProcedureDrop      (CString  p_schema,CString  p_procedure) const = 0;
+  virtual CString GetPSMProcedureErrors    (CString  p_schema,CString  p_procedure) const = 0;
   // And it's parameters
-  virtual CString GetPSMProcedureParameters(CString p_schema,CString p_procedure) const = 0;
+  virtual CString GetPSMProcedureParameters(CString& p_schema,CString& p_procedure) const = 0;
 
   // All Language elements
   virtual CString GetPSMDeclaration(bool p_first,CString p_variable,int p_datatype,int p_precision = 0,int p_scale = 0,
@@ -426,6 +451,8 @@ private:
 
   // All default granted users for GRANT statements
   CString m_grantedUsers;
+  // Prefer ODBC metaqueries above hand crafted ones
+  bool    m_preferODBC { true };
 };
 
 inline void    
@@ -438,6 +465,18 @@ inline CString
 SQLInfoDB::GetGrantedUsers() const
 {
   return m_grantedUsers;
+}
+
+inline void
+SQLInfoDB::SetPreferODBC(bool p_prefer)
+{
+  m_preferODBC = p_prefer;
+}
+
+inline bool
+SQLInfoDB::GetPreferODBC()
+{
+  return m_preferODBC;
 }
 
 // End of namespace

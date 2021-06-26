@@ -101,6 +101,7 @@
       <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
       <PreprocessorDefinitions>COMPILED_TOGETHER_WITH_MARLIN;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ExceptionHandling>Async</ExceptionHandling>
+      <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Lib>
       <AdditionalOptions>/ignore:4221 %(AdditionalOptions)</AdditionalOptions>
@@ -123,6 +124,7 @@
       <ExceptionHandling>Async</ExceptionHandling>
       <RuntimeTypeInfo>true</RuntimeTypeInfo>
       <ProgramDataBaseFileName>$(OutDir)$(TargetName).pdb</ProgramDataBaseFileName>
+      <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Lib>
       <AdditionalOptions>/ignore:4221 %(AdditionalOptions)</AdditionalOptions>
@@ -139,6 +141,7 @@
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <PreprocessorDefinitions>COMPILED_TOGETHER_WITH_MARLIN;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ExceptionHandling>Async</ExceptionHandling>
+      <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Lib>
       <AdditionalOptions>/ignore:4221 %(AdditionalOptions)</AdditionalOptions>
@@ -161,6 +164,7 @@
       <RuntimeTypeInfo>true</RuntimeTypeInfo>
       <ProgramDataBaseFileName>$(IntDir)$(TargetName).pdb</ProgramDataBaseFileName>
       <MinimalRebuild />
+      <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Lib>
       <AdditionalOptions>/ignore:4221 %(AdditionalOptions)</AdditionalOptions>
@@ -178,6 +182,7 @@
       <WarningLevel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Level4</WarningLevel>
     </ClCompile>
     <ClCompile Include="ConvertWideString.cpp" />
+    <ClCompile Include="CrackURL.cpp" />
     <ClCompile Include="DDLCreateTable.cpp" />
     <ClCompile Include="DefuseBOM.cpp" />
     <ClCompile Include="ExcelFormat.cpp">
@@ -186,6 +191,8 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NotUsing</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="FileBuffer.cpp" />
+    <ClCompile Include="Namespace.cpp" />
     <ClCompile Include="SQLConnections.cpp" />
     <ClCompile Include="SQLDatabasePool.cpp" />
     <ClCompile Include="SQLDriverManager.cpp" />
@@ -211,12 +218,14 @@
     <ClCompile Include="SQLInfoFirebird.cpp" />
     <ClCompile Include="SQLInfoGenericODBC.cpp" />
     <ClCompile Include="SQLInfoInformix.cpp" />
+    <ClCompile Include="SQLInfoMariaDB.cpp" />
     <ClCompile Include="SQLInfoMySQL.cpp" />
     <ClCompile Include="SQLInfoOracle.cpp" />
     <ClCompile Include="SQLInfoPostgreSQL.cpp" />
     <ClCompile Include="SQLInfoSQLServer.cpp" />
     <ClCompile Include="SQLInterval.cpp" />
     <ClCompile Include="SQLLanguage.cpp" />
+    <ClCompile Include="SQLMessage.cpp" />
     <ClCompile Include="SQLMutation.cpp" />
     <ClCompile Include="SQLQuery.cpp" />
     <ClCompile Include="SQLRecord.cpp" />
@@ -252,18 +261,25 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NotUsing</PrecompiledHeader>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">false</ExcludedFromBuild>
     </ClCompile>
+    <ClCompile Include="XMLDataType.cpp" />
     <ClCompile Include="XMLMessage.cpp" />
     <ClCompile Include="XMLParser.cpp" />
+    <ClCompile Include="XMLRestriction.cpp" />
+    <ClCompile Include="XMLTemporal.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="BasicExcel.h" />
     <ClInclude Include="BasicXmlExcel.h" />
     <ClInclude Include="bcd.h" />
     <ClInclude Include="ConvertWideString.h" />
+    <ClInclude Include="CrackURL.h" />
     <ClInclude Include="DDLCreateTable.h" />
     <ClInclude Include="DefuseBOM.h" />
     <ClInclude Include="ExcelFormat.h" />
+    <ClInclude Include="FileBuffer.h" />
+    <ClInclude Include="Namespace.h" />
     <ClInclude Include="SQLAutoDBS.h" />
+    <ClInclude Include="SQLComponentsVersion.h" />
     <ClInclude Include="SQLConnections.h" />
     <ClInclude Include="SQLDatabasePool.h" />
     <ClInclude Include="SQLDriverManager.h" />
@@ -287,6 +303,7 @@
     <ClInclude Include="SQLInfoFirebird.h" />
     <ClInclude Include="SQLInfoGenericODBC.h" />
     <ClInclude Include="SQLInfoInformix.h" />
+    <ClInclude Include="SQLInfoMariaDB.h" />
     <ClInclude Include="SQLInfoMySQL.h" />
     <ClInclude Include="SQLInfoOracle.h" />
     <ClInclude Include="SQLInfoPostgreSQL.h" />
@@ -294,6 +311,7 @@
     <ClInclude Include="SQLInterval.h" />
     <ClInclude Include="SQLLanguage.h" />
     <ClInclude Include="SQLMemoryDebug.h" />
+    <ClInclude Include="SQLMessage.h" />
     <ClInclude Include="SQLMetaInfo.h" />
     <ClInclude Include="SQLMutation.h" />
     <ClInclude Include="SQLOperator.h" />
@@ -316,6 +334,8 @@
     <ClInclude Include="XMLDataType.h" />
     <ClInclude Include="XMLMessage.h" />
     <ClInclude Include="XMLParser.h" />
+    <ClInclude Include="XMLRestriction.h" />
+    <ClInclude Include="XMLTemporal.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

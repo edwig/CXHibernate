@@ -181,7 +181,7 @@ typedef struct _metaInfoIndex
   CString   m_catalogName;              // 01 Catalog (database name)
   CString   m_schemaName;               // 02 Schema owner
   CString   m_tableName;                // 03 Table name
-  bool      m_unique      { false };    // 04 true = UNIQUE
+  bool      m_nonunique   { true };     // 04 false = UNIQUE
   CString   m_indexName;                // 05 Index name
   int       m_indexType   { 0 };        // 06 SQL_TABLE_STAT / SQL_INDEX_CLUSTERED / SQL_INDEX_HASHED / SQL_INDEX_OTHER
   int       m_position    { 0 };        // 07 Ordinal position (start at 1)
@@ -219,6 +219,7 @@ typedef struct _metaInfoPrivilege
   CString   m_catalogName;              // Catalog of the object
   CString   m_schemaName;               // Schema of the object
   CString   m_tableName;                // Table/object name
+  CString   m_columnName;               // Column with specific privileges
   CString   m_grantor;                  // Grantor granting the privilege
   CString   m_grantee;                  // Grantee receiving the privilege
   CString   m_privilege;                // The privilege (CRUD etc)

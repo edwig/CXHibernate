@@ -119,23 +119,25 @@ public:
   // GETTING ALL THE INFO FOR ONE PROCEDURE
   // GETTING ALL META TYPES
 protected:
-  virtual bool MakeInfoTableTable     (MTableMap&     p_tables,    CString& p_errors,CString p_schema,CString p_tablename,CString p_type);
-  virtual bool MakeInfoTableColumns   (MColumnMap&    p_columns,   CString& p_errors,CString p_schema,CString p_tablename,CString p_columnname = "");
-  virtual bool MakeInfoTablePrimary   (MPrimaryMap&   p_primaries, CString& p_errors,CString p_schema,CString p_tablename);
-  virtual bool MakeInfoPSMProcedures  (MProcedureMap& p_procedures,CString& p_errors,CString p_schema,CString p_procedure);
-  virtual bool MakeInfoPSMParameters  (MParameterMap& p_parameters,CString& p_errors,CString p_schema,CString p_procedure);
-  virtual bool MakeInfoTableForeign   (MForeignMap&   p_foreigns,  CString& p_errors,CString p_schema,CString p_tablename,bool p_referenced = false);
-  virtual bool MakeInfoTableStatistics(MIndicesMap&   p_statistics,CString& p_errors,CString p_schema,CString p_tablename,MPrimaryMap* p_keymap,bool p_all = true);
+  virtual bool MakeInfoTableTable      (MTableMap&     p_tables,    CString& p_errors,CString p_schema,CString p_tablename,CString p_type);
+  virtual bool MakeInfoTableColumns    (MColumnMap&    p_columns,   CString& p_errors,CString p_schema,CString p_tablename,CString p_columnname = "");
+  virtual bool MakeInfoTablePrimary    (MPrimaryMap&   p_primaries, CString& p_errors,CString p_schema,CString p_tablename);
+  virtual bool MakeInfoPSMProcedures   (MProcedureMap& p_procedures,CString& p_errors,CString p_schema,CString p_procedure);
+  virtual bool MakeInfoPSMParameters   (MParameterMap& p_parameters,CString& p_errors,CString p_schema,CString p_procedure);
+  virtual bool MakeInfoTableForeign    (MForeignMap&   p_foreigns,  CString& p_errors,CString p_schema,CString p_tablename,bool p_referenced = false);
+  virtual bool MakeInfoTableStatistics (MIndicesMap&   p_statistics,CString& p_errors,CString p_schema,CString p_tablename,MPrimaryMap* p_keymap,bool p_all = true);
+  virtual bool MakeInfoTablePrivileges (MPrivilegeMap& p_privileges,CString& p_errors,CString p_schema,CString p_tablename);
+  virtual bool MakeInfoColumnPrivileges(MPrivilegeMap& p_privileges,CString& p_errors,CString p_schema,CString p_tablename,CString p_columnname = "");
+
 public:
   virtual bool MakeInfoTableSpecials  (MSpecialsMap&  p_specials,  CString& p_errors,CString p_schema,CString p_tablename);
-  virtual bool MakeInfoTablePrivileges(MPrivilegeMap& p_privileges,CString& p_errors,CString p_schema,CString p_tablename);
   virtual bool MakeInfoMetaTypes      (MMetaMap&      p_objects,   CString& p_errors,int p_type);
 
   // Meta pointer to SQLGet<META> functions
   unsigned char* GetMetaPointer(unsigned char* p_buffer,bool p_meta);
 
   // Getting datatype info
-  TypeInfo* GetTypeInfo(int p_sqlDatatype) const;
+  TypeInfo* GetTypeInfo(int p_sqlDatatype,CString p_typename = "") const;
 
   // CONNECTION ATTRIBUTES
 

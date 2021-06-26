@@ -792,6 +792,7 @@ WSDLCache::CheckParameters(XMLElement*  p_orgBase
     orgParam = p_orig ->GetElementSibling(orgParam);
     type     = orgParam ? orgParam->GetType() : 0;
   }
+
   // See if we've got something extra left
   checkParam = p_check->GetElementFirstChild(p_checkBase);
   while(checkParam)

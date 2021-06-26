@@ -2,9 +2,6 @@
 //
 // SourceFile: XMLMessage.h
 //
-// From the project: Marlin Server: Internet server/client
-// See: https://github.com/edwig/Marlin
-// 
 // Copyright (c) 1998-2020 ir. W.E. Huisman
 // All rights reserved
 //
@@ -26,19 +23,11 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 //
-// Version number: See SQLComponents.h
-//
-#pragma once
-#include "SQLComponents.h"
+#ifndef __XMLMessage__
+#define __XMLMessage__
+
 #include "XMLDataType.h"
 #include <deque>
-
-#ifdef COMPILED_TOGETHER_WITH_MARLIN
-#include "..\Marlin\XMLMessage.h"
-#else
-
-namespace SQLComponents
-{
 
 // XML coding of the message
 enum class XMLEncoding
@@ -90,6 +79,7 @@ enum class WhiteSpace
 // Forward declarations
 class XMLAttribute;
 class XMLElement;
+class XMLMessage;
 class XMLParser;
 class XMLParserImport;
 class XMLRestriction;
@@ -113,6 +103,7 @@ class XMLElement
 {
 public:
   XMLElement();
+  XMLElement(XMLElement* p_parent);
   XMLElement(const XMLElement& p_source);
 
  ~XMLElement();
@@ -123,13 +114,29 @@ public:
   CString         GetName()         { return m_name;        };
   XmlDataType     GetType()         { return m_type;        };
   CString         GetValue()        { return m_value;       };
+  XmlAttribMap&   GetAttributes()   { return m_attributes;  };
+  XmlElementMap&  GetChildren()     { return m_elements;    };
+  XMLElement*     GetParent()       { return m_parent;      };
   XMLRestriction* GetRestriction()  { return m_restriction; };
 
-  void  SetName(CString p_name)         { m_name  = p_name;     };
-  void  SetValue(CString p_value)       { m_value = p_value;    };
-  void  SetDataType(XmlDataType p_type) { m_type  = p_type;     };
+  // TESTERS
+  static bool     IsValidName(const CString& p_name);
+  static CString  InvalidNameMessage(const CString& p_name);
 
-  // (Public!) data
+  // SETTERS
+  void            SetParent(XMLElement* parent)  { m_parent    = parent;    };
+  void            SetNamespace(CString p_namesp) { m_namespace = p_namesp;  };
+  void            SetName(CString p_name);
+  void            SetType(XmlDataType p_type)    { m_type      = p_type;    };
+  void            SetValue(CString p_value)      { m_value     = p_value;   };
+  void            SetRestriction(XMLRestriction* p_restrict) { m_restriction = p_restrict; };
+
+  // REFERENCE SYSTEM
+  void            AddReference();
+  void            DropReference();
+
+private:
+  // Our element node data
   CString         m_namespace;
   CString         m_name;
   XmlDataType     m_type { 0 };
@@ -138,6 +145,7 @@ public:
   XmlElementMap   m_elements;
   XMLElement*     m_parent      { nullptr };
   XMLRestriction* m_restriction { nullptr };
+  long            m_references  { 1       };
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -168,18 +176,27 @@ public:
   virtual CString Print();
   // Print the XML header
   CString         PrintHeader();
+  CString         PrintStylesheet();
   // Print the elements stack
   virtual CString PrintElements(XMLElement* p_element
                                ,bool        p_utf8  = true
                                ,int         p_level = 0);
+  // Print the XML as a JSON object
+  virtual CString PrintJson(bool p_attributes);
+  // Print the elements stack as a JSON string
+  virtual CString PrintElementsJson(XMLElement* p_element
+                                   ,bool        p_attributes
+                                   ,bool        p_utf8  = true
+                                   ,int         p_level = 0);
+
   // FILE OPERATIONS
 
   // Load from file
-  bool            LoadFile(const CString& p_fileName);
-  bool            LoadFile(const CString& p_fileName, XMLEncoding p_encoding);
+  virtual bool    LoadFile(const CString& p_fileName);
+  virtual bool    LoadFile(const CString& p_fileName, XMLEncoding p_encoding);
   // Save to file
-  bool            SaveFile(const CString& p_fileName);
-  bool            SaveFile(const CString& p_fileName, XMLEncoding p_encoding);
+  virtual bool    SaveFile(const CString& p_fileName,bool p_withBom = false);
+  virtual bool    SaveFile(const CString& p_fileName,XMLEncoding p_encoding,bool p_withBom = false);
 
   // SETTERS
   // Set the output encoding of the message
@@ -188,9 +205,13 @@ public:
   void            SetRootNodeName(CString p_name);
   // Set condensed format (no spaces or newlines)
   void            SetCondensed(bool p_condens);
+  void            SetPrintRestrictions(bool p_restrict);
   // Set sending in Unicode
   void            SetSendUnicode(bool p_unicode);
   void            SetSendBOM(bool p_bom);
+  // Stylesheet info
+  void            SetStylesheetType(CString p_type);
+  void            SetStylesheet(CString p_sheet);
   // Setting an element
   XMLElement*     SetElement(CString p_name, CString&    p_value);
   XMLElement*     SetElement(CString p_name, const char* p_value);
@@ -226,9 +247,11 @@ public:
   CString         GetInternalErrorString();
   XMLEncoding     GetEncoding();
   bool            GetCondensed();
+  bool            GetPrintRestrictions();
   bool            GetSendUnicode();
   bool            GetSendBOM();
   XMLElement*     GetRoot();
+  void            SetRoot(XMLElement* p_root);
   CString         GetElement(CString p_name);
   int             GetElementInteger(CString p_name);
   bool            GetElementBoolean(CString p_name);
@@ -243,6 +266,8 @@ public:
   int             GetAttributeInteger(XMLElement* p_elem,CString p_attribName);
   bool            GetAttributeBoolean(XMLElement* p_elem,CString p_attribName);
   double          GetAttributeDouble(XMLElement* p_elem,CString p_attribName);
+  CString         GetStylesheetType();
+  CString         GetStylesheet();
 
   // FINDING
   XMLElement*     FindElement(CString p_name, bool p_recurse = true);
@@ -267,15 +292,22 @@ public:
   XMLElement*     FindElementByAttribute(CString p_attribute, CString p_value);
   XMLElement*     FindElementByAttribute(XMLElement* p_element, CString p_attribute, CString p_value);
 
+  // XMLElements can be stored elsewhere. Use the reference mechanism to add/drop references
+  // With the drop of the last reference, the object WILL destroy itself
+  void            AddReference();
+  void            DropReference();
+
 protected:
-  // Split namespace from an identifier
-  static CString  SplitNamespace(CString& p_name);
+  // Encrypt the whole message: yielding a new message
+  virtual void    EncryptMessage(CString& p_message);
+  // Print the WSDL Comments in the message
+  CString         PrintWSDLComment(XMLElement* p_element);
 
   // Parser for the XML texts
   friend          XMLParser;
   friend          XMLParserImport;
   // The one and only rootnode
-  XMLElement      m_root;                                     // All elements, from the root up
+  XMLElement*     m_root            { nullptr };              // All elements, from the root up
   XMLEncoding     m_encoding        { XMLEncoding::ENC_UTF8 };// Encoding scheme
   CString         m_version         { "1.0" };                // XML Version, most likely 1.0
   CString         m_standalone;                               // Stand alone from DTD or XSD's
@@ -283,9 +315,14 @@ protected:
   bool            m_whitespace      { false };                // Collapse whitespace
   bool            m_sendUnicode     { false };                // Construct UTF-16 on sending out
   bool            m_sendBOM         { false };                // Prepend Byte-Order-Mark before message (UTF-8 / UTF-16)
+  bool            m_printRestiction { false };                // Print restrictions as comment before node
+  // Stylesheet info
+  CString         m_stylesheetType;                           // Content type of the XSL stylesheet
+  CString         m_stylesheet;                               // Link tot he XSL stylesheet
   // Status and other info
   XmlError        m_internalError   { XmlError::XE_NoError }; // Internal error status
   CString         m_internalErrorString;                      // Human readable form of the error
+  long            m_references      { 0 };                    // Externally referenced
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -294,7 +331,7 @@ protected:
 inline XMLElement*
 XMLMessage::GetRoot()
 {
-  return &m_root;
+  return m_root;
 }
 
 inline void
@@ -318,13 +355,13 @@ XMLMessage::GetInternalErrorString()
 inline void
 XMLMessage::SetRootNodeName(CString p_name)
 {
-  m_root.m_name = p_name;
+  m_root->SetName(p_name);
 }
 
 inline CString
 XMLMessage::GetRootNodeName()
 {
-  return m_root.m_name;
+  return m_root->GetName();
 }
 
 inline XMLEncoding
@@ -357,7 +394,40 @@ XMLMessage::SetSendBOM(bool p_bom)
   m_sendBOM = p_bom;
 }
 
-// End of namespace
+inline bool
+XMLMessage::GetPrintRestrictions()
+{
+  return m_printRestiction;
 }
 
-#endif   // COMPILED_TOGETHER_WITH_MARLIN
+inline void
+XMLMessage::SetPrintRestrictions(bool p_restrict)
+{
+  m_printRestiction = p_restrict;
+}
+
+inline CString
+XMLMessage::GetStylesheetType()
+{
+  return m_stylesheetType;
+}
+
+inline CString
+XMLMessage::GetStylesheet()
+{
+  return m_stylesheet;
+}
+
+inline void
+XMLMessage::SetStylesheetType(CString p_type)
+{
+  m_stylesheetType = p_type;
+}
+
+inline void
+XMLMessage::SetStylesheet(CString p_sheet)
+{
+  m_stylesheet = p_sheet;
+}
+
+#endif  // __XMLMessage__

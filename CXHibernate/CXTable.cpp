@@ -594,7 +594,7 @@ CXTable::SaveIndices(SOAPMessage& p_msg)
     {
       index = p_msg.AddElement(elem,"Index",XDT_String,"");
       p_msg.AddElement(index,"Name",     XDT_String |XDT_Type,ind.m_indexName);
-      p_msg.AddElement(index,"Unique",   XDT_Boolean|XDT_Type,ind.m_unique);
+      p_msg.AddElement(index,"Unique",   XDT_Boolean|XDT_Type,! ind.m_nonunique);
       p_msg.AddElement(index,"Ascending",XDT_Boolean|XDT_Type,ind.m_ascending == "A");
       p_msg.AddElement(index,"Filter",   XDT_String |XDT_Type,ind.m_filter);
 
@@ -795,7 +795,7 @@ CXTable::LoadIndices(SOAPMessage& p_msg)
     MetaIndex ind;
 
     ind.m_indexName = p_msg.GetElement       (index,"Name");
-    ind.m_unique    = p_msg.GetElementBoolean(index,"Unique");
+    ind.m_nonunique = ! p_msg.GetElementBoolean(index,"Unique");
     ind.m_ascending = p_msg.GetElementBoolean(index,"Ascending") ? "A" : "D";
     ind.m_filter    = p_msg.GetElement       (index,"Filter");
     ind.m_position  = position;

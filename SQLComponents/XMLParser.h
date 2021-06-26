@@ -2,9 +2,6 @@
 //
 // SourceFile: XMLParser.h
 //
-// From the project: Marlin Server: Internet server/client
-// See: https://github.com/edwig/Marlin
-// 
 // Copyright (c) 1998-2020 ir. W.E. Huisman
 // All rights reserved
 //
@@ -26,17 +23,10 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 //
-// Version number: See SQLComponents.h
-//
-#pragma once
+#ifndef __XMLParser__
+#define __XMLParser__
+
 #include "XMLMessage.h"
-
-#ifdef COMPILED_TOGETHER_WITH_MARLIN
-#include "..\Marlin\XMLParser.h"
-#else
-
-namespace SQLComponents
-{
 
 // To be translated entities in an XML string
 class Entity
@@ -53,12 +43,6 @@ using uchar = unsigned char;
 // Current number of entities recognized
 constexpr auto NUM_ENTITY = 5;
 
-// Decoding a UTF-8 string
-CString DecodeUTF8String(const CString& p_string);
-// Encode to UTF-8 string
-CString EncodeUTF8String(const CString& p_string);
-// Print string with entities and optionally as UTF8 again
-CString PrintXmlString(const CString& p_string,bool p_utf8 = false);
 
 class XMLParser
 {
@@ -72,6 +56,10 @@ public:
   // Setting message to UTF-8 encryption
   void          SetUTF8();
 
+  // Print string with entities and optionally as UTF8 again
+  static CString PrintXmlString (const CString& p_string, bool p_utf8 = false);
+  static CString PrintJsonString(const CString& p_string, bool p_utf8 = false);
+
 protected:
   // Set the internal error
   void          SetError(XmlError p_error,const uchar* p_text,bool p_throw = true);
@@ -82,6 +70,7 @@ protected:
   // Parsers
   void          ParseLevel();
   void          ParseDeclaration();
+  void          ParseStylesheet();
   void          ParseComment();
   void          ParseDTD();
   void          ParseCDATA();
@@ -122,7 +111,4 @@ XMLParser::SetUTF8()
   m_utf8 = true;
 }
 
-// End of namespace
-}
-
-#endif // COMPILED_TOGETHER_WITH_MARLIN
+#endif // __XMLParser__

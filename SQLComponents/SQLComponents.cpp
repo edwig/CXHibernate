@@ -30,10 +30,14 @@
 namespace SQLComponents
 {
   bool g_SQLComponentsInitialized = false;
+  bool g_SQLComponentsInServer    = false;
 
   // Initialization of the SQLComponents library
-  void InitSQLComponents(Language p_language)
+  void InitSQLComponents(Language p_language,bool p_inServer /*= false*/)
   {
+    // Save the server setting
+    g_SQLComponentsInServer = p_inServer;
+
     // Use StdExceptions in this library
     // BEWARE: All threads must call this function!!
     _set_se_translator(SeTranslator);
@@ -69,4 +73,3 @@ namespace SQLComponents
     }
   }
 }
-

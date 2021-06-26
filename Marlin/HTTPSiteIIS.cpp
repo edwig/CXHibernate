@@ -78,12 +78,9 @@ HTTPSiteIIS::InitSite()
   m_domain          = config->GetSiteDomain   (m_site,m_domain);
   m_authScheme      = config->GetSiteScheme   (m_site,m_authScheme);
 
-
   // Call our main class InitSite
   HTTPSite::InitSite(m_server->GetWebConfig());
 }
-
-
 
 bool
 HTTPSiteIIS::StartSite()

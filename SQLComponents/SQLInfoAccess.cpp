@@ -2,7 +2,7 @@
 //
 // File: SQLInfoAccess.cpp
 //
-// Copyright (c) 1998-2020 ir. W.E. Huisman
+// Copyright (c) 1998-2021 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy of 
@@ -280,6 +280,13 @@ SQLInfoAccess::GetKEYWORDDataType(MetaColumn* p_column)
   return p_column->m_typename;
 }
 
+// Gets the USER (current-user) keyword function
+CString 
+SQLInfoAccess::GetKEYWORDCurrentUser() const
+{
+  return "CurrentUser()";
+}
+
 // Connects to a default schema in the database/instance
 CString 
 SQLInfoAccess::GetSQLDefaultSchema(CString /*p_schema*/) const
@@ -498,6 +505,12 @@ SQLInfoAccess::GetCATALOGTableCreate(MetaTable& p_table,MetaColumn& /*p_column*/
   CString sql = "CREATE TABLE ";
   sql += p_table.m_table;
   return sql;
+}
+
+CString 
+SQLInfoAccess::GetCATALOGTableCreatePostfix(MetaTable& /*p_table*/,MetaColumn& /*p_column*/) const
+{
+  return "";
 }
 
 // Rename a database table 
@@ -956,6 +969,13 @@ SQLInfoAccess::GetCATALOGViewAttributes(CString& /*p_schema*/,CString& /*p_viewn
 }
 
 CString 
+SQLInfoAccess::GetCATALOGViewText(CString& /*p_schema*/,CString& /*p_viewname*/) const
+{
+  // Cannot query this, Use ODBC functions
+  return "";
+}
+
+CString
 SQLInfoAccess::GetCATALOGViewCreate(CString /*p_schema*/,CString p_viewname,CString p_contents) const
 {
   return "CREATE VIEW " + p_viewname + "\n" + p_contents;

@@ -2,7 +2,7 @@
 //
 // File: SQLComponentsVersion.h
 //
-// Copyright (c) 1998-2020 ir. W.E. Huisman
+// Copyright (c) 1998-2021 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy of 
@@ -26,7 +26,7 @@
 // General version, date and copyright
 // of the SQLComponents library
 
-#define SQL_COMPONENTS_VERSION   "1.7.0"
-#define SQL_COMPONENTS_BINVERSION 1,7,0,0
-#define SQL_COMPONENTS_DATE      "16-08-2020"
-#define SQL_COMPONENTS_COPYRIGHT "Copyright (c) 2002-2020 ir. W.E. Huisman"
+#define SQL_COMPONENTS_VERSION   "1.7.2"
+#define SQL_COMPONENTS_BINVERSION 1,7,2,0
+#define SQL_COMPONENTS_DATE      "01-01-2021"
+#define SQL_COMPONENTS_COPYRIGHT "Copyright (c) 2002-2021 ir. W.E. Huisman"

@@ -2,7 +2,7 @@
 //
 // File: SQLInfoDB.cpp
 //
-// Copyright (c) 1998-2020 ir. W.E. Huisman
+// Copyright (c) 1998-2021 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy of 
@@ -281,24 +281,24 @@ SQLInfoDB::MakeInfoTableColumns(MColumnMap& p_columns
     {
       MetaColumn column;
 
-      column.m_catalog        = (CString) qry[1];
-      column.m_schema         = (CString) qry[2];
-      column.m_table          = (CString) qry[3];
-      column.m_column         = (CString) qry[4];
-      column.m_datatype       = (int)     qry[5];
-      column.m_typename       = (CString) qry[6];
-      column.m_columnSize     = (int)     qry[7];
-      column.m_bufferLength   = (int)     qry[8];
-      column.m_decimalDigits  = (int)     qry[9];
-      column.m_numRadix       = (int)     qry[10];
-      column.m_nullable       = (int)     qry[11];
-      column.m_remarks        = (CString) qry[12];
-      column.m_default        = (CString) qry[13];
-      column.m_datatype3      = (int)     qry[14];
-      column.m_sub_datatype   = (int)     qry[15];
-      column.m_octet_length   = (int)     qry[16];
-      column.m_position       = (int)     qry[17];
-      column.m_isNullable     = (CString) qry[18];
+      column.m_catalog        = (CString)  qry[1];
+      column.m_schema         = (CString)  qry[2];
+      column.m_table          = (CString)  qry[3];
+      column.m_column         = (CString)  qry[4];
+      column.m_datatype       = (int)      qry[5];
+      column.m_typename       = (CString)  qry[6];
+      column.m_columnSize     = (unsigned) qry[7];
+      column.m_bufferLength   = (INT64)    qry[8];
+      column.m_decimalDigits  = (int)      qry[9];
+      column.m_numRadix       = (int)      qry[10];
+      column.m_nullable       = (int)      qry[11];
+      column.m_remarks        = (CString)  qry[12];
+      column.m_default        = (CString)  qry[13];
+      column.m_datatype3      = (int)      qry[14];
+      column.m_sub_datatype   = (int)      qry[15];
+      column.m_octet_length   = (INT64)    qry[16];
+      column.m_position       = (int)      qry[17];
+      column.m_isNullable     = (CString)  qry[18];
 
       column.m_catalog    = column.m_catalog.Trim();
       column.m_table      = column.m_table.Trim();
@@ -539,26 +539,26 @@ SQLInfoDB::MakeInfoPSMProcedures(MProcedureMap&  p_procedures
     else
     {
       // List complete procedure
-    while(qry.GetRecord())
-    {
-      MetaProcedure proc;
+      while(qry.GetRecord())
+      {
+        MetaProcedure proc;
 
-      proc.m_catalogName      = qry.GetColumn(1)->GetAsChar();
-      proc.m_schemaName       = qry.GetColumn(2)->GetAsChar();
-      proc.m_procedureName    = qry.GetColumn(3)->GetAsChar();
-      proc.m_inputParameters  = qry.GetColumn(4)->GetAsSLong();
-      proc.m_outputParameters = qry.GetColumn(5)->GetAsSLong();
-      proc.m_resultSets       = qry.GetColumn(6)->GetAsSLong();
-      proc.m_remarks          = qry.GetColumn(7)->GetAsChar();
-      proc.m_procedureType    = qry.GetColumn(8)->GetAsSLong();
-      proc.m_source           = qry.GetColumn(9)->GetAsChar();
+        proc.m_catalogName      = qry.GetColumn(1)->GetAsChar();
+        proc.m_schemaName       = qry.GetColumn(2)->GetAsChar();
+        proc.m_procedureName    = qry.GetColumn(3)->GetAsChar();
+        proc.m_inputParameters  = qry.GetColumn(4)->GetAsSLong();
+        proc.m_outputParameters = qry.GetColumn(5)->GetAsSLong();
+        proc.m_resultSets       = qry.GetColumn(6)->GetAsSLong();
+        proc.m_remarks          = qry.GetColumn(7)->GetAsChar();
+        proc.m_procedureType    = qry.GetColumn(8)->GetAsSLong();
+        proc.m_source           = qry.GetColumn(9)->GetAsChar();
 
         if(proc.m_source.IsEmpty() || proc.m_source.Compare("<@>") == 0)
-      {
-        proc.m_source = MakeInfoPSMSourcecode(proc.m_schemaName, proc.m_procedureName);
+        {
+          proc.m_source = MakeInfoPSMSourcecode(proc.m_schemaName, proc.m_procedureName);
+        }
+        p_procedures.push_back(proc);
       }
-      p_procedures.push_back(proc);
-    }
     }
     return !p_procedures.empty();
   }
@@ -742,7 +742,7 @@ SQLInfoDB::MakeInfoTableSequences(MSequenceMap& p_sequences,CString& p_errors,CS
 
     qry.DoSQLStatement(sql);
     while(qry.GetRecord())
-  {
+    {
       MetaSequence sequence;
 
       sequence.m_catalogName  = qry.GetColumn(1)->GetAsChar();
@@ -755,6 +755,28 @@ SQLInfoDB::MakeInfoTableSequences(MSequenceMap& p_sequences,CString& p_errors,CS
       sequence.m_cycle        = qry.GetColumn(8)->GetAsBoolean();
       sequence.m_order        = qry.GetColumn(9)->GetAsBoolean();
 
+      if(sequence.m_increment == 0)
+      {
+        // A sequence without an increment is NO sequence.
+        // Try to get hold of the values through the attributes call
+        CString sql2 = GetCATALOGSequenceAttributes(p_schema,sequence.m_sequenceName);
+        if(!sql2.IsEmpty())
+        {
+          SQLQuery query2(m_database);
+          if(!p_schema.IsEmpty())    query2.SetParameter(p_schema);
+          query2.SetParameter(sequence.m_sequenceName);
+          query2.DoSQLStatement(sql2);
+          if(query2.GetRecord())
+          {
+            sequence.m_currentValue = query2.GetColumn(4)->GetAsDouble();
+            sequence.m_minimalValue = query2.GetColumn(5)->GetAsDouble();
+            sequence.m_increment    = query2.GetColumn(6)->GetAsSLong();
+            sequence.m_cache        = query2.GetColumn(7)->GetAsSLong();
+            sequence.m_cycle        = query2.GetColumn(8)->GetAsBoolean();
+            sequence.m_order        = query2.GetColumn(9)->GetAsBoolean();
+          }
+        }
+      }
       p_sequences.push_back(sequence);
     }
     return !p_sequences.empty();
@@ -858,6 +880,33 @@ SQLInfoDB::MakeInfoColumnPrivileges(MPrivilegeMap& p_privileges,CString& p_error
     p_errors += er.GetErrorMessage();
   }
   return false;
+}
+
+bool    
+SQLInfoDB::MakeInfoViewDefinition(CString& p_defintion,CString& p_errors,CString p_schema,CString p_viewname)
+{
+  bool result = false;
+  CString sql = GetCATALOGViewText(p_schema,p_viewname);
+  if(!sql.IsEmpty())
+  {
+    try
+    {
+      // RDBMS might store view definition in multiple catalog records
+      SQLQuery query(m_database);
+      query.DoSQLStatement(sql);
+      while(query.GetRecord())
+      {
+        p_defintion += query.GetColumn(1)->GetAsChar();
+      }
+      result = true;
+    }
+    catch(StdException& er)
+    {
+      ReThrowSafeException(er);
+      p_errors += er.GetErrorMessage();
+    }
+  }
+  return result;
 }
 
 //////////////////////////////////////////////////////////////////////////

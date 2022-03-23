@@ -2,7 +2,7 @@
 //
 // SourceFile: XMLParser.cpp
 //
-// Copyright (c) 1998-2020 ir. W.E. Huisman
+// Copyright (c) 2014-2021 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -215,7 +215,10 @@ XMLParser::ParseMessage(CString& p_message,WhiteSpace p_whiteSpace /*=PRESERVE_W
   catch(StdException& ex)
   {
     m_message->m_internalError = XmlError::XE_NotAnXMLMessage;
-    m_message->m_internalErrorString = ex.GetErrorMessage();
+    if(m_message->m_internalErrorString.IsEmpty())
+    {
+      m_message->m_internalErrorString = ex.GetErrorMessage();
+    }
   }
 
   // Conclusion of condensed level

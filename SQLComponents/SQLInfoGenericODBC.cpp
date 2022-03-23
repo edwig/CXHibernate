@@ -2,7 +2,7 @@
 //
 // File: SQLInfoGenericODBC.cpp
 //
-// Copyright (c) 1998-2020 ir. W.E. Huisman
+// Copyright (c) 1998-2021 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy of 
@@ -286,6 +286,13 @@ SQLInfoGenericODBC::GetKEYWORDDataType(MetaColumn* p_column)
   return p_column->m_typename = SQLInfo::ODBCDataType(p_column->m_datatype);
 }
 
+// Gets the USER (current-user) keyword function
+CString
+SQLInfoGenericODBC::GetKEYWORDCurrentUser() const
+{
+  return "CURRENT_USER";
+}
+
 // Connects to a default schema in the database/instance
 CString
 SQLInfoGenericODBC::GetSQLDefaultSchema(CString /*p_schema*/) const
@@ -518,6 +525,12 @@ SQLInfoGenericODBC::GetCATALOGTableCreate(MetaTable& p_table,MetaColumn& /*p_col
   }
   sql += "TABLE " + p_table.m_table;
   return sql;
+}
+
+CString
+SQLInfoGenericODBC::GetCATALOGTableCreatePostfix(MetaTable& /*p_table*/,MetaColumn& /*p_column*/) const
+{
+  return "";
 }
 
 CString
@@ -1055,7 +1068,14 @@ SQLInfoGenericODBC::GetCATALOGViewAttributes(CString& /*p_schema*/,CString& /*p_
   return "";
 }
 
-CString 
+CString
+SQLInfoGenericODBC::GetCATALOGViewText(CString& /*p_schema*/,CString& /*p_viewname*/) const
+{
+  // Cannot query this, Use ODBC functions
+  return "";
+}
+
+CString
 SQLInfoGenericODBC::GetCATALOGViewCreate(CString p_schema,CString p_viewname,CString p_contents) const
 {
   return "CREATE VIEW " + p_schema + "." + p_viewname + "\n" + p_contents;

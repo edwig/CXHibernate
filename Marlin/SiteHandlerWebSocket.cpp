@@ -4,7 +4,7 @@
 //
 // Marlin Server: Internet server/client
 // 
-// Copyright (c) 2015-2018 ir. W.E. Huisman
+// Copyright (c) 2014-2021 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -78,14 +78,16 @@ SiteHandlerWebSocket::Handle(HTTPMessage* p_message)
     if(Handle(p_message,socket))
     {
       // Handler must **NOT** handle the response sending!
+      // Handler must **NOT** change the status
       HTTP_OPAQUE_ID request = p_message->GetRequestHandle();
-      if(request)
+      if(request && (p_message->GetStatus() == HTTP_STATUS_SWITCH_PROTOCOLS))
       {
         // Send the response to the client side, confirming that we become a WebSocket
         // Sending the switch protocols and handshake headers as a HTTP 101 status, 
         // but keep the channel OPEN
         m_site->SendResponse(p_message);
-        // server->FlushSocket(request);
+        // Flush socket, so object will be created in IIS and client receives confirmation
+        server->FlushSocket(request,m_site->GetPrefixURL());
 
         // Find the internal structures for the server
         p_message->SetRequestHandle(request);

@@ -2,7 +2,7 @@
 //
 // File: SQLMetaInfo.h
 //
-// Copyright (c) 1998-2020 ir. W.E. Huisman
+// Copyright (c) 1998-2021 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy of 
@@ -79,7 +79,7 @@ typedef struct _metaInfoColumn
   int       m_datatype      { 0 };    // 05 SQL Data type
   CString   m_typename;               // 06 Data type name (according to RDBMS)
   int       m_columnSize    { 0 };    // 07 Display column size or precision
-  int       m_bufferLength  { 0 };    // 08 Internal buffer size
+  INT64     m_bufferLength  { 0 };    // 08 Internal buffer size
   int       m_decimalDigits { 0 };    // 09 Also known as scale
   int       m_numRadix      { 0 };    // 10 Radix of the column size
   int       m_nullable      { 2 };    // 11 Nullable SQL_NO_NULLS(0) / SQL_NULLABLE (1) / SQL_NULLABLE_UNKNOWN (2)
@@ -87,7 +87,7 @@ typedef struct _metaInfoColumn
   CString   m_default;                // 13 Default value of the column
   int       m_datatype3     { 0 };    // 14 ODBC3 datatype (mostly m_datatype)
   int       m_sub_datatype  { 0 };    // 15 Datetime sub type 
-  int       m_octet_length  { 0 };    // 16 (VAR)CHAR octet length for Unicode
+  INT64     m_octet_length  { 0 };    // 16 (VAR)CHAR octet length for Unicode
   int       m_position      { 0 };    // 17 Ordinal position in the table
   CString   m_isNullable;             // 18 'YES', 'NO' or 'UNKNOWN'
 

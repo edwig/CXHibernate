@@ -4,7 +4,7 @@
 //
 // Marlin Server: Internet server/client
 // 
-// Copyright (c) 2015-2018 ir. W.E. Huisman
+// Copyright (c) 2014-2021 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -95,7 +95,7 @@ __declspec(thread) ULONG tls_lastError = 0;
 
 // Static globals for the server as a whole
 // Can be set through the web.config reading of the HTTPServer
-unsigned long g_streaming_limit = STREAMING_LIMIT;
+// unsigned long g_streaming_limit = STREAMING_LIMIT;
 unsigned long g_compress_limit  = COMPRESS_LIMIT;
 
 // Logging macro's

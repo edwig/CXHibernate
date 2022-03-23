@@ -505,7 +505,7 @@ CXTable::SaveColumnInfo(SOAPMessage& p_msg)
     p_msg.AddElement(column, "ODBC_Type",     XDT_Integer|XDT_Type,col.m_datatype);
     p_msg.AddElement(column, "RDBMS_Type",    XDT_String |XDT_Type,col.m_typename);
     p_msg.AddElement(column, "ColumnSize",    XDT_Integer|XDT_Type,col.m_columnSize);
-    p_msg.AddElement(column, "BufferLength",  XDT_Integer|XDT_Type,col.m_bufferLength);
+    p_msg.AddElement(column, "BufferLength",  XDT_Integer|XDT_Type,(int) col.m_bufferLength);
     p_msg.AddElement(column, "DecimalDigits", XDT_Integer|XDT_Type,col.m_decimalDigits);
     p_msg.AddElement(column, "Radix",         XDT_Integer|XDT_Type,col.m_numRadix);
     p_msg.AddElement(column, "Nullable",      XDT_Integer|XDT_Type,col.m_nullable);
@@ -513,7 +513,7 @@ CXTable::SaveColumnInfo(SOAPMessage& p_msg)
     p_msg.AddElement(column, "DefaultValue",  XDT_String |XDT_Type,col.m_default);
     p_msg.AddElement(column, "ODBC_Type3",    XDT_Integer|XDT_Type,col.m_datatype3);
     p_msg.AddElement(column, "SubType",       XDT_Integer|XDT_Type,col.m_sub_datatype);
-    p_msg.AddElement(column, "OctetLength",   XDT_Integer|XDT_Type,col.m_octet_length);
+    p_msg.AddElement(column, "OctetLength",   XDT_Integer|XDT_Type,(int)col.m_octet_length);
   }
 }
 

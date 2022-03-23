@@ -29,6 +29,7 @@
 #include "stdafx.h"
 #include "SQLComponents.h"
 #include "BasicXmlExcel.h"
+#include <comutil.h>
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -77,7 +78,7 @@ BasicXmlCell::~BasicXmlCell()
 bool     
 BasicXmlCell::GetCellValue(int& p_value)
 {
-  if(m_type == XCT_INTEGER)
+  if(m_type == XCT_INTEGER || m_type == XCT_DATE)
   {
     p_value = m_val.m_intval;
     return true;
@@ -236,8 +237,44 @@ BasicXmlWorksheet::Load(XMLMessage& p_msg,XMLElement* p_root)
           {
             // Integer number
             int intNum = atoi(value);
-            cell = new BasicXmlCell(rowNumber,colNumber,intNum,XCT_INTEGER);
-          }
+            //Het is een getal, maar nog controleren of het een datum is.
+            // met het s attribuut kan de style verwijzing worden opgevraagd.
+            dataType = p_msg.GetAttribute(col,"s");
+            if(dataType && !dataType.IsEmpty())
+            {
+              //Als de s waarde voorkomt in de style array met datumopmaak dan is het een datum :)              
+              CString formatCode =  m_workbook->GetStyleCode(_ttoi(dataType));
+              if (formatCode.Compare("M/D/YY") == 0 ||
+                formatCode.Compare("[$-F800]dddd\\,\\ mmmm\\ dd\\,\\ yyyy") == 0 ||
+                formatCode.Compare("yyyy/mm/dd;@") == 0 ||
+                formatCode.Compare("d/m;@") == 0 ||
+                formatCode.Compare("d/mm/yy;@") == 0 ||
+                formatCode.Compare("dd/mm/yy;@") == 0 ||
+                formatCode.Compare("[$-413]d/mmm;@") == 0 ||
+                formatCode.Compare("[$-413]dd/mmm/yy;@") == 0 ||
+                formatCode.Compare("[$-413]mmm/yy;@") == 0 ||
+                formatCode.Compare("[$-413]mmmm/yy;@") == 0 ||
+                formatCode.Compare("[$-413]d\\ mmmm\\ yyyy;@") == 0 ||
+                formatCode.Compare("[$-413]d/mmm/yyyy;@") == 0 ||
+                formatCode.Compare("[$-413]d/mmm/yy;@") == 0 ||
+                formatCode.Compare("[$-413]mmmmm;@") == 0 ||
+                formatCode.Compare("[$-413]mmmmm/yy;@") == 0 ||
+                formatCode.Compare("m/d/yyyy;@") == 0
+                )
+              {
+                cell = new BasicXmlCell(rowNumber, colNumber, intNum, XCT_DATE);
+              }
+              else
+              {
+                //Toch geen datum dus laten we maar wel een cell met integer aanmaken :)
+                cell = new BasicXmlCell(rowNumber, colNumber, intNum, XCT_INTEGER);
+              }
+            }
+            else
+            {
+            	cell = new BasicXmlCell(rowNumber,colNumber,intNum,XCT_INTEGER);
+          	}
+        	}
         }
         ulong cellnum = CELLNUM(rowNumber,colNumber);
         m_cells.insert(std::make_pair(cellnum,cell));
@@ -310,6 +347,15 @@ BasicXmlWorksheet::GetCellValue(int p_row,int p_col)
                           value = m_workbook->GetSharedString(intValue);
                         }
                         break;
+      case XCT_DATE:    if(cell->GetCellValue(intValue))
+                        {
+                          // Het omzetten van een int naar een string datum
+                          BSTR bstr = NULL;
+                          VarBstrFromDate(intValue, LANG_USER_DEFAULT, VAR_FOURDIGITYEARS, &bstr); 
+                          value = bstr;
+                          SysFreeString(bstr);
+                        }
+                        break;
       case XCT_EMPTY:    // Fall through
       default:          break;
     }
@@ -354,6 +400,7 @@ BasicXmlExcel::~BasicXmlExcel()
   }
   m_worksheets.clear();
   m_sheetnames.clear();
+  m_styles.clear();
   m_sharedStrings.clear();
 }
 
@@ -522,6 +569,8 @@ BasicXmlExcel::Load()
   // Ignore return value from LoadStrings
   // After Office-2013 it shared-strings are not mandatory any more
   LoadStrings();
+  //De xlsx bestanden hebben intern een styles.xml, hier staat bijvoorbeeld een datumopmaak in beschreven.
+  LoadStyles();
   return LoadWorksheets();
 }
 
@@ -601,6 +650,128 @@ BasicXmlExcel::LoadStrings()
       // Ready with the buffer
       free(buffer);
       // Ready reading strings
+      return true;
+    }
+  }
+  return false;
+}
+
+bool
+BasicXmlExcel::LoadStyles()
+{
+  if(m_zip == NULL)
+  {
+    return false;
+  }
+  if(m_sheetRead)
+  {
+    return true;
+  }
+  ZIPENTRY ze;
+  ZRESULT  res     = ZR_OK;
+  int      entries = 0;
+  CString  sstName = "xl/styles.xml";
+
+  // get the number of entries
+  res = GetZipItem(m_zip,-1,&ze);
+  if(res == ZR_OK)
+  {
+    entries = ze.index;
+  }
+  else
+  {
+    SetError(res);
+    return false;
+  }
+  // Loop through all entries
+  for(int ind = 0; ind < entries; ++ind)
+  {
+    res = GetZipItem(m_zip,ind,&ze);
+    if(res != ZR_OK)
+    {
+      m_error.Format("Cannot get entries from file: %s",m_filename.GetString());
+      SetError(res);
+      return false;
+    }
+    if(sstName.CompareNoCase(ze.name) == 0)
+    {
+      int   bufflen = ze.unc_size + 1;
+      char* buffer  = (char*) malloc(bufflen);
+      res = UnzipItem(m_zip,ind,buffer,bufflen);
+      if(res != ZR_OK)
+      {
+        m_error.Format("Cannot read the styles of: %s",m_filename.GetString());
+        SetError(res);
+        free(buffer);
+        return false;
+      }
+      // delimit the buffer
+      buffer[ze.unc_size] = 0;
+      CString styleInfo(buffer);
+
+      XMLMessage doc;
+      doc.ParseMessage(styleInfo);
+      XMLElement* root = doc.GetRoot();
+      if(root == NULL)
+      {
+        m_error.Format("Styles definition incorrect in: %s",m_filename.GetString());
+        free(buffer);
+        return false;
+      }
+      std::vector<CString> styleFormats;
+      // Reading the styles
+      //In het element cellxfs staan voor elke 's' attribuut waarde van een cell een formaat id
+      //hiermee kan in de volgende stap dan weer de formatcode opgezocht worden
+      XMLElement* cellformat = doc.FindElement(root,"cellXfs");
+      if (cellformat)
+      {
+        for (auto& elem : cellformat->GetChildren())
+        {
+          for (auto& attrib : elem->GetAttributes())
+          {
+            if (attrib.m_name == "numFmtId")
+            {
+              styleFormats.push_back(attrib.m_value);
+              break;
+            }
+          }
+        }
+      }
+      //voor alle cellformats de bijbehorende code zoeken.
+      for (int i = 0; i < (int)styleFormats.size(); i++)
+      {
+        //Er zijn een aantal standaardwaarden die niet apart in een code worden opgenomen, voor deze zelf een formatcode aanmaken
+        if (styleFormats[i] == "14" || styleFormats[i] == "15"||styleFormats[i] == "16"||styleFormats[i] == "17" )
+        {
+          //Een datumformaat, welke maakt niet uit voor het omzetten van de datum naar string.
+          m_styles.insert(std::make_pair(i, "dd/mm/yy;@"));
+        }
+        else
+        {
+          XMLElement* nummerFormatId = doc.FindElementByAttribute("numFmtId", styleFormats[i]);
+          if (nummerFormatId)
+          {
+            XMLAttribute* FormatCode = doc.FindAttribute(nummerFormatId, "formatCode");
+            if (FormatCode)
+            {
+              m_styles.insert(std::make_pair(i, FormatCode->m_value));
+            }
+            else
+            {
+              //Verwacht niet dat dit voor kan komen.
+              m_styles.insert(std::make_pair(i, "Geen formaat code gevonden" + styleFormats[i]));
+            }
+          }
+          else
+          {
+            //Verwacht niet dat dit voor kan komen.
+            m_styles.insert(std::make_pair(i, "Geen formaat code gevonden" + styleFormats[i]));
+          }
+        }
+      }
+      // Ready with the buffer
+      free(buffer);
+      // Ready reading styles
       return true;
     }
   }
@@ -709,6 +880,12 @@ BasicXmlExcel::GetSharedString(int p_string)
     value = m_sharedStrings[p_string];
   }
   return value;
+}
+
+CString
+BasicXmlExcel::GetStyleCode(int id)
+{
+  return m_styles.find(id)->second;
 }
 
 // End of namespace

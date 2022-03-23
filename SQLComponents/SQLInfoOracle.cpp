@@ -2,7 +2,7 @@
 //
 // File: SQLInfoOracle.cpp
 //
-// Copyright (c) 1998-2020 ir. W.E. Huisman
+// Copyright (c) 1998-2021 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy of 
@@ -366,6 +366,13 @@ SQLInfoOracle::GetKEYWORDDataType(MetaColumn* p_column)
     default:                            break;
   }
   return p_column->m_typename = type;
+}
+
+// Gets the USER (current-user) keyword function
+CString
+SQLInfoOracle::GetKEYWORDCurrentUser() const
+{
+  return "USER";
 }
 
 // Connects to a default schema in the database/instance
@@ -779,6 +786,12 @@ SQLInfoOracle::GetCATALOGTableCreate(MetaTable& p_table,MetaColumn& /*p_column*/
 }
 
 CString
+SQLInfoOracle::GetCATALOGTableCreatePostfix(MetaTable& /*p_table*/,MetaColumn& /*p_column*/) const
+{
+  return "";
+}
+
+CString
 SQLInfoOracle::GetCATALOGTableRename(CString p_schema,CString p_tablename,CString p_newname) const
 {
   // Beware: No 'TABLE' in the statement
@@ -864,7 +877,7 @@ SQLInfoOracle::GetCATALOGColumnAttributes(CString& p_schema,CString& p_tablename
                 "      ,col.owner                        AS col_owner\n"
                 "      ,col.table_name                   AS col_table\n"
                 "      ,col.column_name                  AS col_column_name\n"
-                "      ,CASE SubStr(col.data_type,1,8)\n"
+                "      ,CASE SubStr(col.data_type,1,10)\n"
                 "            WHEN 'CHAR'          THEN  1\n"
                 "            WHEN 'VARCHAR2'      THEN 12\n"
                 "            WHEN 'NCHAR'         THEN -8\n"
@@ -877,32 +890,35 @@ SQLInfoOracle::GetCATALOGColumnAttributes(CString& p_schema,CString& p_tablename
                 "                                           WHEN 63  THEN 7\n"
                 "                                                    ELSE 8\n"
                 "                                      END\n"
-                "            WHEN 'BINARY_F' THEN  7\n"
-                "            WHEN 'BINARY_D' THEN  8\n"
-                "            WHEN 'DATE'     THEN 93\n"
-                "            WHEN 'TIMESTAM' THEN 93\n"
-                "            WHEN 'INTERVAL' THEN -4\n"
-                "            WHEN 'CLOB'     THEN -1\n"
-                "            WHEN 'LONG'     THEN -1\n"
-                "            WHEN 'BLOB'     THEN -4\n"
-                "            WHEN 'NCLOB'    THEN -10\n"
-                "                            ELSE  0\n"
+                "            WHEN 'BINARY_FLO'    THEN  7\n"
+                "            WHEN 'BINARY_DOU'    THEN  8\n"
+                "            WHEN 'DATE'          THEN 93\n"
+                "            WHEN 'TIMESTAMP('    THEN 93\n"
+                "            WHEN 'INTERVAL Y'    THEN 107\n"
+                "            WHEN 'INTERVAL D'    THEN 110\n"
+                "            WHEN 'CLOB'          THEN -1\n"
+                "            WHEN 'RAW'           THEN -3\n"
+                "            WHEN 'LONG'          THEN -1\n"
+                "            WHEN 'BLOB'          THEN -4\n"
+                "            WHEN 'NCLOB'         THEN -10\n"
+                "                                 ELSE  0\n"
                 "       END                             AS col_datatype\n"
                 "      ,col.data_type                   AS col_typename\n"
-                "      ,CASE SubStr(col.data_type,1,8)\n"
-                "            WHEN 'LONG'     THEN 2147483647\n"
-                "            WHEN 'CLOB'     THEN 2147483647\n"
-                "            WHEN 'BLOB'     THEN 2147483647\n"
-                "            WHEN 'NCLOB'    THEN 2147483647\n"
-                "            WHEN 'DATE'     THEN 19\n"
-                "            WHEN 'TIMESTAM' THEN 19\n"
-                "            WHEN 'INTERVAL' THEN 52\n"
-                "            WHEN 'BINARY_D' THEN 15\n"
-                "            WHEN 'BINARY_F' THEN  7\n"
-                "            WHEN 'NCHAR'    THEN char_col_decl_length\n"
-                "            WHEN 'NVARCHAR' THEN char_col_decl_length\n"
-                "            WHEN 'NUMBER'   THEN NVL(data_precision,38)\n"
-                "                            ELSE col.data_length\n"
+                "      ,CASE SubStr(col.data_type,1,10)\n"
+                "            WHEN 'LONG'       THEN 2147483647\n"
+                "            WHEN 'CLOB'       THEN 2147483647\n"
+                "            WHEN 'BLOB'       THEN 2147483647\n"
+                "            WHEN 'NCLOB'      THEN 2147483647\n"
+                "            WHEN 'DATE'       THEN 19\n"
+                "            WHEN 'TIMESTAMP(' THEN 19\n"
+                "            WHEN 'INTERVAL Y' THEN 52\n"
+                "            WHEN 'INTERVAL D' THEN 52\n"
+                "            WHEN 'BINARY_DOU' THEN 15\n"
+                "            WHEN 'BINARY_FLO' THEN  7\n"
+                "            WHEN 'NCHAR'      THEN char_col_decl_length\n"
+                "            WHEN 'NVARCHAR'   THEN char_col_decl_length\n"
+                "            WHEN 'NUMBER'     THEN NVL(data_precision,38)\n"
+                "                              ELSE col.data_length\n"
                 "       END                             AS col_columnsize\n"
                 "      ,CASE SubStr(col.data_type,1,8)\n"
                 "            WHEN 'LONG'     THEN 2147483647\n"
@@ -1873,10 +1889,24 @@ SQLInfoOracle::GetCATALOGViewAttributes(CString& p_schema,CString& p_viewname) c
   return sql;
 }
 
-CString 
+CString
+SQLInfoOracle::GetCATALOGViewText(CString& p_schema,CString& p_viewname) const
+{
+  p_schema.MakeUpper();
+  p_viewname.MakeUpper();
+
+  // BEWARE works from Oracle 19 onwards
+  CString sql = "SELECT text\n"
+                "  FROM all_views\n"
+                " WHERE owner = '" + p_schema + "'\n"
+                "   AND view_name = '" + p_viewname + "'";
+  return sql;
+}
+
+CString
 SQLInfoOracle::GetCATALOGViewCreate(CString p_schema,CString p_viewname,CString p_contents) const
 {
-  return "CREATE OR REPLACE VIEW " + p_schema + "." + p_viewname + "\n" + p_contents;
+  return "CREATE OR REPLACE VIEW " + p_schema + "." + p_viewname + " AS\n" + p_contents;
 }
 
 CString 

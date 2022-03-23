@@ -2,7 +2,7 @@
 //
 // SourceFile: bcd.cpp
 //
-// Copyright (c) 2015-2020 ir. W.E. Huisman
+// Copyright (c) 1998-2021 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -49,6 +49,8 @@
 #include <intsafe.h>          // Min/Max sizes of integer datatypes
 #include <locale.h>         
 
+#ifndef COMPILED_TOGETHER_WITH_MARLIN
+
 #ifdef _DEBUG
 #define new DEBUG_NEW
 #undef THIS_FILE
@@ -73,8 +75,6 @@ InitValutaString()
 {
   if(g_locale_valutaInit == false)
   {
-    setlocale(LC_NUMERIC,"C");
-
     GetLocaleInfo(LOCALE_USER_DEFAULT, LOCALE_SDECIMAL,  g_locale_decimalSep, SEP_LEN);
     GetLocaleInfo(LOCALE_USER_DEFAULT, LOCALE_STHOUSAND, g_locale_thousandSep,SEP_LEN);
     GetLocaleInfo(LOCALE_USER_DEFAULT, LOCALE_SCURRENCY, g_locale_strCurrency,SEP_LEN);
@@ -219,6 +219,14 @@ bcd::bcd(const char* p_string,bool p_fromDB /*= false*/)
 bcd::bcd(const SQL_NUMERIC_STRUCT* p_numeric)
 {
   SetValueNumeric(p_numeric);
+}
+
+// bcd::~bcd
+// Description: Destructor of class bcd.
+//
+bcd::~bcd()
+{
+  // Nothing interesting here :-)
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -1136,7 +1144,7 @@ bcd::Negate()
   }
   else
   {
-  m_sign = (m_sign == Positive) ? Negative : Positive;
+  	m_sign = (m_sign == Positive) ? Negative : Positive;
   }
 }
   
@@ -4038,8 +4046,11 @@ bcd::ReadFromFile(FILE* p_fp)
 //
 //////////////////////////////////////////////////////////////////////////
 
+#endif // COMPILED_TOGETHER_WITH_MARLIN
+
 //////////////////////////////////////////////////////////////////////////
 //
 // END OF BCD IMPLEMENTATION
 //
 //////////////////////////////////////////////////////////////////////////
+

@@ -2,7 +2,7 @@
 //
 // File: SQLQuery.cpp
 //
-// Copyright (c) 1998-2020 ir. W.E. Huisman
+// Copyright (c) 1998-2021 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy of 
@@ -74,7 +74,7 @@ SQLQuery::SQLQuery(HDBC p_hdbc)
 
 SQLQuery::~SQLQuery()
 {
-  Close();
+  Close(false);
   ResetParameters();
 }
 
@@ -110,8 +110,10 @@ SQLQuery::Init(HDBC p_connection)
 }
 
 void
-SQLQuery::Close()
+SQLQuery::Close(bool p_throw /*= true*/)
 {
+  CString error;
+
   // Statement reset
   if (m_hstmt)
   {
@@ -124,6 +126,7 @@ SQLQuery::Close()
       if(!SQL_SUCCEEDED(m_retCode))
       {
         GetLastError("Closing the cursor: ");
+        error += m_lastError;
 
         // Some databases give a SQLSTATE = 24000 if the cursor was at the end
         // This is documented behavior of SQLCloseCursor
@@ -144,7 +147,7 @@ SQLQuery::Close()
     if(!SQL_SUCCEEDED(m_retCode))
     {
       GetLastError("Freeing the cursor: ");
-      throw StdException(m_lastError);
+      error += m_lastError;
     }
   }
   // Clear number map
@@ -172,6 +175,10 @@ SQLQuery::Close()
   // m_database
   // m_connection
   // m_parameters
+  if(p_throw && !error.IsEmpty())
+  {
+    throw StdException(error);
+  }
 }
 
 void
@@ -784,7 +791,7 @@ SQLQuery::DoSQLStatementBatch(CString p_statements)
       }
       else
       {
-        DoSQLStatement(statement); 
+        DoSQLStatement(statement);
       }
     }
     // Find next statement
@@ -993,7 +1000,7 @@ SQLQuery::BindParameters()
     }
 
     // Ugly hack!!
-    if(m_database->GetDatabaseType() == RDBMS_SQLSERVER)
+    if(m_database && m_database->GetDatabaseType() == RDBMS_SQLSERVER)
     {
       if(sqlDatatype == SQL_CHAR && columnSize > 8000)
       {
@@ -1026,7 +1033,10 @@ SQLQuery::BindParameters()
     }
 
     // Bind NUMERIC/DECIMAL precision and scale
-    if(dataType == SQL_C_NUMERIC)
+    // But only if the sql datatype and the C++ datatype are the same (a SQLVariant from the application)
+    // In case of a SQLVariant that came from the ODBC driver earlier we may NOT rebind the precision and scale
+    // Oracle ODBC drivers beyond 12.x.x.x.x **WILL** crash on that
+    if(dataType == SQL_C_NUMERIC && (dataType == sqlDatatype))
     {
       BindColumnNumeric((ushort)icol,var,SQL_PARAM_INPUT);
     }

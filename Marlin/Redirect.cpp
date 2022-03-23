@@ -4,7 +4,7 @@
 //
 // Marlin Component: Internet server/client
 // 
-// Copyright (c) 2015-2018 ir. W.E. Huisman
+// Copyright (c) 2014-2021 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -498,4 +498,15 @@ CRedirect::WriteChildStdIn(LPCSTR lpszInput)
     }
   }
   return 0;
+}
+
+
+void
+CRedirect::CloseChildStdIn()
+{
+  if(m_hStdInWrite != NULL)
+  {
+    VERIFY(::CloseHandle(m_hStdInWrite));
+    m_hStdInWrite = NULL;
+  }
 }

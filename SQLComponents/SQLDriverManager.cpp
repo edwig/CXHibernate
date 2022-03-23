@@ -2,7 +2,7 @@
 //
 // File: SQLDriverManager.cpp
 //
-// Copyright (c) 1998-2020 ir. W.E. Huisman
+// Copyright (c) 1998-2021 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy of 
@@ -28,6 +28,12 @@
 #include "StdException.h"
 #include <odbcinst.h>
 #include <sqlext.h>
+
+#ifdef _DEBUG
+#define new DEBUG_NEW
+#undef THIS_FILE
+static char THIS_FILE[] = __FILE__;
+#endif
 
 namespace SQLComponents
 {

@@ -2,7 +2,7 @@
 //
 // File: SQLInfo.h
 //
-// Copyright (c) 1998-2020 ir. W.E. Huisman
+// Copyright (c) 1998-2021 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy of 
@@ -89,6 +89,8 @@ public:
   virtual void OnGetInfo(HDBC ,int ) {return;};
   // Is it a correct identifier (type 0=table,1=column)
   bool    IsCorrectName(CString p_name,int p_type = 0);
+  // Is reserved word
+  bool    IsReservedWord(CString p_name);
   // Can we start a transaction on the database
   bool    CanStartTransaction();
   // Returns the fact whether an API function is supported
@@ -352,15 +354,15 @@ protected:
   void    InfoMessageBox(CString p_message,UINT p_type = MB_OK);
 
 protected:
-  bool           m_initDone;           // Already read in?
-  SQLDatabase*   m_database;           // Database for which we provide the info
-  HDBC           m_hdbc;               // Database handle (if open)
-  HSTMT          m_hstmt;              // Statement handle for info of tables/procedures
-  RETCODE        m_retCode;            // Generic return code from ::SQL function
+  bool         m_initDone;             // Already read in?
+  SQLDatabase* m_database;             // Database for which we provide the info
+  HDBC         m_hdbc;                 // Database handle (if open)
+  HSTMT        m_hstmt;                // Statement handle for info of tables/procedures
+  RETCODE      m_retCode;              // Generic return code from ::SQL function
 
-  WordList    m_ODBCKeywords;          // Stationary ODBC keywords
-  WordList    m_RDBMSkeywords;         // Keywords  reported by the RDBMS
-  DataTypeMap m_dataTypes;             // Datatypes reported by the RDBMS
+  WordList     m_ODBCKeywords;         // Stationary ODBC keywords
+  WordList     m_RDBMSkeywords;        // Keywords  reported by the RDBMS
+  DataTypeMap  m_dataTypes;            // Datatypes reported by the RDBMS
 
   // CONFORMANCE TO THE SQL-LANGUAGE
   CString      m_cli_year;             // Year of X/Open CLI standard

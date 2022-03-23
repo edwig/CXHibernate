@@ -4,7 +4,7 @@
 //
 // Marlin Server: Internet server/client
 // 
-// Copyright (c) 2015-2018 ir. W.E. Huisman
+// Copyright (c) 2014-2021 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -67,6 +67,11 @@ constexpr auto INIT_HTTP_BACKLOGQUEUE = 64;
 constexpr auto MAXX_HTTP_BACKLOGQUEUE = 640;
 // Timout after bruteforce attack
 constexpr auto TIMEOUT_BRUTEFORCE     = (10 * CLOCKS_PER_SEC);
+
+// Websockets are two sided sockets, not HTTP
+#ifndef HANDLER_HTTPSYS_UNFRIENDLY
+#define HANDLER_HTTPSYS_UNFRIENDLY 9
+#endif
 
 // Static globals for the server as a whole
 // Can be set through the web.config reading of the HTTPServer
@@ -189,7 +194,7 @@ public:
   // Receive the WebSocket stream and pass on the the WebSocket
   virtual void       ReceiveWebSocket(WebSocket* p_socket,HTTP_OPAQUE_ID p_request) = 0;
   // Flushing a WebSocket intermediate
-  virtual bool       FlushSocket (HTTP_OPAQUE_ID p_request) = 0;
+  virtual bool       FlushSocket (HTTP_OPAQUE_ID p_request,CString p_prefix) = 0;
   // Used for canceling a WebSocket for an event stream
   virtual void       CancelRequestStream(HTTP_OPAQUE_ID p_response) = 0;
   // Sending a response on a message

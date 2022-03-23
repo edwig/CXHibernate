@@ -2,7 +2,7 @@
 //
 // File: SQLVariant.cpp
 //
-// Copyright (c) 1998-2020 ir. W.E. Huisman
+// Copyright (c) 1998-2021 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy of 
@@ -670,6 +670,17 @@ SQLVariant::SetSQLDataType(int p_type)
     m_sqlDatatype = p_type;
   }
 }
+
+void
+SQLVariant::SetDataTypeDate()
+{
+  if (m_datatype == SQL_C_TIMESTAMP || m_datatype == SQL_C_TYPE_TIMESTAMP)
+  {
+    m_datatype    = SQL_C_TYPE_DATE;
+    m_sqlDatatype = SQL_C_TYPE_DATE;
+  }
+}
+
 
 // Setting the NUMERIC precision and scale
 // Can e.g. be used for output parameter settings

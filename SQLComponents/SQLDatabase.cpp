@@ -2,7 +2,7 @@
 //
 // File: SQLDatabase.cpp
 //
-// Copyright (c) 1998-2020 ir. W.E. Huisman
+// Copyright (c) 1998-2021 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy of 
@@ -527,8 +527,9 @@ SQLDatabase::SetKnownRebinds()
   if(m_rdbmsType == RDBMS_ORACLE)
   {
     m_rebindColumns.clear();
-//     m_rebindColumns[SQL_REAL   ] = SQL_C_DOUBLE;
-//     m_rebindColumns[SQL_FLOAT  ] = SQL_C_DOUBLE;
+    m_rebindColumns[SQL_REAL   ] = SQL_C_NUMERIC;
+    m_rebindColumns[SQL_FLOAT  ] = SQL_C_NUMERIC;
+    m_rebindColumns[SQL_DOUBLE ] = SQL_C_NUMERIC;
   }
   else if(m_rdbmsType == RDBMS_SQLSERVER)
   {
@@ -948,7 +949,7 @@ SQLDatabase::ODBCNativeSQL(CString& p_sql)
   // Let the driver do the translation
   SQLRETURN ret = SQLNativeSql(m_hdbc
                               ,(UCHAR*)p_sql.GetString()
-                              ,p_sql.GetLength()
+                              ,p_sql.GetLength() + 1
                               ,(UCHAR*)buffer
                               ,2*len
                               ,&lengte);

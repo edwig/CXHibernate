@@ -2,7 +2,7 @@
 //
 // File: SQLInfoAccess.h
 //
-// Copyright (c) 1998-2020 ir. W.E. Huisman
+// Copyright (c) 1998-2021 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy of 
@@ -139,6 +139,9 @@ public:
   // Gets the RDBMS definition of the datatype
   CString GetKEYWORDDataType(MetaColumn* p_column);
 
+  // Gets the USER (current-user) keyword function
+  CString GetKEYWORDCurrentUser() const;
+
   // SQL's
 
   // Connects to a default schema in the database/instance
@@ -225,6 +228,7 @@ public:
   CString GetCATALOGTableSynonyms     (CString& p_schema,CString& p_tablename) const;
   CString GetCATALOGTableCatalog      (CString& p_schema,CString& p_tablename) const;
   CString GetCATALOGTableCreate       (MetaTable& p_table,MetaColumn& p_column) const;
+  CString GetCATALOGTableCreatePostfix(MetaTable& p_table,MetaColumn& p_column) const;
   CString GetCATALOGTableRename       (CString  p_schema,CString  p_tablename,CString p_newname) const;
   CString GetCATALOGTableDrop         (CString  p_schema,CString  p_tablename,bool p_ifExist = false,bool p_restrict = false,bool p_cascade = false) const;
   // All Temporary table functions
@@ -274,6 +278,7 @@ public:
   CString GetCATALOGViewExists        (CString& p_schema,CString& p_viewname) const;
   CString GetCATALOGViewList          (CString& p_schema,CString& p_pattern)  const;
   CString GetCATALOGViewAttributes    (CString& p_schema,CString& p_viewname) const;
+  CString GetCATALOGViewText          (CString& p_schema,CString& p_viewname) const;
   CString GetCATALOGViewCreate        (CString  p_schema,CString  p_viewname,CString p_contents)   const;
   CString GetCATALOGViewRename        (CString  p_schema,CString  p_viewname,CString p_newname)    const;
   CString GetCATALOGViewDrop          (CString  p_schema,CString  p_viewname,CString& p_precursor) const;

@@ -2,7 +2,7 @@
 //
 // File: SQLInfoDB.h
 //
-// Copyright (c) 1998-2020 ir. W.E. Huisman
+// Copyright (c) 1998-2021 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy of 
@@ -82,6 +82,7 @@ public:
   virtual bool    MakeInfoTableSequences  (MSequenceMap&  p_sequences, CString& p_errors,CString p_schema,CString p_tablename);
   virtual bool    MakeInfoTablePrivileges (MPrivilegeMap& p_privileges,CString& p_errors,CString p_schema,CString p_tablename);
   virtual bool    MakeInfoColumnPrivileges(MPrivilegeMap& p_privileges,CString& p_errors,CString p_schema,CString p_tablename,CString p_columnname = "");
+  virtual bool    MakeInfoViewDefinition  (CString&       p_defintion, CString& p_errors,CString p_schema,CString p_viewname);
 
   // Procedures
   virtual bool    MakeInfoPSMProcedures(MProcedureMap& p_procedures,CString& p_errors,CString p_schema,CString p_procedure) override;
@@ -200,6 +201,9 @@ public:
   // Gets the RDBMS definition of the datatype
   virtual CString GetKEYWORDDataType(MetaColumn* p_column) = 0;
 
+  // Gets the USER (current-user) keyword function
+  virtual CString GetKEYWORDCurrentUser() const = 0;
+
   //////////////////////////////////////////////////////////////////////////
   // SQL FOR SUB-PROCESSING
 
@@ -288,6 +292,7 @@ public:
   virtual CString GetCATALOGTableSynonyms     (CString& p_schema,CString& p_tablename) const = 0;
   virtual CString GetCATALOGTableCatalog      (CString& p_schema,CString& p_tablename) const = 0;
   virtual CString GetCATALOGTableCreate       (MetaTable& p_table,MetaColumn& p_column) const = 0;
+  virtual CString GetCATALOGTableCreatePostfix(MetaTable& p_table,MetaColumn& p_column) const = 0;
   virtual CString GetCATALOGTableRename       (CString  p_schema,CString  p_tablename,CString p_newname) const = 0;
   virtual CString GetCATALOGTableDrop         (CString  p_schema,CString  p_tablename,bool p_ifExist = false,bool p_restrict = false,bool p_cascade = false) const = 0;
   // All Temporary table functions
@@ -337,6 +342,7 @@ public:
   virtual CString GetCATALOGViewExists        (CString& p_schema,CString& p_viewname) const = 0;
   virtual CString GetCATALOGViewList          (CString& p_schema,CString& p_pattern)  const = 0;
   virtual CString GetCATALOGViewAttributes    (CString& p_schema,CString& p_viewname) const = 0;
+  virtual CString GetCATALOGViewText          (CString& p_schema,CString& p_viewname) const = 0;
   virtual CString GetCATALOGViewCreate        (CString  p_schema,CString  p_viewname,CString p_contents)   const = 0;
   virtual CString GetCATALOGViewRename        (CString  p_schema,CString  p_viewname,CString p_newname)    const = 0;
   virtual CString GetCATALOGViewDrop          (CString  p_schema,CString  p_viewname,CString& p_precursor) const = 0;

@@ -27,6 +27,7 @@
 // Version number: See SQLComponents.h
 //
 #include "ExcelFormat.h"
+#include <comutil.h>
 
 #ifdef _MSC_VER
 #include <malloc.h>	// for alloca()
@@ -38,6 +39,8 @@
 #ifdef AFXAPI
 #pragma error ("COMPILE-TIME-ERROR: BasicExcel cannot be compiled in the AFX context")
 #endif
+
+#pragma comment(lib, "comsuppw.lib")
 
 #ifdef _WIN32
 
@@ -6592,9 +6595,38 @@ BasicExcelWorksheet::CellValue(int row,int col,char* p_buffer,int p_length)
                                       break;
       case BasicExcelCell::INT:       sprintf_s(p_buffer,p_length,"%d",cell->GetInteger());
                                       break;
-      case BasicExcelCell::DOUBLE:    sprintf_s(p_buffer,p_length,"%f",cell->GetDouble());
-                                      TrimDoubleString(p_buffer);
-                                      break;
+      case BasicExcelCell::DOUBLE:    {
+                                        sprintf_s(p_buffer,p_length,"%f",cell->GetDouble());
+                                        //Kijk of het een datum formaat is, zo ja dan omzetten naar een string datum
+                                        ExcelFormat::XLSFormatManager fmt_mgr(*excel_);
+                                        ExcelFormat::CellFormat fmt(fmt_mgr, cell);
+                                        std::wstring format = fmt_mgr.get_format_string(fmt);
+                                        if(format.compare(L"M/D/YY")==0 ||
+                                          format.compare(L"[$-F800]dddd\\,\\ mmmm\\ dd\\,\\ yyyy")==0 ||
+                                          format.compare(L"yyyy/mm/dd;@")==0 ||
+                                          format.compare(L"d/m;@")==0 ||
+                                          format.compare(L"d/mm/yy;@")==0 ||
+                                          format.compare(L"dd/mm/yy;@")==0 ||
+                                          format.compare(L"[$-413]d/mmm;@")==0 ||
+                                          format.compare(L"[$-413]dd/mmm/yy;@")==0 ||
+                                          format.compare(L"[$-413]mmm/yy;@")==0 ||
+                                          format.compare(L"[$-413]mmmm/yy;@")==0 ||
+                                          format.compare(L"[$-413]d\\ mmmm\\ yyyy;@")==0 ||
+                                          format.compare(L"[$-413]d/mmm/yyyy;@")==0 ||
+                                          format.compare(L"[$-413]d/mmm/yy;@")==0 ||
+                                          format.compare(L"[$-413]mmmmm;@")==0 ||
+                                          format.compare(L"[$-413]mmmmm/yy;@")==0 ||
+                                          format.compare(L"m/d/yyyy;@")==0 
+                                          )
+                                        {
+                                          BSTR bstr = NULL;
+                                          VarBstrFromDate(cell->GetDouble(), LANG_USER_DEFAULT, VAR_FOURDIGITYEARS, &bstr); 
+                                          pointer = (char*)_com_util::ConvertBSTRToString(bstr);
+                                          break;
+                                        }
+                                      	TrimDoubleString(p_buffer);
+                                      	break;
+                                      }
       case BasicExcelCell::STRING:    pointer = (char*)cell->GetString();
                                       break;
       case BasicExcelCell::WSTRING:   {

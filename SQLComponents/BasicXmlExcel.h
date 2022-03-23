@@ -50,6 +50,7 @@ typedef enum _celltype
  ,XCT_INTEGER
  ,XCT_DOUBLE
  ,XCT_STRING
+ ,XCT_DATE
  ,XCT_FORMULA
 }
 CellType;
@@ -134,18 +135,21 @@ public:
   BasicXmlWorksheet*  GetWorksheet(int p_index);
   BasicXmlWorksheet*  GetWorksheet(CString p_name);
   CString             GetSharedString(int p_string);
+  CString             GetStyleCode(int id);
   CString             GetError();
   
 private:
   // Read in the worksheetnames
   void       ReadSheetNames();
   bool       LoadStrings();
+  bool       LoadStyles();
   bool       LoadWorksheets();
 
   CString    m_filename;      // Filename
   HZIP       m_zip;           // ZIP handle for unzipping
   Names      m_sheetnames;
   Names      m_sharedStrings;
+  std::map <int,CString> m_styles;
   WorkSheets m_worksheets;
   // status
   bool       m_namesRead;

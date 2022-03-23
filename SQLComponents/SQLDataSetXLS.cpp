@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////
 //
-// Copyright (c) 1998-2020 ir. W.E. Huisman
+// Copyright (c) 1998-2021 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy of 
@@ -276,8 +276,18 @@ SQLDataSetXLS::AddRow(WordList& p_rowValues, long /*p_row*/, bool /*p_replace*/)
 
   while(cols-- && vals--)
   {
-    SQLVariant* var = new SQLVariant(*it++); //p_rowValues[ind++]);
+    SQLVariant* var = new SQLVariant(*it++); 
     record->AddField(var);
+  }
+  if(vals == 0 && cols > 0)
+  {
+    // If less values found then columns in the dataset
+    // Append with empty values (strings)
+    while(cols--)
+    {
+      SQLVariant* var = new SQLVariant("");
+      record->AddField(var);
+    }
   }
   if(!m_transaction)
   {
@@ -541,6 +551,7 @@ SQLDataSetXLS::Open()
           char* value = sheet->CellValue(row,col,buffer,100);
           SQLVariant* var = new SQLVariant(value);
           record->AddField(var);
+          delete var;
         }
       }
     }
@@ -611,14 +622,13 @@ SQLDataSetXLS::Open()
       {
         CString tempString;
         Close();
-        int rows = 0;
-        bool result = true;
+        int  rows    = 0;
+        bool result  = true;
         // Read and store all rows in memory
         m_transaction = true;
         // Read and store all rows in memory
         while(ReadString(file,tempString))
         {
-          ATLTRACE("INPUT: %s\n",tempString.GetString());
           WordList values;
           if(SplitRow(tempString,values) == false)
           {
@@ -845,6 +855,8 @@ SQLDataSetXLS::ReadString(FILE* p_file,CString& p_string)
 {
   int ch = 0;
   bool reading = true;
+  p_string.Empty();
+
   do 
   {
     ch = fgetc(p_file);
@@ -866,6 +878,12 @@ SQLDataSetXLS::ReadString(FILE* p_file,CString& p_string)
     }
   } 
   while(reading);
+
+  // We did read a string?
+  if(p_string.GetLength())
+  {
+    return true;
+  }
 
   // Return false on end of file
   return ch != EOF;

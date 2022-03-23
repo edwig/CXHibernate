@@ -4,7 +4,7 @@
 //
 // Marlin Server: Internet server/client
 // 
-// Copyright (c) 2015-2018 ir. W.E. Huisman
+// Copyright (c) 2014-2021 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -198,6 +198,8 @@ public:
   // Set headers
   void            AddHeader(CString p_name,CString p_value);
   void            AddHeader(HTTP_HEADER_ID p_id,CString p_value);
+  void            DelHeader(CString p_name);
+  void            DelHeader(HTTP_HEADER_ID p_id);
   // Routing
   void            AddRoute(CString p_route);
   // Set Fault elements

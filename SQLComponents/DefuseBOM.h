@@ -5,7 +5,7 @@
 // From the project: Marlin Server: Internet server/client
 // See: https://github.com/edwig/Marlin
 // 
-// Copyright (c) 1998-2020 ir. W.E. Huisman
+// Copyright (c) 1998-2021 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy

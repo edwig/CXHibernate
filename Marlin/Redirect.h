@@ -4,7 +4,7 @@
 //
 // Marlin Component: Internet server/client
 // 
-// Copyright (c) 2015-2018 ir. W.E. Huisman
+// Copyright (c) 2014-2021 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -45,6 +45,7 @@ public:
   BOOL IsChildRunning() const;
   void TerminateChildProcess();
   int  WriteChildStdIn(LPCSTR lpszInput);
+  void CloseChildStdIn();
 
   // Virtual interface. Derived class must implement this!!
   virtual void OnChildStarted    (LPCSTR lpszCmdLine) = 0;

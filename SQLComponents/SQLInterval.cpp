@@ -2,7 +2,7 @@
 //
 // File: SQLInterval.cpp
 //
-// Copyright (c) 1998-2020 ir. W.E. Huisman
+// Copyright (c) 1998-2021 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy of 
@@ -640,45 +640,53 @@ SQLInterval::AsXMLDuration() const
   // Add sign and leading 'P'eriod marker
   duration = m_interval.interval_sign == SQL_TRUE ? "-P" : "P";
 
-  // Add year-month-day part
-  if(m_interval.intval.year_month.year)
+  if (m_interval.interval_type == SQL_IS_YEAR  ||
+      m_interval.interval_type == SQL_IS_MONTH ||
+      m_interval.interval_type == SQL_IS_YEAR_TO_MONTH)
   {
-    duration.AppendFormat("%dY",m_interval.intval.year_month.year);
-  }
-  if(m_interval.intval.year_month.month)
-  {
-    duration.AppendFormat("%dM",m_interval.intval.year_month.month);
-  }
-  if(m_interval.intval.day_second.day)
-  {
-    duration.AppendFormat("%dD",m_interval.intval.day_second.day);
-  }
-
-  // See if we must do the time part
-  if(m_interval.intval.day_second.hour   ||
-     m_interval.intval.day_second.minute ||
-     m_interval.intval.day_second.second ||
-     m_interval.intval.day_second.fraction)
-  {
-    duration += "T";
-
-    if(m_interval.intval.day_second.hour)
+    // Add year-month-day part
+    if (m_interval.intval.year_month.year)
     {
-      duration.AppendFormat("%dH",m_interval.intval.day_second.hour);
+      duration.AppendFormat("%dY", m_interval.intval.year_month.year);
     }
-    if(m_interval.intval.day_second.minute)
+    if (m_interval.intval.year_month.month)
     {
-      duration.AppendFormat("%dM",m_interval.intval.day_second.minute);
+      duration.AppendFormat("%dM", m_interval.intval.year_month.month);
     }
-    if(m_interval.intval.day_second.second)
+  }
+  else
+  {
+    if(m_interval.intval.day_second.day)
     {
-      duration.AppendFormat("%d",m_interval.intval.day_second.second);
+      duration.AppendFormat("%dD",m_interval.intval.day_second.day);
+    }
 
-      if(m_interval.intval.day_second.fraction)
+    // See if we must do the time part
+    if(m_interval.intval.day_second.hour   ||
+       m_interval.intval.day_second.minute ||
+       m_interval.intval.day_second.second ||
+       m_interval.intval.day_second.fraction)
+    {
+      duration += "T";
+
+      if(m_interval.intval.day_second.hour)
       {
-        duration.AppendFormat(".%09d",m_interval.intval.day_second.fraction);
+        duration.AppendFormat("%dH",m_interval.intval.day_second.hour);
       }
-      duration += "S";
+      if(m_interval.intval.day_second.minute)
+      {
+        duration.AppendFormat("%dM",m_interval.intval.day_second.minute);
+      }
+      if(m_interval.intval.day_second.second)
+      {
+        duration.AppendFormat("%d",m_interval.intval.day_second.second);
+
+        if(m_interval.intval.day_second.fraction)
+        {
+          duration.AppendFormat(".%09d",m_interval.intval.day_second.fraction);
+        }
+        duration += "S";
+      }
     }
   }
   return duration;

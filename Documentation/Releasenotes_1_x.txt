@@ -1,8 +1,13 @@
 RELEASENOTES VERSIONS 1.X
 =========================
 
-Version 1.2.0 Date: 22-11-220
------------------------------
+Version 1.2.1 Date: 23-03-2022
+------------------------------
+1)  Updated to Visual Studio 2022
+2)  x86 Version now Discontinued. Only 64 bits version is supported
+
+Version 1.2.0 Date: 22-11-2020
+------------------------------
 1)  Update of SQLCompoentns from version 1.6.1 to 1.7.0
     See https://github/Edwig/SQLComponents/Documentation for full 
     details of this update. Main features are:

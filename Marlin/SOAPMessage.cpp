@@ -4,7 +4,7 @@
 //
 // Marlin Server: Internet server/client
 // 
-// Copyright (c) 2015-2018 ir. W.E. Huisman
+// Copyright (c) 2014-2021 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -506,6 +506,30 @@ SOAPMessage::AddHeader(HTTP_HEADER_ID p_id,CString p_value)
   {
     CString name(header_fields[p_id]);
     AddHeader(name,p_value);
+  }
+}
+
+void
+SOAPMessage::DelHeader(CString p_name)
+{
+  p_name.MakeLower();
+  HeaderMap::iterator it = m_headers.find(p_name);
+  if(it != m_headers.end())
+  {
+    m_headers.erase(it);
+  }
+}
+
+void
+SOAPMessage::DelHeader(HTTP_HEADER_ID p_id)
+{
+  extern char* header_fields[HttpHeaderMaximum];
+  int maximum = m_incoming ? HttpHeaderMaximum : HttpHeaderResponseMaximum;
+
+  if(p_id >= 0 && p_id < maximum)
+  {
+    CString name(header_fields[p_id]);
+    DelHeader(name);
   }
 }
 

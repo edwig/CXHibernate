@@ -4,7 +4,7 @@
 //
 // Marlin Server: Internet server/client
 // 
-// Copyright (c) 2015-2018 ir. W.E. Huisman
+// Copyright (c) 2014-2021 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -153,14 +153,6 @@ WebServiceServer::Reset()
     m_poolOwner = false;
   }
 
-  // Remove Logfile
-  if (m_log && m_logOwner)
-  {
-	  delete m_log;
-    m_log = nullptr;
-	  m_logOwner = false;
-  }
-
   // De-register ourselves with the server
   if(m_httpServer)
   {
@@ -185,6 +177,15 @@ WebServiceServer::Reset()
       delete server;
     }
   }
+
+  // Remove Logfile
+  if(m_log && m_logOwner)
+  {
+    delete m_log;
+    m_log = nullptr;
+    m_logOwner = false;
+  }
+
   // SoapHandler & GetHandler
   // are cleaned up by the HTTPSite!
 }

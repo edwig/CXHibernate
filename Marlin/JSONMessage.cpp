@@ -4,7 +4,7 @@
 //
 // Marlin Server: Internet server/client
 // 
-// Copyright (c) 2015-2018 ir. W.E. Huisman
+// Copyright (c) 2014-2021 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -626,6 +626,17 @@ JSONMessage::AddHeader(CString p_name,CString p_value)
 {
   p_name.MakeLower();
   m_headers.insert(std::make_pair(p_name,p_value));
+}
+
+void
+JSONMessage::DelHeader(CString p_name)
+{
+  p_name.MakeLower();
+  HeaderMap::iterator it = m_headers.find(p_name);
+  if(it != m_headers.end())
+  {
+    m_headers.erase(it);
+  }
 }
 
 // Finding a header by lowercase name

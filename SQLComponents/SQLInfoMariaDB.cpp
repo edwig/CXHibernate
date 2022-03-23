@@ -2,7 +2,7 @@
 //
 // File: SQLInfoMariaDB.cpp
 //
-// Copyright (c) 1998-2020 ir. W.E. Huisman
+// Copyright (c) 1998-2021 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy of 
@@ -42,6 +42,9 @@ SQLInfoMariaDB::SQLInfoMariaDB(SQLDatabase* p_database)
                :SQLInfoDB(p_database)
 {
   DetectOracleMode();
+
+  AddSQLWord("database");
+  AddSQLWord("databases");
 }
 
 // Destructor. Does nothing
@@ -90,7 +93,7 @@ SQLInfoMariaDB::GetRDBMSIsCatalogUpper() const
 bool
 SQLInfoMariaDB::GetRDBMSUnderstandsSchemas() const
 {
-  return false;
+  return true;
 }
 
 // Supports database/ODBCdriver comments in SQL
@@ -400,6 +403,13 @@ SQLInfoMariaDB::GetKEYWORDDataType(MetaColumn* p_column)
   return p_column->m_typename = type;
 }
 
+// Gets the USER (current-user) keyword function
+CString
+SQLInfoMariaDB::GetKEYWORDCurrentUser() const
+{
+  return "CURRENT_USER";
+}
+
 // Connects to a default schema in the database/instance
 CString
 SQLInfoMariaDB::GetSQLDefaultSchema(CString p_schema) const
@@ -476,10 +486,10 @@ SQLInfoMariaDB::GetSQLFromDualClause() const
 
 // Get SQL to lock  a table 
 CString
-SQLInfoMariaDB::GetSQLLockTable(CString /*p_schema*/, CString p_tablename, bool p_exclusive) const
+SQLInfoMariaDB::GetSQLLockTable(CString p_schema, CString p_tablename, bool p_exclusive) const
 {
   // Standard ISO SQL Syntax
-  CString query = "LOCK TABLE " + p_tablename + " IN ";
+  CString query = "LOCK TABLE " + p_schema + "." + p_tablename + " IN ";
   query += p_exclusive ? "EXCLUSIVE" : "SHARE";
   query += " MODE";
   return query;
@@ -489,7 +499,7 @@ SQLInfoMariaDB::GetSQLLockTable(CString /*p_schema*/, CString p_tablename, bool 
 CString
 SQLInfoMariaDB::GetSQLOptimizeTable(CString p_schema, CString p_tablename) const
 {
-  return "OPTIMIZE TABLE " + p_tablename + " NOWAIT";
+  return "OPTIMIZE TABLE " + p_schema + "." + p_tablename + " NOWAIT";
 }
 
 // Transform query to select top <n> rows
@@ -639,7 +649,7 @@ SQLInfoMariaDB::GetCATALOGTableAttributes(CString& p_schema,CString& p_tablename
         "  FROM information_schema.tables\n"  
         " WHERE table_type = 'BASE TABLE'\n"
         "   AND table_schema NOT IN ('mysql','sys','performance_schema')\n";
-  if(!p_schema)
+  if(!p_schema.IsEmpty())
   {
     sql += "   AND table_schema = ?\n";
   }
@@ -677,6 +687,10 @@ SQLInfoMariaDB::GetCATALOGTableCatalog(CString& p_schema,CString& p_tablename) c
         "  FROM information_schema.tables\n"  
         " WHERE ( table_type = 'SYSTEM VIEW'\n"
         "      OR table_schema IN ('mysql','sys','performance_schema'))\n";
+  if(!p_schema.IsEmpty())
+  {
+    sql += "   AND table_schema = ?\n";
+  }
   if(!p_tablename.IsEmpty())
   {
     sql += "   AND table_name ";
@@ -684,7 +698,8 @@ SQLInfoMariaDB::GetCATALOGTableCatalog(CString& p_schema,CString& p_tablename) c
     sql += " ?\n";
   }
   sql += " ORDER BY 1,2,3";
-  return sql;}
+  return sql;
+}
 
 CString
 SQLInfoMariaDB::GetCATALOGTableCreate(MetaTable& p_table,MetaColumn& /*p_column*/) const
@@ -699,21 +714,32 @@ SQLInfoMariaDB::GetCATALOGTableCreate(MetaTable& p_table,MetaColumn& /*p_column*
 }
 
 CString
-SQLInfoMariaDB::GetCATALOGTableRename(CString /*p_schema*/,CString p_tablename,CString p_newname) const
+SQLInfoMariaDB::GetCATALOGTableCreatePostfix(MetaTable& p_table,MetaColumn& /*p_column*/) const
 {
-  CString sql("RENAME TABLE" + p_tablename + " TO " + p_newname);
+  CString sql;
+  if(p_table.m_temporary)
+  {
+    sql += "ENGINE = MEMORY";
+  }
   return sql;
 }
 
 CString
-SQLInfoMariaDB::GetCATALOGTableDrop(CString /*p_schema*/,CString p_tablename,bool p_ifExist /*= false*/,bool p_restrict /*= false*/,bool p_cascade /*= false*/) const
+SQLInfoMariaDB::GetCATALOGTableRename(CString p_schema,CString p_tablename,CString p_newname) const
+{
+  CString sql("RENAME TABLE" + p_schema + "." + p_tablename + " TO " + p_newname);
+  return sql;
+}
+
+CString
+SQLInfoMariaDB::GetCATALOGTableDrop(CString p_schema,CString p_tablename,bool p_ifExist /*= false*/,bool p_restrict /*= false*/,bool p_cascade /*= false*/) const
 {
   CString sql("DROP TABLE ");
   if (p_ifExist)
   {
     sql += "IF EXISTS ";
   }
-  sql += p_tablename;
+  sql += p_schema + "." + p_tablename;
   if (p_restrict)
   {
     sql += " RESTRICT";
@@ -729,10 +755,10 @@ SQLInfoMariaDB::GetCATALOGTableDrop(CString /*p_schema*/,CString p_tablename,boo
 // ALL TEMPORARY TABLE FUNCTIONS
 
 CString 
-SQLInfoMariaDB::GetCATALOGTemptableCreate(CString /*p_schema*/,CString p_tablename,CString p_select) const
+SQLInfoMariaDB::GetCATALOGTemptableCreate(CString p_schema,CString p_tablename,CString p_select) const
 {
   // BEWARE: THIS IS A GUESS. 
-  return "CREATE TEMPORARY TABLE " + p_tablename + "\nAS " + p_select;
+  return "CREATE TEMPORARY TABLE " + p_schema + "." + p_tablename + "\nAS " + p_select;
 }
 
 CString 
@@ -757,17 +783,140 @@ SQLInfoMariaDB::GetCATALOGColumnExists(CString /*p_schema*/,CString p_tablename,
 }
 
 CString 
-SQLInfoMariaDB::GetCATALOGColumnList(CString& /*p_schema*/,CString& /*p_tablename*/) const
+SQLInfoMariaDB::GetCATALOGColumnList(CString& p_schema,CString& p_tablename) const
 {
-  // Standard ODBC driver suffices
-  return "";
+  CString column;
+  return GetCATALOGColumnAttributes(p_schema,p_tablename,column);
 }
 
-CString 
-SQLInfoMariaDB::GetCATALOGColumnAttributes(CString& /*p_schema*/,CString& /*p_tablename*/,CString& /*p_columnname*/) const
+CString
+SQLInfoMariaDB::GetCATALOGColumnAttributes(CString& p_schema,CString& p_tablename,CString& p_columnname) const
 {
-  // Standard ODBC driver suffices
-  return "";
+  p_schema.MakeLower();
+  p_tablename.MakeLower();
+  p_columnname.MakeLower();
+
+  CString query = "SELECT table_catalog  AS table_cat\n"
+                  "      ,table_schema   AS table_schem\n"
+                  "      ,table_name\n"
+                  "      ,column_name\n"
+                  "      ,case data_type\n"
+                  "            when 'char'               then   1\n"
+                  "            when 'varchar'            then  12\n"
+                  "            when 'bigint'   then case locate('unsigned',column_type) > 0\n"
+                  "                                 when true then -27\n"   // UBIGINT
+                  "                                           else -25\n"   // SBIGINT
+                  "                                 end\n"
+                  "            when 'binary'             then  -2\n"
+                  "            when 'bit'                then  -7\n"
+                  "            when 'blob'               then  -4\n"  // longvarbinary
+                  "            when 'bool'               then  -7\n"  // bit
+                  "            when 'date'               then   9\n"  // date
+                  "            when 'datetime'           then  93\n"  // TYPE TIMESTAMP
+                  "            when 'decimal'            then   2\n"  // NUMERIC
+                  "            when 'double'             then   8\n"
+                  "            when 'double precision'   then   8\n"
+                  "            when 'enum'               then  12\n"  // VARCHAR
+                  "            when 'float'              then   7\n"
+                  "            when 'int'      then case locate('unsigned',column_type) > 0\n"
+                  "                                 when true then -18\n"   // ULONG
+                  "                                           else   4\n"   // SLONG
+                  "                                 end\n"
+                  "            when 'integer'  then case locate('unsigned',column_type) > 0\n"
+                  "                                 when true then -18\n"   // ULONG
+                  "                                           else   4\n"   // SLONG
+                  "                                 end\n"
+                  "            when 'long varbinary'     then  -4\n"  // BLOB
+                  "            when 'long varchar'       then  -1\n"
+                  "            when 'longblob'           then  -4\n"
+                  "            when 'longtext'           then  -1\n"
+                  "            when 'mediumblob'         then  -4\n"
+                  "            when 'mediumint' then case locate('unsigned',column_type) > 0\n"
+                  "                                  when true then -18\n"   // ULONG
+                  "                                            else   4\n"   // SLONG
+                  "                                  end\n"
+                  "            when 'mediumtext'         then  -1\n"
+                  "            when 'numeric'            then   2\n"
+                  "            when 'real'               then   7\n"
+                  "            when 'set'                then  12\n"
+                  "            when 'smallint' then case locate('unsigned',column_type) > 0\n"
+                  "                                 when true then -17\n"   // USMALLINT
+                  "                                           else   5\n"   // SMALLINT
+                  "                                 end\n"
+                  "            when 'text'               then  -1\n"
+                  "            when 'time'               then  92\n"  // TYPE TIME
+                  "            when 'timestamp'          then  93\n"
+                  "            when 'tinyblob'           then  -3\n"  // varbinary
+                  "            when 'tinyint'  then case locate('unsigned',column_type) > 0\n"
+                  "                                 when true then -16\n"   // UTINYINT
+                  "                                           else  -6\n"   // TINYINT
+                  "                                 end\n"
+                  "            when 'tinytext'           then  -1\n"
+                  "            when 'varbinary'          then  -3\n"
+                  "       end       as data_type\n"
+                  "      ,ucase(if(column_type like '%%(%%)%%',concat(substring(column_type,1,locate('(',column_type)-1),substring(column_type,1+locate(')',column_type))),column_type)) as type_name\n"
+                  "      ,case when data_type = 'bit'    then (numeric_precision+7)/8\n"
+                  "            when data_type in('tinyint','smallint','mediumint','int','bigint','decimal') then numeric_precision\n"
+                  "            when data_type = 'float'  then if(numeric_scale IS NULL,7,numeric_precision)\n"
+                  "            when data_type = 'double' then if(numeric_scale IS NULL,15,numeric_precision)\n"
+                  "            when data_type = 'date'   then 10\n"
+                  "            when data_type = 'time'   then  8\n"
+                  "            when data_type = 'year'   then  4\n"
+                  "            when data_type in('timestamp','datetime') then 19\n"
+                  "            else character_maximum_length\n"
+                  "       end  as column_size\n"
+                  "      ,case data_type\n"
+                  "            when 'bit'        then 1\n"
+                  "            when 'tinyint'    then 1\n"
+                  "            when 'smallint'   then 2\n"
+                  "            when 'int'        then 4\n"
+                  "            when 'integer'    then 4\n"
+                  "            when 'mediumint'  then 3\n"
+                  "            when 'bigint'     then 20\n"
+                  "            when 'real'       then 4\n"
+                  "            when 'float'      then 8\n"
+                  "            when 'double'     then 8\n"
+                  "            when 'date'       then 6\n"
+                  "            when 'time'       then 6\n"
+                  "            when 'timestamp'  then 16\n"
+                  "            when 'datetime'   then 16\n"
+                  "            when 'guid'       then 16\n"
+                  "            when 'year'       then 2\n"
+                  "            when 'decimal'    then (numeric_precision + 2)\n"
+                  "            else  character_octet_length\n"
+                  "       end  as buffer_length\n"
+                  "      ,Nvl(numeric_scale,datetime_precision) AS decimal_digits\n"
+                  "      ,if(character_octet_length is not null,null,10) as num_prec_radix\n"
+                  "      ,if(data_type='timestamp',1,if(is_nullable='YES',1,if(extra='auto_increment',1,0))) as nullable\n"
+                  "      ,column_comment     as remarks\n"
+                  "      ,column_default     as column_def\n"
+                  "      ,case data_type\n"
+                  "            when 'date'      then 9\n"   // DATETIME
+                  "            when 'time'      then 9\n"   // DATETIME
+                  "            when 'datetime'  then 9\n"   // DATETIME
+                  "            when 'timestamp' then 9\n"   // DATETIME
+                  "       end  as sql_data_type\n"
+                  "      ,case data_type\n"
+                  "            when 'date'      then 1\n"   // SQL_DATE
+                  "            when 'time'      then 2\n"   // SQL_TIME
+                  "            when 'datetime'  then 3\n"   // SQL_CODE_TIMESTAMP
+                  "            when 'timestamp' then 3\n"   // SQL_CODE_TIMESTAMP
+                  "       end  as sql_datetime_sub\n"
+                  "      ,character_octet_length\n"
+                  "      ,ordinal_position\n"
+                  "      ,if(data_type = 'timestamp','YES',if(is_nullable = 'YES','YES',if(extra = 'auto_increment','YES','NO'))) as is_nullable\n"
+                  "  FROM information_schema.columns\n"
+                  " WHERE table_name   = '" + p_tablename + "'\n";
+  if(!p_schema.IsEmpty())
+  {
+    query += "   AND table_schema = '" + p_schema + "'\n";
+  }
+  if(!p_columnname.IsEmpty())
+  {
+    query += "   AND column_name = '" + p_columnname + "'\n";
+  }
+  query += " ORDER BY ordinal_position ASC";
+  return query;
 }
 
 CString 
@@ -886,9 +1035,10 @@ SQLInfoMariaDB::GetCATALOGIndexCreate(MIndicesMap& p_indices) const
 }
 
 CString
-SQLInfoMariaDB::GetCATALOGIndexDrop(CString /*p_schema*/,CString /*p_tablename*/,CString p_indexname) const
+SQLInfoMariaDB::GetCATALOGIndexDrop(CString p_schema,CString p_tablename,CString p_indexname) const
 {
-  CString sql = "DROP INDEX " + p_indexname;
+  CString sql = "ALTER TABLE " + p_schema + "." + p_tablename + "\n"
+                " DROP INDEX " + p_indexname;
   return sql;
 }
 
@@ -916,6 +1066,8 @@ SQLInfoMariaDB::GetCATALOGPrimaryAttributes(CString& /*p_schema*/,CString& /*p_t
   return "";
 }
 
+// In MariaDB all primary keys are named "PRIMARY".
+// You can add a constraint name, but it WILL be ignored!
 CString
 SQLInfoMariaDB::GetCATALOGPrimaryCreate(MPrimaryMap& p_primaries) const
 {
@@ -925,9 +1077,8 @@ SQLInfoMariaDB::GetCATALOGPrimaryCreate(MPrimaryMap& p_primaries) const
   {
     if(prim.m_columnPosition == 1)
     {
-      query += prim.m_table + "\n";
-      query += "  ADD CONSTRAINT " + prim.m_constraintName + "\n";
-      query += "      PRIMARY KEY (";
+      query += prim.m_schema + "." + prim.m_table + "\n";
+      query += "  ADD PRIMARY KEY (";
 
     }
     else
@@ -940,11 +1091,12 @@ SQLInfoMariaDB::GetCATALOGPrimaryCreate(MPrimaryMap& p_primaries) const
   return query;
 }
 
+// In MariaDB all primary keys are named "PRIMARY".
 CString
-SQLInfoMariaDB::GetCATALOGPrimaryDrop(CString /*p_schema*/,CString p_tablename,CString p_constraintname) const
+SQLInfoMariaDB::GetCATALOGPrimaryDrop(CString p_schema,CString p_tablename,CString /*p_constraintname*/) const
 {
-  CString sql("ALTER TABLE " + p_tablename + "\n"
-              " DROP CONSTRAINT " + p_constraintname);
+  CString sql("ALTER TABLE " + p_schema + "." + p_tablename + "\n"
+              " DROP CONSTRAINT PRIMARY");
   return sql;
 }
 
@@ -1111,9 +1263,9 @@ SQLInfoMariaDB::GetCATALOGForeignAlter(MForeignMap& p_original, MForeignMap& p_r
 }
 
 CString
-SQLInfoMariaDB::GetCATALOGForeignDrop(CString /*p_schema*/,CString p_tablename,CString p_constraintname) const
+SQLInfoMariaDB::GetCATALOGForeignDrop(CString p_schema,CString p_tablename,CString p_constraintname) const
 {
-  CString sql("ALTER TABLE " + p_tablename + "\n"
+  CString sql("ALTER TABLE " + p_schema + "." + p_tablename + "\n"
               " DROP CONSTRAINT " + p_constraintname);
   return sql;
 }
@@ -1215,13 +1367,16 @@ SQLInfoMariaDB::GetCATALOGSequenceExists(CString p_schema, CString p_sequence) c
 CString
 SQLInfoMariaDB::GetCATALOGSequenceList(CString& p_schema,CString& p_pattern) const
 {
-  p_schema.Empty();
+  p_schema.MakeLower();
   p_pattern.MakeLower();
-  p_pattern = "%" + p_pattern + "%";
+  if(p_pattern.Find('%') < 0)
+  {
+    p_pattern = "%" + p_pattern + "%";
+  }
 
-  CString sql = "SELECT ''               AS catalog_name\n"
-                "      ,tab.table_schema AS schema_name\n"
-                "      ,tab.table_name   AS sequence_name\n"
+  CString sql = "SELECT tab.table_catalog as catalog_name\n"
+                "      ,tab.table_schema  as schema_name\n"
+                "      ,tab.table_name    as sequence_name\n"
                 "      ,0 AS current_value\n"
                 "      ,0 AS minimal_value\n"
                 "      ,0 AS seq_increment\n"
@@ -1229,18 +1384,31 @@ SQLInfoMariaDB::GetCATALOGSequenceList(CString& p_schema,CString& p_pattern) con
                 "      ,0 AS cycle\n"
                 "      ,0 AS ordering\n"
                 "  FROM information_schema.tables tab\n"
-                " WHERE tab.table_type = 'SEQUENCE'\n"
-                "   AND table_name  LIKE ?";
+                " WHERE tab.table_type = 'SEQUENCE'";
+  if(!p_schema.IsEmpty())
+  {
+    sql += "\n   AND table_schema = ?";
+  }
+  if(!p_pattern.IsEmpty())
+  {
+    sql += "\n   AND table_name LIKE ?";
+  }
   return sql;
 }
 
 CString
 SQLInfoMariaDB::GetCATALOGSequenceAttributes(CString& p_schema,CString& p_sequence) const
 {
-  p_schema.Empty();
+  p_schema.MakeLower();
   p_sequence.MakeLower();
+  CString table;
+  if(!p_schema.IsEmpty())
+  {
+    table = p_schema + ".";
+  }
+  table += p_sequence;
 
-  CString sql = "SELECT ''                  AS catalog_name\n"
+  CString sql = "SELECT tab.table_catalog   AS catalog_name\n"
                 "      ,tab.table_schema    AS schema_name\n"
                 "      ,tab.table_name      AS sequence_name\n"
                 "      ,seq.start_value     AS current_value\n"
@@ -1249,9 +1417,17 @@ SQLInfoMariaDB::GetCATALOGSequenceAttributes(CString& p_schema,CString& p_sequen
                 "      ,seq.cache_size      AS cache\n"
                 "      ,seq.cycle_option    AS cycle\n"
                 "      ,0                   AS ordering\n"
-                "  FROM information_schema.tables tab\n"
-                " WHERE tab.table_type = 'SEQUENCE'\n";
-                "   AND sequence_name  = ?";
+                "  FROM information_schema.tables as tab\n"
+                "      ," + table + " as seq\n"
+                " WHERE tab.table_type = 'SEQUENCE'";
+  if(!p_schema.IsEmpty())
+  {
+    sql += "\n   AND tab.table_schema = ?";
+  }
+  if(!p_sequence.IsEmpty())
+  {
+    sql += "\n   AND tab.table_name  = ?";
+  }
   return sql;
 }
 
@@ -1298,7 +1474,7 @@ SQLInfoMariaDB::GetCATALOGViewList(CString& p_schema,CString& p_pattern) const
   return GetCATALOGViewAttributes(p_schema,p_pattern);
 }
 
-CString 
+CString
 SQLInfoMariaDB::GetCATALOGViewAttributes(CString& p_schema,CString& p_viewname) const
 {
   CString sql;
@@ -1313,7 +1489,7 @@ SQLInfoMariaDB::GetCATALOGViewAttributes(CString& p_schema,CString& p_viewname) 
         "  FROM information_schema.tables\n"  
         " WHERE table_type = 'VIEW'\n"
         "   AND table_schema NOT IN ('mysql','sys','performance_schema')\n";
-  if(!p_schema)
+  if(!p_schema.IsEmpty())
   {
     sql += "   AND table_schema = ?\n";
   }
@@ -1327,7 +1503,14 @@ SQLInfoMariaDB::GetCATALOGViewAttributes(CString& p_schema,CString& p_viewname) 
   return sql;
 }
 
-CString 
+CString
+SQLInfoMariaDB::GetCATALOGViewText(CString& /*p_schema*/,CString& /*p_viewname*/) const
+{
+  // Cannot query this, Use ODBC functions
+  return "";
+}
+
+CString
 SQLInfoMariaDB::GetCATALOGViewCreate(CString /*p_schema*/,CString p_viewname,CString p_contents) const
 {
   return "CREATE VIEW " + p_viewname + "\n" + p_contents;
@@ -1762,7 +1945,6 @@ SQLInfoMariaDB::GetPSMExceptionRaise(CString p_sqlState) const
 {
   return "SIGNAL SQLSTATE '" + p_sqlState + "'\n";
 }
-
 
 //////////////////////////////////////////////////////////////////////////
 //

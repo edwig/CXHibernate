@@ -4,7 +4,7 @@
 //
 // Marlin Server: Internet server/client
 // 
-// Copyright (c) 2015-2018 ir. W.E. Huisman
+// Copyright (c) 2014-2021 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -301,6 +301,19 @@ CrackedURL::CrackURL(CString p_url)
 
   // Now a valid URL
   return (m_valid = true);
+}
+
+
+void
+CrackedURL::SetPath(CString p_path)
+{
+  // Strip parameters and anchors
+  int pos = p_path.FindOneOf("#?");
+  if (pos >= 0)
+  {
+    p_path = p_path.Left(pos);
+  }
+  m_path = p_path;
 }
 
 // Convert string to URL encoding, using UTF-8 chars
@@ -677,4 +690,18 @@ CrackedURL::GetParameter(unsigned p_parameter)
     return &m_parameters[p_parameter];
   }
   return nullptr;
+}
+
+bool
+CrackedURL::DelParameter(CString p_parameter)
+{
+  for(UriParams::iterator it = m_parameters.begin(); it != m_parameters.end();++it)
+  {
+    if(it->m_key.CompareNoCase(p_parameter) == 0)
+    {
+      m_parameters.erase(it);
+      return true;
+    }
+  }
+  return false;
 }

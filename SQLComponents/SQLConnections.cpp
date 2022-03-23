@@ -2,7 +2,7 @@
 //
 // File: SQLConnections.cpp
 //
-// Copyright (c) 1998-2020 ir. W.E. Huisman
+// Copyright (c) 1998-2021 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy of 
@@ -182,8 +182,9 @@ SQLConnections::SaveConnectionsFile(CString p_filename /*=""*/)
   {
     p_filename = "Database.xml";
   }
-  XMLMessage msg;
+  p_filename = SQLGetExePath() + p_filename;
 
+  XMLMessage msg;
   msg.SetRootNodeName("Connections");
   
   for(auto& connect : m_connections)

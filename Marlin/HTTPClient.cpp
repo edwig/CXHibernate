@@ -4,7 +4,7 @@
 //
 // Marlin Server: Internet server/client
 // 
-// Copyright (c) 2015-2018 ir. W.E. Huisman
+// Copyright (c) 2014-2021 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -41,6 +41,7 @@
 #include "HTTPCertificate.h"
 #include "HTTPClientTracing.h"
 #include "HTTPError.h"
+#include "OAuth2Cache.h"
 #include "gzip.h"
 #include <winerror.h>
 #include <wincrypt.h>
@@ -70,8 +71,8 @@ static char THIS_FILE[] = __FILE__;
 // HTTP_STATUS_NO_CONTENT      -> W3C Standard says that a server can end a event stream with tis HTTP status 
 //
 #define CONTINUE_STREAM(status) ((m_status == HTTP_STATUS_CONTINUE) || \
-                                 (m_status >= HTTP_STATUS_OK && m_status < HTTP_STATUS_NO_CONTENT) || \
-                                 (m_status == HTTP_STATUS_SERVICE_UNAVAIL))
+                                  (m_status >= HTTP_STATUS_OK && m_status < HTTP_STATUS_NO_CONTENT) || \
+                                  (m_status == HTTP_STATUS_SERVICE_UNAVAIL))
 
 // CTOR for the client
 HTTPClient::HTTPClient()
@@ -506,7 +507,7 @@ HTTPClient::InitLogging()
 }
 
 void
-HTTPClient::SetLogging(LogAnalysis* p_log)
+HTTPClient::SetLogging(LogAnalysis* p_log,bool p_transferOwnership /*= false*/)
 {
   if(m_log && m_logOwner)
   {
@@ -516,6 +517,12 @@ HTTPClient::SetLogging(LogAnalysis* p_log)
   }
   // Remember the setting or resetting of the logfile
   m_log = p_log;
+
+  // HTTP Client wil destroy the logfile object!
+  if(p_transferOwnership)
+  {
+    m_logOwner = true;
+  }
 
   // In case we just gotten a new logfile, init it!
   if(m_log)
@@ -1234,6 +1241,48 @@ HTTPClient::AddPreEmptiveAuthorization()
   }
 }
 
+// Add OAuth2 authorization if configured for this call
+bool
+HTTPClient::AddOAuth2authorization()
+{
+  bool result = false;
+
+  if(m_oauthCache && m_oauthSession)
+  {
+    CString token = m_oauthCache->GetBearerToken(m_oauthSession);
+    if(!token.IsEmpty())
+    {
+      USES_CONVERSION;
+      CString auth("Authorization: Bearer ");
+      auth += token;
+      wstring header = A2CW(auth);
+
+      if(!::WinHttpAddRequestHeaders(m_request
+                                    ,header.c_str()
+                                    ,(DWORD)header.size()
+                                    ,WINHTTP_ADDREQ_FLAG_ADD | 
+                                     WINHTTP_ADDREQ_FLAG_REPLACE))
+      {
+        ERRORLOG("Cannot add OAuth2 bearer token as 'Authorization' header");
+      }
+      else
+      {
+        result = true;
+      }
+    }
+  }
+  return result;
+}
+
+void
+HTTPClient::ResetOAuth2Session()
+{
+  if(m_oauthCache && m_oauthSession)
+  {
+    m_oauthCache->SetExpired(m_oauthSession);
+  }
+}
+
 void
 HTTPClient::AddWebSocketUpgrade()
 {
@@ -1942,7 +1991,7 @@ HTTPClient::Send(CString& p_url)
 
   if(SetURL(p_url))
   {
-    return Send();
+    return SendAndRedirect();
   }
   return false;
 }
@@ -1959,7 +2008,7 @@ HTTPClient::Send(CString& p_url,CString& p_body)
   if(SetURL(p_url))
   {
     SetBody((void*) p_body.GetString(),p_body.GetLength());
-    return Send();
+    return SendAndRedirect();
   }
   return false;
 }
@@ -1981,7 +2030,7 @@ HTTPClient::Send(CString& p_url,void* p_buffer,unsigned p_length)
     TestReconnect();
 
     SetBody(p_buffer,p_length);
-    return Send();
+    return SendAndRedirect();
   }
   return false;
 }
@@ -2032,7 +2081,7 @@ HTTPClient::Send(CString&    p_url
   }
 
   // Go get our HTTP file
-  result = Send();
+  result = SendAndRedirect();
 
   p_buffer->Reset();
   p_buffer->ResetFilename();
@@ -2088,7 +2137,7 @@ HTTPClient::Send(HTTPMessage* p_msg)
   m_cookies     = p_msg->GetCookies();
 
   // NOW GO SEND IT
-  result = Send();
+  result = SendAndRedirect();
 
   // Forget what we did send
   p_msg->Reset();
@@ -2241,7 +2290,7 @@ HTTPClient::Send(SOAPMessage* p_msg)
   // Put in logfile
   DETAILLOG("Outgoing SOAP message: %s",p_msg->GetSoapAction().GetString());
 
-  // Now go send our XML
+  // Now go send our XML (Never redirected)
   bool result = Send();
 
   // Headers from the answer
@@ -2436,7 +2485,7 @@ HTTPClient::Send(JSONMessage* p_msg)
   // Put in logfile
   DETAILLOG("Outgoing JSON message");
   
-  // NOW GO SEND IT
+  // NOW GO SEND IT (Never redirected)
   result = Send();
 
   ProcessJSONResult(p_msg,result);
@@ -2571,7 +2620,7 @@ HTTPClient::SendAsJSON(SOAPMessage* p_msg)
   // Most definitely a get
   m_verb = "GET";
   // Most definitely we want a JSON back
-  m_contentType = "text/json";
+  m_contentType = "application/json";
   m_bodyLength  = 0;
   m_body        = "";
 
@@ -2589,7 +2638,7 @@ HTTPClient::SendAsJSON(SOAPMessage* p_msg)
   DETAILLOG("Outgoing SOAP->JSON: GET %s",url.GetString());
 
   // Go get our JSON response
-  result = Send();
+  result = SendAndRedirect();
 
   // Reset our original request
   p_msg->Reset();
@@ -2640,6 +2689,77 @@ HTTPClient::StartEventStream(CString& p_url)
     return StartEventStreamingThread();
   }
   return false;
+}
+
+bool
+HTTPClient::DoRedirectionAfterSend()
+{
+  CString redirURL = GetResultHeader(WINHTTP_QUERY_LOCATION, 0);
+  if(!redirURL.IsEmpty())
+  {
+    m_url = redirURL;
+    return true;
+  }
+  return false;
+}
+
+// Send message and redirect if so requested by the server
+bool
+HTTPClient::SendAndRedirect()
+{
+  bool result = false;
+  bool redirecting = false;
+  CString redirURL;
+
+  do 
+  {
+    // Do send our message
+    result = Send();
+    // And test for status in the 300 range
+    if(result && (m_status >= HTTP_STATUS_AMBIGUOUS && m_status < HTTP_STATUS_BAD_REQUEST))
+    {
+      switch(m_status)
+      {
+        case HTTP_STATUS_AMBIGUOUS:         if(m_verb != "HEAD")
+                                            {
+                                              redirecting = DoRedirectionAfterSend();
+                                            }
+                                            break;
+        case HTTP_STATUS_MOVED:             // Fall through
+        case HTTP_STATUS_REDIRECT:          // Fall through
+        case HTTP_STATUS_REDIRECT_KEEP_VERB:if(m_verb == "GET" || m_verb == "HEAD")
+                                            {
+                                              redirecting = DoRedirectionAfterSend();
+                                            }
+                                            break;
+        case HTTP_STATUS_REDIRECT_METHOD:   redirecting = DoRedirectionAfterSend();
+                                            if(redirecting)
+                                            {
+                                              m_verb = "GET";
+                                            }
+                                            break;
+        case HTTP_STATUS_NOT_MODIFIED:      // if-modified-since was not modified
+                                            // NEVER REDIRECTED!!
+                                            break;
+        case HTTP_STATUS_USE_PROXY:         redirecting = DoRedirectionAfterSend();
+                                            if(!redirecting)
+                                            {
+                                              // USE_PROXY **MUST** have the "Location" header
+                                              result = false;
+                                            }
+                                            break;
+        case HTTP_STATUS_PERMANENT_REDIRECT:redirecting = DoRedirectionAfterSend();
+                                            break;
+      }
+    }
+    else
+    {
+      redirecting = false;
+    }
+  } 
+  while(redirecting);
+
+  return result;
 }
 
 // Our primary function: send a message
@@ -2755,6 +2875,7 @@ HTTPClient::Send()
   AddProxyAuthorization();
   // Add authorization up-front before the call
   AddPreEmptiveAuthorization();
+  AddOAuth2authorization();
   // Always add a host header
   AddHostHeader();
   // Add our recorded cookies
@@ -2892,7 +3013,9 @@ HTTPClient::Send()
                                     --iRetryTimes;
 
                                     // Add authentication headers
-                                    if(AddAuthentication(ntlm3Step) == false)
+                                    ResetOAuth2Session();
+                                    if(AddOAuth2authorization()     == false &&
+                                       AddAuthentication(ntlm3Step) == false )
                                     {
                                       getReponseSucceed = true;
                                       iRetryTimes = retries + 1;
@@ -4105,7 +4228,7 @@ HTTPClient::EventThreadRunning()
 
     DETAILLOG("Starting the HTTP event-stream");
 
-    // Simply send a HTTP GET for this URL
+    // Simply send a HTTP GET for this URL (Never redirected)
     Send();
 
     // If coming out of loop and OnClose is seen
@@ -4159,6 +4282,8 @@ HTTPClient::StopClient()
     return;
   }
   DETAILLOG("Stopping the HTTPClient");
+  bool stopping = false;
+
   // Cleaning out the event source
   if(m_eventSource)
   {
@@ -4182,8 +4307,9 @@ HTTPClient::StopClient()
     delete m_eventSource;
     m_eventSource = nullptr;
     DETAILLOG("Stopped the push-events EventSource");
+    stopping = true;
   }
-  else if(m_queueThread && m_queueEvent)
+  if(m_queueThread && m_queueEvent)
   {
     // Stop the queue by resetting the thread
     DETAILLOG("Stopping the send queue");
@@ -4212,9 +4338,13 @@ HTTPClient::StopClient()
     CloseHandle(m_queueEvent);
     m_queueEvent = NULL;
     DETAILLOG("Closed the client HTTP queue");
+    stopping = true;
   }
-  // We are now stopped
-  m_initialized = false;
+  // We are now stopped. Reset also
+  if(stopping)
+  {
+    Reset();
+  }
 }
 
 bool 

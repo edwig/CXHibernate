@@ -4,7 +4,7 @@
 //
 // Marlin Server: Internet server/client
 // 
-// Copyright (c) 2015-2018 ir. W.E. Huisman
+// Copyright (c) 2014-2021 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -58,7 +58,7 @@ public:
   // Receive the WebSocket stream and pass on the the WebSocket
   virtual void       ReceiveWebSocket(WebSocket* p_socket,HTTP_OPAQUE_ID p_request);
   // Flushing a WebSocket intermediate
-  virtual bool       FlushSocket(HTTP_OPAQUE_ID p_request);
+  virtual bool       FlushSocket(HTTP_OPAQUE_ID p_request,CString p_prefix);
   // Sending response for an incoming message
   virtual void       SendResponse(HTTPMessage* p_message);
 

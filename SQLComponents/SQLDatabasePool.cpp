@@ -2,7 +2,7 @@
 //
 // File: SQLDatabasePool.cpp
 //
-// Copyright (c) 1998-2020 ir. W.E. Huisman
+// Copyright (c) 1998-2021 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy of 
@@ -248,13 +248,13 @@ SQLDatabasePool::GetListOfConnections(CString& p_list)
   // All databases with an active connection
   for(auto& it : m_allDatabases)
   {
-    text.Format("Database pool - connection to     : %s\n",it.first.GetString());
+    text.Format("Database pool - connection to    : %s\n",it.first.GetString());
     p_list += text;
   }
   // If so, reflect the empty status
   if(p_list.IsEmpty())
   {
-    p_list = "Database pool - ODBC connections  : No connections\n";
+    p_list = "Database pool - ODBC connections : No connections\n";
   }
 }
 

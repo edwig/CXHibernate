@@ -2,7 +2,7 @@
 //
 // File: SQLDataSet.h
 //
-// Copyright (c) 1998-2020 ir. W.E. Huisman
+// Copyright (c) 1998-2021 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy of 
@@ -77,13 +77,14 @@ public:
 
 class SQLDatabase;
 class SQLQuery;
-typedef std::vector<SQLRecord*>   RecordSet;
-typedef std::vector<SQLVariant*>  VariantSet;
-typedef std::vector<SQLParameter> ParameterSet;
-typedef std::vector<CString>      NamenMap;
-typedef std::vector<int>          TypenMap;
-typedef std::map<CString,int>     ObjectMap;
-typedef std::list<CString>        WordList;
+
+typedef std::vector<SQLRecord*>     RecordSet;
+typedef std::vector<SQLVariant*>    VariantSet;
+typedef std::vector<SQLParameter>   ParameterSet;
+typedef std::vector<CString>        NamenMap;
+typedef std::vector<int>            TypenMap;
+typedef std::map<CString,int>       ObjectMap;
+typedef std::list<CString>          WordList;
 
 class SQLDataSet
 {
@@ -116,13 +117,13 @@ public:
   // Insert new record (Manually)
   SQLRecord*   InsertRecord();
   // Insert new field in new record (manually)
-  int          InsertField(CString& p_name,SQLVariant* p_value);
+  int          InsertField(CString p_name,SQLVariant* p_value);
   // Calculate aggregate functions
   int          Aggregate(int p_num,AggregateInfo& p_info);
   // Cancel the mutations of this mutation ID
   void         CancelMutation(int p_mutationID);
   // Insert / Update / delete records from the database
-  bool         Synchronize(int p_mutationID = 0);
+  bool         Synchronize(int p_mutationID = 0,bool p_throw = false);
   // In case synchronize doesn't work, ask for mixed mutations
   int          AllMixedMutations(MutationIDS& p_list,int p_mutationID);
   // Find the object record of a primary key
@@ -152,6 +153,7 @@ public:
   virtual void SetFilters(SQLFilterSet* p_filters);
   // Set GROUP BY 
   virtual void SetGroupBy(CString p_groupby);
+  virtual void AddGroupby(CString p_property);
   // Set ORDER BY
   virtual void SetOrderBy(CString p_orderby);
   // Set HAVING
@@ -176,9 +178,9 @@ public:
   // Set the status to modified/saved
   void         SetStatus(int m_add,int m_delete = 0);
   // Set a field value in the current record
-  void         SetField(int p_num,      SQLVariant* p_value,int p_mutationID = 0);
+  bool         SetField(int p_num,      SQLVariant* p_value,int p_mutationID = 0);
   // Set a field value in the current record
-  void         SetField(CString& p_name,SQLVariant* p_value,int p_mutationID = 0);
+  bool         SetField(CString& p_name,SQLVariant* p_value,int p_mutationID = 0);
 
   // GETTERS
 
@@ -215,7 +217,8 @@ public:
   CString      GetGroupBy();
   CString      GetOrderBy();
   SQLFilterSet* GetHavings();
-  void         AddGroupby(const CString& p_property);
+  // Options
+  bool         GetBindPrimary();
 
   // XML Saving and loading
   bool         XMLSave(CString p_filename,CString p_name,XMLEncoding p_encoding = XMLEncoding::ENC_UTF8);
@@ -297,8 +300,8 @@ protected:
   SQLFilterSet* m_havings { nullptr };
 
   // Records and objects
-  int          m_status      { SQL_Empty };
-  int          m_current     { -1 };
+  int          m_status    { SQL_Empty };
+  int          m_current   { -1 };
   NamenMap     m_names;
   TypenMap     m_types;
   RecordSet    m_records;
@@ -416,16 +419,6 @@ inline CString
 SQLDataSet::GetGroupBy()
 {
   return m_groupby;
-}
-
-inline void 
-SQLDataSet::AddGroupby(const CString& p_property)
-{
-  if (!m_groupby.IsEmpty())
-  {
-    m_groupby += ", ";
-  }
-  m_groupby += p_property;
 }
 
 inline CString

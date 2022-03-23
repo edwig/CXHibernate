@@ -4,7 +4,7 @@
 //
 // Marlin Server: Internet server/client
 // 
-// Copyright (c) 2015-2018 ir. W.E. Huisman
+// Copyright (c) 2014-2021 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -40,6 +40,9 @@ constexpr auto NUM_THREADS_MAXIMUM = 20;   // More than this is not wise under W
 
 // Standard stack size of a thread in 64 bits architectures
 constexpr auto THREAD_STACKSIZE = (2 * 1024 * 1024);
+
+// Set a name on your thread
+void SetThreadName(char* threadName,DWORD dwThreadID = MAXDWORD);
 
 // Callbacks
 typedef void (* LPFN_CALLBACK)(void *);

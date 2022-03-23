@@ -2,7 +2,7 @@
 //
 // File: SQLInfo.cpp
 //
-// Copyright (c) 1998-2020 ir. W.E. Huisman
+// Copyright (c) 1998-2021 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy of 
@@ -800,7 +800,7 @@ SQLInfo::SupportedFunction(unsigned int api_function)
 int
 SQLInfo::GetAttributeInteger(LPCTSTR description,SQLINTEGER attrib)
 {
-  SQLUINTEGER value = 0;
+  SQLULEN    value = 0;
   SQLINTEGER cbMax = 0;
   
   SQLRETURN nRetCode = SQLGetConnectAttr(m_hdbc
@@ -831,7 +831,7 @@ SQLInfo::GetAttributeInteger(LPCTSTR description,SQLINTEGER attrib)
     return 0;
   }
   ATLTRACE("Database connection attribute \"%s\" was: %d\n",description,value);
-  return value;
+  return (int) (value & 0xFFFF);
 }
 
 // Getting a general STRING connection attribute
@@ -1122,12 +1122,25 @@ SQLInfo::IsCorrectName(CString p_name,int p_type)
     }
   }
 
+  // Cannot be in the ODBC keywords list or in de RDBMS extra reserved words list
+  if(IsReservedWord(p_name))
+  {
+    return false;
+  }
+  // Name OK
+  return true;
+}
+
+// Is reserved word
+bool
+SQLInfo::IsReservedWord(CString p_name)
+{
   // Cannot be in the ODBC keywords list
   for(auto& word : m_ODBCKeywords)
   {
     if(p_name.CompareNoCase(word) == 0)
     {
-      return false;
+      return true;
     }
   }
 
@@ -1136,12 +1149,10 @@ SQLInfo::IsCorrectName(CString p_name,int p_type)
   {
     if(p_name.CompareNoCase(word) == 0)
     {
-      return false;
+      return true;
     }
   }
-
-  // Name OK
-  return true;
+  return false;
 }
 
 // Can we start a transaction on the database
@@ -1226,8 +1237,6 @@ SQLInfo::CloseStatement()
     SqlFreeStmt(m_hstmt,SQL_DROP);
     m_hstmt   = NULL;
     m_retCode = SQL_SUCCESS;
-
-    ATLTRACE("DBInfo::CloseStatement\n");
   }
 }
 

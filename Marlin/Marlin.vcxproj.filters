@@ -306,40 +306,37 @@
     <ClCompile Include="XMLDataType.cpp">
       <Filter>MarlinGeneral</Filter>
     </ClCompile>
+    <ClCompile Include="WebSocketClient.cpp">
+      <Filter>MarlinClient</Filter>
+    </ClCompile>
+    <ClCompile Include="WebSocketServerIIS.cpp">
+      <Filter>MarlinServer</Filter>
+    </ClCompile>
+    <ClCompile Include="WebSocketServer.cpp">
+      <Filter>MarlinServer</Filter>
+    </ClCompile>
+    <ClCompile Include="WebSocketServerSync.cpp">
+      <Filter>MarlinServer</Filter>
+    </ClCompile>
+    <ClCompile Include="ServerMain.cpp">
+      <Filter>MarlinServer</Filter>
+    </ClCompile>
+    <ClCompile Include="MarlinServer.cpp">
+      <Filter>MarlinServer</Filter>
+    </ClCompile>
     <ClCompile Include="AppConfig.cpp">
       <Filter>MarlinGeneral</Filter>
     </ClCompile>
     <ClCompile Include="EventLogRegistration.cpp">
       <Filter>MarlinGeneral</Filter>
     </ClCompile>
+    <ClCompile Include="ServiceReporting.cpp">
+      <Filter>MarlinGeneral</Filter>
+    </ClCompile>
     <ClCompile Include="ExecuteProcess.cpp">
       <Filter>MarlinGeneral</Filter>
     </ClCompile>
-    <ClCompile Include="MarlinServer.cpp">
-      <Filter>MarlinServer</Filter>
-    </ClCompile>
-    <ClCompile Include="ServerMain.cpp">
-      <Filter>MarlinServer</Filter>
-    </ClCompile>
-    <ClCompile Include="ServiceReporting.cpp">
-      <Filter>MarlinServer</Filter>
-    </ClCompile>
-    <ClCompile Include="WebSocketClient.cpp">
-      <Filter>MarlinClient</Filter>
-    </ClCompile>
-    <ClCompile Include="WinSocket.cpp">
-      <Filter>MarlinGeneral</Filter>
-    </ClCompile>
-    <ClCompile Include="WebSocketServer.cpp">
-      <Filter>MarlinServer</Filter>
-    </ClCompile>
-    <ClCompile Include="WebSocketServerIIS.cpp">
-      <Filter>MarlinServer</Filter>
-    </ClCompile>
-    <ClCompile Include="WebSocketServerSync.cpp">
-      <Filter>MarlinServer</Filter>
-    </ClCompile>
-    <ClCompile Include="Alert.cpp">
+    <ClCompile Include="Marlin.cpp">
       <Filter>MarlinGeneral</Filter>
     </ClCompile>
     <ClCompile Include="AutoCritical.cpp">
@@ -348,7 +345,7 @@
     <ClCompile Include="bcd.cpp">
       <Filter>MarlinGeneral</Filter>
     </ClCompile>
-    <ClCompile Include="Marlin.cpp">
+    <ClCompile Include="Alert.cpp">
       <Filter>MarlinGeneral</Filter>
     </ClCompile>
     <ClCompile Include="XMLParserJSON.cpp">
@@ -356,6 +353,12 @@
     </ClCompile>
     <ClCompile Include="StoreMessage.cpp">
       <Filter>MarlinGeneral</Filter>
+    </ClCompile>
+    <ClCompile Include="WebSocketContext.cpp">
+      <Filter>MarlinServer</Filter>
+    </ClCompile>
+    <ClCompile Include="OAuth2Cache.cpp">
+      <Filter>MarlinClient</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -677,46 +680,43 @@
     </ClInclude>
     <ClInclude Include="Marlin.h" />
     <ClInclude Include="Version.h" />
+    <ClInclude Include="WebSocketClient.h">
+      <Filter>MarlinClient\Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="WebSocketServerIIS.h">
+      <Filter>MarlinServer\Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="WebSocketServer.h">
+      <Filter>MarlinServer\Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="WebSocketServerSync.h">
+      <Filter>MarlinServer\Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="ServerMain.h">
+      <Filter>MarlinServer\Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="MarlinServer.h">
+      <Filter>MarlinServer\Headers</Filter>
+    </ClInclude>
     <ClInclude Include="AppConfig.h">
       <Filter>MarlinGeneral\Headers</Filter>
     </ClInclude>
     <ClInclude Include="EventLogRegistration.h">
       <Filter>MarlinGeneral\Headers</Filter>
     </ClInclude>
-    <ClInclude Include="ExecuteProcess.h">
+    <ClInclude Include="ServiceReporting.h">
       <Filter>MarlinGeneral\Headers</Filter>
     </ClInclude>
-    <ClInclude Include="MarlinServer.h">
-      <Filter>MarlinServer\Headers</Filter>
+    <ClInclude Include="ExecuteProcess.h">
+      <Filter>MarlinGeneral\Headers</Filter>
     </ClInclude>
     <ClInclude Include="Routing.h">
       <Filter>MarlinGeneral\Headers</Filter>
     </ClInclude>
-    <ClInclude Include="ServerMain.h">
-      <Filter>MarlinServer\Headers</Filter>
-    </ClInclude>
-    <ClInclude Include="ServiceReporting.h">
-      <Filter>MarlinServer\Headers</Filter>
-    </ClInclude>
-    <ClInclude Include="WebSocketClient.h">
-      <Filter>MarlinClient\Headers</Filter>
-    </ClInclude>
-    <ClInclude Include="WinSocket.h">
+    <ClInclude Include="bcd.h">
       <Filter>MarlinGeneral\Headers</Filter>
-    </ClInclude>
-    <ClInclude Include="WebSocketServer.h">
-      <Filter>MarlinServer\Headers</Filter>
-    </ClInclude>
-    <ClInclude Include="WebSocketServerIIS.h">
-      <Filter>MarlinServer\Headers</Filter>
-    </ClInclude>
-    <ClInclude Include="WebSocketServerSync.h">
-      <Filter>MarlinServer\Headers</Filter>
     </ClInclude>
     <ClInclude Include="Alert.h">
-      <Filter>MarlinGeneral\Headers</Filter>
-    </ClInclude>
-    <ClInclude Include="bcd.h">
       <Filter>MarlinGeneral\Headers</Filter>
     </ClInclude>
     <ClInclude Include="XMLParserJSON.h">
@@ -724,6 +724,12 @@
     </ClInclude>
     <ClInclude Include="StoreMessage.h">
       <Filter>MarlinGeneral\Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="WebSocketContext.h">
+      <Filter>MarlinServer\Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="OAuth2Cache.h">
+      <Filter>MarlinClient\Headers</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

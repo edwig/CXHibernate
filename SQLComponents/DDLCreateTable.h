@@ -2,7 +2,7 @@
 //
 // File: DDLCreateTable.h
 //
-// Copyright (c) 1998-2020 ir. W.E. Huisman
+// Copyright (c) 1998-2021 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy of 
@@ -41,8 +41,18 @@ public:
   // Request DDL for "table" or "schema.table" 
   // Where "table" can be of type: "TABLE" / "VIEW"
   CString GetTableDDL(CString p_tableName);
-  DDLS    GetTableStatements(CString p_tablename);
   bool    SaveDDL(CString p_filename);
+  DDLS    GetTableStatements(CString p_tablename);
+  DDLS    GetTableStatements(CString p_tableName
+                            ,bool p_columns
+                            ,bool p_options
+                            ,bool p_indices
+                            ,bool p_primaries
+                            ,bool p_foreigns
+                            ,bool p_triggers
+                            ,bool p_sequences
+                            ,bool p_access);
+  DDLS    GetViewStatements(CString p_viewname);
 
   // Internal delivery of all table information
   void    SetTableInfoTable    (MTableMap&     p_info);
@@ -63,6 +73,7 @@ public:
 private:
   // Primary formatting of 'create table' DDL
   void    GetTableInfo();
+  void    GetViewInfo();
   void    GetColumnInfo();
   void    GetOptionsInfo();
   void    GetIndexInfo();
@@ -70,7 +81,7 @@ private:
   void    GetForeignKeyInfo();
   void    GetTriggerInfo();
   void    GetSequenceInfo();
-  void    GetAccessInfo();
+  void    GetAccessInfo(bool p_strict = false);
 
   // Service routines
 
@@ -91,14 +102,15 @@ private:
   CString    m_createDDL;
 
   // Info gotten
-  bool m_hasTable      { false };
-  bool m_hasColumns    { false };
-  bool m_hasIndices    { false };
-  bool m_hasPrimary    { false };
-  bool m_hasForeigns   { false };
-  bool m_hasTriggers   { false };
-  bool m_hasSequence   { false };
-  bool m_hasPrivileges { false };
+  bool m_didTable      { false };
+  bool m_didColumns    { false };
+  bool m_didOptions    { false };
+  bool m_didIndices    { false };
+  bool m_didPrimary    { false };
+  bool m_didForeigns   { false };
+  bool m_didTriggers   { false };
+  bool m_didSequence   { false };
+  bool m_didPrivileges { false };
 
 public:
   // Mappings are public. We may examine/change them directly!

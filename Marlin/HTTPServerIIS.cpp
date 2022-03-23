@@ -4,7 +4,7 @@
 //
 // Marlin Server: Internet server/client
 // 
-// Copyright (c) 2015-2018 ir. W.E. Huisman
+// Copyright (c) 2014-2021 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -692,7 +692,7 @@ HTTPServerIIS::ReceiveWebSocket(WebSocket* p_socket,HTTP_OPAQUE_ID /*p_request*/
 }
 
 bool
-HTTPServerIIS::FlushSocket(HTTP_OPAQUE_ID p_request)
+HTTPServerIIS::FlushSocket(HTTP_OPAQUE_ID p_request,CString /*p_prefix*/)
 {
   IHttpContext*     context  = reinterpret_cast<IHttpContext*>(p_request);
   IHttpResponse*    response = context->GetResponse();
@@ -704,7 +704,8 @@ HTTPServerIIS::FlushSocket(HTTP_OPAQUE_ID p_request)
   response->DisableKernelCache(9); // 9 = HANDLER_HTTPSYS_UNFRIENDLY
   policy->DisableUserCache();      // Disable user caching
 
-  HRESULT hr = response->Flush(FALSE,TRUE,&bytesSent);
+  BOOL completion = FALSE;
+  HRESULT hr = response->Flush(FALSE,TRUE,&bytesSent,&completion);
   if(hr != S_OK)
   {
     ERRORLOG(GetLastError(),"Flushing WebSocket failed!");
@@ -837,6 +838,7 @@ HTTPServerIIS::AddUnknownHeaders(IHttpResponse* p_response,UKHeaders& p_headers)
 void
 HTTPServerIIS::SetResponseStatus(IHttpResponse* p_response,USHORT p_status,CString p_statusMessage)
 {
+  DETAILLOGV("HTTP Response: %u %s",p_status,p_statusMessage.GetString());
   p_response->SetStatus(p_status,p_statusMessage);
 }
 
@@ -1234,12 +1236,15 @@ HTTPServerIIS::SendResponseEventBuffer(HTTP_OPAQUE_ID p_response
   {
     DETAILLOGV("WriteEntityChunks for event stream sent [%d] bytes",p_length);
     hr = response->Flush(false,p_continue,&bytesSent);
-    if(hr != S_OK)
+    if(hr != S_OK && p_continue)
     {
       ERRORLOG(GetLastError(),"Flushing event stream failed!");
     }
-    // Possibly log and trace what we just sent
-    LogTraceResponse(nullptr,(unsigned char*) p_buffer,(int) p_length);
+    else
+    {
+      // Possibly log and trace what we just sent
+      LogTraceResponse(nullptr,(unsigned char*) p_buffer,(int) p_length);
+    }
   }
   // Final closing of the connection
   if(p_continue == false)

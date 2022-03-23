@@ -67,6 +67,7 @@ WebConfigIIS* g_config  { nullptr };  // The ApplicationHost.config information 
 LogAnalysis*  g_logfile { nullptr };  // Logfile for the MarlinModule only
 ErrorReport   g_error;                // Local error reporting object
 wchar_t       g_moduleName[SERVERNAME_BUFFERSIZE + 1] = L"";
+unsigned long g_streaming_limit = STREAMING_LIMIT;
 
 // Logging macro for this file only
 #define DETAILLOG(text)    if(g_logfile) { g_logfile->AnalysisLog(__FUNCTION__,LogType::LOG_INFO, false,(text)); }

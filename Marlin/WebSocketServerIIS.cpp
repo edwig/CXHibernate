@@ -4,7 +4,7 @@
 //
 // Marlin Server: Internet server/client
 // 
-// Copyright (c) 2015-2018 ir. W.E. Huisman
+// Copyright (c) 2014-2021 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -244,12 +244,12 @@ WebSocketServerIIS::WriteFragment(BYTE*  p_buffer
 }
 
 void WINAPI
-ServerReadCompletion(HRESULT p_error,
-                     VOID*   p_completionContext,
-                     DWORD   p_bytes,
-                     BOOL    p_utf8,
-                     BOOL    p_final,
-                     BOOL    p_close)
+ServerReadCompletionIIS(HRESULT p_error,
+                        VOID*   p_completionContext,
+                        DWORD   p_bytes,
+                        BOOL    p_utf8,
+                        BOOL    p_final,
+                        BOOL    p_close)
 {
   WebSocketServerIIS* socket = reinterpret_cast<WebSocketServerIIS*>(p_completionContext);
   if(socket)
@@ -266,7 +266,7 @@ WebSocketServerIIS::SocketReader(HRESULT p_error
                                 ,BOOL    p_close)
 {
   // Handle any error (if any)
-  if(p_error)
+  if(p_error != S_OK)
   {
     DWORD error = (p_error & 0x0F);
     ERRORLOG(error,"Websocket failed to read fragment");
@@ -275,10 +275,14 @@ WebSocketServerIIS::SocketReader(HRESULT p_error
   }
 
   // Consolidate the reading buffer
-  m_reading->m_data[p_bytes] = 0;
-  m_reading->m_data          = (BYTE*)realloc(m_reading->m_data,p_bytes + 1);
-  m_reading->m_length        = p_bytes;
-  m_reading->m_final         = p_final == TRUE;
+  m_reading->m_length += p_bytes;
+  m_reading->m_data[m_reading->m_length] = 0;
+  m_reading->m_final = (p_final == TRUE);
+
+  if(!p_final)
+  {
+    m_reading->m_data = (BYTE*)realloc(m_reading->m_data, m_reading->m_length + m_fragmentsize + WS_OVERHEAD);
+  }
 
   // Setting the type of message
   if(p_close)
@@ -296,7 +300,7 @@ WebSocketServerIIS::SocketReader(HRESULT p_error
       m_reading = nullptr;
     }
   }
-  else
+  else if(p_final)
   {
     // Store or append the fragment
     if(p_utf8)
@@ -345,22 +349,25 @@ WebSocketServerIIS::SocketListener()
   if(!m_reading)
   {
     m_reading = new WSFrame();
-    m_reading->m_length = m_fragmentsize;
-    m_reading->m_data = (BYTE*)malloc(m_fragmentsize + WS_OVERHEAD);
+    m_reading->m_length = 0;
+    m_reading->m_data   = (BYTE*)malloc(m_fragmentsize + WS_OVERHEAD);
   }
 
   // Issue the Asynchronous read-a-fragment command to the Asynchronous I/O WebSocket
-  BOOL utf8 = FALSE;
-  BOOL last = FALSE;
-  BOOL isclosing = FALSE;
-  BOOL expected = FALSE;
-  HRESULT hr = m_iis_socket->ReadFragment(m_reading->m_data
-                                         ,&m_reading->m_length
+  BOOL  utf8 = FALSE;
+  BOOL  last = FALSE;
+  BOOL  isclosing = FALSE;
+  BOOL  expected  = FALSE;
+
+  m_reading->m_read = m_fragmentsize;
+
+  HRESULT hr = m_iis_socket->ReadFragment(&m_reading->m_data[m_reading->m_length]
+                                         ,&m_reading->m_read
                                          ,TRUE
                                          ,&utf8
                                          ,&last
                                          ,&isclosing
-                                         ,ServerReadCompletion
+                                         ,ServerReadCompletionIIS
                                          ,this
                                          ,&expected);
   if(FAILED(hr))
@@ -369,9 +376,11 @@ WebSocketServerIIS::SocketListener()
     ERRORLOG(error,"Websocket failed to register read command for a fragment");
     CloseSocket();
   }
+
   if(!expected)
   {
     // Was issued in-sync after all, so re-work the received data
+    m_reading->m_length += m_reading->m_read;
     SocketReader(hr,m_reading->m_length,utf8,last,isclosing);
   }
 }

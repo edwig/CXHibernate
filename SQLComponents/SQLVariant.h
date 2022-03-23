@@ -2,7 +2,7 @@
 //
 // File: SQLVariant.h
 //
-// Copyright (c) 1998-2020 ir. W.E. Huisman
+// Copyright (c) 1998-2021 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy of 
@@ -138,6 +138,8 @@ public:
    void    SetNumericPrecisionScale(int p_precision,int p_scale);
    void    SetFromBinaryStreamData(int p_type,int p_length,void* p_data,bool p_isnull);
    void    SetNULL();
+   void    SetDataTypeDate();
+
    // Variable space functions
    void    ReserveSpace(int p_type,int p_space);
    void    ShrinkSpace();

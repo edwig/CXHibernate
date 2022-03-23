@@ -2,7 +2,7 @@
 //
 // File: SQLDate.h
 //
-// Copyright (c) 1998-2020 ir. W.E. Huisman
+// Copyright (c) 1998-2021 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy of 
@@ -262,7 +262,7 @@ SQLDate::AsString() const
   return buffer;
 }
 
-CString     
+CString
 SQLDate::AsXMLString() const
 {
   CString buffer;
@@ -877,7 +877,7 @@ SQLDate::ParseXMLDate(const CString& p_string,SQLTimestamp& p_moment)
 
   if(n >= 8 && jaar >= 0 && jaar <= 9999 && maand >= 0 && maand <= 12 && dag >= 0 && dag <= 31)
   {
-    bool valid = false;
+    bool valid  = false;
     bool UTC    = false;
     bool offset = false;
     int  offsetminuten = 0;

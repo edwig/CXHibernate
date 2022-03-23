@@ -2,7 +2,7 @@
 //
 // File: SQLDataSet.cpp
 //
-// Copyright (c) 1998-2020 ir. W.E. Huisman
+// Copyright (c) 1998-2021 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy of 
@@ -215,10 +215,9 @@ SQLDataSet::Forget(bool p_force /*=false*/)
     }
   }
   // Deleting all records
-  for(unsigned int ind = 0; ind < m_records.size(); ++ind)
+  for(auto& record : m_records)
   {
-    SQLRecord* record = m_records[ind];
-    delete record;
+    record->Release();
   }
   // Forget the caches
   m_records.clear();
@@ -407,6 +406,16 @@ SQLDataSet::SetOrderBy(CString p_orderby)
 }
 
 void
+SQLDataSet::AddGroupby(CString p_property)
+{
+  if(!m_groupby.IsEmpty())
+  {
+    m_groupby += ", ";
+  }
+  m_groupby += p_property;
+}
+
+void
 SQLDataSet::SetHavings(SQLFilterSet* p_havings)
 {
   m_query.Empty();
@@ -486,7 +495,7 @@ SQLDataSet::ParseSelection(SQLQuery& p_query)
 {
   CString sql("SELECT ");
   
-    sql += m_selection.IsEmpty() ? "*" : m_selection;
+  sql += m_selection.IsEmpty() ? "*" : m_selection;
   sql += "\n  FROM ";
 
   if(!m_primarySchema.IsEmpty())
@@ -600,7 +609,7 @@ SQLDataSet::GetSelectionSQL(SQLQuery& p_qry)
 bool
 SQLDataSet::Open(bool p_stopIfNoColumns /*=false*/)
 {
-  bool   result = false;
+  bool    result = false;
   ULONG64 begin  = 0;
   CString query;
 
@@ -688,7 +697,7 @@ SQLDataSet::Open(bool p_stopIfNoColumns /*=false*/)
 bool 
 SQLDataSet::Append()
 {
-  bool result = false;
+  bool    result = false;
   ULONG64 begin  = 0;
 
   // See if already opened
@@ -822,10 +831,13 @@ SQLDataSet::MakePrimaryKey(SQLRecord* p_record)
   for(auto& field : m_primaryKey)
   {
     SQLVariant* var = p_record->GetField(field);
-    var->GetAsString(value);
+    if (var != nullptr)
+    {
+      var->GetAsString(value);
 
-    key += value;
-    key += "\0x1E";  // ASCII UNIT Separator
+      key += value;
+      key += "\0x1E";  // ASCII UNIT Separator
+    }
   }
   return key;
 }
@@ -1130,39 +1142,45 @@ SQLDataSet::InsertRecord()
 
 // Insert new field in new record
 int
-SQLDataSet::InsertField(CString& p_name,SQLVariant* p_value)
+SQLDataSet::InsertField(CString p_name,SQLVariant* p_value)
 {
-  m_names.push_back(p_name);
-  m_types.push_back(p_value->GetDataType());
   if(m_current >= 0 && m_current < (int)m_records.size())
   {
+    m_names.push_back(p_name);
+    m_types.push_back(p_value->GetDataType());
+
     SQLRecord* record = m_records[m_current];
-    record->AddField(p_value);
-    return 0;
+    return record->AddField(p_value,true);
   }
   // Internal programming error
   return -1;
 }
 
 // Set a field value in the current record
-void
+bool
 SQLDataSet::SetField(CString& p_name,SQLVariant* p_value,int p_mutationID /*=0*/)
 {
   int num = GetFieldNumber(p_name);
   if(num >= 0)
   {
-    SetField(num,p_value,p_mutationID);
+    return SetField(num,p_value,p_mutationID);
   }
+  return false;
 }
 
 // Set a field value in the current record
-void       
+bool
 SQLDataSet::SetField(int p_num,SQLVariant* p_value,int p_mutationID /*=0*/)
 {
   if(m_current >= 0)
   {
-    m_records[m_current]->SetField(p_num,p_value,p_mutationID);
+    if(m_records[m_current]->SetField(p_num,p_value,p_mutationID))
+    {
+      m_status |= SQL_Updates;
+      return true;
+    }
   }
+  return false;
 }
 
 // Cancel the mutations of this mutation ID
@@ -1220,7 +1238,7 @@ SQLDataSet::Aggregate(int p_num,AggregateInfo& p_info)
 
 // Insert / Update / delete records from the database
 bool
-SQLDataSet::Synchronize(int p_mutationID /*=0*/)
+SQLDataSet::Synchronize(int p_mutationID /*=0*/,bool p_throw /*=false*/)
 {
   // Needs the primary table name of the dataset
   if(m_primaryTableName.IsEmpty())
@@ -1283,7 +1301,12 @@ SQLDataSet::Synchronize(int p_mutationID /*=0*/)
   {
     ReThrowSafeException(er);
     // Automatic rollback will be done now
-    m_database->LogPrint("Database synchronization stopped: " + er.GetErrorMessage());
+    CString error = "Database synchronization stopped: " + er.GetErrorMessage();
+    if(p_throw)
+    {
+      throw StdException(error);
+    }
+    m_database->LogPrint(error);
     // Restore original status of the dataset, reduce never done
     m_status = oldStatus;
     return false;

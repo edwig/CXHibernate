@@ -2,7 +2,7 @@
 //
 // File: SQLRecord.h
 //
-// Copyright (c) 1998-2020 ir. W.E. Huisman
+// Copyright (c) 1998-2021 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy of 
@@ -59,13 +59,11 @@ public:
   // Setting a generator column
   void        SetGenerator(int p_generator);
   // Adding a field to the record
-  void        AddField(SQLVariant* p_field,bool p_insert = false);
+  int         AddField(SQLVariant* p_field,bool p_insert = false);
   // Setting different value without changing status
-  void        SetField   (int     p_num, SQLVariant* p_field,int p_mutationID = 0);
-  void        SetField   (CString p_name,SQLVariant* p_field,int p_mutationID = 0);
+  bool        SetField   (int     p_num, SQLVariant* p_field,int p_mutationID = 0);
+  bool        SetField   (CString p_name,SQLVariant* p_field,int p_mutationID = 0);
   // Setting different value AND changing record/set status
-//   void        ModifyField(int         p_num, void*       p_field,int p_mutationID = 0);
-//   void        ModifyField(const char* p_name,void*       p_field,int p_mutationID = 0);
   void        ModifyField(int         p_num, SQLVariant* p_field,int p_mutationID = 0);
   void        ModifyField(const char* p_name,SQLVariant* p_field,int p_mutationID = 0);
 

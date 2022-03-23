@@ -2,7 +2,7 @@
 //
 // File: SQLInfoFirebird.cpp
 //
-// Copyright (c) 1998-2020 ir. W.E. Huisman
+// Copyright (c) 1998-2021 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy of 
@@ -392,6 +392,13 @@ SQLInfoFirebird::GetKEYWORDDataType(MetaColumn* p_column)
   return p_column->m_typename = type;
 }
 
+// Gets the USER (current-user) keyword function
+CString
+SQLInfoFirebird::GetKEYWORDCurrentUser() const
+{
+  return "CURRENT_USER";
+}
+
 // Connects to a default schema in the database/instance
 CString
 SQLInfoFirebird::GetSQLDefaultSchema(CString /*p_schema*/) const
@@ -692,6 +699,12 @@ SQLInfoFirebird::GetCATALOGTableCreate(MetaTable& p_table,MetaColumn& /*p_column
   }
   sql += "TABLE " + p_table.m_table;
   return sql;
+}
+
+CString
+SQLInfoFirebird::GetCATALOGTableCreatePostfix(MetaTable& /*p_table*/,MetaColumn& /*p_column*/) const
+{
+  return "";
 }
 
 CString
@@ -1670,7 +1683,14 @@ SQLInfoFirebird::GetCATALOGViewList(CString& p_schema,CString& p_pattern) const
   return GetCATALOGViewAttributes(p_schema,p_pattern);
 }
 
-CString 
+CString
+SQLInfoFirebird::GetCATALOGViewText(CString& /*p_schema*/,CString& /*p_viewname*/) const
+{
+  // Cannot query this, Use ODBC functions
+  return "";
+}
+
+CString
 SQLInfoFirebird::GetCATALOGViewAttributes(CString& p_schema,CString& p_viewname) const
 {
   p_schema.Empty(); // do not bind as parameter

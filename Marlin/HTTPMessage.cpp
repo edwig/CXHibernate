@@ -4,7 +4,7 @@
 //
 // Marlin Server: Internet server/client
 // 
-// Copyright (c) 2015-2018 ir. W.E. Huisman
+// Copyright (c) 2014-2021 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -138,11 +138,13 @@ HTTPMessage::HTTPMessage(HTTPMessage* p_msg,bool p_deep /*=false*/)
   m_request           = p_msg->m_request;
   m_contentType       = p_msg->m_contentType;
   m_acceptEncoding    = p_msg->m_acceptEncoding;
+  m_verbTunnel        = p_msg->m_verbTunnel;
   m_url               = p_msg->m_url;
   m_site              = p_msg->m_site;
   m_desktop           = p_msg->m_desktop;
   m_ifmodified        = p_msg->m_ifmodified;
   m_sendBOM           = p_msg->m_sendBOM;
+  m_referrer          = p_msg->m_referrer;
 
   // Taking a duplicate token
   if(DuplicateTokenEx(p_msg->m_token
@@ -175,6 +177,7 @@ HTTPMessage::HTTPMessage(HTTPMessage* p_msg,bool p_deep /*=false*/)
   // A shallow copy does not create a full buffer copy
   if(p_deep)
   {
+    m_contentLength = p_msg->GetContentLength();
     m_buffer = p_msg->m_buffer;
   }
 }
@@ -351,7 +354,7 @@ HTTPMessage::HTTPMessage(HTTPCommand p_command,JSONMessage* p_msg)
   m_contentType.AppendFormat("; charset=%s", CodepageToCharset(acp).GetString());
 
   // Propagate the BOM settings of the site to this message
-  if(m_site->GetSendJsonBOM())
+  if(m_site && m_site->GetSendJsonBOM())
   {
     p_msg->SetSendBOM(true);
   }

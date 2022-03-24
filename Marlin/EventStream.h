@@ -4,7 +4,7 @@
 //
 // Marlin Server: Internet server/client
 // 
-// Copyright (c) 2014-2021 ir. W.E. Huisman
+// Copyright (c) 2014-2022 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -31,7 +31,13 @@
 constexpr auto DEFAULT_EVENT_KEEPALIVE = 10000;
 // Initial event retry time in milliseconds
 constexpr auto DEFAULT_EVENT_RETRYTIME = 3000;
-// Maximum number of datachunks on a IIS event stream
+// Minimum and maximum values
+constexpr auto EVENT_KEEPALIVE_MIN =  1000;   //  1 second
+constexpr auto EVENT_KEEPALIVE_MAX = 90000;   // 90 seconds
+constexpr auto EVENT_RETRYTIME_MIN =  1000;   //  1 second
+constexpr auto EVENT_RETRYTIME_MAX =  5000;   //  5 seconds
+
+// Maximum number of data chunks on a IIS event stream
 // Theoretical max = 65535, but we stop before this is reached
 constexpr auto MAX_DATACHUNKS = 65530;
 
@@ -41,15 +47,15 @@ public:
   SOCKADDR_IN6    m_sender;     // Stream originates from this address
   int             m_desktop;    // Stream originates from this desktop
   int             m_port;       // Port of the base URL of the stream
-  CString         m_baseURL;    // Base URL of the stream
-  CString         m_absPath;    // Absolute pathname of the URL
+  XString         m_baseURL;    // Base URL of the stream
+  XString         m_absPath;    // Absolute pathname of the URL
   HTTPSite*       m_site;       // HTTPSite that's handling the stream
   HTTP_RESPONSE   m_response;   // Response buffer
   HTTP_OPAQUE_ID  m_requestID;  // Outstanding HTTP request ID
   UINT            m_lastID;     // Last ID of this connection
   bool            m_alive;      // Connection still alive after sending
   __time64_t      m_lastPulse;  // Time of last sent event
-  CString         m_user;       // For authenticated user
+  XString         m_user;       // For authenticated user
   long            m_chunks;     // Send chunk counter
   CRITICAL_SECTION m_lock;       // Just one message from one thread please!
 

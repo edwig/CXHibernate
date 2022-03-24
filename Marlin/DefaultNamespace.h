@@ -1,8 +1,0 @@
-/////////////////////////////////////////////////////////////////////////////////
-//
-// SourceFile: DefaultNamespace.h
-//
-//
-#define DEFAULT_NAMESPACE "http://www.cxhibernate.org/"
-#define DEFAULT_TOKEN     ":cxhibernate:"
-

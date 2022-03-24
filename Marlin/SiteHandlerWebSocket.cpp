@@ -4,7 +4,7 @@
 //
 // Marlin Server: Internet server/client
 // 
-// Copyright (c) 2014-2021 ir. W.E. Huisman
+// Copyright (c) 2014-2022 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -53,16 +53,16 @@ SiteHandlerWebSocket::Handle(HTTPMessage* p_message)
 {
   bool opened = false;
   HTTPServer* server = m_site->GetHTTPServer();
-  CString uri = p_message->GetAbsolutePath();
+  XString uri = p_message->GetAbsolutePath();
 
   // Create socket by absolute path of the incoming URL
   WebSocket* socket = server->CreateWebSocket(uri);
 
   // Also get the parameters (key & value)
-  CrackedURL& url = p_message->GetCrackedURL();
+  const CrackedURL& url = p_message->GetCrackedURL();
   for(unsigned ind = 0; ind < url.GetParameterCount(); ++ind)
   {
-    UriParam* parameter = url.GetParameter(ind);
+    const UriParam* parameter = url.GetParameter(ind);
     socket->AddParameter(parameter->m_key,parameter->m_value);
   }
 
@@ -98,7 +98,7 @@ SiteHandlerWebSocket::Handle(HTTPMessage* p_message)
             opened = true;
             // Register the socket at the server, so we can find it
             server->RegisterSocket(socket);
-            SITE_DETAILLOGS("Opened a WebSocket for: ",uri);
+            SITE_DETAILLOGV("Opened a WebSocket [%s] on [%s]",socket->GetIdentityKey().GetString(),uri.GetString());
           }
           else
           {

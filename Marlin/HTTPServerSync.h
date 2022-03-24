@@ -4,7 +4,7 @@
 //
 // Marlin Server: Internet server/client
 // 
-// Copyright (c) 2014-2021 ir. W.E. Huisman
+// Copyright (c) 2014-2022 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -28,10 +28,18 @@
 #pragma once
 #include "HTTPServerMarlin.h"
 
+// Structure for dispatching an event stream
+typedef struct _msg_stream
+{
+  HTTPMessage* m_message;
+  EventStream* m_stream;
+}
+MsgStream;
+
 class HTTPServerSync: public HTTPServerMarlin
 {
 public:
-  HTTPServerSync(CString p_name);
+  HTTPServerSync(XString p_name);
   virtual ~HTTPServerSync();
 
   // Running the server 
@@ -44,13 +52,15 @@ public:
   virtual bool ReceiveIncomingRequest(HTTPMessage* p_message);
   // Sending response for an incoming message
   virtual void SendResponse(HTTPMessage* p_message);
+  // Sending a response as a chunk
+  virtual void SendAsChunk(HTTPMessage* p_message,bool p_final = false);
   // Create a new WebSocket in the subclass of our server
-  virtual WebSocket* CreateWebSocket(CString p_uri);
+  virtual WebSocket* CreateWebSocket(XString p_uri);
 
   // FUNCTIONS FOR STAND-ALONE SERVER
 
   // Running the main loop of the WebServer in same thread
-  void         RunHTTPServer();
+  void RunHTTPServer();
 
 protected:
   // Cleanup the server
@@ -58,7 +68,7 @@ protected:
   // Init the stream response
   virtual bool InitEventStream(EventStream& p_stream);
   // Used for canceling a WebSocket for an event stream
-  virtual void CancelRequestStream(HTTP_OPAQUE_ID p_response);
+  virtual void CancelRequestStream(HTTP_OPAQUE_ID p_response,bool p_reset = false);
 
 private:
   // Preparing a response
@@ -66,10 +76,11 @@ private:
   void      AddKnownHeader        (HTTP_RESPONSE& p_response,HTTP_HEADER_ID p_header,const char* p_value);
   PHTTP_UNKNOWN_HEADER AddUnknownHeaders(UKHeaders& p_headers);
   // Sub-functions for SendResponse
-  bool      SendResponseBuffer     (PHTTP_RESPONSE p_response,HTTP_OPAQUE_ID p_request,FileBuffer* p_buffer,size_t p_totalLength);
+  bool      SendResponseBuffer     (PHTTP_RESPONSE p_response,HTTP_OPAQUE_ID p_request,FileBuffer* p_buffer,size_t p_totalLength,bool p_moreData = false);
   void      SendResponseBufferParts(PHTTP_RESPONSE p_response,HTTP_OPAQUE_ID p_request,FileBuffer* p_buffer,size_t p_totalLength);
+  void      SendResponseChunk      (PHTTP_RESPONSE p_response,HTTP_OPAQUE_ID p_request,FileBuffer* p_buffer,bool p_last);
   void      SendResponseFileHandle (PHTTP_RESPONSE p_response,HTTP_OPAQUE_ID p_request,FileBuffer* p_buffer);
-  void      SendResponseError      (PHTTP_RESPONSE p_response,HTTP_OPAQUE_ID p_request,CString& p_page,int p_error,const char* p_reason);
+  void      SendResponseError      (PHTTP_RESPONSE p_response,HTTP_OPAQUE_ID p_request,XString& p_page,int p_error,const char* p_reason);
 
   // For the handling of the event streams: Sending a chunk to an event stream
   virtual bool SendResponseEventBuffer(HTTP_OPAQUE_ID     p_request

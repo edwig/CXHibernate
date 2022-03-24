@@ -4,7 +4,7 @@
 //
 // Marlin Server: Internet server/client
 // 
-// Copyright (c) 2014-2021 ir. W.E. Huisman
+// Copyright (c) 2014-2022 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -34,7 +34,7 @@
 static char THIS_FILE[] = __FILE__;
 #endif
 
-SiteFilter::SiteFilter(unsigned p_priority,CString p_name)
+SiteFilter::SiteFilter(unsigned p_priority,XString p_name)
            :m_priority(p_priority)
            ,m_name(p_name)
 {

@@ -4,7 +4,7 @@
 //
 // Marlin Server: Internet server/client
 // 
-// Copyright (c) 2015-2020 ir. W.E. Huisman
+// Copyright (c) 2014-2022 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -32,6 +32,7 @@
 #pragma warning (error:4091)
 
 #include "ServerApp.h"
+#include "PoolApp.h"
 #include <map>
 
 #define SERVERNAME_BUFFERSIZE 256
@@ -42,40 +43,11 @@ class LogAnalysis;
 class HTTPServerIIS;
 class ErrorReport;
 
-// Helper class with a web application
-// Also contains the function pointers into our application DLL
-class APP
-{
-public:
-  ~APP()
-  {
-    // Only delete application if last site was deallocated
-    // If ServerApp::LoadSite() overloads forget to call base method
-    // the reference count can drop below zero
-    if(m_application && (*m_sitesInAppPool)(m_application) <= 0)
-    {
-      delete m_application;
-    }
-  }
-  WebConfigIIS        m_config;
-  CString             m_marlinDLL;
-  ServerApp*          m_application     { nullptr };
-  LogAnalysis*        m_analysisLog     { nullptr };
-  HMODULE             m_module          { NULL    };
-  // DLL Loaded functions
-  CreateServerAppFunc m_createServerApp { nullptr };
-  FindHTTPSiteFunc    m_findSite        { nullptr };
-  GetHTTPStreamFunc   m_getHttpStream   { nullptr };
-  GetHTTPMessageFunc  m_getHttpMessage  { nullptr };
-  HandleMessageFunc   m_handleMessage   { nullptr };
-  SitesInApplicPool   m_sitesInAppPool  { nullptr };
-};
-
 // All applications in the application pool
-using AppPool = std::map<int,APP*>;
+using AppPool = std::map<int,PoolApp*>;
 
-// Global objects: The one and only IIS Server application pool
-extern AppPool g_IISApplicationPool;
+// General error function
+void Unhealthy(XString p_error, HRESULT p_code);
 
 // Create the module class
 // Hooking into the 'integrated pipeline' of IIS
@@ -129,19 +101,16 @@ public:
   virtual GLOBAL_NOTIFICATION_STATUS OnGlobalApplicationStop (_In_ IHttpApplicationStartProvider* p_provider) override;
 
   // Extract webroot from config/physical combination
-  CString ExtractWebroot(CString p_configPath,CString p_physicalPath);
+  XString ExtractWebroot(XString p_configPath,XString p_physicalPath);
   // Extract site from the config combination
-  CString ExtractAppSite(CString p_configPath);
+  XString ExtractAppSite(XString p_configPath);
 
   // Stopping the global factory
   virtual void Terminate() override;
 private:
-  bool    ModuleInHandlers(const CString& p_configPath);
-  CString ConstructDLLLocation(CString p_rootpath,CString p_dllPath);
-  bool    CheckApplicationPresent(CString& p_dllPath,CString& p_dllName);
-  bool    AlreadyLoaded(APP* p_app, CString p_path_to_dll);
+  bool    ModuleInHandlers(const XString& p_configPath);
   bool    StillUsed(const HMODULE& p_module);
-  GLOBAL_NOTIFICATION_STATUS Unhealthy(CString p_error,HRESULT p_code);
+  int     CountAppPoolApplications(ServerApp* p_application);
 
   CRITICAL_SECTION m_lock;
 };

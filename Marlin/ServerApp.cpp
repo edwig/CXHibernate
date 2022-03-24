@@ -4,7 +4,7 @@
 //
 // Marlin Server: Internet server/client
 // 
-// Copyright (c) 2014-2021 ir. W.E. Huisman
+// Copyright (c) 2014-2022 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -30,6 +30,8 @@
 #include "WebConfigIIS.h"
 #include "HTTPSite.h"
 #include "EnsureFile.h"
+#include "Version.h"
+#include "ServiceReporting.h"
 #include <string>
 #include <set>
 
@@ -146,6 +148,12 @@ int __stdcall SitesInApplicationPool(ServerApp* p_application)
   return p_application->SitesInThePool();
 }
 
+__declspec(dllexport)
+bool __stdcall MinMarlinVersion(ServerApp* p_application,int p_version)
+{
+  return p_application->MinMarlinVersion(p_version);
+}
+
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -190,7 +198,7 @@ ServerApp::InitInstance()
   m_httpServer = new HTTPServerIIS(m_applicationName);
   m_httpServer->SetWebroot(m_webroot);
 
-  // Reading our web.config and ApplicationHost.config info
+  // Reading our IIS web.config and ApplicationHost.config info
   m_config.ReadConfig(m_applicationName);
   m_httpServer->SetWebConfigIIS(&m_config);
 
@@ -287,7 +295,7 @@ ServerApp::StartLogging()
   if(m_logfile == nullptr)
   {
     // Create the directory for the logfile
-    CString logfile = m_config.GetLogfilePath() + "\\" + m_applicationName + "\\Logfile.txt";
+    XString logfile = m_config.GetLogfilePath() + "\\" + m_applicationName + "\\Logfile.txt";
     EnsureFile ensure(logfile);
     ensure.CheckCreateDirectory();
 
@@ -315,12 +323,13 @@ ServerApp::CorrectlyStarted()
   // If a derived class has been statically declared
   // and a IHttpServer and a HTTPServerIIS has been found
   // and a ThreadPool is initialized, we are good to go
-  if(m_iis && m_httpServer && m_threadPool && m_logfile)
+  if(m_iis && m_httpServer && m_threadPool && m_logfile && m_versionCheck)
   {
     return true;
   }
 
   // Log the errors
+  // See to it that we did our version check
   if(!m_iis)
   {
     ERRORLOG(ERROR_NOT_FOUND,"No connected IIS server found!");
@@ -333,6 +342,11 @@ ServerApp::CorrectlyStarted()
   {
     ERRORLOG(ERROR_NOT_FOUND,"No connected threadpool found!");
   }
+  if(!m_versionCheck)
+  {
+    ERRORLOG(ERROR_VALIDATE_CONTINUE,"MarlinModule version check not done! Did you use a MarlinModule prior to version 7.0.0 ?");
+    return false;
+  }
   return false;
 }
 
@@ -341,6 +355,26 @@ int
 ServerApp::SitesInThePool()
 {
   return m_numSites;
+}
+
+bool
+ServerApp::MinMarlinVersion(int p_version)
+{
+  int minVersion =  MARLIN_VERSION_MAJOR      * 10000 +   // Major version main
+                    MARLIN_VERSION_MINOR      *   100;
+  int maxVersion = (MARLIN_VERSION_MAJOR + 1) * 10000;    // Major version main
+
+  if(p_version < minVersion || maxVersion <= p_version)
+  {
+    SvcReportErrorEvent(0,true,__FUNCTION__
+                       ,"MarlinModule version is out of range: %d.%d.%d\n"
+                       ,"This application was compiled for: %d.%d.%d"
+                       ,p_version / 10000,(p_version % 10000)/100,p_version % 100
+                       ,MARLIN_VERSION_MAJOR,MARLIN_VERSION_MINOR,MARLIN_VERSION_SP);
+    return 0;
+  }
+  // We have done our version check
+  return m_versionCheck = true;
 }
 
 // Default implementation. Use the Marlin error report
@@ -395,13 +429,13 @@ ServerApp::GetSiteConfig(int ind)
 
 // Start our sites from the IIS configuration
 void 
-ServerApp::LoadSites(IHttpApplication* p_app,CString p_physicalPath)
+ServerApp::LoadSites(IHttpApplication* p_app,XString p_physicalPath)
 {
   USES_CONVERSION;
 
-  CString config(p_app->GetAppConfigPath());
+  XString config(p_app->GetAppConfigPath());
   int pos = config.ReverseFind('/');
-  CString configSite = config.Mid(pos + 1);
+  XString configSite = config.Mid(pos + 1);
 
   CComBSTR siteCollection = L"system.applicationHost/sites";
   CComBSTR configPath = A2CW(config);
@@ -439,10 +473,11 @@ ServerApp::LoadSites(IHttpApplication* p_app,CString p_physicalPath)
             return;
           }
         }
+        delete iisConfig;
       }
     }
   }
-  CString text("ERROR Loading IIS Site: ");
+  XString text("ERROR Loading IIS Site: ");
   text += config;
   ERRORLOG(ERROR_NO_SITENAME,text);
 }
@@ -489,12 +524,12 @@ ServerApp::ReadModules(CComBSTR& /*p_configPath*/)
 // 
 //           if (childElement->GetPropertyByName(CComBSTR(L"image"), &prop) == S_OK && prop->get_Value(&vvar) == S_OK && vvar.vt == VT_BSTR)
 //           {
-//             CString image = W2A(vvar.bstrVal);
+//             XString image = W2A(vvar.bstrVal);
 //             if (image.CompareNoCase(GetDLLName()) == 0)
 //             {
 //               if (childElement->GetPropertyByName(CComBSTR(L"name"), &prop) == S_OK && prop->get_Value(&vvar) == S_OK && vvar.vt == VT_BSTR)
 //               {
-//                 m_modules.insert(CString(W2A(vvar.bstrVal)).MakeLower());
+//                 m_modules.insert(XString(W2A(vvar.bstrVal)).MakeLower());
 //               }
 //             }
 //           }
@@ -533,8 +568,8 @@ ServerApp::ReadHandlers(CComBSTR& p_configPath,IISSiteConfig& p_config)
           VARIANT vvar;
           vvar.bstrVal = 0;
 
-          CString name;
-          CString modules;
+          XString name;
+          XString modules;
           IISHandler handler;
 
           if (childElement->GetPropertyByName(CComBSTR(L"modules"), &prop) == S_OK && prop->get_Value(&vvar) == S_OK && vvar.vt == VT_BSTR)
@@ -575,7 +610,7 @@ ServerApp::ReadHandlers(CComBSTR& p_configPath,IISSiteConfig& p_config)
 
 // Read the site's configuration from the IIS internal structures
 bool  
-ServerApp::ReadSite(IAppHostElementCollection* p_sites,CString p_siteName,int p_num,IISSiteConfig& p_config)
+ServerApp::ReadSite(IAppHostElementCollection* p_sites,XString p_siteName,int p_num,IISSiteConfig& p_config)
 {
   IAppHostElement* site;
   VARIANT v;
@@ -587,7 +622,7 @@ ServerApp::ReadSite(IAppHostElementCollection* p_sites,CString p_siteName,int p_
   }
 
   // Find our site
-  CString name = GetProperty(site,"name");
+  XString name = GetProperty(site,"name");
   if(p_siteName.CompareNoCase(name) != 0)
   {
     return false;
@@ -657,11 +692,11 @@ ServerApp::ReadBinding(IAppHostElementCollection* p_bindings,int p_item,IISBindi
     return false;
   }
   // Finding the protocol
-  CString protocol = GetProperty(binding,"protocol");
+  XString protocol = GetProperty(binding,"protocol");
   p_binding.m_secure = protocol.CompareNoCase("https") == 0 ? true : false;
 
   // Binding information
-  CString info = GetProperty(binding,"bindingInformation");
+  XString info = GetProperty(binding,"bindingInformation");
   switch(info.GetAt(0))
   {
     case '*': p_binding.m_prefix = PrefixType::URLPRE_Weak;    break;
@@ -683,8 +718,8 @@ ServerApp::ReadBinding(IAppHostElementCollection* p_bindings,int p_item,IISBindi
   return true;
 }
 
-CString
-ServerApp::GetProperty(IAppHostElement* p_elem,CString p_property)
+XString
+ServerApp::GetProperty(IAppHostElement* p_elem,XString p_property)
 {
   USES_CONVERSION;
 
@@ -694,7 +729,7 @@ ServerApp::GetProperty(IAppHostElement* p_elem,CString p_property)
     BSTR strValue;
     prop->get_StringValue(&strValue);
 
-    return CString(strValue);
+    return XString(strValue);
   }
   return "";
 }

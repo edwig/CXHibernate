@@ -4,7 +4,7 @@
 //
 // Marlin Server: Internet server/client
 // 
-// Copyright (c) 2014-2021 ir. W.E. Huisman
+// Copyright (c) 2014-2022 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -52,11 +52,11 @@ static char THIS_FILE[] = __FILE__;
 #define ERRORLOG(code,text)       ErrorLog (__FUNCTION__,code,text)
 #define HTTPERROR(code,text)      HTTPError(__FUNCTION__,code,text)
 
-HTTPServerMarlin::HTTPServerMarlin(CString p_name)
+HTTPServerMarlin::HTTPServerMarlin(XString p_name)
                  :HTTPServer(p_name)
 {
-  // Default web.config
-  m_webConfig = new WebConfig();
+  // Default Marlin.config
+  m_marlinConfig = new MarlinConfig();
 }
 
 HTTPServerMarlin::~HTTPServerMarlin()
@@ -65,10 +65,10 @@ HTTPServerMarlin::~HTTPServerMarlin()
   Cleanup();
 }
 
-CString
+XString
 HTTPServerMarlin::GetVersion()
 {
-  return CString(MARLIN_SERVER_VERSION " on Microsoft HTTP-Server API/2.0");
+  return XString(MARLIN_SERVER_VERSION " on Microsoft HTTP-Server API/2.0");
 }
 
 // Initialise a HTTP server and server-session
@@ -137,7 +137,7 @@ HTTPServerMarlin::Initialise()
 
   // STEP 7: SET THE LENGTH OF THE BACKLOG QUEUE FOR INCOMING TRAFFIC
   // Overrides for the HTTP Site. Test min/max via SetQueueLength
-  int queueLength = m_webConfig->GetParameterInteger("Server","QueueLength",m_queueLength);
+  int queueLength = m_marlinConfig->GetParameterInteger("Server","QueueLength",m_queueLength);
   SetQueueLength(queueLength);
   // Set backlog queue: using HttpSetRequestQueueProperty
   retCode = HttpSetRequestQueueProperty(m_requestQueue
@@ -176,10 +176,13 @@ HTTPServerMarlin::Initialise()
   // STEP 9: Set the hard limits
   InitHardLimits();
 
-  // STEP 10: Init the response headers to send
+  // STEP 10: Set the event stream parameters
+  InitEventstreamKeepalive();
+
+  // STEP 11: Init the response headers to send
   InitHeaders();
 
-  // STEP 11: Init the ThreadPool
+  // STEP 12: Init the ThreadPool
   InitThreadPool();
 
   // We are airborne!
@@ -224,7 +227,7 @@ HTTPServerMarlin::Cleanup()
   }
 
   // Try to stop and remove all groups
-  for(auto group : m_urlGroups)
+  for(auto& group : m_urlGroups)
   {
     // Gracefully stop
     group->StopGroup();
@@ -298,8 +301,8 @@ HTTPServerMarlin::Cleanup()
 void
 HTTPServerMarlin::InitHeaders()
 {
-  CString name = m_webConfig->GetParameterString("Server","ServerName","");
-  CString type = m_webConfig->GetParameterString("Server","TypeServerName","Hide");
+  XString name = m_marlinConfig->GetParameterString("Server","ServerName","");
+  XString type = m_marlinConfig->GetParameterString("Server","TypeServerName","Hide");
 
   // Server name combo
   if(type.CompareNoCase("Microsoft")   == 0) m_sendHeader = SendHeader::HTTP_SH_MICROSOFT;
@@ -324,16 +327,16 @@ HTTPSite*
 HTTPServerMarlin::CreateSite(PrefixType    p_type
                             ,bool          p_secure
                             ,int           p_port
-                            ,CString       p_baseURL
+                            ,XString       p_baseURL
                             ,bool          p_subsite  /* = false */
                             ,LPFN_CALLBACK p_callback /* = NULL  */)
 {
   // USE OVERRIDES FROM WEBCONFIG 
   // BUT USE PROGRAM'S SETTINGS AS DEFAULT VALUES
   
-  CString chanType;
+  XString chanType;
   int     chanPort;
-  CString chanBase;
+  XString chanBase;
   bool    chanSecure;
 
   // Changing the input to a name
@@ -346,11 +349,11 @@ HTTPServerMarlin::CreateSite(PrefixType    p_type
     case PrefixType::URLPRE_Weak:   chanType = "weak";     break;
   }
 
-  // Getting the settings from the web.config, use parameters as defaults
-  chanType      = m_webConfig->GetParameterString ("Server","ChannelType",chanType);
-  chanSecure    = m_webConfig->GetParameterBoolean("Server","Secure",     p_secure);
-  chanPort      = m_webConfig->GetParameterInteger("Server","Port",       p_port);
-  chanBase      = m_webConfig->GetParameterString ("Server","BaseURL",    p_baseURL);
+  // Getting the settings from the Marlin.config, use parameters as defaults
+  chanType      = m_marlinConfig->GetParameterString ("Server","ChannelType",chanType);
+  chanSecure    = m_marlinConfig->GetParameterBoolean("Server","Secure",     p_secure);
+  chanPort      = m_marlinConfig->GetParameterInteger("Server","Port",       p_port);
+  chanBase      = m_marlinConfig->GetParameterString ("Server","BaseURL",    p_baseURL);
 
   // Recalculate the type
        if(chanType.CompareNoCase("strong")  == 0) p_type = PrefixType::URLPRE_Strong;
@@ -373,7 +376,7 @@ HTTPServerMarlin::CreateSite(PrefixType    p_type
   }
 
   // Create our URL prefix
-  CString prefix = CreateURLPrefix(p_type,chanSecure,p_port,p_baseURL);
+  XString prefix = CreateURLPrefix(p_type,chanSecure,p_port,p_baseURL);
   if(!prefix.IsEmpty())
   {
     HTTPSite* mainSite = nullptr;
@@ -386,7 +389,7 @@ HTTPServerMarlin::CreateSite(PrefixType    p_type
       if(mainSite == nullptr)
       {
         // No luck: No main site to register against
-        CString message;
+        XString message;
         message.Format("Tried to register a sub-site, without a main-site: %s",p_baseURL.GetString());
         ERRORLOG(ERROR_NOT_FOUND,message);
         return nullptr;
@@ -408,7 +411,7 @@ HTTPServerMarlin::CreateSite(PrefixType    p_type
 
 // Delete a channel (from prefix OR base URL forms)
 bool
-HTTPServerMarlin::DeleteSite(int p_port,CString p_baseURL,bool p_force /*=false*/)
+HTTPServerMarlin::DeleteSite(int p_port,XString p_baseURL,bool p_force /*=false*/)
 {
   AutoCritSec lock(&m_sitesLock);
   // Default result
@@ -417,7 +420,7 @@ HTTPServerMarlin::DeleteSite(int p_port,CString p_baseURL,bool p_force /*=false*
   // Use counter
   m_counter.Start();
 
-  CString search(MakeSiteRegistrationName(p_port,p_baseURL));
+  XString search(MakeSiteRegistrationName(p_port,p_baseURL));
   SiteMap::iterator it = m_allsites.find(search);
   if(it != m_allsites.end())
   {
@@ -458,15 +461,15 @@ HTTPServerMarlin::DeleteSite(int p_port,CString p_baseURL,bool p_force /*=false*
 
 // Find and make an URL group
 HTTPURLGroup*
-HTTPServerMarlin::FindUrlGroup(CString p_authName
+HTTPServerMarlin::FindUrlGroup(XString p_authName
                               ,ULONG   p_authScheme
                               ,bool    p_cache
-                              ,CString p_realm
-                              ,CString p_domain)
+                              ,XString p_realm
+                              ,XString p_domain)
 {
   // See if we already have a group of these combination
   // And if so: reuse that URL group
-  for(auto group : m_urlGroups)
+  for(auto& group : m_urlGroups)
   {
     if(group->GetAuthenticationScheme()    == p_authScheme &&
        group->GetAuthenticationNtlmCache() == p_cache      &&
@@ -700,7 +703,7 @@ HTTPServerMarlin::StopServer()
 
 // Used for canceling a WebSocket for an event stream
 void 
-HTTPServerMarlin::CancelRequestStream(HTTP_OPAQUE_ID p_response)
+HTTPServerMarlin::CancelRequestStream(HTTP_OPAQUE_ID p_response,bool /*p_reset*/)
 {
   HTTPRequest* request = reinterpret_cast<HTTPRequest*>(p_response);
 
@@ -713,7 +716,7 @@ HTTPServerMarlin::CancelRequestStream(HTTP_OPAQUE_ID p_response)
 
 // Create a new WebSocket in the subclass of our server
 WebSocket*
-HTTPServerMarlin::CreateWebSocket(CString p_uri)
+HTTPServerMarlin::CreateWebSocket(XString p_uri)
 {
   return new WebSocketServer(p_uri);
 }
@@ -736,6 +739,13 @@ HTTPServerMarlin::ReceiveIncomingRequest(HTTPMessage* /*p_message*/)
   return false;
 }
 
+// Sending a response as a chunk
+void
+HTTPServerMarlin::SendAsChunk(HTTPMessage* p_message, bool /*p_final*/ /*= false*/)
+{
+  ERRORLOG(ERROR_IMPLEMENTATION_LIMIT,"To be implemented");
+  SendResponse(p_message);
+}
 
 // Sending response for an incoming message
 void       
@@ -752,7 +762,6 @@ HTTPServerMarlin::SendResponse(HTTPMessage* p_message)
     request->StartResponse(p_message);
   }
 }
-
 
 //////////////////////////////////////////////////////////////////////////
 //
@@ -795,7 +804,7 @@ HTTPServerMarlin::SendResponseEventBuffer(HTTP_OPAQUE_ID p_requestID
 
 // Cancel and close a WebSocket
 bool
-HTTPServerMarlin::FlushSocket(HTTP_OPAQUE_ID p_request,CString p_prefix)
+HTTPServerMarlin::FlushSocket(HTTP_OPAQUE_ID p_request,XString p_prefix)
 {
   USES_CONVERSION;
   wstring prefix = A2W(p_prefix);

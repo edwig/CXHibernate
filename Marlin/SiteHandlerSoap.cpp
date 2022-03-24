@@ -4,7 +4,7 @@
 //
 // Marlin Server: Internet server/client
 // 
-// Copyright (c) 2014-2021 ir. W.E. Huisman
+// Copyright (c) 2014-2022 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -71,10 +71,13 @@ SiteHandlerSoap::PreHandle(HTTPMessage* p_message)
   // Detect XML SOAP errors
   if(g_soapMessage->GetInternalError() != XmlError::XE_NoError)
   {
-    CString msg = g_soapMessage->GetInternalErrorString();
-    g_soapMessage->Reset();
-    g_soapMessage->SetFault("XML","Client","XML parsing error",msg);
-    SITE_ERRORLOG(ERROR_BAD_ARGUMENTS,"Expected a SOAP message, but no valid XML message found");
+    XString msg = g_soapMessage->GetInternalErrorString();
+    if(g_soapMessage->GetFaultCode().IsEmpty())
+    {
+      g_soapMessage->Reset();
+      g_soapMessage->SetFault("XML","Client","XML parsing error",msg);
+      SITE_ERRORLOG(ERROR_BAD_ARGUMENTS,"Expected a SOAP message, but no valid XML message found");
+    }
     m_site->SendResponse(g_soapMessage);
     p_message->SetHasBeenAnswered();
     return false;

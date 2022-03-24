@@ -4,7 +4,7 @@
 //
 // Marlin Server: Internet server/client
 // 
-// Copyright (c) 2014-2021 ir. W.E. Huisman
+// Copyright (c) 2014-2022 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -35,8 +35,8 @@ class HTTPSiteMarlin : public HTTPSite
 public:
   HTTPSiteMarlin(HTTPServerMarlin*  p_server
                 ,int                p_port
-                ,CString            p_site
-                ,CString            p_prefix
+                ,XString            p_site
+                ,XString            p_prefix
                 ,HTTPSite*          p_mainSite = nullptr
                 ,LPFN_CALLBACK      p_callback = nullptr);
 
@@ -44,9 +44,9 @@ public:
   virtual bool StartSite();
 
   // OPTIONAL: Set the webroot of the site
-  virtual bool SetWebroot(CString p_webroot);
+  virtual bool SetWebroot(XString p_webroot);
 
 protected:
   // Initialize the site from automatic settings in the config
-  void         InitSite(WebConfig& p_config);
+  void         InitSite(MarlinConfig& p_config);
 };

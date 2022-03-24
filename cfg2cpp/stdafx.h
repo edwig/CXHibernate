@@ -6,11 +6,10 @@
 #pragma once
 
 #include "targetver.h"
+#include "framework.h"
 
-#include <stdio.h>
-#include <tchar.h>
-#include <afx.h>
-
+// Auto link to these libraries
+#include <BaseLibrary.h>
 #include <SQLComponents.h>
 #include <CXHibernate.h>
 #include <Marlin.h>

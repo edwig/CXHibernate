@@ -4,7 +4,7 @@
 //
 // Marlin Server: Internet server/client
 // 
-// Copyright (c) 2014-2021 ir. W.E. Huisman
+// Copyright (c) 2014-2022 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -29,7 +29,7 @@
 #include "HTTPSite.h"
 #include "HTTPMessage.h"
 #include "HTTPServer.h"
-#include "Analysis.h"
+#include "LogAnalysis.h"
 
 // Macro's for logging in the site handlers
 #define SITE_DETAILLOG1(text)       m_site->GetHTTPServer()->DetailLog (__FUNCTION__,LogType::LOG_INFO,(text))
@@ -55,7 +55,7 @@ public:
 
   // Go handle this message
   virtual void HandleMessage(HTTPMessage* p_message);
-  virtual void HandleStream (EventStream* p_stream);
+  virtual void HandleStream (HTTPMessage* p_message,EventStream* p_stream);
   virtual void CleanUp      (HTTPMessage* p_message);
 
   // When stopping the site

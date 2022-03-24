@@ -4,7 +4,7 @@
 //
 // Marlin Server: Internet server/client
 // 
-// Copyright (c) 2014-2021 ir. W.E. Huisman
+// Copyright (c) 2014-2022 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -40,5 +40,5 @@ protected:
   // This is the work of the posted action
   // Gets input like the filename, the body of the action
   // And the full URL carrying the parameters of the posted call
-  virtual bool DoPostAction(CString p_filename,CString p_body,CrackedURL& p_full);
+  virtual bool DoPostAction(XString p_filename,XString p_body,const CrackedURL& p_full);
 };

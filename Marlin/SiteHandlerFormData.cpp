@@ -4,7 +4,7 @@
 //
 // Marlin Server: Internet server/client
 // 
-// Copyright (c) 2014-2021 ir. W.E. Huisman
+// Copyright (c) 2014-2022 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -42,9 +42,9 @@ bool
 SiteHandlerFormData::Handle(HTTPMessage* p_message)
 {
   int errors = 0;
-  CString message;
+  XString message;
 
-  CString contentType = p_message->GetContentType();
+  XString contentType = p_message->GetContentType();
   FileBuffer* buffer  = p_message->GetFileBuffer();
   MultiPartBuffer multi(FD_UNKNOWN);
 

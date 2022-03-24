@@ -4,7 +4,7 @@
 //
 // Marlin Server: Internet server/client
 // 
-// Copyright (c) 2014-2021 ir. W.E. Huisman
+// Copyright (c) 2014-2022 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -85,23 +85,23 @@ public:
   FindProxy();
  ~FindProxy();
 
-  CString     Find(const CString& p_url,bool p_secure);
-  CString     GetIngoreList();
+  XString     Find(const XString& p_url,bool p_secure);
+  XString     GetIngoreList();
   ProxyInfo*  GetProxyInfo();
-  void        SetInfo(CString p_proxy, CString p_bypass);
+  void        SetInfo(XString p_proxy, XString p_bypass);
 
 private:
-  void        FindUniqueProxy(CString p_proxyList,bool p_secure);
+  void        FindUniqueProxy(XString p_proxyList,bool p_secure);
   ProxyInfo*  m_info;
   bool        m_perDest;
-  CString     m_ignored;
-  CString     m_lastUsedDst;
-  CString     m_proxy;
+  XString     m_ignored;
+  XString     m_lastUsedDst;
+  XString     m_proxy;
   wstring     m_wProxy;
   wstring     m_wIgnored;
 };
 
-inline CString 
+inline XString 
 FindProxy::GetIngoreList()
 {
   return m_ignored;

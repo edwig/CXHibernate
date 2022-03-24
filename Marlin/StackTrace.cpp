@@ -4,7 +4,7 @@
 //
 // Marlin Server: Internet server/client
 // 
-// Copyright (c) 2014-2021 ir. W.E. Huisman
+// Copyright (c) 2014-2022 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -28,7 +28,7 @@
 #include "StdAfx.h"
 #include "StackTrace.h"
 #include "XMLParser.h"
-#include "WebConfig.h"
+#include "MarlinConfig.h"
 
 // To prevent:
 // C:\Program Files (x86)\Windows Kits\8.1\Include\um\dbghelp.h(1544): warning C4091: 'typedef ': ignored on left of '' when no variable is declared
@@ -70,7 +70,7 @@ namespace
     DbgHelp()
     {
       // Load the dbghelp library
-      CString debugHelper = WebConfig::GetExePath();
+      CString debugHelper = MarlinConfig::GetExePath();
 #ifdef _WIN64
       debugHelper += "dbghelp64.dll";
 #else
@@ -195,7 +195,7 @@ StackTrace::Process(CONTEXT *context, unsigned int overslaan)
   }
 
   // Initialize symbol handling
-  dbgHelp.fnSymInitialize(process, const_cast<LPSTR>(static_cast<LPCSTR>(WebConfig::GetExePath())), TRUE);
+  dbgHelp.fnSymInitialize(process, const_cast<LPSTR>(static_cast<LPCSTR>(MarlinConfig::GetExePath())), TRUE);
 
   // Initialize first stack frame
 #ifdef _WIN64

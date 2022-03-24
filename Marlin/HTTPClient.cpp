@@ -4,7 +4,7 @@
 //
 // Marlin Server: Internet server/client
 // 
-// Copyright (c) 2014-2021 ir. W.E. Huisman
+// Copyright (c) 2014-2022 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -32,8 +32,9 @@
 #include "ConvertWideString.h"
 #include "HTTPMessage.h"
 #include "SOAPMessage.h"
+#include "JSONMessage.h"
 #include "AutoCritical.h"
-#include "Analysis.h"
+#include "LogAnalysis.h"
 #include "ThreadPool.h"
 #include "EventSource.h"
 #include "Crypto.h"
@@ -71,8 +72,8 @@ static char THIS_FILE[] = __FILE__;
 // HTTP_STATUS_NO_CONTENT      -> W3C Standard says that a server can end a event stream with tis HTTP status 
 //
 #define CONTINUE_STREAM(status) ((m_status == HTTP_STATUS_CONTINUE) || \
-                                  (m_status >= HTTP_STATUS_OK && m_status < HTTP_STATUS_NO_CONTENT) || \
-                                  (m_status == HTTP_STATUS_SERVICE_UNAVAIL))
+                                 (m_status >= HTTP_STATUS_OK && m_status < HTTP_STATUS_NO_CONTENT) || \
+                                 (m_status == HTTP_STATUS_SERVICE_UNAVAIL))
 
 // CTOR for the client
 HTTPClient::HTTPClient()
@@ -147,7 +148,6 @@ HTTPClient::Reset()
   m_sendUnicode     = false;
   m_sniffCharset    = true;
   m_sendBOM         = false;
-  m_readAllHeaders  = false;
   m_pushEvents      = false;
   m_onCloseSeen     = false;
   // Timeouts
@@ -183,9 +183,9 @@ HTTPClient::Reset()
     m_trace = nullptr;
   }
   // Clear the maps
-  m_headers.clear();
+  m_requestHeaders.clear();
+  m_responseHeaders.clear();
   m_cookies.Clear();
-  m_respHeaders.clear();
   m_resultCookies.Clear();
 
   // Reset the logging
@@ -253,7 +253,7 @@ HTTPClient::TestReconnect()
 }
 
 int    
-HTTPClient::GetError(CString* p_message /*=NULL*/)
+HTTPClient::GetError(XString* p_message /*=NULL*/)
 {
   if(p_message && m_lastError)
   {
@@ -262,17 +262,17 @@ HTTPClient::GetError(CString* p_message /*=NULL*/)
   return m_lastError;
 }
 
-CString
+XString
 HTTPClient::GetStatusText()
 {
-  CString errorText;
+  XString errorText;
   GetError(&errorText);
-  CString text;
+  XString text;
   text.Format("Status [%u] Windows error %lu: %s",m_status,m_lastError,errorText.GetString());
   return text;
 }
 
-// Errorlog text MUST have the formatting of
+// Logging error text MUST have the formatting of
 // text text text %d %s
 // Where %d is the error number and
 // where %s is the error text explanation
@@ -280,7 +280,7 @@ int
 HTTPClient::ErrorLog(const char* p_function,const char* p_logText)
 {
   m_lastError = GetLastError();
-  CString msg = GetLastErrorAsString(m_lastError);
+  XString msg = GetLastErrorAsString(m_lastError);
 
   // ERRORLOG macro
   if(m_log && m_logLevel)
@@ -294,7 +294,7 @@ bool
 HTTPClient::Initialize()
 {
   USES_CONVERSION;
-  CString totalURL;
+  XString totalURL;
 
   // Something to be done?
   if(m_initialized)
@@ -304,21 +304,21 @@ HTTPClient::Initialize()
   DETAILLOG("Initializing HTTP Client");
   m_initialized = true;
 
-  // If no "web.config" read, fall back to "Marlin.config" for IIS mode applications
-  if(m_webConfig.IsFilled())
+  // Try to read the Marlin.config file in the current directory
+  if(m_marlinConfig.IsFilled())
   {
-    DETAILLOG("Configuration file \'web.config\' has been read!");
+    DETAILLOG("Configuration file \'Marlin.config\' has already been read!");
   }
   else
   {
-    m_webConfig.ReadConfig("Marlin.config");
-    if(m_webConfig.IsFilled())
+    m_marlinConfig.ReadConfig("Marlin.config");
+    if(m_marlinConfig.IsFilled())
     {
       DETAILLOG("Configuration file \'marlin.config\' has been read!");
     }
     else
     {
-      ERRORLOG("No configuration files found (marlin.config; web.config)!");
+      DETAILLOG("No configuration file [Marlin.config] found!");
     }
   }
 
@@ -353,7 +353,7 @@ HTTPClient::Initialize()
                                        m_proxy       = m_proxyFinder.Find(totalURL,m_secure);
                                        m_proxyBypass = m_proxyFinder.GetIngoreList();
                                        break;
-    case ProxyType::PROXY_MYPROXY:     // Use proxy settings from the web.config. Do nothing
+    case ProxyType::PROXY_MYPROXY:     // Use proxy settings from the marlin.config. Do nothing
                                        break;
     case ProxyType::PROXY_NOPROXY:     // Reset all proxy settings. Forget everything
                                        m_proxy.Empty();
@@ -428,24 +428,6 @@ HTTPClient::InitializeSingleSignOn()
     ErrorLog(__FUNCTION__,"Cannot set the auto-logon policy. Error [%d] %s");
     return;
   }
-
-//   COMMENTED OUT: NEVER SEEN WORKING ON ANY SYSTEM
-//   AND SYSTEM-WIDE SSO IS NOT VERY SECURE. SO DO NOT DO THIS AGAIN!!
-
-//   // See if we can optimize the single-sign-on procedure
-//   BOOL cred = TRUE;
-//   if(WinHttpSetOption(m_request,WINHTTP_OPTION_USE_GLOBAL_SERVER_CREDENTIALS,&cred,sizeof(BOOL)))
-//   {
-//     DETAILLOG("Single sign-on optimized to use global server credentials");
-//   }
-//   else
-//   {
-//     // NOT AN ERROR IF NOT SUCCEEDED!!!!!!
-//     // IT IS JUST AN OPTIMIZATION!!!
-//     // It's not very likely to work on Windows 2003 Server of Windows XP anyhow
-//     DETAILLOG("Cannot optimize the auto-logon with the use of global server credentials. Reason: %d",GetLastError());
-//     DETAILLOG("Maybe you must set the registry key: 'HKLM\\Software\\Microsoft\\Windows\\CurrentVersion\\Internet Settings!ShareCredsWithWinHttp' to TRUE");
-//   }
 }
 
 void
@@ -457,13 +439,13 @@ HTTPClient::InitLogging()
     return;
   }
 
-  // Get parameters from webconfig
-  CString file = m_webConfig.GetParameterString ("Logging","Logfile",  "");
-  bool logging = m_webConfig.GetParameterBoolean("Logging","DoLogging",false);
-  bool timing  = m_webConfig.GetParameterBoolean("Logging","DoTiming", true);
-  bool events  = m_webConfig.GetParameterBoolean("Logging","DoEvents", false);
-  int  cache   = m_webConfig.GetParameterInteger("Logging","Cache",    100);
-  int  level   = m_webConfig.GetParameterBoolean("Logging","LogLevel", m_logLevel);
+  // Get parameters from Marlin.config
+  XString file = m_marlinConfig.GetParameterString ("Logging","Logfile",  "");
+  bool logging = m_marlinConfig.GetParameterBoolean("Logging","DoLogging",false);
+  bool timing  = m_marlinConfig.GetParameterBoolean("Logging","DoTiming", true);
+  bool events  = m_marlinConfig.GetParameterBoolean("Logging","DoEvents", false);
+  int  cache   = m_marlinConfig.GetParameterInteger("Logging","Cache",    100);
+  int  level   = m_marlinConfig.GetParameterInteger("Logging","LogLevel", m_logLevel);
 
   // Check for a logging object
   if(m_log == NULL && !file.IsEmpty() && logging)
@@ -472,38 +454,33 @@ HTTPClient::InitLogging()
     m_log = new LogAnalysis(m_agent);
     m_logOwner = true;
   }
-  if(!file.IsEmpty())
+
+  // Make other settings effective on the created logfile
+  // BUT REMEMBER: "Logging.config" can override these settings.
+  if(m_log && !file.IsEmpty())
   {
     m_log->SetLogFilename(file);
   }
-  if(m_webConfig.HasParameter("Logging","DoLogging"))
+  if(m_log && m_marlinConfig.HasParameter("Logging","DoLogging"))
   {
     m_log->SetDoLogging(logging);
   }
-  if(m_webConfig.HasParameter("Logging","DoTiming"))
+  if(m_log && m_marlinConfig.HasParameter("Logging","DoTiming"))
   {
     m_log->SetDoTiming(timing);
   }
-  if(m_webConfig.HasParameter("Logging","DoEvents"))
+  if(m_log && m_marlinConfig.HasParameter("Logging","DoEvents"))
   {
     m_log->SetDoEvents(events);
   }
-  if(m_webConfig.HasParameter("Logging","Cache"))
+  if(m_log && m_marlinConfig.HasParameter("Logging","Cache"))
   {
     m_log->SetCache(cache);
   }
-
-  // Detailed logging for client
-  if (m_webConfig.HasParameter("Logging","LogLevel"))
+  if(m_log && m_marlinConfig.HasParameter("Logging","LogLevel"))
   {
-    m_logLevel = level;
-    if(m_log)
-    {
-      m_log->SetLogLevel(m_logLevel);
-    }
+    m_log->SetLogLevel(m_logLevel = level);
   }
-
-  // Now "Logging.config" can override these settings.
 }
 
 void
@@ -518,7 +495,7 @@ HTTPClient::SetLogging(LogAnalysis* p_log,bool p_transferOwnership /*= false*/)
   // Remember the setting or resetting of the logfile
   m_log = p_log;
 
-  // HTTP Client wil destroy the logfile object!
+  // HTTP Client will destroy the logfile object!
   if(p_transferOwnership)
   {
     m_logOwner = true;
@@ -536,30 +513,30 @@ void
 HTTPClient::InitSettings()
 {
   // General client settings
-  m_retries        =             m_webConfig.GetParameterInteger("Client","RetryCount",       m_retries);
-  m_agent          =             m_webConfig.GetParameterString ("Client","Agent",            m_agent);
-  m_useProxy       = (ProxyType) m_webConfig.GetParameterInteger("Client","UseProxy",         (int)m_useProxy);
-  m_proxy          =             m_webConfig.GetParameterString ("Client","Proxy",            m_proxy);
-  m_proxyBypass    =             m_webConfig.GetParameterString ("Client","ProxyBypass",      m_proxyBypass);
-  m_timeoutResolve =             m_webConfig.GetParameterInteger("Client","TimeoutResolve",   m_timeoutResolve);
-  m_timeoutConnect =             m_webConfig.GetParameterInteger("Client","TimeoutConnect",   m_timeoutConnect);
-  m_timeoutSend    =             m_webConfig.GetParameterInteger("Client","TimeoutSend",      m_timeoutSend);
-  m_timeoutReceive =             m_webConfig.GetParameterInteger("Client","TimeoutReceive",   m_timeoutReceive);
-  m_soapCompress   =             m_webConfig.GetParameterBoolean("Client","SOAPCompress",     m_soapCompress);
-  m_httpCompression=             m_webConfig.GetParameterBoolean("Client","HTTPCompression",  m_httpCompression);
-  m_sendUnicode    =             m_webConfig.GetParameterBoolean("Client","SendUnicode",      m_sendUnicode);
-  m_sendBOM        =             m_webConfig.GetParameterBoolean("Client","SendBOM",          m_sendBOM);
-  m_verbTunneling  =             m_webConfig.GetParameterBoolean("Client","VerbTunneling",    m_verbTunneling);
-  m_certPreset     =             m_webConfig.GetParameterBoolean("Client","CertificatePreset",m_certPreset);
-  m_certStore      =             m_webConfig.GetParameterString ("Client","CertificateStore", m_certStore);
-  m_certName       =             m_webConfig.GetParameterString ("Client","CertificateName",  m_certName);
-  m_corsOrigin     =             m_webConfig.GetParameterString ("Client","CORS_Origin",      m_corsOrigin);
+  m_retries        =             m_marlinConfig.GetParameterInteger("Client","RetryCount",       m_retries);
+  m_agent          =             m_marlinConfig.GetParameterString ("Client","Agent",            m_agent);
+  m_useProxy       = (ProxyType) m_marlinConfig.GetParameterInteger("Client","UseProxy",         (int)m_useProxy);
+  m_proxy          =             m_marlinConfig.GetParameterString ("Client","Proxy",            m_proxy);
+  m_proxyBypass    =             m_marlinConfig.GetParameterString ("Client","ProxyBypass",      m_proxyBypass);
+  m_timeoutResolve =             m_marlinConfig.GetParameterInteger("Client","TimeoutResolve",   m_timeoutResolve);
+  m_timeoutConnect =             m_marlinConfig.GetParameterInteger("Client","TimeoutConnect",   m_timeoutConnect);
+  m_timeoutSend    =             m_marlinConfig.GetParameterInteger("Client","TimeoutSend",      m_timeoutSend);
+  m_timeoutReceive =             m_marlinConfig.GetParameterInteger("Client","TimeoutReceive",   m_timeoutReceive);
+  m_soapCompress   =             m_marlinConfig.GetParameterBoolean("Client","SOAPCompress",     m_soapCompress);
+  m_httpCompression=             m_marlinConfig.GetParameterBoolean("Client","HTTPCompression",  m_httpCompression);
+  m_sendUnicode    =             m_marlinConfig.GetParameterBoolean("Client","SendUnicode",      m_sendUnicode);
+  m_sendBOM        =             m_marlinConfig.GetParameterBoolean("Client","SendBOM",          m_sendBOM);
+  m_verbTunneling  =             m_marlinConfig.GetParameterBoolean("Client","VerbTunneling",    m_verbTunneling);
+  m_certPreset     =             m_marlinConfig.GetParameterBoolean("Client","CertificatePreset",m_certPreset);
+  m_certStore      =             m_marlinConfig.GetParameterString ("Client","CertificateStore", m_certStore);
+  m_certName       =             m_marlinConfig.GetParameterString ("Client","CertificateName",  m_certName);
+  m_corsOrigin     =             m_marlinConfig.GetParameterString ("Client","CORS_Origin",      m_corsOrigin);
 
   // Test environments must often do with relaxed certificate settings
-  bool m_relaxValid     = m_webConfig.GetParameterBoolean("Client","RelaxCertificateValid",     false);
-  bool m_relaxDate      = m_webConfig.GetParameterBoolean("Client","RelaxCertificateDate",      false);
-  bool m_relaxAuthority = m_webConfig.GetParameterBoolean("Client","RelaxCertificateAuthority", false);
-  bool m_relaxUsage     = m_webConfig.GetParameterBoolean("Client","RelaxCertificateUsage",     false);
+  bool m_relaxValid     = m_marlinConfig.GetParameterBoolean("Client","RelaxCertificateValid",     false);
+  bool m_relaxDate      = m_marlinConfig.GetParameterBoolean("Client","RelaxCertificateDate",      false);
+  bool m_relaxAuthority = m_marlinConfig.GetParameterBoolean("Client","RelaxCertificateAuthority", false);
+  bool m_relaxUsage     = m_marlinConfig.GetParameterBoolean("Client","RelaxCertificateUsage",     false);
 
   if(m_relaxValid)      m_relax |= SECURITY_FLAG_IGNORE_CERT_CN_INVALID;
   if(m_relaxDate)       m_relax |= SECURITY_FLAG_IGNORE_CERT_DATE_INVALID;
@@ -568,28 +545,28 @@ HTTPClient::InitSettings()
 
   // Overrides for Secure HTTP protocol
   unsigned ssltls = 0;
-  CString  ssltlsLogging(":");
-  if(m_webConfig.GetParameterBoolean("Client","SecureSSL20",(m_ssltls & WINHTTP_FLAG_SECURE_PROTOCOL_SSL2) > 0))
+  XString  ssltlsLogging(":");
+  if(m_marlinConfig.GetParameterBoolean("Client","SecureSSL20",(m_ssltls & WINHTTP_FLAG_SECURE_PROTOCOL_SSL2) > 0))
   {
     ssltls |= WINHTTP_FLAG_SECURE_PROTOCOL_SSL2;
     ssltlsLogging += "SSL2:";
   }
-  if(m_webConfig.GetParameterBoolean("Client","SecureSSL30",(m_ssltls & WINHTTP_FLAG_SECURE_PROTOCOL_SSL3) > 0))
+  if(m_marlinConfig.GetParameterBoolean("Client","SecureSSL30",(m_ssltls & WINHTTP_FLAG_SECURE_PROTOCOL_SSL3) > 0))
   {
     ssltls |= WINHTTP_FLAG_SECURE_PROTOCOL_SSL3;
     ssltlsLogging += "SSL3:";
   }
-  if(m_webConfig.GetParameterBoolean("Client","SecureTLS10",(m_ssltls & WINHTTP_FLAG_SECURE_PROTOCOL_TLS1) > 0))
+  if(m_marlinConfig.GetParameterBoolean("Client","SecureTLS10",(m_ssltls & WINHTTP_FLAG_SECURE_PROTOCOL_TLS1) > 0))
   {
     ssltls |= WINHTTP_FLAG_SECURE_PROTOCOL_TLS1;
     ssltlsLogging += "TLS1:";
   }
-  if(m_webConfig.GetParameterBoolean("Client","SecureTLS11",(m_ssltls & WINHTTP_FLAG_SECURE_PROTOCOL_TLS1_1) > 0))
+  if(m_marlinConfig.GetParameterBoolean("Client","SecureTLS11",(m_ssltls & WINHTTP_FLAG_SECURE_PROTOCOL_TLS1_1) > 0))
   {
     ssltls |= WINHTTP_FLAG_SECURE_PROTOCOL_TLS1_1;
     ssltlsLogging += "TLS1.1:";
   }
-  if(m_webConfig.GetParameterBoolean("Client","SecureTLS12",(m_ssltls & WINHTTP_FLAG_SECURE_PROTOCOL_TLS1_2) > 0))
+  if(m_marlinConfig.GetParameterBoolean("Client","SecureTLS12",(m_ssltls & WINHTTP_FLAG_SECURE_PROTOCOL_TLS1_2) > 0))
   {
     ssltls |= WINHTTP_FLAG_SECURE_PROTOCOL_TLS1_2;
     ssltlsLogging += "TLS1.2:";
@@ -597,11 +574,11 @@ HTTPClient::InitSettings()
   m_ssltls = ssltls;
 
   // Overrides of the URL can be set manual
-  m_user          = m_webConfig.GetParameterString ("Authentication","User",         m_user);
-  m_password      = m_webConfig.GetEncryptedString ("Authentication","Password",     m_password);
-  m_sso           = m_webConfig.GetParameterBoolean("Authentication","SSO",          m_sso);
-  m_proxyUser     = m_webConfig.GetParameterString ("Client",        "ProxyUser",    m_proxyUser);
-  m_proxyPassword = m_webConfig.GetEncryptedString ("Client",        "ProxyPassword",m_proxyPassword);
+  m_user          = m_marlinConfig.GetParameterString ("Authentication","User",         m_user);
+  m_password      = m_marlinConfig.GetEncryptedString ("Authentication","Password",     m_password);
+  m_sso           = m_marlinConfig.GetParameterBoolean("Authentication","SSO",          m_sso);
+  m_proxyUser     = m_marlinConfig.GetParameterString ("Client",        "ProxyUser",    m_proxyUser);
+  m_proxyPassword = m_marlinConfig.GetEncryptedString ("Client",        "ProxyPassword",m_proxyPassword);
 
   // Test that we do not keep on nagging the server
   if(m_retries > CLIENT_MAX_RETRIES)
@@ -610,12 +587,12 @@ HTTPClient::InitSettings()
   }
 
   // Proxy type
-  CString proxyType;
+  XString proxyType;
   switch(m_useProxy)
   {
     case ProxyType::PROXY_IEPROXY:   proxyType = "Always use IE autoproxy settings in the connect if possible (default)"; break;
     case ProxyType::PROXY_AUTOPROXY: proxyType = "Use IE autoproxy if connection fails as a default fallback";            break;
-    case ProxyType::PROXY_MYPROXY:   proxyType = "Use MY proxy settings from web.config";                                 break;
+    case ProxyType::PROXY_MYPROXY:   proxyType = "Use MY proxy settings from Marlin.config";                              break;
     case ProxyType::PROXY_NOPROXY:   proxyType = "Never use any proxy";                                                   break;
     default:                         proxyType = "Unknown and unsupported proxy settings!!";
                                      ERRORLOG(proxyType);
@@ -623,14 +600,15 @@ HTTPClient::InitSettings()
   }
 
   // Logging level
-  CString loglevel;
+  XString loglevel;
   switch(m_logLevel)
   {
     case HLL_NOLOG:     loglevel = "No logging";          break;
     case HLL_ERRORS:    loglevel = "Errors and warnings"; break;
     case HLL_LOGGING:   loglevel = "Info logging";        break;
+    case HLL_LOGBODY:   loglevel = "Logging bodies";      break;
     case HLL_TRACE:     loglevel = "Tracing and bodies";  break;
-    case HLL_TRACEDUMP: loglevel = "Tracing bodies, headers and hexdump"; break;
+    case HLL_TRACEDUMP: loglevel = "Tracing bodies, headers and hex-dump"; break;
   }
 
   // Logging of our settings
@@ -677,7 +655,7 @@ HTTPClient::InitSecurity()
     return;
   }
   // Read XML Signing en encryption from the config
-  CString level;
+  XString level;
   switch(m_securityLevel)
   {
     case XMLEncryption::XENC_Plain:   level = "";        break;
@@ -685,8 +663,8 @@ HTTPClient::InitSecurity()
     case XMLEncryption::XENC_Body:    level = "body";    break;
     case XMLEncryption::XENC_Message: level = "message"; break;
   }
-  level          = m_webConfig.GetParameterString("Encryption","Level",   level);
-  m_enc_password = m_webConfig.GetEncryptedString("Encryption","Password",m_enc_password);
+  level          = m_marlinConfig.GetParameterString("Encryption","Level",   level);
+  m_enc_password = m_marlinConfig.GetEncryptedString("Encryption","Password",m_enc_password);
 
   // Now set the resulting security level
        if(level == "sign")    m_securityLevel = XMLEncryption::XENC_Signing;
@@ -701,7 +679,7 @@ HTTPClient::InitSecurity()
 }
 
 void
-HTTPClient::ReplaceSetting(CString* m_setting,CString p_potential)
+HTTPClient::ReplaceSetting(XString* m_setting,XString p_potential)
 {
   if(p_potential.IsEmpty())
   {
@@ -726,7 +704,7 @@ HTTPClient::ReplaceSetting(CString* m_setting,CString p_potential)
 }
 
 bool
-HTTPClient::SetURL(CString p_url)
+HTTPClient::SetURL(XString p_url)
 {
   // Keep the complete URL
   m_url = p_url;
@@ -735,8 +713,6 @@ HTTPClient::SetURL(CString p_url)
   CrackedURL url(p_url);
   if(url.Valid())
   {
-    if(url.m_foundUsername) ReplaceSetting(&m_user,    url.m_userName);
-    if(url.m_foundPassword) ReplaceSetting(&m_password,url.m_password);
     m_scheme   = url.m_scheme;
     m_secure   = url.m_secure;
     m_server   = url.m_host;
@@ -752,37 +728,73 @@ HTTPClient::SetURL(CString p_url)
 
 // Add extra header for the call
 bool 
-HTTPClient::AddHeader(CString p_header)
+HTTPClient::AddHeader(XString p_header)
 {
-  USES_CONVERSION;
-  wstring header = A2CW(p_header);
-  m_headers.push_back(header);
+  int pos = p_header.Find(':');
+  if (pos > 0)
+  {
+    XString name   = p_header.Left(pos);
+    XString value  = p_header.Mid(pos + 1).Trim();
 
-  return true;
+    AddHeader(name,value);
+    return true;
+  }
+  return false;
 }
 
 // Add extra header by name and value pair
-bool
-HTTPClient::AddHeader(CString p_name,CString p_value)
+void
+HTTPClient::AddHeader(XString p_name,XString p_value)
 {
-  if(p_value.GetLength() && (p_value[0] != '\"' && p_value[0] != '\'' && p_value.Find(':') >= 0))
+  // Case-insensitive search!
+  HeaderMap::iterator it = m_requestHeaders.find(p_name);
+  if(it != m_requestHeaders.end())
   {
-    p_value = "\"" + p_value + "\"";
+    // Check if we set it a duplicate time
+    // If appended, we do not append it a second time
+    if(it->second.Find(p_value) >= 0)
+    {
+      return;
+    }
+    if(p_name.CompareNoCase("Set-Cookie") == 0)
+    {
+      // Insert as a new header
+      m_requestHeaders.insert(std::make_pair(p_name,p_value));
+      return;
+    }
+    // New value of the header
+    it->second = p_value;
   }
-  CString header = p_name + ": " + p_value;
-  return AddHeader(header);
+  else
+  {
+    // Insert as a new header
+    m_requestHeaders.insert(std::make_pair(p_name,p_value));
+  }
+}
+
+// Delete a header
+bool 
+HTTPClient::DelHeader(XString p_name)
+{
+  HeaderMap::iterator it = m_requestHeaders.find(p_name);
+  if(it != m_requestHeaders.end())
+  {
+    m_requestHeaders.erase(it);
+    return true;
+  }
+  return false;
 }
 
 // Add extra cookie for the call
 bool 
-HTTPClient::AddCookie(CString p_cookie)
+HTTPClient::AddCookie(XString p_cookie)
 {
   m_cookies.AddCookie(p_cookie);
   return true;
 }
 
 void 
-HTTPClient::SetBody(CString& p_body)
+HTTPClient::SetBody(XString& p_body)
 {
   m_body = (void*) p_body.GetString();
   m_bodyLength =   p_body.GetLength();
@@ -928,45 +940,26 @@ HTTPClient::AddHostHeader()
   }
 
   // Create host header
-  USES_CONVERSION;
-  CString hostHeader = "Host: " + m_server;
-  if(m_port != INTERNET_DEFAULT_HTTP_PORT)
+  XString host(m_server);
+  if((m_secure && m_port != INTERNET_DEFAULT_HTTPS_PORT) ||
+    (!m_secure && m_port != INTERNET_DEFAULT_HTTP_PORT))
   {
-    hostHeader.AppendFormat(":%d",m_port);
+    host.AppendFormat(":%d",m_port);
   }
-  wstring hostString = A2CW(hostHeader);
-
-  if(!::WinHttpAddRequestHeaders(m_request
-                                ,hostString.c_str()
-                                ,(DWORD)hostString.size()
-                                ,WINHTTP_ADDREQ_FLAG_ADD | 
-                                 WINHTTP_ADDREQ_FLAG_REPLACE))
-  {
-    ErrorLog(__FUNCTION__,"Host header NOT set. Error [%d] %s");
-    return;
-  }
-  DETAILLOG("Header => %S",hostString.c_str());
+  AddHeader("Host",host);
 }
 
 // Add content length header
 void
 HTTPClient::AddLengthHeader()
 {
-  USES_CONVERSION;
-  CString length;
-  length.Format("Content-Length: %lu",m_bodyLength);
-  wstring header = A2CW(length);
+  // Remove old/incorrect content-length header
+  DelHeader("Content-Length");
 
-  if(!::WinHttpAddRequestHeaders(m_request
-                                ,header.c_str()
-                                ,(DWORD)header.size()
-                                ,WINHTTP_ADDREQ_FLAG_ADD |
-                                 WINHTTP_ADDREQ_FLAG_REPLACE))
-  {
-    ErrorLog(__FUNCTION__,"Host header NOT set. Error [%d] %s");
-    return;
-  }
-  DETAILLOG("Header => %S",header.c_str());
+  // Set our header according to what we are about to send
+  XString length;
+  length.Format("%lu",m_bodyLength);
+  AddHeader("Content-Length",length);
 }
 
 void
@@ -1002,7 +995,7 @@ HTTPClient::AddSecurityOptions()
     }
     if(MUSTLOG(HLL_LOGGING))
     {
-      CString allow;
+      XString allow;
       if(m_ssltls & WINHTTP_FLAG_SECURE_PROTOCOL_SSL2)   allow  = "SSL 2.0, "; 
       if(m_ssltls & WINHTTP_FLAG_SECURE_PROTOCOL_SSL3)   allow += "SSL 3.0, "; 
       if(m_ssltls & WINHTTP_FLAG_SECURE_PROTOCOL_TLS1)   allow += "TLS 1.0, ";
@@ -1049,72 +1042,14 @@ HTTPClient::AddCORSHeaders()
 void
 HTTPClient::AddExtraHeaders()
 {
-  if(m_headers.size())
+  if(!m_contentType.IsEmpty())
   {
-    for(unsigned ind = 0;ind < m_headers.size(); ++ind)
-    {
-      if(!::WinHttpAddRequestHeaders(m_request
-                                    ,m_headers[ind].c_str()
-                                    ,(DWORD)m_headers[ind].size()
-                                    ,(ind == 0) ? WINHTTP_ADDREQ_FLAG_ADD | WINHTTP_ADDREQ_FLAG_REPLACE
-                                                : WINHTTP_ADDREQ_FLAG_COALESCE_WITH_SEMICOLON))
-      {
-        // Log error but continue. A lot of headers are optional to a HTTP call
-        ErrorLog(__FUNCTION__,"Request headers NOT set. Error [%d] %s");
-      }
-      DETAILLOG("Header => %S",m_headers[ind].c_str());
-    }
-  }
-  if(m_contentType.GetLength())
-  {
-    USES_CONVERSION;
-    wstring type = wstring(L"Content-Type: ") + A2CW(m_contentType);
-    if(!::WinHttpAddRequestHeaders(m_request
-                                  ,type.c_str()
-                                  ,(DWORD)type.size()
-                                  ,WINHTTP_ADDREQ_FLAG_ADD | 
-                                   WINHTTP_ADDREQ_FLAG_REPLACE))
-    {
-      // Log error but continue. Most servers can reconstruct the content type
-      ErrorLog(__FUNCTION__,"Content type NOT set. Error [%d] %s");
-    }
-    DETAILLOG("Header => %S",type.c_str());
+    AddHeader("Content-Type",m_contentType);
   }
   if(m_httpCompression)
   {
-    wstring accept = wstring(L"Accept-Encoding: gzip");
-    if(!::WinHttpAddRequestHeaders(m_request
-                                  ,accept.c_str()
-                                  ,(DWORD)accept.size()
-                                  ,WINHTTP_ADDREQ_FLAG_ADD |
-                                   WINHTTP_ADDREQ_FLAG_REPLACE))
-    {
-      // Log error but continue. Most servers will simply not GZIP it's answer
-      ErrorLog(__FUNCTION__,"Accept-Encoding NOT set. Error [%d] %s");
-    }
-    DETAILLOG("Header => %S",accept.c_str());
+    AddHeader("Accept-Encoding","gzip");
   }
-  if(m_soapAction.GetLength())
-  {
-    USES_CONVERSION;
-    if(m_soapAction[0] != '\"' && m_soapAction.Find(':') >= 0)
-    {
-      m_soapAction = "\"" + m_soapAction + "\"";
-    }
-    wstring header(L"SOAPAction: ");
-    header += A2CW(m_soapAction);
-    if(!::WinHttpAddRequestHeaders(m_request
-                                  ,header.c_str()
-                                  ,(DWORD)header.size()
-                                  ,WINHTTP_ADDREQ_FLAG_ADD | 
-                                   WINHTTP_ADDREQ_FLAG_REPLACE))
-    {
-      // Log error but continue. Most SOAP-XML has the action in the header or the root node
-      ErrorLog(__FUNCTION__,"SOAPAction NOT set. Error [%d] %s");
-    }
-    DETAILLOG("Header => %S",header.c_str());
-  }
-
   if(m_terminalServices)
   {
     // Try to get the TerminalServices desktop session number
@@ -1124,20 +1059,9 @@ HTTPClient::AddExtraHeaders()
     DWORD pid = GetCurrentProcessId();
     if(ProcessIdToSessionId(pid,&session))
     {
-      wchar_t number[20];
-      _itow_s(session,number,20,10);
-      wstring remDesktop = L"RemoteDesktop: " + wstring(number);
-      if(!::WinHttpAddRequestHeaders(m_request
-                                    ,remDesktop.c_str()
-                                    ,(DWORD)remDesktop.size()
-                                    ,WINHTTP_ADDREQ_FLAG_ADD | 
-                                     WINHTTP_ADDREQ_FLAG_REPLACE))
-      {
-        // Log error and continue with fingers crossed. 
-        // Result will most probably not work on RDP/Citrix sessions
-        ErrorLog(__FUNCTION__,"RemoteDesktop NOT set. Error [%d] %s");
-      }
-      DETAILLOG("Header => %S",remDesktop.c_str());
+      char number[20];
+      _itoa_s(session,number,20,10);
+      AddHeader("RemoteDesktop",number);
     }
   }
 }
@@ -1145,30 +1069,53 @@ HTTPClient::AddExtraHeaders()
 void
 HTTPClient::AddCookieHeaders()
 {
-  // Remove previous cookies
-  wstring cookie(L"Cookie:");
-  WinHttpAddRequestHeaders(m_request
-                          ,cookie.c_str()
-                          ,(DWORD)cookie.size()
-                          ,WINHTTP_ADDREQ_FLAG_REPLACE);
-
   if(m_cookies.GetSize())
   {
-    USES_CONVERSION;
+    AddHeader("Cookie",m_cookies.GetCookieText());
+  }
+}
 
-    // Add our cookies, appended together
-    CString cookieText = "Cookie: " + m_cookies.GetCookieText();
-    wstring cookieStr  = A2CW(cookieText);
+// Add OAuth2 authorization if configured for this call
+bool
+HTTPClient::AddOAuth2authorization()
+{
+  bool result = false;
 
-    if(!::WinHttpAddRequestHeaders(m_request
-                                  ,cookieStr.c_str()
-                                  ,(DWORD)cookieStr.size()
-                                  ,WINHTTP_ADDREQ_FLAG_ADD|WINHTTP_ADDREQ_FLAG_REPLACE))
+  if(m_oauthCache && m_oauthSession)
+  {
+    XString token = m_oauthCache->GetBearerToken(m_oauthSession);
+    if(!token.IsEmpty())
     {
-      // Log error and continue. Some cookies are optional (e.g. advertorials)
-      ErrorLog(__FUNCTION__,"Cookie headers NOT set. Error [%d] %s");
+      XString bearerToken("Bearer ");
+      bearerToken += token;
+      AddHeader("Authorization",bearerToken);
+      m_lastBearerToken = token;
+      result = true;
     }
-    DETAILLOG("Header => %S",cookieStr.c_str());
+  }
+  return result;
+}
+
+void 
+HTTPClient::FlushAllHeaders()
+{
+  // Set all of our headers
+  USES_CONVERSION;
+  for(auto& head : m_requestHeaders)
+  {
+    XString header = head.first + ":" + head.second;
+    wstring theHeader = A2CW(header);
+
+    DWORD modifiers = WINHTTP_ADDREQ_FLAG_ADD | WINHTTP_ADDREQ_FLAG_REPLACE;
+    if(!::WinHttpAddRequestHeaders(m_request
+                                  ,theHeader.c_str()
+                                  ,(DWORD)theHeader.size()
+                                  ,modifiers))
+    {
+      // Log error but continue. A lot of headers are optional to a HTTP call
+      ErrorLog(__FUNCTION__,"Request headers NOT set. Error [%d] %s");
+    }
+    DETAILLOG("Header => %S",theHeader.c_str());
   }
 }
 
@@ -1241,39 +1188,6 @@ HTTPClient::AddPreEmptiveAuthorization()
   }
 }
 
-// Add OAuth2 authorization if configured for this call
-bool
-HTTPClient::AddOAuth2authorization()
-{
-  bool result = false;
-
-  if(m_oauthCache && m_oauthSession)
-  {
-    CString token = m_oauthCache->GetBearerToken(m_oauthSession);
-    if(!token.IsEmpty())
-    {
-      USES_CONVERSION;
-      CString auth("Authorization: Bearer ");
-      auth += token;
-      wstring header = A2CW(auth);
-
-      if(!::WinHttpAddRequestHeaders(m_request
-                                    ,header.c_str()
-                                    ,(DWORD)header.size()
-                                    ,WINHTTP_ADDREQ_FLAG_ADD | 
-                                     WINHTTP_ADDREQ_FLAG_REPLACE))
-      {
-        ERRORLOG("Cannot add OAuth2 bearer token as 'Authorization' header");
-      }
-      else
-      {
-        result = true;
-      }
-    }
-  }
-  return result;
-}
-
 void
 HTTPClient::ResetOAuth2Session()
 {
@@ -1302,11 +1216,11 @@ HTTPClient::AddWebSocketUpgrade()
   }
 }
 
-CString
+XString
 HTTPClient::GetResultHeader(DWORD p_header,DWORD p_index)
 {
   DWORD dwSize = 0;
-  CString result;
+  XString result;
 
   // Get the result size
   BOOL bResult = ::WinHttpQueryHeaders(m_request,
@@ -1349,7 +1263,7 @@ HTTPClient::ProcessResultCookies()
 {
   m_resultCookies.Clear();
 
-  CString header = GetResultHeader(WINHTTP_QUERY_COOKIE,WINHTTP_NO_HEADER_INDEX);
+  XString header = GetResultHeader(WINHTTP_QUERY_COOKIE,WINHTTP_NO_HEADER_INDEX);
   m_resultCookies.AddCookie(header);
 
   unsigned ind = 0;
@@ -1608,7 +1522,7 @@ HTTPClient::SendBodyData()
                                    ,(DWORD)length
                                    ,&dwWritten))
             {
-              CString msg;
+              XString msg;
               msg.Format("Write body: Buffer part [%d]. Error [%%d] %%s",part + 1);
               ErrorLog(__FUNCTION__,(char*) msg.GetString());
               break;
@@ -1703,6 +1617,7 @@ HTTPClient::ReceiveResponseData()
   else
   {
     ReceiveResponseDataBuffer();
+    ProcessChunkedEncoding();
   }
 }
 
@@ -1728,6 +1643,7 @@ HTTPClient::ReceiveResponseDataFile()
 
   do 
   {
+    dwSize = 0;
     if(WinHttpQueryDataAvailable(m_request,&dwSize))
     {
       if(dwSize)
@@ -1740,7 +1656,7 @@ HTTPClient::ReceiveResponseDataFile()
           DWORD dwWritten = 0;
           if(!WriteFile(file,response,dwRead,&dwWritten,NULL))
           {
-            CString msg;
+            XString msg;
             msg.Format("Cannot write block to file. Size [%d] Error [%%d] %%s",dwRead);
             ErrorLog(__FUNCTION__,(char*)msg.GetString());
             break;
@@ -1771,6 +1687,7 @@ HTTPClient::ReceiveResponseDataBuffer()
 
   do
   {
+    dwSize = 0;
     if(::WinHttpQueryDataAvailable(m_request,&dwSize))
     {
       if(dwSize)
@@ -1820,11 +1737,83 @@ HTTPClient::ReceiveResponseDataBuffer()
   }
   while (dwSize > 0);
 
-  // Handeling the result
+  // Handling the result
   if(m_response)
   {
     m_response[m_responseLength] = 0;
   }
+}
+
+// Process a chunked response to the 'normal' form
+// Normally WinHTTP already decodes the chunking
+// but cases exist where chunked input still comes in the input buffers
+void
+HTTPClient::ProcessChunkedEncoding()
+{
+  // Check if we received chunked transfer encoding
+  XString encoding = FindHeader("Transfer-encoding");
+  encoding.MakeLower();
+  if(encoding.Find("chunked") < 0)
+  {
+    return;
+  }
+
+  unsigned totalSize = 0;
+  unsigned chunkSize = 0;
+  uchar* writing = m_response;
+  uchar* reading = m_response;
+
+  reading = GetChunkSize(reading,chunkSize);
+  while(chunkSize)
+  {
+    totalSize += chunkSize;
+    // Check that we do not process past the end of the buffer
+    if(totalSize > m_responseLength)
+    {
+      break;
+    }
+
+    // Getting the chunk
+    while(chunkSize--)
+    {
+      *writing++ = *reading++;
+    }
+    *writing = 0;
+    if (*reading == '\r') ++reading;
+    if (*reading == '\n') ++reading;
+
+    reading = GetChunkSize(reading,chunkSize);
+  }
+
+  if(totalSize)
+  {
+    m_responseLength = totalSize;
+  }
+}
+
+// Determine next chunk size in chunked response
+uchar*
+HTTPClient::GetChunkSize(uchar* p_reading,unsigned& p_size)
+{
+  p_size = 0;
+  while(isxdigit(*p_reading))
+  {
+    p_size *= 16;
+    int ch = toupper(*p_reading);
+    if(ch >= 'A')
+    {
+      p_size += (10 + ch - 'A');
+    }
+    else
+    {
+      p_size += (ch - '0');
+    }
+    ++p_reading;
+  }
+  if(*p_reading == '\r') ++p_reading;
+  if(*p_reading == '\n') ++p_reading;
+
+  return p_reading;
 }
 
 void
@@ -1982,7 +1971,7 @@ HTTPClient::ReceivePushEvents()
 
 // Send HTTP to an URL
 bool
-HTTPClient::Send(CString& p_url)
+HTTPClient::Send(XString& p_url)
 {
   AutoCritSec lock(&m_sendSection);
 
@@ -1998,7 +1987,7 @@ HTTPClient::Send(CString& p_url)
 
 // Send HTTP + body to an URL
 bool
-HTTPClient::Send(CString& p_url,CString& p_body)
+HTTPClient::Send(XString& p_url,XString& p_body)
 {
   AutoCritSec lock(&m_sendSection);
 
@@ -2017,7 +2006,7 @@ HTTPClient::Send(CString& p_url,CString& p_body)
 // WARNING: Do the rest of the plumbing yourself!!
 // Otherwise use: Send(HTTPMessage), Send(SOAPMessage) or Send(JSONMessage)
 bool 
-HTTPClient::Send(CString& p_url,void* p_buffer,unsigned p_length)
+HTTPClient::Send(XString& p_url,void* p_buffer,unsigned p_length)
 {
   AutoCritSec lock(&m_sendSection);
 
@@ -2037,9 +2026,9 @@ HTTPClient::Send(CString& p_url,void* p_buffer,unsigned p_length)
 
 // Send to an URL to GET a file in a buffer
 bool
-HTTPClient::Send(CString&    p_url
+HTTPClient::Send(XString&    p_url
                 ,FileBuffer* p_buffer
-                ,CString*    p_contentType /*=nullptr*/
+                ,XString*    p_contentType /*=nullptr*/
                 ,Cookies*    p_cookies     /*=nullptr*/
                 ,HeaderMap*  p_headers     /*=nullptr*/)
 {
@@ -2060,7 +2049,7 @@ HTTPClient::Send(CString&    p_url
   m_verb = "GET";
 
   // Reset as far as needed
-  m_headers.clear();
+  m_requestHeaders.clear();
   m_cookies.Clear();
 
   // Using our parameters (if any)
@@ -2146,12 +2135,9 @@ HTTPClient::Send(HTTPMessage* p_msg)
   p_msg->SetBody(m_response,m_responseLength);
   p_msg->SetCookies(m_resultCookies);
   // Getting all headers from the answer
-  if(m_readAllHeaders)
+  for(HeaderMap::iterator it = m_responseHeaders.begin(); it != m_responseHeaders.end(); ++it)
   {
-    for(ResponseMap::iterator it = m_respHeaders.begin(); it != m_respHeaders.end(); ++it)
-    {
-      p_msg->AddHeader(it->first,it->second);
-    }
+    p_msg->AddHeader(it->first,it->second);
   }
   // Set result
   p_msg->SetStatus(m_status);
@@ -2196,13 +2182,13 @@ HTTPClient::Send(SOAPMessage* p_msg)
   TestReconnect();
 
   // Setting members for posting soap-xml
-  CString verb("POST");
+  XString verb("POST");
   SetVerb(verb);
   
   // Use the signing/encryption options
   InitSecurity();
   XMLEncryption security = (XMLEncryption) m_securityLevel;
-  CString password = m_enc_password;
+  XString password = m_enc_password;
   if(security != XMLEncryption::XENC_Plain)
   {
     // Whole client is in security mode
@@ -2224,7 +2210,7 @@ HTTPClient::Send(SOAPMessage* p_msg)
 
   // Test sending of a Unicode posting
   // Place soap message on the stack and set it as a body
-  CString soap;
+  XString soap;
   uchar* buffer = nullptr;
   int    length = 0;
 
@@ -2240,7 +2226,7 @@ HTTPClient::Send(SOAPMessage* p_msg)
 
     if(TryCreateWideString(soap,"",p_msg->GetSendBOM(),&buffer,length))
     {
-      m_contentType = p_msg->GetContentType() + "; charset=utf-16";
+      m_contentType = SetFieldInHTTPHeader(p_msg->GetContentType(),"charset","utf-16");
       SetBody(buffer,length);
     }
     else
@@ -2253,35 +2239,51 @@ HTTPClient::Send(SOAPMessage* p_msg)
   {
     soap = p_msg->GetSoapMessage();
     m_contentType = p_msg->GetContentType();
-    XMLEncoding encoding = p_msg->GetEncoding();
+    StringEncoding encoding = p_msg->GetEncoding();
 
-    // Take care of character encoding
-    int acp = -1;
-    switch(encoding)
+    if(FindCharsetInContentType(m_contentType).IsEmpty())
     {
-      case XMLEncoding::ENC_Plain:   acp =    -1; break; // Find Active Code Page
-      case XMLEncoding::ENC_UTF8:    acp = 65001; break; // See ConvertWideString.cpp
-      case XMLEncoding::ENC_UTF16:   acp =  1200; break; // See ConvertWideString.cpp
-      case XMLEncoding::ENC_ISO88591:acp = 28591; break; // See ConvertWideString.cpp
-      default:                       break;
+      // Take care of character encoding
+      int acp = -1;
+      switch(encoding)
+      {
+        case StringEncoding::ENC_Plain:   acp = -1;    break; // Find Active Code Page
+        case StringEncoding::ENC_UTF8:    acp = 65001; break; // See ConvertWideString.cpp
+        case StringEncoding::ENC_UTF16:   acp = 1200;  break; // See ConvertWideString.cpp
+        case StringEncoding::ENC_ISO88591:acp = 28591; break; // See ConvertWideString.cpp
+        default:                       break;
+      }
+      m_contentType = SetFieldInHTTPHeader(m_contentType,"charset",CodepageToCharset(acp));
     }
-    m_contentType.AppendFormat("; charset=%s",CodepageToCharset(acp).GetString());
     SetBody(soap);
   }
 
   // Transfer all headers to the client
   AddMessageHeaders(p_msg);
 
-  // For Plain-Old-Soap: make a SOAPAction header
-  if((p_msg->GetSoapVersion() < SoapVersion::SOAP_12) && m_soapAction.IsEmpty())
+  // Create a SOAPAction header value
+  XString soapAction(m_soapAction);
+  if(soapAction.IsEmpty())
   {
-    m_soapAction = p_msg->GetNamespace();
-
-    if(!m_soapAction.IsEmpty() && m_soapAction.Right(1) != "/" && m_soapAction.Right(1) != "\\")
+    soapAction += p_msg->GetSoapAction();
+    if(soapAction.Find('/') < 0)
     {
-      m_soapAction += "/";
+      XString namesp = p_msg->GetNamespace();
+      if(!namesp.IsEmpty() && namesp.Right(1).Compare("/"))
+      {
+        namesp += "/";
+      }
+      soapAction = namesp + soapAction;
     }
-    m_soapAction += p_msg->GetSoapAction();
+  }
+  // Apply the SOAPAction header value to the appropriate HTTP header
+  if(p_msg->GetSoapVersion() < SoapVersion::SOAP_12) 
+  {
+    AddHeader("SOAPAction",soapAction);
+  }
+  else // SOAP 1.2
+  {
+    m_contentType = SetFieldInHTTPHeader(m_contentType,"action",m_soapAction);
   }
 
   // Set cookies
@@ -2294,12 +2296,14 @@ HTTPClient::Send(SOAPMessage* p_msg)
   bool result = Send();
 
   // Headers from the answer
-  CString nosniff     = FindHeader("X-Content-Type-Options");
-  CString charset     = FindCharsetInContentType(m_contentType);
+  XString nosniff     = FindHeader("X-Content-Type-Options");
+  XString charset     = FindCharsetInContentType(m_contentType);
 
   // Process our answer
   p_msg->Reset();
-  CString answer;
+  p_msg->SetStatus(m_status);
+
+  XString answer;
   bool sendBom = false;
   if(charset.Left(6).CompareNoCase("utf-16") == 0)
   {
@@ -2311,7 +2315,7 @@ HTTPClient::Send(SOAPMessage* p_msg)
     else
     {
       // SET SOAP FAULT
-      CString message;
+      XString message;
       message.Format("Cannot convert UTF-16 message");
       p_msg->SetFault("Server","Charset",message,"Possibly unknown UNICODE charset, or non-standard machine charset");
       result = false;
@@ -2327,7 +2331,7 @@ HTTPClient::Send(SOAPMessage* p_msg)
       if(!TryConvertWideString(m_response,m_responseLength,"",answer,sendBom))
       {
         // SET SOAP FAULT
-        CString message;
+        XString message;
         message.Format("Unknown charset from server: %s",charset.GetString());
         p_msg->SetFault("Server","Charset",message,"Possibly unknown UNICODE charset, or non-standard machine charset");
         answer.Empty();
@@ -2348,9 +2352,10 @@ HTTPClient::Send(SOAPMessage* p_msg)
   }
 
   // Keep response as new body. Might contain an error!!
+  SoapVersion oldVersion = p_msg->GetSoapVersion();
   p_msg->ParseMessage(answer);
 
-  CString soapAction = p_msg->GetSoapAction();
+  soapAction = p_msg->GetSoapAction();
   if(!soapAction.IsEmpty())
   {
     DETAILLOG("Incoming SOAP answer: %s",soapAction.GetString());
@@ -2359,12 +2364,9 @@ HTTPClient::Send(SOAPMessage* p_msg)
   p_msg->SetCookies(m_resultCookies);
 
   // Getting all headers from the answer
-  if(m_readAllHeaders)
+  for(HeaderMap::iterator it = m_responseHeaders.begin(); it != m_responseHeaders.end(); ++it)
   {
-    for(ResponseMap::iterator it = m_respHeaders.begin(); it != m_respHeaders.end(); ++it)
-    {
-      p_msg->AddHeader(it->first,it->second);
-    }
+    p_msg->AddHeader(it->first,it->second);
   }
 
   // Only check the answer in case of a correct HTTP answer
@@ -2377,9 +2379,20 @@ HTTPClient::Send(SOAPMessage* p_msg)
   }
   else
   {
+    XString response;
+    if(m_response)
+    {
+      response = m_response;
+      response += ". ";
+    }
+    if(m_lastError >= WINHTTP_ERROR_BASE && m_lastError <= WINHTTP_ERROR_LAST)
+    {
+      response.AppendFormat("%s. Error number [%d]",GetHTTPErrorText(m_lastError).GetString(),m_lastError);
+    }
     // In case of an error
+    p_msg->SetSoapVersion(oldVersion);
     p_msg->Reset();
-    p_msg->SetFault("Client","Send error","HTTPClient send result",(const char*)m_response);
+    p_msg->SetFault("Client","Send error","HTTPClient send result",response);
   }
 
   // Freeing Unicode UTF-16 buffer
@@ -2421,7 +2434,7 @@ HTTPClient::Send(JSONMessage* p_msg)
   TestReconnect();
 
   // Set the client properties before Send()
-  CString json;
+  XString json;
   uchar* buffer = nullptr;
   int    length = 0;
 
@@ -2433,14 +2446,14 @@ HTTPClient::Send(JSONMessage* p_msg)
   // Preparing the body of the transmission
   if(m_sendUnicode || 
      p_msg->GetSendUnicode() || 
-     p_msg->GetEncoding() == JsonEncoding::JENC_UTF16)
+     p_msg->GetEncoding() == StringEncoding::ENC_UTF16)
   {
     // SEND AS 16 BITS UTF MESSAGE
     p_msg->SetSendUnicode(true);
-    json = p_msg->GetJsonMessage(JsonEncoding::JENC_Plain);
+    json = p_msg->GetJsonMessage(StringEncoding::ENC_Plain);
     if(TryCreateWideString(json,"",p_msg->GetSendBOM(),&buffer,length))
     {
-      m_contentType = p_msg->GetContentType() + "; charset=utf-16";
+      m_contentType = SetFieldInHTTPHeader(p_msg->GetContentType(),"charset","utf-16");
       SetBody(buffer,length);
     }
     else
@@ -2453,20 +2466,20 @@ HTTPClient::Send(JSONMessage* p_msg)
   {
     // SEND IN OTHER ENCODINGS
     m_contentType = p_msg->GetContentType();
-    JsonEncoding encoding = p_msg->GetEncoding();
+    StringEncoding encoding = p_msg->GetEncoding();
     json = p_msg->GetJsonMessageWithBOM(encoding);
 
     // Take care of character encoding
     int acp = -1;
     switch(encoding)
     {
-      case JsonEncoding::JENC_Plain:   acp =    -1; break; // Find Active Code Page
-      case JsonEncoding::JENC_UTF8:    acp = 65001; break; // See ConvertWideString.cpp
-      case JsonEncoding::JENC_UTF16:   acp =  1200; break; // See ConvertWideString.cpp
-      case JsonEncoding::JENC_ISO88591:acp = 28591; break; // See ConvertWideString.cpp
-      default:                         break;
+      case StringEncoding::ENC_Plain:   acp =    -1; break; // Find Active Code Page
+      case StringEncoding::ENC_UTF8:    acp = 65001; break; // See ConvertWideString.cpp
+      case StringEncoding::ENC_UTF16:   acp =  1200; break; // See ConvertWideString.cpp
+      case StringEncoding::ENC_ISO88591:acp = 28591; break; // See ConvertWideString.cpp
+      default:                                       break;
     }
-    m_contentType.AppendFormat("; charset=%s",CodepageToCharset(acp).GetString());
+    m_contentType = SetFieldInHTTPHeader(m_contentType,"charset",CodepageToCharset(acp));
     SetBody(json);
   }
 
@@ -2502,15 +2515,15 @@ void
 HTTPClient::ProcessJSONResult(JSONMessage* p_msg,bool& p_result)
 {
   // Headers from the answer
-  CString nosniff = FindHeader("X-Content-Type-Options");
-  CString charset = FindCharsetInContentType(m_contentType);
+  XString nosniff = FindHeader("X-Content-Type-Options");
+  XString charset = FindCharsetInContentType(m_contentType);
 
   // Process our answer, Forget what we did send
   p_msg->Reset();
 
   // Prepare the answer
-  CString answer;
-  JsonEncoding encoding = JsonEncoding::JENC_UTF8;
+  XString answer;
+  StringEncoding encoding = StringEncoding::ENC_UTF8;
   bool doBom = false;
   int uni = IS_TEXT_UNICODE_UNICODE_MASK;  // Intel/AMD processors
 
@@ -2521,12 +2534,12 @@ HTTPClient::ProcessJSONResult(JSONMessage* p_msg,bool& p_result)
     if(TryConvertWideString(m_response,m_responseLength,"",answer,doBom))
     {
       p_msg->SetSendBOM(doBom);
-      encoding = JsonEncoding::JENC_Plain;
+      encoding = StringEncoding::ENC_Plain;
     }
     else
     {
-      // SET SOAP FAULT
-      CString message;
+      // SET ERROR STATE
+      XString message;
       message.Format("Cannot convert UTF-16 message");
       p_msg->SetLastError(message);
       p_msg->SetErrorstate(true);
@@ -2541,12 +2554,12 @@ HTTPClient::ProcessJSONResult(JSONMessage* p_msg,bool& p_result)
     if(TryConvertWideString(m_response,m_responseLength,"",answer,doBom))
     {
       p_msg->SetSendBOM(doBom);
-      encoding = JsonEncoding::JENC_Plain;
+      encoding = StringEncoding::ENC_Plain;
     }
     else
     {
       // SET ERROR STATE
-      CString message;
+      XString message;
       message.Format("Unknown charset from server: %s",charset.GetString());
       p_msg->SetLastError(message);
       p_msg->SetErrorstate(true);
@@ -2558,16 +2571,16 @@ HTTPClient::ProcessJSONResult(JSONMessage* p_msg,bool& p_result)
   {
     // Sender forces to not sniffing
     // So assume the standard codepages are used (ACP=1252, UTF-8 or ISO-8859-1)
-    CString currentCP = CodepageToCharset(GetACP());
+    XString currentCP = CodepageToCharset(GetACP());
 
     // Other special cases of the charset
     if(charset.Left(currentCP.GetLength()).CompareNoCase(currentCP) == 0)
     {
-      encoding = JsonEncoding::JENC_Plain;
+      encoding = StringEncoding::ENC_Plain;
     }
     else if(charset.Left(10).CompareNoCase("iso-8859-1") == 0)
     {
-      encoding = JsonEncoding::JENC_ISO88591;
+      encoding = StringEncoding::ENC_ISO88591;
     }
     // Answer is the raw response
     answer = ((const char*)m_response);
@@ -2580,12 +2593,9 @@ HTTPClient::ProcessJSONResult(JSONMessage* p_msg,bool& p_result)
   // Keep cookies
   p_msg->SetCookies(m_resultCookies);
   // Getting all headers from the answer
-  if(m_readAllHeaders)
+  for(HeaderMap::iterator it = m_responseHeaders.begin(); it != m_responseHeaders.end(); ++it)
   {
-    for(ResponseMap::iterator it = m_respHeaders.begin(); it != m_respHeaders.end(); ++it)
-    {
-      p_msg->AddHeader(it->first,it->second);
-    }
+    p_msg->AddHeader(it->first,it->second);
   }
   // Reset our input buffer
   m_buffer     = NULL;
@@ -2597,7 +2607,7 @@ bool
 HTTPClient::SendAsJSON(SOAPMessage* p_msg)
 {
   // Try to get a JSON url + parameters
-  CString url = p_msg->GetJSON_URL();
+  XString url = p_msg->GetJSON_URL();
   if(url.IsEmpty())
   {
     // Probably one or more complex objects
@@ -2622,10 +2632,10 @@ HTTPClient::SendAsJSON(SOAPMessage* p_msg)
   // Most definitely we want a JSON back
   m_contentType = "application/json";
   m_bodyLength  = 0;
-  m_body        = "";
+  m_body        = (void*) "";
 
   // Reset as far as needed
-  m_headers.clear();
+  m_requestHeaders.clear();
   m_cookies.Clear();
 
   // Using our parameters (if any)
@@ -2653,16 +2663,16 @@ HTTPClient::SendAsJSON(SOAPMessage* p_msg)
   }
   else
   {
-    CString status;
+    XString status;
     status.Format("Webserver returned status: %d",m_status);
-    CString response = (LPCTSTR)m_response;
+    XString response = (LPCTSTR)m_response;
     p_msg->SetFault("JSON-GET","Server",status,response);
   }
   return result;
 }
 
 EventSource*
-HTTPClient::CreateEventSource(CString p_url)
+HTTPClient::CreateEventSource(XString p_url)
 {
   if(m_eventSource)
   {
@@ -2673,7 +2683,7 @@ HTTPClient::CreateEventSource(CString p_url)
 
 // Start server push-event stream on this url
 bool
-HTTPClient::StartEventStream(CString& p_url)
+HTTPClient::StartEventStream(XString& p_url)
 {
   AutoCritSec lock(&m_sendSection);
 
@@ -2694,7 +2704,7 @@ HTTPClient::StartEventStream(CString& p_url)
 bool
 HTTPClient::DoRedirectionAfterSend()
 {
-  CString redirURL = GetResultHeader(WINHTTP_QUERY_LOCATION, 0);
+  XString redirURL = GetResultHeader(WINHTTP_QUERY_LOCATION, 0);
   if(!redirURL.IsEmpty())
   {
     m_url = redirURL;
@@ -2709,7 +2719,7 @@ HTTPClient::SendAndRedirect()
 {
   bool result = false;
   bool redirecting = false;
-  CString redirURL;
+  XString redirURL;
 
   do 
   {
@@ -2720,7 +2730,7 @@ HTTPClient::SendAndRedirect()
     {
       switch(m_status)
       {
-        case HTTP_STATUS_AMBIGUOUS:         if(m_verb != "HEAD")
+        case HTTP_STATUS_AMBIGUOUS:         if(m_verb.Compare("HEAD") != 0)
                                             {
                                               redirecting = DoRedirectionAfterSend();
                                             }
@@ -2795,7 +2805,7 @@ HTTPClient::Send()
   switch(m_useProxy)
   {
     case ProxyType::PROXY_IEPROXY:  // Use explicit proxy from settings 
-    case ProxyType::PROXY_MYPROXY:  // Use explicit proxy from web.config
+    case ProxyType::PROXY_MYPROXY:  // Use explicit proxy from Marlin.config
                                     if(!m_proxy.IsEmpty())
                                     {
                                       CrackedURL url(m_proxy);
@@ -2814,6 +2824,14 @@ HTTPClient::Send()
     LogTheSend(server,port);
   }
 
+  // Check on localhost for development systems.
+  // IIS has a problem to service 'localhost' directly and can lead
+  // to system 'hangs' for up to 8 seconds.
+  if(_wcsicmp(server.c_str(),L"localhost") == 0)
+  {
+    server = L"127.0.0.1";
+  }
+
   // First: do the connection to the server:port pair
   // Connection could have been opened by earlier Send
   if(m_connect == NULL)
@@ -2822,7 +2840,7 @@ HTTPClient::Send()
     m_connect = WinHttpConnect(m_session,server.c_str(),(INTERNET_PORT)port,0);
     if(m_connect == NULL)
     {
-      CString msg;
+      XString msg;
       msg.Format("Cannot connect to [%s:%d] Error [%%d] %%s",W2CA(server.c_str()),port);
       ErrorLog(__FUNCTION__,msg);
       return false;
@@ -2852,7 +2870,7 @@ HTTPClient::Send()
                                 ,flags);
   if(m_request == NULL)
   {
-    CString msg;
+    XString msg;
     msg.Format("Cannot open a HTTP request for a [%s %s] Error [%%d] %%s",m_verb.GetString(),m_url.GetString());
     ErrorLog(__FUNCTION__,msg);
     return false;
@@ -2888,8 +2906,10 @@ HTTPClient::Send()
   AddExtraHeaders();
   // Add WebSocket preparation
   AddWebSocketUpgrade();
-  // Always add content length
+  // Always add OUR Content-length header
   AddLengthHeader();
+  // Now flush all headers to the WinHTTP client
+  FlushAllHeaders();
 
   // If always using a client certificate, set it upfront
   if(m_certPreset)
@@ -2921,7 +2941,7 @@ HTTPClient::Send()
     m_lastError = 0;
 
     // Clearing the response headers
-    m_respHeaders.clear();
+    m_responseHeaders.clear();
     m_contentType.Empty();
 
     // Send the header only
@@ -3061,11 +3081,8 @@ HTTPClient::Send()
           // Getting our results
           ProcessResultCookies();
 
-          // Optionally getting all response headers
-          if(m_readAllHeaders || MUSTLOG(HLL_LOGBODY))
-          {
-            ReadAllResponseHeaders();
-          }
+          // Get all response headers
+          ReadAllResponseHeaders();
 
           if(m_pushEvents)
           {
@@ -3113,7 +3130,7 @@ HTTPClient::Send()
   DETAILLOG("Returned HTTP status: %d:%s",m_status,GetHTTPStatusText(m_status));
 
   // See if we must do 'gzip' decompression
-  CString compress = ReadHeaderField(WINHTTP_QUERY_CONTENT_ENCODING);
+  XString compress = ReadHeaderField(WINHTTP_QUERY_CONTENT_ENCODING);
   if(compress.CompareNoCase("gzip") == 0)
   {
     // DECompress in-memory with ZLib from a 'gzip' HTTP buffer 
@@ -3129,7 +3146,24 @@ HTTPClient::Send()
       {
         m_response[ind] = out_data[ind];
       }
+      m_response[m_responseLength] = 0;
       DETAILLOG("Unzipped gzip content from [%lu] to [%lu] (%d %%)",before,m_responseLength,(100 * before)/m_responseLength);
+
+      // Replace the already read response header for the length of the content
+      HeaderMap::iterator it = m_responseHeaders.find("Content-length");
+      if(it != m_responseHeaders.end())
+      {
+        XString newlen;
+        newlen.Format("%d",m_responseLength);
+        it->second = newlen;
+      }
+
+      // Remove content-encoding
+      it = m_responseHeaders.find("Content-Encoding");
+      if(it != m_responseHeaders.end())
+      {
+        m_responseHeaders.erase(it);
+      }
     }
   }
 
@@ -3163,12 +3197,12 @@ HTTPClient::LogTheSend(wstring& p_server,int p_port)
   }
 
   USES_CONVERSION;
-  CString proxy;
-  CString server = CW2A(p_server.c_str());
+  XString proxy;
+  XString server = (XString) CW2A(p_server.c_str());
 
 
   // Find secure call
-  CString secure = m_secure && m_scheme.Right(1) != "s" ? "s" : "";
+  XString secure = m_secure && m_scheme.Right(1) != 's' ? "s" : "";
 
   // Log in full, do the raw logging call directly
   m_log->AnalysisLog("HTTPClient::Send",LogType::LOG_INFO,true
@@ -3201,38 +3235,41 @@ HTTPClient::TraceTheSend()
   // Before showing the request we show the configuration of the HTTP channel
   if(MUSTLOG(HLL_TRACE))
   {
-    m_trace->Trace("BEFORE SENDING",m_session,m_request);
+    if(!m_trace)
+    {
+      m_trace = new HTTPClientTracing(this);
+    }
+    m_trace->Trace((char*)"BEFORE SENDING",m_session,m_request);
   }
 
   // THE HTTP HEADER LINE
 
-  CString header;
+  XString header;
   m_log->AnalysisLog(__FUNCTION__,LogType::LOG_TRACE,true,"Outgoing");
-  header.Format("%s %s%s://%s:%d%s HTTP/1.1"
+  header.Format("%s %s://%s:%d%s HTTP/1.1"
                 ,m_verb.GetString()
                 ,m_scheme.GetString()
-                ,m_secure ? "s" : ""
                 ,m_server.GetString()
                 ,m_port
                 ,m_url.GetString());
   m_log->BareStringLog(header, header.GetLength());
 
-  // TRACE ALL HEADERS
+  // TRACE ALL INTERNAL STATES
 
-  header.Format("Host: %s",m_server.GetString());
+  header.Format("INTERNAL -> Host: %s",m_server.GetString());
   m_log->BareStringLog(header.GetString(),header.GetLength());
-  header.Format("Content-Length: %lu",m_bodyLength);
+  header.Format("INTERNAL -> Content-Length: %lu",m_bodyLength);
   m_log->BareStringLog(header.GetString(),header.GetLength());
-  header.Format("Content-Type: %s",m_contentType.GetString());
+  header.Format("INTERNAL -> Content-Type: %s",m_contentType.GetString());
   m_log->BareStringLog(header.GetString(),header.GetLength());
   if (m_httpCompression)
   {
-    header = "Accept-Encoding: gzip";
+    header = "INTERNAL -> Accept-Encoding: gzip";
     m_log->BareStringLog(header.GetString(),header.GetLength());
   }
   if (m_soapAction.GetLength())
   {
-    header.Format("SOAPAction: %s",m_soapAction.GetString());
+    header.Format("INTERNAL -> SOAPAction: %s",m_soapAction.GetString());
     m_log->BareStringLog(header.GetString(),header.GetLength());
   }
   if (m_terminalServices)
@@ -3241,19 +3278,22 @@ HTTPClient::TraceTheSend()
     DWORD pid = GetCurrentProcessId();
     if (ProcessIdToSessionId(pid, &session))
     {
-      header.Format("RemoteDesktop: %d",session);
+      header.Format("INTERNAL -> RemoteDesktop: %d",session);
       m_log->BareStringLog(header.GetString(),header.GetLength());
     }
   }
   if(m_cookies.GetSize())
   {
-    header = "Cookie: " + m_cookies.GetCookieText();
+    header = "INTERNAL -> Cookie: " + m_cookies.GetCookieText();
     m_log->BareStringLog(header.GetString(),header.GetLength());
   }
+  // TRACE ALL HEADERS
+
   // Trace all other extra headers, including CORS headers
-  for(auto& head : m_headers)
+  for(auto& head : m_requestHeaders)
   {
-    header = CW2A(head.c_str());
+    header  = "HTTP Header -> ";
+    header += head.first + ":" + head.second;
     m_log->BareStringLog(header.GetString(),header.GetLength());
   }
 
@@ -3316,12 +3356,12 @@ HTTPClient::TraceTheAnswer()
   // Now here comes the answer
   m_log->AnalysisLog(__FUNCTION__,LogType::LOG_TRACE,false,"Incoming response");
 
-  CString header;
+  XString header;
   header.Format("HTTP/1.1 %d %s",m_status,GetHTTPStatusText(m_status));
   m_log->BareStringLog(header.GetString(),header.GetLength());
 
   // All answer headers
-  for(auto& head : m_respHeaders)
+  for(auto& head : m_responseHeaders)
   {
     header.Format("%s: %s",head.first.GetString(),head.second.GetString());
     m_log->BareStringLog(header,header.GetLength());
@@ -3353,7 +3393,7 @@ HTTPClient::CheckCORSAnswer()
 
   if(!m_corsMethod.IsEmpty())
   {
-    CString methods = FindHeader("Access-Control-Allow-Methods");
+    XString methods = FindHeader("Access-Control-Allow-Methods");
     if(methods.Find(m_corsMethod) < 0)
     {
       // We may NOT use this method on this address
@@ -3365,7 +3405,7 @@ HTTPClient::CheckCORSAnswer()
 
   if(!m_corsHeaders.IsEmpty())
   {
-    CString allowed = FindHeader("Access-Control-Allow-Headers");
+    XString allowed = FindHeader("Access-Control-Allow-Headers");
     if(allowed.Find(m_corsHeaders) < 0)
     {
       // We may NOT use method and headers
@@ -3437,10 +3477,10 @@ HTTPClient::SetClientCertificate(HINTERNET p_request)
   return result;
 }
 
-CString
+XString
 HTTPClient::ReadHeaderField(int p_header)
 {
-  CString field;
+  XString field;
 
   // Get the needed size
   DWORD dwSize = 0;
@@ -3453,7 +3493,7 @@ HTTPClient::ReadHeaderField(int p_header)
 
   if(GetLastError() == ERROR_INSUFFICIENT_BUFFER)
   {
-    WCHAR* buffer = new WCHAR[dwSize];
+    WCHAR* buffer = new WCHAR[dwSize + 1];
     if(buffer)
     {
       if (::WinHttpQueryHeaders(m_request,
@@ -3485,6 +3525,9 @@ HTTPClient::ReadHeaderField(int p_header)
 void
 HTTPClient::ReadAllResponseHeaders()
 {
+  // Clean out previous response headers
+  m_responseHeaders.clear();
+
   DWORD dwSize = 0;
   WinHttpQueryHeaders(m_request
                      ,WINHTTP_QUERY_RAW_HEADERS_CRLF
@@ -3510,27 +3553,24 @@ HTTPClient::ReadAllResponseHeaders()
       else
       {
         USES_CONVERSION;
-        CString all = CW2A(buffer);
-        m_respHeaders.clear();
+        XString all = (XString) CW2A(buffer);
+        m_responseHeaders.clear();
 
         int pos = all.Find("\r\n");
         while(pos >= 0)
         {
           // Getting 1 header from all-headers
-          CString name,value;
-          CString header = all.Left(pos);
+          XString name,value;
+          XString header = all.Left(pos);
           all = all.Mid(pos+2);
 
           // Splitting header in name,value
           int namepos = header.Find(':');
           if(namepos > 0)
           {
-            name  = header.Left(namepos);
-            value = header.Mid(namepos + 1);
-            name.Trim();
-            value.Trim();
-            name.MakeLower();
-            m_respHeaders.insert(std::make_pair(name,value));
+            XString hname   = header.Left(namepos).Trim();
+            XString hvalue  = header.Mid(namepos + 1).Trim();
+            m_responseHeaders.insert(std::make_pair(hname,hvalue));
           }
           // Find next
           pos = all.Find("\r\n");
@@ -3545,13 +3585,12 @@ HTTPClient::ReadAllResponseHeaders()
   }
 }
 
-CString  
-HTTPClient::FindHeader(CString p_header)
+XString  
+HTTPClient::FindHeader(XString p_header)
 {
-  p_header.MakeLower();
-
-  ResponseMap::iterator it = m_respHeaders.find(p_header);
-  if(it != m_respHeaders.end())
+  // Case insensitive find
+  HeaderMap::iterator it = m_responseHeaders.find(p_header);
+  if(it != m_responseHeaders.end())
   {
     return it->second;
   }
@@ -3563,7 +3602,7 @@ void
 HTTPClient::AddMessageHeaders(HTTPMessage* p_message)
 {
   // Clear all headers of the client
-  m_headers.clear();
+  m_requestHeaders.clear();
 
   // Re-align message VERB if necessary through extra header
   if(p_message->GetVerbTunneling())
@@ -3572,7 +3611,7 @@ HTTPClient::AddMessageHeaders(HTTPMessage* p_message)
   }
 
   // Copy headers in different format
-  CString header;
+  XString header;
   HeaderMap* allheaders = p_message->GetHeaderMap();
   for(HeaderMap::iterator it = allheaders->begin(); it != allheaders->end(); ++it)
   {
@@ -3589,10 +3628,10 @@ void
 HTTPClient::AddMessageHeaders(SOAPMessage* p_message)
 {
   // Clear all headers of the client
-  m_headers.clear();
+  m_requestHeaders.clear();
 
   // Copy headers in different format
-  CString header;
+  XString header;
   HeaderMap* allheaders = p_message->GetHeaderMap();
   for(HeaderMap::iterator it = allheaders->begin(); it != allheaders->end(); ++it)
   {
@@ -3604,7 +3643,7 @@ void
 HTTPClient::AddMessageHeaders(JSONMessage* p_message)
 {
   // Clear all headers of the client
-  m_headers.clear();
+  m_requestHeaders.clear();
 
   // Replacing message VERB if necessary through extra header
   if(p_message->GetVerbTunneling())
@@ -3613,7 +3652,7 @@ HTTPClient::AddMessageHeaders(JSONMessage* p_message)
   }
 
   // Copy headers in different format
-  CString header;
+  XString header;
   HeaderMap* allheaders = p_message->GetHeaderMap();
   for(HeaderMap::iterator it = allheaders->begin(); it != allheaders->end(); ++it)
   {
@@ -3623,7 +3662,7 @@ HTTPClient::AddMessageHeaders(JSONMessage* p_message)
 
 // Set and check a client certificate by store/thumbprint pair
 bool
-HTTPClient::SetClientCertificateThumbprint(CString p_store,CString p_thumbprint)
+HTTPClient::SetClientCertificateThumbprint(XString p_store,XString p_thumbprint)
 {
   bool result = false;
 
@@ -3681,21 +3720,16 @@ HTTPClient::SetClientCertificateThumbprint(CString p_store,CString p_thumbprint)
 }
 
 void 
-HTTPClient::SetCORSOrigin(CString p_origin)
+HTTPClient::SetCORSOrigin(XString p_origin)
 {
   // Remember CORS origin
   m_corsOrigin = p_origin;
-  // Must read all response headers for CORS answers
-  if(!m_corsOrigin.IsEmpty())
-  {
-    m_readAllHeaders = true;
-  }
 }
 
 // Simply note the Cross Origin Resource Sharing options
 // for the "OPTIONS" call
 bool 
-HTTPClient::SetCORSPreFlight(CString p_method,CString p_headers)
+HTTPClient::SetCORSPreFlight(XString p_method,XString p_headers)
 {
   if(!m_corsOrigin.IsEmpty())
   {
@@ -3713,7 +3747,7 @@ HTTPClient::SetCORSPreFlight(CString p_method,CString p_headers)
 //////////////////////////////////////////////////////////////////////////
 
 void
-HTTPClient::CheckAnswerSecurity(SOAPMessage* p_msg,CString p_answer,XMLEncryption p_security,CString p_password)
+HTTPClient::CheckAnswerSecurity(SOAPMessage* p_msg,XString p_answer,XMLEncryption p_security,XString p_password)
 {
   if(p_security != p_msg->GetSecurityLevel())
   {
@@ -3733,7 +3767,7 @@ HTTPClient::CheckAnswerSecurity(SOAPMessage* p_msg,CString p_answer,XMLEncryptio
 }
 
 void
-HTTPClient::CheckBodySigning(CString p_password,SOAPMessage* p_message)
+HTTPClient::CheckBodySigning(XString p_password,SOAPMessage* p_message)
 {
   // Restore password
   p_message->SetSecurityPassword(p_password);
@@ -3742,15 +3776,15 @@ HTTPClient::CheckBodySigning(CString p_password,SOAPMessage* p_message)
   XMLElement* sigValue = p_message->FindElement("SignatureValue");
   if(sigValue)
   {
-    CString signature = sigValue->GetValue();
+    XString signature = sigValue->GetValue();
     if(!signature.IsEmpty())
     {
       // Finding the signing method
-      CString method = "sha1"; // Default method
+      XString method = "sha1"; // Default method
       XMLElement* digMethod = p_message->FindElement("DigestMethod");
       if(digMethod)
       {
-        CString usedMethod = p_message->GetAttribute(digMethod,"Algorithm");
+        XString usedMethod = p_message->GetAttribute(digMethod,"Algorithm");
         if(!usedMethod.IsEmpty())
         {
           method = usedMethod;
@@ -3764,11 +3798,11 @@ HTTPClient::CheckBodySigning(CString p_password,SOAPMessage* p_message)
       }
 
       // Finding the reference ID
-      CString signedXML;
+      XString signedXML;
       XMLElement* refer = p_message->FindElement("Reference");
       if(refer)
       {
-        CString uri = p_message->GetAttribute(refer,"URI");
+        XString uri = p_message->GetAttribute(refer,"URI");
         if(!uri.IsEmpty())
         {
           uri = uri.TrimLeft("#");
@@ -3789,7 +3823,7 @@ HTTPClient::CheckBodySigning(CString p_password,SOAPMessage* p_message)
       Crypto sign;
       sign.SetHashMethod(method);
       p_message->SetSigningMethod(sign.GetHashMethod());
-      CString digest = sign.Digest(signedXML,p_password);
+      XString digest = sign.Digest(signedXML,p_password);
 
       if(signature.CompareNoCase(digest) == 0)
       {
@@ -3803,14 +3837,14 @@ HTTPClient::CheckBodySigning(CString p_password,SOAPMessage* p_message)
 }
 
 void
-HTTPClient::DecodeBodyEncryption(CString p_password,SOAPMessage* p_msg,CString p_answer)
+HTTPClient::DecodeBodyEncryption(XString p_password,SOAPMessage* p_msg,XString p_answer)
 {
-  CString crypt = p_msg->GetSecurityPassword();
+  XString crypt = p_msg->GetSecurityPassword();
   p_msg->SetSecurityPassword(p_password);
 
   // Decrypt
   Crypto crypting;
-  CString newBody = crypting.Decryption(crypt,p_password);
+  XString newBody = crypting.Decryption(crypt,p_password);
 
   int beginPos = p_answer.Find("Body>");
   int endPos = p_answer.Find("Body>",beginPos + 2);
@@ -3838,7 +3872,7 @@ HTTPClient::DecodeBodyEncryption(CString p_password,SOAPMessage* p_msg,CString p
     }
 
     // Now re-parse the message
-    CString message = p_answer.Left(beginPos) + newBody + p_answer.Mid(endPos + extra);
+    XString message = p_answer.Left(beginPos) + newBody + p_answer.Mid(endPos + extra);
     p_msg->Reset();
     p_msg->ParseMessage(message);
     p_msg->SetSecurityLevel(XMLEncryption::XENC_Plain);
@@ -3857,15 +3891,15 @@ HTTPClient::DecodeBodyEncryption(CString p_password,SOAPMessage* p_msg,CString p
 }
 
 void
-HTTPClient::DecodeMesgEncryption(CString p_password,SOAPMessage* p_msg,CString p_answer)
+HTTPClient::DecodeMesgEncryption(XString p_password,SOAPMessage* p_msg,XString p_answer)
 {
-  CString crypt = p_msg->GetSecurityPassword();
+  XString crypt = p_msg->GetSecurityPassword();
   // Restore password for return answer
   p_msg->SetSecurityPassword(p_password);
 
   // Decrypt
   Crypto crypting;
-  CString newBody = crypting.Decryption(crypt,p_password);
+  XString newBody = crypting.Decryption(crypt,p_password);
 
   int beginPos = p_answer.Find("Envelope>");
   int endPos = p_answer.Find("Envelope>",beginPos + 2);
@@ -3893,7 +3927,7 @@ HTTPClient::DecodeMesgEncryption(CString p_password,SOAPMessage* p_msg,CString p
     }
 
     // Reparse the envelope
-    CString message = p_answer.Left(beginPos) + newBody + p_answer.Mid(endPos + extra);
+    XString message = p_answer.Left(beginPos) + newBody + p_answer.Mid(endPos + extra);
     p_msg->Reset();
     p_msg->ParseMessage(message);
     p_msg->SetSecurityLevel(XMLEncryption::XENC_Plain);
@@ -4123,11 +4157,11 @@ HTTPClient::ProcessQueueMessage(HTTPMessage* p_message)
 {
   if(Send(p_message))
   {
-    DETAILLOG("Did send queued HTTPMessage to: %s",p_message->GetURL().GetString());
+    DETAILLOG("Did send queued HTTPMessage to: %s",p_message->GetCrackedURL().SafeURL().GetString());
   }
   else
   {
-    ERRORLOG("Error while sending queued HTTPMessage to: %s",p_message->GetURL().GetString());
+    ERRORLOG("Error while sending queued HTTPMessage to: %s",p_message->GetCrackedURL().SafeURL().GetString());
   }
   // End of the line: Remove the queue message
   delete p_message;
@@ -4138,11 +4172,11 @@ HTTPClient::ProcessQueueMessage(SOAPMessage* p_message)
 {
   if(Send(p_message))
   {
-    DETAILLOG("Did send queued SOAPMessage [%s] to: %s",p_message->GetSoapAction().GetString(),p_message->GetURL().GetString());
+    DETAILLOG("Did send queued SOAPMessage [%s] to: %s",p_message->GetSoapAction().GetString(),CrackedURL(p_message->GetURL()).SafeURL().GetString());
   }
   else
   {
-    ERRORLOG("Error while sending queued SOAPMessage [%s] to: %s", p_message->GetSoapAction().GetString(),p_message->GetURL().GetString());
+    ERRORLOG("Error while sending queued SOAPMessage [%s] to: %s", p_message->GetSoapAction().GetString(),CrackedURL(p_message->GetURL()).SafeURL().GetString());
   }
   // End of the line: Remove the queue message
   delete p_message;
@@ -4153,11 +4187,11 @@ HTTPClient::ProcessQueueMessage(JSONMessage* p_message)
 {
   if(Send(p_message))
   {
-    DETAILLOG("Did send queued JSONMessage to: %s",p_message->GetURL().GetString());
+    DETAILLOG("Did send queued JSONMessage to: %s",p_message->GetCrackedURL().SafeURL().GetString());
   }
   else
   {
-    ERRORLOG("Error while sending queued JSONMessage to: %s", p_message->GetURL().GetString());
+    ERRORLOG("Error while sending queued JSONMessage to: %s", p_message->GetCrackedURL().SafeURL().GetString());
   }
   // End of the line: Remove the queue message
   delete p_message;
@@ -4217,6 +4251,16 @@ HTTPClient::EventThreadRunning()
   AddHeader("cache-control: no-cache");
   // Accepts text-event streams
   AddHeader("accept: text/event-stream");
+
+  // Add channel security if so set
+  if(!m_eventSource->GetCookieName().IsEmpty())
+  {
+    XString value;
+    value.Format("%s=%s"
+                 ,m_eventSource->GetCookieName().GetString()
+                 ,m_eventSource->GetCookieValue().GetString());
+    AddHeader("Cookie",value);
+  }
 
   do
   {
@@ -4288,6 +4332,19 @@ HTTPClient::StopClient()
   if(m_eventSource)
   {
     DETAILLOG("Stopping the EventSource");
+    if(m_request)
+    {
+      ERRORLOG("Stopping of the HTTP event-source channel");
+      OnCloseSeen();
+    }
+    for (int i = 0; i < 10; ++i)
+    {
+      Sleep(100);
+      if(m_queueThread == 0)
+      {
+        break;
+      }
+    }
     if(m_queueThread)
     {
       // Only way to cancel from NTDLL.DLL on the HTTP Stack
@@ -4296,13 +4353,6 @@ HTTPClient::StopClient()
       m_queueThread = NULL;
       m_running = false;
       ERRORLOG("Forced stopping of the event-source listner");
-    }
-    if(m_request)
-    {
-      // Close open call
-      WinHttpCloseHandle(m_request);
-      m_request = NULL;
-      ERRORLOG("Forced stopping of the HTTP event-source channel");
     }
     delete m_eventSource;
     m_eventSource = nullptr;

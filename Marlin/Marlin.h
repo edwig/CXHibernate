@@ -12,7 +12,7 @@
 //                          __/ |                                           
 //                         |___/                                            
 //
-// Copyright (c) 2014-2021 ir. W.E. Huisman
+// Copyright (c) 2014-2022 ir. W.E. Huisman
 // All rights reserved
 //
 // MIT License:
@@ -48,6 +48,7 @@ extern const char* PRODUCT_COPYRIGHT;      // Copyright line of the product (c) 
 extern const char* PRODUCT_VERSION;        // Short version string (e.g.: "3.2.0") Release.major.minor ONLY!
 extern const char* PRODUCT_MESSAGES_DLL;   // Filename of the WMI Messages dll.
 extern const char* PRODUCT_SITE;           // Standard base URL absolute path e.g. "/MarlinServer/"
+extern const char* PRODUCT_ADMIN_EMAIL;    // Default administrator to be notified in case of a problem
 
 // Load product and application constants
 // in the constants above

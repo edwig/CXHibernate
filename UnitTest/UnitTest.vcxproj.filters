@@ -13,14 +13,14 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
+    <Filter Include="Configuration">
+      <UniqueIdentifier>{3f40b16c-b9c6-461b-8461-9a13bc815ad8}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Serialization">
+      <UniqueIdentifier>{a51072c2-fc45-489b-ba73-360de9b3448f}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="stdafx.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="targetver.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="TestNumber.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -54,11 +54,17 @@
     <ClInclude Include="Kitten.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="stdafx.h">
+      <Filter>Configuration</Filter>
+    </ClInclude>
+    <ClInclude Include="targetver.h">
+      <Filter>Configuration</Filter>
+    </ClInclude>
+    <ClInclude Include="framework.h">
+      <Filter>Configuration</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="stdafx.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="TestNumber.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -68,61 +74,28 @@
     <ClCompile Include="Master.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Detail_cxh.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Master_cxh.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="TestNumber_cxh.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="Infant.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Infant_cxh.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="NaturalPerson.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="NaturalPerson_cxh.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="Subject.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Subject_cxh.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Supplier.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Supplier_cxh.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="Animal.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Animal_cxh.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Cat.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Cat_cxh.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="Dog.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Dog_cxh.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="Kitten.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Kitten_cxh.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="TEST_OneTable.cpp">
@@ -133,6 +106,42 @@
     </ClCompile>
     <ClCompile Include="TEST_SubTable.cpp">
       <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Animal_cxh.cpp">
+      <Filter>Serialization</Filter>
+    </ClCompile>
+    <ClCompile Include="Cat_cxh.cpp">
+      <Filter>Serialization</Filter>
+    </ClCompile>
+    <ClCompile Include="Detail_cxh.cpp">
+      <Filter>Serialization</Filter>
+    </ClCompile>
+    <ClCompile Include="Dog_cxh.cpp">
+      <Filter>Serialization</Filter>
+    </ClCompile>
+    <ClCompile Include="Infant_cxh.cpp">
+      <Filter>Serialization</Filter>
+    </ClCompile>
+    <ClCompile Include="Kitten_cxh.cpp">
+      <Filter>Serialization</Filter>
+    </ClCompile>
+    <ClCompile Include="Master_cxh.cpp">
+      <Filter>Serialization</Filter>
+    </ClCompile>
+    <ClCompile Include="NaturalPerson_cxh.cpp">
+      <Filter>Serialization</Filter>
+    </ClCompile>
+    <ClCompile Include="Subject_cxh.cpp">
+      <Filter>Serialization</Filter>
+    </ClCompile>
+    <ClCompile Include="Supplier_cxh.cpp">
+      <Filter>Serialization</Filter>
+    </ClCompile>
+    <ClCompile Include="TestNumber_cxh.cpp">
+      <Filter>Serialization</Filter>
+    </ClCompile>
+    <ClCompile Include="stdafx.cpp">
+      <Filter>Configuration</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

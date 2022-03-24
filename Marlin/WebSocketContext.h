@@ -1,5 +1,31 @@
+/////////////////////////////////////////////////////////////////////////////////
+//
+// SourceFile: WebSocketContext.h
+//
+// Marlin Server: Internet server/client
+// 
+// Copyright (c) 2014-2022 ir. W.E. Huisman
+// All rights reserved
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files(the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and / or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions :
+//
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+// THE SOFTWARE.
+//
 #pragma once
-#include <http.h>
 #include <websocket.h>
 
 // Documented by Microsoft on:
@@ -21,8 +47,6 @@ class WebSocketContext
 public:
   WebSocketContext();
  ~WebSocketContext();
-
-  virtual void    SetHandles(HANDLE p_queue,HTTP_REQUEST_ID p_request);
 
   virtual bool    PerformHandshake(_In_  WEB_SOCKET_HTTP_HEADER*  p_clientHeaders,
                                    _In_  ULONG                    p_clientHeadersCount,
@@ -72,7 +96,6 @@ public:
   void SetDisableClientMasking(BOOL p_disable);
   void SetDisableUTF8Checking(BOOL p_disable);
   void SetKeepAliveInterval(ULONG p_interval);
-  void SetRawSocketID(HTTP_RAW_CONNECTION_ID p_id);
   
   // GETTERS
 
@@ -86,11 +109,8 @@ private:
   void Reset();
   bool CreateServerHandle();
 
-  HANDLE                  m_queue  { NULL };
-  HTTP_REQUEST_ID         m_request{ NULL };
   WEB_SOCKET_HANDLE       m_handle { NULL };
-  HTTP_RAW_CONNECTION_ID  m_socket { NULL };
-  CString                 m_subProtocol;
+  XString                 m_subProtocol;
 
   // Buffer parameters
   ULONG m_ws_recv_buffersize      { 4096  };

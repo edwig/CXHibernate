@@ -2,7 +2,7 @@
 //
 // File: SQLRecord.cpp
 //
-// Copyright (c) 1998-2021 ir. W.E. Huisman
+// Copyright (c) 1998-2022 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy of 
@@ -129,7 +129,7 @@ SQLRecord::SetField(int p_num,SQLVariant* p_field,int p_mutationID /*=0*/)
 }
 
 bool
-SQLRecord::SetField(CString p_name,SQLVariant* p_field,int p_mutationID /*=0*/)
+SQLRecord::SetField(XString p_name,SQLVariant* p_field,int p_mutationID /*=0*/)
 {
   return SetField(m_dataSet->GetFieldNumber(p_name),p_field,p_mutationID);
 }
@@ -145,7 +145,7 @@ SQLRecord::GetField(int p_num)
 }
 
 SQLVariant* 
-SQLRecord::GetField(CString p_name)
+SQLRecord::GetField(XString p_name)
 {
   if(m_dataSet)
   {
@@ -303,7 +303,7 @@ SQLRecord::ModifyField(const char* p_name,unsigned short& p_field,int p_mutation
 void
 SQLRecord::ModifyField(const char* p_name,int& p_field,int p_mutationID /*= 0*/)
 {
-  SQLVariant value((long)p_field);
+  SQLVariant value(p_field);
   ModifyField(m_dataSet->GetFieldNumber(p_name), &value, p_mutationID);
 }
 
@@ -378,7 +378,7 @@ SQLRecord::ModifyField(const char* p_name,SQLGuid& p_field,int p_mutationID /*= 
 }
 
 void
-SQLRecord::ModifyField(const char* p_name,CString& p_field,int p_mutationID /*= 0*/)
+SQLRecord::ModifyField(const char* p_name,XString& p_field,int p_mutationID /*= 0*/)
 {
   SQLVariant value(p_field);
   ModifyField(m_dataSet->GetFieldNumber(p_name), &value, p_mutationID);
@@ -416,7 +416,7 @@ SQLRecord::IsModified(int p_num)
 }
 
 bool
-SQLRecord::IsModified(CString p_name)
+SQLRecord::IsModified(XString p_name)
 {
   return IsModified(m_dataSet->GetFieldNumber(p_name));
 }
@@ -539,12 +539,12 @@ SQLRecord::operator[](const char* p_name)
 void
 SQLRecord::XMLSave(XMLMessage* p_msg,XMLElement* p_base)
 {
-  CString recName(dataset_names[g_defaultLanguage][DATASET_RECORD]);
-  CString fldName(dataset_names[g_defaultLanguage][DATASET_FIELD]);
+  XString recName(dataset_names[g_defaultLanguage][DATASET_RECORD]);
+  XString fldName(dataset_names[g_defaultLanguage][DATASET_FIELD]);
 
-  CString idName  = dataset_names[g_defaultLanguage][DATASET_ID];
-  CString typName = dataset_names[g_defaultLanguage][DATASET_TYPE];
-  CString attName = dataset_names[g_defaultLanguage][DATASET_NAME];
+  XString idName  = dataset_names[g_defaultLanguage][DATASET_ID];
+  XString typName = dataset_names[g_defaultLanguage][DATASET_TYPE];
+  XString attName = dataset_names[g_defaultLanguage][DATASET_NAME];
 
   XMLElement* p_elem = p_msg->AddElement(p_base,recName,XDT_String,"");
   if(p_elem)
@@ -552,7 +552,7 @@ SQLRecord::XMLSave(XMLMessage* p_msg,XMLElement* p_base)
     for(unsigned int ind = 0; ind < m_fields.size(); ++ind)
     {
       SQLVariant* var = m_fields[ind]->Current();
-      CString fieldName = m_dataSet->GetFieldName(ind);
+      XString fieldName = m_dataSet->GetFieldName(ind);
       int type = var->GetDataType();
 
       XMLElement* fld = p_msg->AddElement(p_elem,fldName,XDT_String,"");
@@ -560,7 +560,7 @@ SQLRecord::XMLSave(XMLMessage* p_msg,XMLElement* p_base)
       p_msg->SetAttribute(fld,typName,type);
       p_msg->SetAttribute(fld,attName,fieldName);
 
-      CString value;
+      XString value;
       var->GetAsString(value);
       fld->SetValue(value);
     }
@@ -570,8 +570,8 @@ SQLRecord::XMLSave(XMLMessage* p_msg,XMLElement* p_base)
 void
 SQLRecord::XMLLoad(XMLMessage* p_msg,XMLElement* p_base)
 {
-  CString typeName(dataset_names[g_defaultLanguage][DATASET_TYPE]);
-  CString idName  (dataset_names[g_defaultLanguage][DATASET_ID]);
+  XString typeName(dataset_names[g_defaultLanguage][DATASET_TYPE]);
+  XString idName  (dataset_names[g_defaultLanguage][DATASET_ID]);
 
   int ind = 0;
   XMLElement* field = p_msg->GetElementFirstChild(p_base);

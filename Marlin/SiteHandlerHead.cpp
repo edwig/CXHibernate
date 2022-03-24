@@ -4,7 +4,7 @@
 //
 // Marlin Server: Internet server/client
 // 
-// Copyright (c) 2014-2021 ir. W.E. Huisman
+// Copyright (c) 2014-2022 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -59,7 +59,7 @@ SiteHandlerHead::Handle(HTTPMessage* p_message)
   p_message->SetCommand(HTTPCommand::http_response);
   p_message->SetStatus(HTTP_STATUS_OK);
   // Empty the response part. Just to be sure!
-  CString empty;
+  XString empty;
   p_message->GetFileBuffer()->Reset();
   p_message->SetFile(empty);
 

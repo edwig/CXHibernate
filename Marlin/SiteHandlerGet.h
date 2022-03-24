@@ -4,7 +4,7 @@
 //
 // Marlin Server: Internet server/client
 // 
-// Copyright (c) 2014-2021 ir. W.E. Huisman
+// Copyright (c) 2014-2022 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -40,6 +40,6 @@ protected:
   virtual void CleanUp   (HTTPMessage* p_message);
 
   // Filename handlers
-  virtual bool FileNameTransformations(CString& p_filename);
-  virtual bool FileNameRestrictions   (CString& p_filename);
+  virtual bool FileNameTransformations(XString& p_filename);
+  virtual bool FileNameRestrictions   (XString& p_filename);
 };

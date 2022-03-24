@@ -4,7 +4,7 @@
 //
 // Marlin Server: Internet server/client
 // 
-// Copyright (c) 2014-2021 ir. W.E. Huisman
+// Copyright (c) 2014-2022 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -60,10 +60,15 @@ public:
   unsigned GetHashMethod();
   CString  GetHashMethod(unsigned p_hash);
 
-  // ENCRYPT a buffer
+  // ENCRYPT a buffer in AES-256
   CString  Encryption(CString p_input,CString password);
-  // DECRYPT a buffer
+  // DECRYPT a buffer in AES-256
   CString  Decryption(CString p_input,CString password);
+
+  // ENCRYPT a buffer quickly in RC4 through the BCrypt interface
+  CString  FastEncryption(CString p_input, CString password);
+  // DECRYPT a buffer quickly in RC4 through BCrypt interface
+  CString  FastDecryption(CString p_input, CString password);
 
   // Make a MD5 Hash value for a buffer
   CString& Digest(CString& p_buffer,CString& p_password);

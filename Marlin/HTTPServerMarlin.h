@@ -4,7 +4,7 @@
 //
 // Marlin Server: Internet server/client
 // 
-// Copyright (c) 2014-2021 ir. W.E. Huisman
+// Copyright (c) 2014-2022 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -31,7 +31,7 @@
 class HTTPServerMarlin : public HTTPServer
 {
 public:
-  HTTPServerMarlin(CString p_name);
+  HTTPServerMarlin(XString p_name);
   virtual ~HTTPServerMarlin();
 
   // Running the server 
@@ -41,35 +41,37 @@ public:
   // Initialise a HTTP server and server-session
   virtual bool       Initialise();
   // Return a version string
-  virtual CString    GetVersion();
+  virtual XString    GetVersion();
   // Create a site to bind the traffic to
   virtual HTTPSite*  CreateSite(PrefixType    p_type
                                ,bool          p_secure
                                ,int           p_port
-                               ,CString       p_baseURL
+                               ,XString       p_baseURL
                                ,bool          p_subsite  = false
                                ,LPFN_CALLBACK p_callback = nullptr);
   // Delete a site from the remembered set of sites
-  virtual bool       DeleteSite(int p_port,CString p_baseURL,bool p_force = false);
+  virtual bool       DeleteSite(int p_port,XString p_baseURL,bool p_force = false);
   // Receive (the rest of the) incoming HTTP request
   virtual bool       ReceiveIncomingRequest(HTTPMessage* p_message);
   // Create a new WebSocket in the subclass of our server
-  virtual WebSocket* CreateWebSocket(CString p_uri);
+  virtual WebSocket* CreateWebSocket(XString p_uri);
   // Receive the WebSocket stream and pass on the the WebSocket
   virtual void       ReceiveWebSocket(WebSocket* p_socket,HTTP_OPAQUE_ID p_request);
   // Flushing a WebSocket intermediate
-  virtual bool       FlushSocket(HTTP_OPAQUE_ID p_request,CString p_prefix);
+  virtual bool       FlushSocket(HTTP_OPAQUE_ID p_request,XString p_prefix);
   // Sending response for an incoming message
   virtual void       SendResponse(HTTPMessage* p_message);
+  // Sending a response as a chunk
+  virtual void       SendAsChunk(HTTPMessage* p_message,bool p_final = false);
 
   // FUNCTIONS FOR STAND-ALONE SERVER
 
   // Find and make an URL group
-  HTTPURLGroup* FindUrlGroup(CString p_authName
+  HTTPURLGroup* FindUrlGroup(XString p_authName
                             ,ULONG   p_authScheme
                             ,bool    p_cache
-                            ,CString p_realm
-                            ,CString p_domain);
+                            ,XString p_realm
+                            ,XString p_domain);
   // Remove an URLGroup. Called by HTTPURLGroup itself
   void          RemoveURLGroup(HTTPURLGroup* p_group);
 
@@ -81,7 +83,7 @@ protected:
   // Init the stream response
   virtual bool InitEventStream(EventStream& p_stream);
   // Used for canceling a WebSocket for an event stream
-  virtual void CancelRequestStream(HTTP_OPAQUE_ID p_response);
+  virtual void CancelRequestStream(HTTP_OPAQUE_ID p_response,bool p_reset = false);
 
 private:
   // For the handling of the event streams: Sending a chunk to an event stream

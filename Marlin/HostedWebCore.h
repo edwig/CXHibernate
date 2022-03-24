@@ -4,7 +4,7 @@
 //
 // Marlin Server: Internet server/client
 // 
-// Copyright (c) 2014-2021 ir. W.E. Huisman
+// Copyright (c) 2014-2022 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -38,8 +38,8 @@ typedef void(*PFN_SETMETADATA)(void);
 // Names of the application config files
 // You can set these before starting, or they can be
 // taken from the command line of the application
-extern CString g_applicationhost;      // ApplicationHost.config file to use
-extern CString g_webconfig;            // Web.config file to use
+extern XString g_applicationhost;      // ApplicationHost.config file to use
+extern XString g_webconfig;            // Web.config file to use
 
 // Shutdown mode (0=gracefull, 1=immediate forced)
 extern DWORD g_hwcShutdownMode;

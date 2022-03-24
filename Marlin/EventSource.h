@@ -4,7 +4,7 @@
 //
 // Marlin Server: Internet server/client
 // 
-// Copyright (c) 2014-2021 ir. W.E. Huisman
+// Copyright (c) 2014-2022 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -30,7 +30,7 @@
 // 
 // MANUAL FOR EventSource
 //
-// 1: Define  your URL            e.g.  CString url("http://servermachine:1200/TestApp/");
+// 1: Define  your URL            e.g.  XString url("http://servermachine:1200/TestApp/Events");
 // 2: Declare your HTTP Client    e.g.  HTTPClient client;
 // 3: Create  your eventsource as e.g.  EventSource* source = client.CreateEventSource(url);
 // 4: Set the OnOpen handler      e.g.  source->m_onopen    = OnOpen;
@@ -39,13 +39,14 @@
 // 7: Set the OnClose handler     e.g.  source->m_onclose   = OnClose;
 // 8: Set other handlers as well  e.g.  source->AddEventListener("other",OnOther);
 // 9: Define your reconnect time  e.g.  source->SetReconnectionTime(2000);
+// 10: OPTIONALLY: connect pool   e.g.  source->SetThreadPool(p_myPool);
 // 
 // Now turning the client into a listener
 // source->EventSourceInit(false);
 //
 // ... DO THE NORMAL LOGIC OF YOUR APPLICATION
 // ... NOTE: the OnMessage handler starts by way of the threadpool
-//           all other handlers are excuted inplace by the calling thread
+//           all other handlers are executed in-place by the calling thread
 // 
 // At closure time and cleaning up, stop your client
 // client.StopClient();
@@ -74,34 +75,39 @@ typedef enum
 }
 ReadyState;
 
-typedef void(* LPFN_EVENTHANDLER)(ServerEvent* p_event);
+typedef void(* LPFN_EVENTHANDLER)(ServerEvent* p_event,void* p_data);
 
 typedef struct _eventListener
 {
-  CString           m_event;
+  XString           m_event;
   LPFN_EVENTHANDLER m_handler;
   bool              m_capture;
 }
 EventListener;
 
-typedef std::map<CString,EventListener> ListenerMap;
+typedef std::map<XString,EventListener> ListenerMap;
 
 class EventSource
 {
 public:
-  EventSource(HTTPClient* p_client,CString p_url);
+  EventSource(HTTPClient* p_client,XString p_url);
  ~EventSource();
 
   // Init the event source
   bool        EventSourceInit(bool p_withCredentials = false);
-  // Closing the event source. Stopping on next HTTP roundtrip
+  // Closing the event source. Stopping on next HTTP round trip
   void        Close();
-  // Add event listner to the source
-  bool        AddEventListener(CString p_event,LPFN_EVENTHANDLER p_handler,bool p_useCapture = false);
+  // Add event listener to the source
+  bool        AddEventListener(XString p_event,LPFN_EVENTHANDLER p_handler,bool p_useCapture = false);
+  // Add application pointer
+  void        SetApplicationData(void* p_data);
 
   // Setters
   void        SetSerialize(bool p_serialize);
   void        SetReconnectionTime(ULONG p_time);
+  void        SetThreadPool(ThreadPool* p_pool);
+  void        SetDirectMessage(bool p_direct);
+  void        SetSecurity(XString p_cookie,XString p_secret);
 
   // Getters
   ReadyState  GetReadyState();
@@ -109,6 +115,8 @@ public:
   ULONG       GetReconnectionTime();
   bool        GetSerialize();
   ULONG       GetLastEventID();
+  XString     GetCookieName();
+  XString     GetCookieValue();
 
   // Public standard listeners
   LPFN_EVENTHANDLER  m_onopen;      // OPTIONAL
@@ -132,11 +140,11 @@ private:
   // Parse incoming data
   void        Parse(BYTE* p_buffer,unsigned& p_length);
   // Parse buffer in string form
-  void        Parse(CString& p_buffer);
+  void        Parse(XString& p_buffer);
   // Get one line from the incoming buffer
-  bool        GetLine(CString& p_buffer,CString& p_line);
+  bool        GetLine(XString& p_buffer,XString& p_line);
   // Dispatch this event
-  void        DispatchEvent(CString* p_event,ULONG p_id,CString* p_data);
+  void        DispatchEvent(XString* p_event,ULONG p_id,XString* p_data);
 
   // Standard handlers, if all else fails
   void        OnOpen   (ServerEvent* p_event);
@@ -146,15 +154,23 @@ private:
   void        OnComment(ServerEvent* p_event);
   void        OnRetry  (ServerEvent* p_event);
 
-  CString     m_url;
+  XString     m_url;
   bool        m_withCredentials;
   bool        m_serialize;
+  bool        m_ownPool;
+  XString     m_cookie;
+  XString     m_secret;
   ReadyState  m_readyState;
   ULONG       m_reconnectionTime; // No getters
   ULONG       m_lastEventID;      // No getters
   ListenerMap m_listeners;        // All listeners
-  ThreadPool* m_pool;
-  HTTPClient* m_client;
+  ThreadPool* m_pool    { nullptr };
+  HTTPClient* m_client  { nullptr };
+  void*       m_appData { nullptr };
+  bool        m_direct  { false   };
+  // Incoming event
+  XString     m_eventName;
+  XString     m_eventData;
 };
 
 inline ReadyState
@@ -197,4 +213,22 @@ inline ULONG
 EventSource::GetLastEventID()
 {
   return m_lastEventID;
+}
+
+inline void
+EventSource::SetDirectMessage(bool p_direct)
+{
+  m_direct = p_direct;
+}
+
+inline XString
+EventSource::GetCookieName()
+{
+  return m_cookie;
+}
+
+inline XString
+EventSource::GetCookieValue()
+{
+  return m_secret;
 }

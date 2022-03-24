@@ -1,8 +1,41 @@
+/////////////////////////////////////////////////////////////////////////////////
+//
+// SourceFile: WebSocketContext.cpp
+//
+// Marlin Server: Internet server/client
+// 
+// Copyright (c) 2014-2022 ir. W.E. Huisman
+// All rights reserved
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files(the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and / or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions :
+//
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+// THE SOFTWARE.
+//
 #include "StdAfx.h"
 #include "WebSocketContext.h"
 #include <assert.h>
 #include "ServiceReporting.h"
 #include <io.h>
+
+#ifdef _DEBUG
+#define new DEBUG_NEW
+#undef THIS_FILE
+static char THIS_FILE[] = __FILE__;
+#endif
 
 WebSocketContext::WebSocketContext()
 {
@@ -12,14 +45,6 @@ WebSocketContext::~WebSocketContext()
 {
   Reset();
 }
-
-void
-WebSocketContext::SetHandles(HANDLE p_queue,HTTP_REQUEST_ID p_request)
-{
-  m_queue   = p_queue;
-  m_request = p_request;
-}
-
 
 bool
 WebSocketContext::PerformHandshake(_In_  WEB_SOCKET_HTTP_HEADER*  p_clientHeaders,
@@ -101,12 +126,6 @@ WebSocketContext::SetKeepAliveInterval(ULONG p_interval)
   m_ws_keepalive_interval = p_interval;
 }
 
-void 
-WebSocketContext::SetRawSocketID(HTTP_RAW_CONNECTION_ID p_id)
-{
-  m_socket = p_id;
-}
-
 HRESULT 
 WebSocketContext::ReadFragment(_Out_   VOID*  pData,
                                _Inout_ DWORD* pcbData,
@@ -184,40 +203,26 @@ WebSocketContext::ReadFragment(_Out_   VOID*  pData,
         else
         {
           // NOT READY IMPLEMENTING ON MarlinServer !!!
-//           DWORD result = HttpReceiveRequestEntityBody(m_queue
-//                         , m_request
-//                         , 0
-//                         , buffers[0].Data.pbBuffer
-//                         , buffers[0].Data.ulBufferLength
-//                         , &bytesTransferred
-//                         , nullptr);
-//           if(bytesTransferred <= 0 || result != NO_ERROR)
-//           {
-//             SvcReportErrorEvent(0,true,__FUNCTION__,"Socket error: %d",result);
-//             return result;
-//           }
 
-//           if(!ReadFile(m_handle,buffers[0].Data.pbBuffer,buffers[0].Data.ulBufferLength,&bytesTransferred,nullptr))
+
+          if(!ReadFile(m_handle,buffers[0].Data.pbBuffer,buffers[0].Data.ulBufferLength,&bytesTransferred,nullptr))
+          {
+            int result = GetLastError();
+            SvcReportErrorEvent(0,true,__FUNCTION__,"Socket error: %d",result);
+            return -result;
+          }
+
+//           WSABUF buf;
+//           buf.buf = (CHAR*) buffers[0].Data.pbBuffer;
+//           buf.len = (ULONG) buffers[0].Data.ulBufferLength;
+// 
+//           int receiveResult = WSARecv((SOCKET)m_handle,&buf,1,&bytesTransferred,0,nullptr,nullptr);
+//           if(bytesTransferred <= 0 || receiveResult == SOCKET_ERROR)
 //           {
-//             int result = GetLastError();
+//             int result = WSAGetLastError();
 //             SvcReportErrorEvent(0,true,__FUNCTION__,"Socket error: %d",result);
 //             return -result;
 //           }
-
-          WSABUF buf;
-          buf.buf = (CHAR*) buffers[0].Data.pbBuffer;
-          buf.len = (ULONG) buffers[0].Data.ulBufferLength;
-
-
-          ULONGLONG socket = m_socket >> 32;
-          socket &= 0xFF000000;
-          int receiveResult = WSARecv((SOCKET)socket,&buf,1,&bytesTransferred,0,nullptr,nullptr);
-          if(bytesTransferred <= 0 || receiveResult == SOCKET_ERROR)
-          {
-            int error = WSAGetLastError();
-            SvcReportErrorEvent(0,true,__FUNCTION__,"Socket error: %d",error);
-            return -error;
-          }
 
         }
         // Less read than buffer size -> This is the final fragment

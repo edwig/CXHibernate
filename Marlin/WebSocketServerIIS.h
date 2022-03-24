@@ -4,7 +4,7 @@
 //
 // Marlin Server: Internet server/client
 // 
-// Copyright (c) 2014-2021 ir. W.E. Huisman
+// Copyright (c) 2014-2022 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -37,7 +37,7 @@
 class WebSocketServerIIS: public WebSocket
 {
 public:
-  WebSocketServerIIS(CString p_uri);
+  WebSocketServerIIS(XString p_uri);
   virtual ~WebSocketServerIIS();
 
   // FUNCTIONS
@@ -49,7 +49,7 @@ public:
   // Close the socket unconditionally
   virtual bool CloseSocket();
   // Close the socket with a closing frame
-  virtual bool SendCloseSocket(USHORT p_code,CString p_reason);
+  virtual bool SendCloseSocket(USHORT p_code,XString p_reason);
   // Write fragment to a WebSocket
   virtual bool WriteFragment(BYTE* p_buffer,DWORD p_length,Opcode p_opcode,bool p_last = true);
   // Register the server request for sending info
@@ -62,19 +62,22 @@ public:
   void    SocketWriter(HRESULT p_error,DWORD p_bytes,BOOL p_utf8,BOOL p_final,BOOL p_close);
   // Socket listener, entered by the HTTPServerIIS only!!
   void    SocketListener();
-
+  // Dispatch an extra write action
+  void    SocketDispatch();
+  void    PostCompletion(DWORD dwErrorCode,DWORD dwNumberOfBytes);
 protected:
   // Decode the incoming close socket message
   bool    ReceiveCloseSocket();
 
   // Private data for the server variant of the WebSocket
-  HTTPServer*         m_server{nullptr};
-  HTTP_OPAQUE_ID      m_request{NULL};
+  HTTPServer*         m_server     { nullptr };
+  HTTP_OPAQUE_ID      m_request    { NULL    };
   // Private data for the IIS WebSocket variant
-  IWebSocketContext*  m_iis_socket{nullptr};
-  HANDLE              m_listener{NULL};
+  IWebSocketContext*  m_iis_socket { nullptr };
+  HANDLE              m_listener   { NULL    };
   // Asynchronous write buffer
   WSFrameStack        m_writing;
+  bool                m_dispatched { false   };
 };
 
 

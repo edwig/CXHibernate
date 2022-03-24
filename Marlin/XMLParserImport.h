@@ -4,7 +4,7 @@
 //
 // Marlin Server: Internet server/client
 // 
-// Copyright (c) 2014-2021 ir. W.E. Huisman
+// Copyright (c) 2014-2022 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -37,9 +37,9 @@ protected:
   virtual void  ParseAfterElement();
 
 private:
-  void ParseSchemaImport(CString p_location);
+  void ParseSchemaImport(XString p_location);
 
-  bool ReadXSDFileFromURL(CString p_url);
-  bool ReadXSDLocalFile(CString p_filename);
-  bool ReadXSD(CString p_message);
+  bool ReadXSDFileFromURL(XString p_url);
+  bool ReadXSDLocalFile(XString p_filename);
+  bool ReadXSD(XString p_message);
 };

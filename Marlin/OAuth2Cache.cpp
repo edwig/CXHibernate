@@ -4,7 +4,7 @@
 //
 // Marlin Server: Internet server/client
 // 
-// Copyright (c) 2014-2021 ir. W.E. Huisman
+// Copyright (c) 2014-2022 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -31,7 +31,7 @@
 #include "HTTPClient.h"
 #include "JSONMessage.h"
 #include "AutoCritical.h"
-#include "Analysis.h"
+#include "LogAnalysis.h"
 #include <sys\timeb.h>
 
 //////////////////////////////////////////////////////////////////////////
@@ -55,6 +55,12 @@
 // And of course, as always, check for errors, session == 0 etc :-)
 //
 
+#ifdef _DEBUG
+#define new DEBUG_NEW
+#undef THIS_FILE
+static char THIS_FILE[] = __FILE__;
+#endif
+
 OAuth2Cache::OAuth2Cache()
 {
   InitializeCriticalSection(&m_lock);
@@ -71,20 +77,20 @@ OAuth2Cache::~OAuth2Cache()
 }
 
 // Create a token server URL from  a template and a tenant
-CString
-OAuth2Cache::CreateTokenURL(CString p_template,CString p_tenant)
+XString
+OAuth2Cache::CreateTokenURL(XString p_template,XString p_tenant)
 {
-  CString url;
+  XString url;
   url.Format(p_template,p_tenant.GetString());
   return url;
 }
 
 // Create a credentials grant, returning a session ID
 int
-OAuth2Cache::CreateClientCredentialsGrant(CString p_url
-                                         ,CString p_appID
-                                         ,CString p_appKey
-                                         ,CString p_scope)
+OAuth2Cache::CreateClientCredentialsGrant(XString p_url
+                                         ,XString p_appID
+                                         ,XString p_appKey
+                                         ,XString p_scope)
 {
   OAuthSession session;
   session.m_flow    = OAuthFlow::OA_CLIENT;
@@ -101,12 +107,12 @@ OAuth2Cache::CreateClientCredentialsGrant(CString p_url
 
 // Create a resource owner grant, returning a session ID
 int
-OAuth2Cache::CreateResourceOwnerCredentialsGrant(CString p_url
-                                                ,CString p_appID
-                                                ,CString p_appKey
-                                                ,CString p_scope
-                                                ,CString p_username
-                                                ,CString p_password)
+OAuth2Cache::CreateResourceOwnerCredentialsGrant(XString p_url
+                                                ,XString p_appID
+                                                ,XString p_appKey
+                                                ,XString p_scope
+                                                ,XString p_username
+                                                ,XString p_password)
 {
   OAuthSession session;
   session.m_flow     = OAuthFlow::OA_ROWNER;
@@ -137,16 +143,16 @@ OAuth2Cache::EndSession(int p_session)
   return false;
 }
 
-CString
-OAuth2Cache::GetBearerToken(int p_session,bool p_refresh /*= true*/)
+XString
+OAuth2Cache::GetBearerToken(int p_session,bool p_refresh /*= false*/)
 {
   AutoCritSec lock(&m_lock);
 
-  CString token;
+  XString token;
   OAuthSession* session = FindSession(p_session);
   if(session)
   {
-    if(GetIsExpired(p_session) && p_refresh)
+    if(GetIsExpired(p_session) || p_refresh)
     {
       StartCredentialsGrant(session);
     }
@@ -224,6 +230,26 @@ OAuth2Cache::SetExpired(int p_session)
   }
 }
 
+void
+OAuth2Cache::SetDevelopment(bool p_dev /*= true*/)
+{
+  m_development = p_dev;
+}
+
+// Slow lookup of a session
+int
+OAuth2Cache::GetHasSession(XString p_appID,XString p_appKey)
+{
+  for(auto& ses : m_cache)
+  {
+    if(ses.second.m_appID == p_appID && ses.second.m_appKey == p_appKey)
+    {
+      return ses.first;
+    }
+  }
+  return 0;
+}
+
 //////////////////////////////////////////////////////////////////////////
 //
 // PRIVATE
@@ -251,6 +277,15 @@ OAuth2Cache::GetClient()
     {
       m_client->SetLogging(m_logfile);
     }
+    if(m_development)
+    {
+      // Test environments are normally lax with certificates
+      // So be prepared to deal with not completely right ones!
+      m_client->SetRelaxOptions(SECURITY_FLAG_IGNORE_CERT_CN_INVALID   |
+                                SECURITY_FLAG_IGNORE_CERT_DATE_INVALID | 
+                                SECURITY_FLAG_IGNORE_UNKNOWN_CA        | 
+                                SECURITY_FLAG_IGNORE_CERT_WRONG_USAGE  );
+    }
   }
   return m_client;
 }
@@ -259,7 +294,7 @@ void
 OAuth2Cache::StartCredentialsGrant(OAuthSession* p_session)
 {
   bool valid = false;
-  CString typeFound;
+  XString typeFound;
 
   // Reset the token
   p_session->m_bearerToken.Empty();
@@ -275,12 +310,13 @@ OAuth2Cache::StartCredentialsGrant(OAuthSession* p_session)
   getToken.AddHeader("Accept","application/json");
   getToken.SetUser    (p_session->m_appID);
   getToken.SetPassword(p_session->m_appKey);
-  CString payload = CreateTokenRequest(p_session);
+  XString payload = CreateTokenRequest(p_session);
   getToken.SetBody(payload);
   
   // Send through extra HTTPClient
   HTTPClient* client = GetClient();
   client->SetPreEmptiveAuthorization(WINHTTP_AUTH_SCHEME_BASIC);
+
   if(client->Send(&getToken))
   {
     JSONMessage json(&getToken);
@@ -342,10 +378,10 @@ OAuth2Cache::StartCredentialsGrant(OAuthSession* p_session)
   }
 }
 
-CString
+XString
 OAuth2Cache::CreateTokenRequest(OAuthSession* p_session)
 {
-  CString request;
+  XString request;
   request.Format("client_id=%s",           p_session->m_appID.GetString());
   request.AppendFormat("&scope=%s",        p_session->m_scope.GetString());
   request.AppendFormat("&client_secret=%s",p_session->m_appKey.GetString());

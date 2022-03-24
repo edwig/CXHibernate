@@ -2,7 +2,7 @@
 //
 // File: CXHibernate.h
 //
-// Copyright (c) 1998-2018 ir. W.E. Huisman
+// Copyright (c) 2015-2022 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy of 
@@ -30,8 +30,8 @@
 #include <vector>
 #include <map>
 
-#define HIBERNATE_VERSION "1.2.1"
-#define HIBERNATE_DATE    "26-06-2021"
+#define HIBERNATE_VERSION "1.3.0"
+#define HIBERNATE_DATE    "24-03-2022"
 
 #define CXH_LOG_NOTHING       0   // Logging is OFF
 #define CXH_LOG_ERRORS        1   // Only error logging
@@ -56,6 +56,7 @@ MapStrategy;
 // by the object factories. De- or increase at your own leisure.
 const unsigned int MAX_CLASSES = 1000;
 
+class LogAnalysis;
 class CXSession;
 using MapSessions = std::map<CString,CXSession*>;
 using MapCreate   = std::map<CString,CreateCXO>;

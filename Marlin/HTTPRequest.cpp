@@ -4,7 +4,7 @@
 //
 // Marlin Server: Internet server/client
 // 
-// Copyright (c) 2014-2021 ir. W.E. Huisman
+// Copyright (c) 2014-2022 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -133,16 +133,6 @@ HTTPRequest::ClearMemory()
     m_unknown = nullptr;
   }
   m_strings.clear();
-}
-
-HTTP_RAW_CONNECTION_ID 
-HTTPRequest::GetRawSocketID() 
-{ 
-  if(m_request)
-  {
-    return m_request->RawConnectionId;
-  }
-  return NULL;
 }
 
 // Callback from I/O Completion port right out of the threadpool
@@ -275,15 +265,15 @@ HTTPRequest::ReceivedRequest()
   m_requestID = m_request->RequestId;
 
   // Grab the senders content
-  CString   acceptTypes     = m_request->Headers.KnownHeaders[HttpHeaderAccept         ].pRawValue;
-  CString   contentType     = m_request->Headers.KnownHeaders[HttpHeaderContentType    ].pRawValue;
-  CString   contentLength   = m_request->Headers.KnownHeaders[HttpHeaderContentLength  ].pRawValue;
-  CString   acceptEncoding  = m_request->Headers.KnownHeaders[HttpHeaderAcceptEncoding ].pRawValue;
-  CString   cookie          = m_request->Headers.KnownHeaders[HttpHeaderCookie         ].pRawValue;
-  CString   authorize       = m_request->Headers.KnownHeaders[HttpHeaderAuthorization  ].pRawValue;
-  CString   modified        = m_request->Headers.KnownHeaders[HttpHeaderIfModifiedSince].pRawValue;
-  CString   referrer        = m_request->Headers.KnownHeaders[HttpHeaderReferer        ].pRawValue;
-  CString   rawUrl          = CW2A(m_request->CookedUrl.pFullUrl);
+  XString   acceptTypes     = m_request->Headers.KnownHeaders[HttpHeaderAccept         ].pRawValue;
+  XString   contentType     = m_request->Headers.KnownHeaders[HttpHeaderContentType    ].pRawValue;
+  XString   contentLength   = m_request->Headers.KnownHeaders[HttpHeaderContentLength  ].pRawValue;
+  XString   acceptEncoding  = m_request->Headers.KnownHeaders[HttpHeaderAcceptEncoding ].pRawValue;
+  XString   cookie          = m_request->Headers.KnownHeaders[HttpHeaderCookie         ].pRawValue;
+  XString   authorize       = m_request->Headers.KnownHeaders[HttpHeaderAuthorization  ].pRawValue;
+  XString   modified        = m_request->Headers.KnownHeaders[HttpHeaderIfModifiedSince].pRawValue;
+  XString   referrer        = m_request->Headers.KnownHeaders[HttpHeaderReferer        ].pRawValue;
+  XString   rawUrl          = (XString) CW2A(m_request->CookedUrl.pFullUrl);
   PSOCKADDR sender          = m_request->Address.pRemoteAddress;
   PSOCKADDR receiver        = m_request->Address.pLocalAddress;
   int       remDesktop      = m_server->FindRemoteDesktop(m_request->Headers.UnknownHeaderCount
@@ -321,15 +311,19 @@ HTTPRequest::ReceivedRequest()
   // See if we must substitute for a sub-site
   if(m_server->GetHasSubsites())
   {
-    CString absPath = CW2A(m_request->CookedUrl.pAbsPath);
+    XString absPath = (XString) CW2A(m_request->CookedUrl.pAbsPath);
     m_site = m_server->FindHTTPSite(m_site,absPath);
   }
 
-  // Now check for authentication and possible send 401 back
-  if(m_server->CheckAuthentication(m_request,(HTTP_OPAQUE_ID)this,m_site,rawUrl,authorize,accessToken) == false)
+  // Check our authentication
+  if(m_site->GetAuthentication())
   {
-    // Not authenticated, go back for next request
-    return;
+    // Now check for authentication and possible send 401 back
+    if(m_server->CheckAuthentication(m_request,(HTTP_OPAQUE_ID)this,m_site,rawUrl,authorize,accessToken) == false)
+    {
+      // Not authenticated, go back for next request
+      return;
+    }
   }
 
   // Remember the context: easy in API 2.0
@@ -378,26 +372,21 @@ HTTPRequest::ReceivedRequest()
 
   // Receiving the initiation of an event stream for the server
   acceptTypes.Trim();
+  EventStream* stream = nullptr;
   if((type == HTTPCommand::http_get) && (eventStream || acceptTypes.Left(17).CompareNoCase("text/event-stream") == 0))
   {
-    CString absolutePath = CW2A(m_request->CookedUrl.pAbsPath);
+    XString absolutePath = (XString) CW2A(m_request->CookedUrl.pAbsPath);
     if(m_server->CheckUnderDDOSAttack((PSOCKADDR_IN6)sender,absolutePath))
     {
       return;
     }
-    EventStream* stream = m_server->SubscribeEventStream((PSOCKADDR_IN6) sender
-                                                         ,remDesktop
-                                                         ,m_site
-                                                         ,m_site->GetSite()
-                                                         ,absolutePath
-                                                         ,(HTTP_OPAQUE_ID) this
-                                                         ,accessToken);
-    if(stream)
-    {
-      stream->m_baseURL = rawUrl;
-      m_site->HandleEventStream(stream);
-      return;
-    }
+    stream = m_server->SubscribeEventStream((PSOCKADDR_IN6) sender
+                                            ,remDesktop
+                                            ,m_site
+                                            ,m_site->GetSite()
+                                            ,absolutePath
+                                            ,(HTTP_OPAQUE_ID) this
+                                            ,accessToken);
   }
 
   // For all types of requests: Create the HTTPMessage
@@ -417,17 +406,8 @@ HTTPRequest::ReceivedRequest()
   m_message->SetReceiver((PSOCKADDR_IN6)receiver);
   m_message->SetCookiePairs(cookie);
   m_message->SetAcceptEncoding(acceptEncoding);
-  if(m_site->GetAllHeaders())
-  {
-    // If requested so, copy all headers to the message
-    m_message->SetAllHeaders(&m_request->Headers);
-  }
-  else
-  {
-    // As a minimum, always add the unknown headers
-    // in case of a 'POST', as the SOAPAction header is here too!
-    m_message->SetUnknownHeaders(&m_request->Headers);
-  }
+  m_message->SetAllHeaders(&m_request->Headers);
+  m_message->SetUnknownHeaders(&m_request->Headers);
 
   // Handle modified-since 
   // Rest of the request is then not needed any more
@@ -451,6 +431,14 @@ HTTPRequest::ReceivedRequest()
     {
       DETAILLOGV("Request VERB changed to: %s",m_message->GetVerb().GetString());
     }
+  }
+
+  // Go handle the stream if we got one
+  if(stream)
+  {
+    stream->m_baseURL = rawUrl;
+    m_site->HandleEventStream(m_message,stream);
+    return;
   }
 
   // Remember the fact that we should read the rest of the message
@@ -795,7 +783,7 @@ HTTPRequest::StartEventStreamResponse()
   TRACE0("Start EventStream Response\n");
 
   // First comment to push to the stream (not an event!)
-  CString init = m_server->GetEventBOM() ? ConstructBOM() : "";
+  XString init = m_server->GetEventBOM() ? ConstructBOM() : XString();
   init += ":init event-stream\n";
 
   // Initialize the HTTP response structure.
@@ -1050,10 +1038,10 @@ HTTPRequest::Finalize()
 
 // Add a request string for a header
 void 
-HTTPRequest::AddRequestString(CString p_string,const char*& p_buffer,USHORT& p_size)
+HTTPRequest::AddRequestString(XString p_string,const char*& p_buffer,USHORT& p_size)
 {
   m_strings.push_back(p_string);
-  CString& string = m_strings.back();
+  XString& string = m_strings.back();
   p_buffer = string.GetString();
   p_size   = (USHORT) string.GetLength();
 }
@@ -1089,13 +1077,13 @@ HTTPRequest::AddUnknownHeaders(UKHeaders& p_headers)
     const char* string = nullptr;
     USHORT size = 0;
 
-    CString name = unknown.first;
+    XString name = unknown.first;
     AddRequestString(name,string,size);
     m_unknown[ind].NameLength = size;
     m_unknown[ind].pName = string;
 
 
-    CString value = unknown.second;
+    XString value = unknown.second;
     AddRequestString(value,string,size);
     m_unknown[ind].RawValueLength = size;
     m_unknown[ind].pRawValue = string;
@@ -1133,21 +1121,30 @@ HTTPRequest::FillResponse(int p_status,bool p_responseOnly /*=false*/)
   // Add content type as a known header. (octet-stream or the message content type)
   if(p_status != HTTP_STATUS_SWITCH_PROTOCOLS)
   {
-    CString contentType("application/octet-stream");
+    XString contentType("application/octet-stream");
     if(!m_message->GetContentType().IsEmpty())
     {
       contentType = m_message->GetContentType();
     }
+    else
+    {
+      XString cttype = m_message->GetHeader("Content-type");
+      if(!cttype.IsEmpty())
+      {
+        contentType = cttype;
+      }
+    }
+    m_message->DelHeader("Content-Type");
     AddKnownHeader(HttpHeaderContentType, contentType);
   }
 
   // In case of a 401, we challenge to the client to identify itself
   if(m_message->GetStatus() == HTTP_STATUS_DENIED)
   {
-    CString date = HTTPGetSystemTime();
+    XString date = HTTPGetSystemTime();
 
     // See if the message already has an authentication scheme header
-    CString challenge = m_message->GetHeader("AuthenticationScheme");
+    XString challenge = m_message->GetHeader("AuthenticationScheme");
     if(challenge.IsEmpty())
     {
       // Add authentication scheme
@@ -1173,24 +1170,58 @@ HTTPRequest::FillResponse(int p_status,bool p_responseOnly /*=false*/)
                                           AddKnownHeader(HttpHeaderServer,"");
                                           break;
   }
+  m_message->DelHeader("Server");
+
+  // Cookie settings
+  bool cookiesHasSecure(false);
+  bool cookiesHasHttp(false);
+  bool cookiesHasSame(false);
+  bool cookiesSecure(false);
+  bool cookiesHttpOnly(false);
+  CookieSameSite cookiesSameSite(CookieSameSite::NoSameSite);
+
+  // Getting the site settings
+  HTTPSite* site = m_message->GetHTTPSite();
+  if(site)
+  {
+    cookiesHasSecure = site->GetCookieHasSecure();
+    cookiesHasHttp   = site->GetCookieHasHttpOnly();
+    cookiesHasSame   = site->GetCookieHasSameSite();
+
+    cookiesSecure    = site->GetCookiesSecure();
+    cookiesHttpOnly  = site->GetCookiesHttpOnly();
+    cookiesSameSite  = site->GetCookiesSameSite();
+  }
 
   // Add cookies to the unknown response headers
   // Because we can have more than one Set-Cookie: header
   // and HTTP API just supports one set-cookie.
   UKHeaders ukheaders;
   Cookies& cookies = m_message->GetCookies();
-  for(auto& cookie : cookies.GetCookies())
+  if(cookies.GetCookies().empty())
   {
-    ukheaders.insert(std::make_pair("Set-Cookie",cookie.GetSetCookieText()));
+    XString cookie = m_message->GetHeader("Set-Cookie");
+    if(!cookie.IsEmpty())
+    {
+      AddKnownHeader(HttpHeaderSetCookie,cookie);
+    }
   }
-
-  // Add Other unknown headers
-  if(m_site)
+  else
   {
-    m_site->AddSiteOptionalHeaders(ukheaders);
-  }
+    for(auto& cookie : cookies.GetCookies())
+    {
+      if(cookiesHasSecure)  cookie.SetSecure  (cookiesSecure);
+      if(cookiesHasHttp)    cookie.SetHttpOnly(cookiesHttpOnly);
+      if(cookiesHasSame)    cookie.SetSameSite(cookiesSameSite);
 
-  // Add extra headers from the message
+      ukheaders.insert(std::make_pair("Set-Cookie",cookie.GetSetCookieText()));
+    }
+  }
+  m_message->DelHeader("Set-Cookie");
+
+  // Add extra headers from the message, except for content-length
+  m_message->DelHeader("Content-Length");
+
   if(p_status == HTTP_STATUS_SWITCH_PROTOCOLS)
   {
     FillResponseWebSocketHeaders(ukheaders);
@@ -1201,6 +1232,12 @@ HTTPRequest::FillResponse(int p_status,bool p_responseOnly /*=false*/)
     {
       ukheaders.insert(std::make_pair(header.first, header.second));
     }
+  }
+
+  // Add other optional security headers like CORS etc.
+  if(m_site)
+  {
+    m_site->AddSiteOptionalHeaders(ukheaders);
   }
 
   // Possible zip the contents, and add content-encoding header
@@ -1258,7 +1295,7 @@ HTTPRequest::FillResponse(int p_status,bool p_responseOnly /*=false*/)
   {
     // Now after the compression, and after the calculation of the file length
     // add the total content length in the form of the content-length header
-    CString contentLength;
+    XString contentLength;
 #ifdef _WIN64
     contentLength.Format("%I64u",totalLength);
 #else

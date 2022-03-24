@@ -4,7 +4,7 @@
 //
 // Marlin Server: Internet server/client
 // 
-// Copyright (c) 2014-2021 ir. W.E. Huisman
+// Copyright (c) 2014-2022 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -33,7 +33,7 @@ class ServerEvent
 public:
   // Standard constructores
   ServerEvent()                 { m_id = 0; };
-  ServerEvent(CString p_event)  { m_id = 0;m_event = p_event; };
+  ServerEvent(XString p_event)  { m_id = 0;m_event = p_event; };
   ServerEvent(ServerEvent* p_event)
   {
     m_id    = p_event->m_id;
@@ -42,6 +42,6 @@ public:
   }
   // Event data
   UINT    m_id;
-  CString m_event;
-  CString m_data;
+  XString m_event;
+  XString m_data;
 };

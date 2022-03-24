@@ -4,7 +4,7 @@
 //
 // Marlin Server: Internet server/client
 // 
-// Copyright (c) 2014-2021 ir. W.E. Huisman
+// Copyright (c) 2014-2022 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -54,8 +54,8 @@ static char THIS_FILE[] = __FILE__;
 
 HTTPSiteIIS::HTTPSiteIIS(HTTPServerIIS* p_server
                         ,int            p_port
-                        ,CString        p_site
-                        ,CString        p_prefix
+                        ,XString        p_site
+                        ,XString        p_prefix
                         ,HTTPSite*      p_mainSite /*=nullptr*/
                         ,LPFN_CALLBACK  p_callback /*=nullptr*/)
             :HTTPSite(p_server,p_port,p_site,p_prefix,p_mainSite,p_callback)
@@ -78,6 +78,16 @@ HTTPSiteIIS::InitSite()
   m_domain          = config->GetSiteDomain   (m_site,m_domain);
   m_authScheme      = config->GetSiteScheme   (m_site,m_authScheme);
 
+  // Authentication scheme
+  m_scheme.Empty();
+  if(m_authScheme & HTTP_AUTH_ENABLE_BASIC)     m_scheme += "Basic/";
+  if(m_authScheme & HTTP_AUTH_ENABLE_DIGEST)    m_scheme += "Digest/";
+  if(m_authScheme & HTTP_AUTH_ENABLE_NTLM)      m_scheme += "NTLM/";
+  if(m_authScheme & HTTP_AUTH_ENABLE_NEGOTIATE) m_scheme += "Negotiate/";
+  if(m_authScheme & HTTP_AUTH_ENABLE_KERBEROS)  m_scheme += "Kerberos/";
+  if(m_authScheme == 0)                         m_scheme += "Anonymous/";
+  m_scheme = m_scheme.TrimRight('/');
+
   // Call our main class InitSite
   HTTPSite::InitSite(m_server->GetWebConfig());
 }
@@ -90,7 +100,7 @@ HTTPSiteIIS::StartSite()
   // Getting the global settings
   InitSite();
  
-  // Now log the settings, once we read all web.config files
+  // Now log the settings, once we read all Marlin.config files
   LogSettings();
 
   // See if we have a reliable messaging WITH authentication
@@ -127,12 +137,12 @@ HTTPSiteIIS::StartSite()
 }
 
 bool
-HTTPSiteIIS::SetWebroot(CString p_webroot)
+HTTPSiteIIS::SetWebroot(XString p_webroot)
 {
   UNREFERENCED_PARAMETER(p_webroot);
 
   // Getting the IIS server root
-  CString root = m_server->GetWebroot();
+  XString root = m_server->GetWebroot();
   root.TrimRight('\\');
 
   // IIS now expects you to add the site name
@@ -152,7 +162,7 @@ HTTPSiteIIS::SetWebroot(CString p_webroot)
 // Getting the sites directory within the IIS rootdir
 // /Site/         -> "\\Site\\"
 // /Site/Subsite/ -> "\\Site\\"
-CString 
+XString 
 HTTPSiteIIS::GetIISSiteDir()
 {
   // Follow the main site chain to the site
@@ -163,7 +173,7 @@ HTTPSiteIIS::GetIISSiteDir()
   }
 
   // This is the mainsite
-  CString dir = mainsite->GetSite();
+  XString dir = mainsite->GetSite();
 
   // Transpose site URL to directory name
   int pos1 = dir.Find('/',1);
@@ -190,7 +200,7 @@ HTTPSiteIIS::GetHasAnonymousAuthentication(HANDLE p_token)
   GetTokenInformation(p_token,TokenOwner,NULL,0,&size);
   if(!size)
   {
-    CString text;
+    XString text;
     text.Format("Error getting token owner: error code0x%lx\n", GetLastError());
     ERRORLOG(ENOMEM,text);
     return false;

@@ -4,7 +4,7 @@
 //
 // Marlin Server: Internet server/client
 // 
-// Copyright (c) 2014-2021 ir. W.E. Huisman
+// Copyright (c) 2014-2022 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -103,7 +103,7 @@ public:
   // OUR PRIMARY FUNCTION!
 
   // Submit an item, starting a thread on it
-  void  SubmitWork(LPFN_CALLBACK p_callback,void* p_argument);
+  bool  SubmitWork(LPFN_CALLBACK p_callback,void* p_argument);
   // Submitting cleanup jobs. Runs when ThreadPool stops
   void  SubmitCleanup(LPFN_CALLBACK p_cleanup,void* p_argument);
 

@@ -4,7 +4,7 @@
 //
 // Marlin Server: Internet server/client
 // 
-// Copyright (c) 2014-2021 ir. W.E. Huisman
+// Copyright (c) 2014-2022 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -95,7 +95,7 @@ WSFrame::~WSFrame()
 //
 //////////////////////////////////////////////////////////////////////////
 
-WebSocket::WebSocket(CString p_uri)
+WebSocket::WebSocket(XString p_uri)
           :m_uri(p_uri)
           ,m_openReading(false)
           ,m_openWriting(false)
@@ -218,17 +218,25 @@ WebSocket::SetClosingTimeout(unsigned p_timeout)
 
 // Add a URI parameter
 void
-WebSocket::AddParameter(CString p_name,CString p_value)
+WebSocket::AddParameter(XString p_name,XString p_value)
 {
   p_name.MakeLower();
   m_parameters[p_name] = p_value;
 }
 
-// Find a URI parameter
-CString
-WebSocket::GetParameter(CString p_name)
+// Add a HTTP header
+void
+WebSocket::AddHeader(XString p_name,XString p_value)
 {
-  CString value;
+  p_name.MakeLower();
+  m_headers[p_name] = p_value;
+}
+
+// Find a URI parameter
+XString
+WebSocket::GetParameter(XString p_name)
+{
+  XString value;
   p_name.MakeLower();
   SocketParams::iterator it = m_parameters.find(p_name);
   if(it != m_parameters.end())
@@ -236,6 +244,31 @@ WebSocket::GetParameter(CString p_name)
     value = it->second;
   }
   return value;
+}
+
+XString 
+WebSocket::GetClosingErrorAsString()
+{
+  XString reason;
+  switch(m_closingError)
+  {
+    case 0:                   reason = "Unknown closing reason";                      break;
+    case WS_CLOSE_NORMAL:     reason = "Normal closing of the connection";            break;
+    case WS_CLOSE_GOINGAWAY:  reason = "Going away. Closing webpage/application";     break;
+    case WS_CLOSE_BYERROR:    reason = "Closing due to protocol error";               break;
+    case WS_CLOSE_TERMINATE:  reason = "Terminating (unacceptable data)";             break;
+    case WS_CLOSE_RESERVED:   reason = "Reserved for future use";                     break;
+    case WS_CLOSE_NOCLOSE:    reason = "Internal error (no closing frame received)";  break;
+    case WS_CLOSE_ABNORMAL:   reason = "No closing frame, TCP/IP error";              break;
+    case WS_CLOSE_DATA:       reason = "Abnormal data(no UTF-8 in UTF-8 frame";       break;
+    case WS_CLOSE_POLICY:     reason = "Policy error, or extension error";            break;
+    case WS_CLOSE_TOOBIG:     reason = "Message is too big to handle";                break;
+    case WS_CLOSE_NOEXTENSION:reason = "Not one of the expected extensions";          break;
+    case WS_CLOSE_CONDITION:  reason = "Internal server error";                       break;
+    case WS_CLOSE_SECURE:     reason = "TLS handshake error (do not send!)";          break;
+    default:                  reason = "Application defined closing number";          break;
+  }
+  return reason;
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -258,7 +291,7 @@ WebSocket::DetailLogS(const char* p_function,LogType p_type,const char* p_text,c
 {
   if(MUSTLOG(HLL_LOGGING) && m_logfile)
   {
-    CString text(p_text);
+    XString text(p_text);
     text += p_extra;
 
     m_logfile->AnalysisLog(p_function,p_type,false,text);
@@ -272,7 +305,7 @@ WebSocket::DetailLogV(const char* p_function,LogType p_type,const char* p_text,.
   {
     va_list varargs;
     va_start(varargs,p_text);
-    CString text;
+    XString text;
     text.FormatV(p_text,varargs);
     va_end(varargs);
 
@@ -282,7 +315,7 @@ WebSocket::DetailLogV(const char* p_function,LogType p_type,const char* p_text,.
 
 // Error logging to the log file
 void
-WebSocket::ErrorLog(const char* p_function,DWORD p_code,CString p_text)
+WebSocket::ErrorLog(const char* p_function,DWORD p_code,XString p_text)
 {
   bool result = false;
 
@@ -306,8 +339,8 @@ WebSocket::ErrorLog(const char* p_function,DWORD p_code,CString p_text)
   // nothing logged
   if(!result)
   {
-    // What can we do? As a last result: print to stdout
-    printf(MARLIN_SERVER_VERSION " Error [%d] %s\n",p_code,(LPCTSTR)p_text);
+    // What can we do? As a last result: print debug pane
+    TRACE("%s Error [%d] %s\n",MARLIN_SERVER_VERSION,p_code,(LPCTSTR)p_text);
   }
 #endif
 }
@@ -325,8 +358,15 @@ WebSocket::OnOpen()
   WSFrame frame;
   if(m_onopen)
   {
-    DETAILLOGS("WebSocket OnOpen called for: ",m_uri);
-    (*m_onopen)(this,&frame);
+    DETAILLOGV("WebSocket OnOpen called for [%s] on [%s]",m_key.GetString(),m_uri.GetString());
+    try
+    {
+      (*m_onopen)(this,&frame);
+    }
+    catch(StdException& ex)
+    {
+      ERRORLOG(ERROR_APPEXEC_INVALID_HOST_STATE,ex.GetErrorMessage());
+    }
   }
 }
 
@@ -339,8 +379,18 @@ WebSocket::OnMessage()
   {
     if(m_onmessage)
     {
-      DETAILLOGS("WebSocket OnMessage called for: ",m_uri);
-      (*m_onmessage)(this,frame);
+      try
+      {
+        (*m_onmessage)(this,frame);
+      }
+      catch(StdException& ex)
+      {
+        ERRORLOG(ERROR_APPEXEC_INVALID_HOST_STATE,ex.GetErrorMessage());
+      }
+    }
+    else
+    {
+      ERRORLOG(ERROR_LOST_WRITEBEHIND_DATA,"WebSocket lost WSFrame message data");
     }
     delete frame;
   }
@@ -355,8 +405,18 @@ WebSocket::OnBinary()
   {
     if(m_onbinary)
     {
-      DETAILLOGS("WebSocket OnBinary called for: ",m_uri);
-      (*m_onbinary)(this,frame);
+      try
+      {
+        (*m_onbinary)(this,frame);
+      }
+      catch(StdException& ex)
+      {
+        ERRORLOG(ERROR_APPEXEC_INVALID_HOST_STATE,ex.GetErrorMessage());
+      }
+    }
+    else
+    {
+      ERRORLOG(ERROR_LOST_WRITEBEHIND_DATA,"WebSocket lost WSFrame binary data");
     }
     delete frame;
   }
@@ -366,10 +426,17 @@ void
 WebSocket::OnError()
 {
   WSFrame* frame = GetWSFrame();
+
   if(m_onerror)
   {
-    DETAILLOGS("WebSocket OnError called for: ",m_uri);
-    (*m_onerror)(this,frame);
+    try
+    {
+      (*m_onerror)(this,frame);
+    }
+    catch(StdException& ex)
+    {
+      ERRORLOG(ERROR_APPEXEC_INVALID_HOST_STATE,ex.GetErrorMessage());
+    }
   }
   delete frame;
 }
@@ -383,18 +450,36 @@ WebSocket::OnClose()
   {
     if(m_onclose && (m_openReading || m_openWriting))
     {
-      DETAILLOGS("WebSocket OnClose called for: ",m_uri);
-      (*m_onclose)(this,frame);
+      try
+      {
+        (*m_onclose)(this,frame);
+      }
+      catch(StdException& ex)
+      {
+        ERRORLOG(ERROR_APPEXEC_INVALID_HOST_STATE,ex.GetErrorMessage());
+      }
+    }
+    else
+    {
+      // Application already stopped accepting info
+      // ERRORLOG(ERROR_LOST_WRITEBEHIND_DATA,"WebSocket lost closing frame");
     }
     delete frame;
   }
   else
   {
-    WSFrame empty;
     if(m_onclose && (m_openReading || m_openWriting))
     {
-      DETAILLOGS("WebSocket OnClose called for: ",m_uri);
-      (*m_onclose)(this,&empty);
+      WSFrame empty;
+      DETAILLOGV("WebSocket OnClose called for [%s] on [%s] ", m_key.GetString(), m_uri.GetString());
+      try
+      {
+        (*m_onclose)(this,&empty);
+      }
+      catch(StdException& ex)
+      {
+        ERRORLOG(ERROR_APPEXEC_INVALID_HOST_STATE,ex.GetErrorMessage());
+      }
     }
   }
   // OnClose can be called just once!
@@ -410,15 +495,15 @@ WebSocket::OnClose()
 
 // Write as an UTF-8 string to the WebSocket
 bool 
-WebSocket::WriteString(CString p_string)
+WebSocket::WriteString(XString p_string)
 {
-  CString encoded;
+  XString encoded;
   // Now encode MBCS to UTF-8
   uchar* buffer = nullptr;
   int    length = 0;
   bool   result = false;
 
-  DETAILLOGS("Outgoing message on WebSocket: ",m_uri);
+  DETAILLOGV("Outgoing message on WebSocket [%s] on [%s]",m_key.GetString(),m_uri.GetString());
   if(MUSTLOG(HLL_LOGBODY))
   {
     DETAILLOG1(p_string);
@@ -435,7 +520,7 @@ WebSocket::WriteString(CString p_string)
 
       if(MUSTLOG(HLL_TRACEDUMP))
       {
-        m_logfile->AnalysisHex(__FUNCTION__,m_uri,(void*)pointer,toSend);
+        m_logfile->AnalysisHex(__FUNCTION__,m_key,(void*)pointer,toSend);
       }
   
       do
@@ -456,9 +541,14 @@ WebSocket::WriteString(CString p_string)
         }
         // Bookkeeping of the total amount of sent bytes
         total += toWrite;
-        result = true;
       }
       while(total < toSend);
+
+      // Check that we send ALL
+      if(total >= toSend)
+      {
+        result = true;
+      }
     }
     delete [] buffer;
   }
@@ -541,44 +631,6 @@ WebSocket::StoreWSFrame(WSFrame*& p_frame)
   p_frame = nullptr;
 }
 
-// Append UTF-8 text to last frame on the stack, or just store it
-void
-WebSocket::StoreOrAppendWSFrame(WSFrame*& p_frame)
-{
-  AutoCritSec lock(&m_lock);
-
-  // Try to get the Top-Of-Stack (TOS)
-  WSFrame* last = nullptr;
-  if(!m_frames.empty())
-  {
-    last = m_frames.back();
-  }
-
-  // See if we must append the text frame to the last
-  if(last && last->m_utf8 && !last->m_final)
-  {
-    // Append the frame
-    DWORD length = last->m_length + p_frame->m_length;
-    last->m_data = (BYTE*) realloc(last->m_data,length + 1);
-    memcpy_s(&last->m_data[last->m_length],p_frame->m_length + 1,p_frame->m_data,p_frame->m_length + 1);
-    last->m_length = length;
-
-    // Now convert to total back to MBCS
-    if(p_frame->m_final)
-    {
-      ConvertWSFrameToMBCS(last);
-    }
-    // Done with the frame
-    delete p_frame;
-    p_frame = nullptr;
-  }
-  else
-  {
-    // Store the frame
-    StoreWSFrame(p_frame);
-  }
-}
-
 // Convert the UTF-8 in a frame back to MBCS
 void
 WebSocket::ConvertWSFrameToMBCS(WSFrame* p_frame)
@@ -586,9 +638,9 @@ WebSocket::ConvertWSFrameToMBCS(WSFrame* p_frame)
   // Convert UTF-8 back to MBCS
   uchar*  buffer_utf8 = nullptr;
   int     length_utf8 = 0;
-  CString input(p_frame->m_data);
+  XString input(p_frame->m_data);
 
-  DETAILLOGS("Incoming message on WebSocket: ",m_uri);
+  DETAILLOGV("Incoming message on WebSocket [%s] on [%s]",m_key.GetString(),m_uri.GetString());
   if(MUSTLOG(HLL_TRACEDUMP))
   {
     // This is what we get from 'the wire'
@@ -597,7 +649,7 @@ WebSocket::ConvertWSFrameToMBCS(WSFrame* p_frame)
 
   if(TryCreateWideString(input,"utf-8",false,&buffer_utf8,length_utf8))
   {
-    CString encoded;
+    XString encoded;
     bool foundBom = false;
     if(TryConvertWideString(buffer_utf8,length_utf8,"",encoded,foundBom))
     {
@@ -616,7 +668,7 @@ WebSocket::ConvertWSFrameToMBCS(WSFrame* p_frame)
 }
 
 bool
-WebSocket::GetCloseSocket(USHORT& p_code,CString& p_reason)
+WebSocket::GetCloseSocket(USHORT& p_code,XString& p_reason)
 {
   p_code   = m_closingError;
   p_reason = m_closing;
@@ -633,11 +685,11 @@ WebSocket::ServerHandshake(HTTPMessage* /*p_message*/)
 }
 
 // Generate a server key-answer
-CString
-WebSocket::ServerAcceptKey(CString p_clientKey)
+XString
+WebSocket::ServerAcceptKey(XString p_clientKey)
 {
   // Step 1: Append WebSocket GUID. See RFC 6455. It's hard coded!!
-  CString key = p_clientKey + "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
+  XString key = p_clientKey + "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
 
   // Step 2: Take the SHA1 hash of the resulting string
   Crypto crypt;

@@ -4,7 +4,7 @@
 //
 // Marlin Server: Internet server/client
 // 
-// Copyright (c) 2014-2021 ir. W.E. Huisman
+// Copyright (c) 2014-2022 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -29,11 +29,17 @@
 #include "Marlin.h"
 #include "AppConfig.h"
 #include "MarlinServer.h"
-#include "WebConfig.h"
+#include "MarlinConfig.h"
 #include <winhttp.h>
 #include <io.h>
 
-AppConfig::AppConfig(CString p_rootname)
+#ifdef _DEBUG
+#define new DEBUG_NEW
+#undef THIS_FILE
+static char THIS_FILE[] = __FILE__;
+#endif
+
+AppConfig::AppConfig(XString p_rootname)
           :m_rootname(p_rootname)
 {
   m_name               = DEFAULT_NAME;
@@ -54,10 +60,10 @@ AppConfig::~AppConfig()
 
 // Server URL is not stored in this form
 // But  it is used in many places.
-CString
+XString
 AppConfig::GetServerURL()
 {
-  CString MDAServerURL;
+  XString MDAServerURL;
 
   if (m_serverPort == INTERNET_DEFAULT_HTTP_PORT)
   {
@@ -78,7 +84,7 @@ AppConfig::GetServerURL()
 bool
 AppConfig::GetConfigWritable()
 {
-  CString fileNaam = GetConfigFilename();
+  XString fileNaam = GetConfigFilename();
   if (_access(fileNaam, 00) == -1)
   {
     // File does not exist. Assume that we can create it
@@ -94,11 +100,11 @@ AppConfig::GetConfigWritable()
 }
 
 // The config file as an absolute pathname
-CString
+XString
 AppConfig::GetConfigFilename()
 {
   // This is our config file
-  return WebConfig::GetExePath() + PRODUCT_NAME + ".Config";
+  return MarlinConfig::GetExePath() + PRODUCT_NAME + ".Config";
 }
 
 // Read the config from disk
@@ -106,7 +112,7 @@ bool
 AppConfig::ReadConfig()
 {
   // This is our config file
-  CString fileName = GetConfigFilename();
+  XString fileName = GetConfigFilename();
 
   if(XMLMessage::LoadFile(fileName) == false)
   {
@@ -122,8 +128,8 @@ AppConfig::ReadConfig()
   XMLElement* node = GetElementFirstChild(m_root);
   while (node)
   {
-    CString param = node->GetName();
-    CString value = node->GetValue();
+    XString param = node->GetName();
+    XString value = node->GetValue();
 
     // Remember
     AddParameter(param,value);
@@ -191,7 +197,7 @@ AppConfig::WriteConfigElements()
 
 // Remember a parameter
 bool
-AppConfig::AddParameter(CString& p_param,CString& p_value)
+AppConfig::AddParameter(XString& p_param,XString& p_value)
 {
        if(p_param.Compare("Name")          == 0) m_name           = p_value;
   else if(p_param.Compare("Role")          == 0) m_role           = p_value;

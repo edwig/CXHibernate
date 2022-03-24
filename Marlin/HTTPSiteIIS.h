@@ -4,7 +4,7 @@
 //
 // Marlin Server: Internet server/client
 // 
-// Copyright (c) 2014-2021 ir. W.E. Huisman
+// Copyright (c) 2014-2022 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -35,8 +35,8 @@ class HTTPSiteIIS : public HTTPSite
 public:
   HTTPSiteIIS(HTTPServerIIS* p_server
              ,int            p_port
-             ,CString        p_site
-             ,CString        p_prefix
+             ,XString        p_site
+             ,XString        p_prefix
              ,HTTPSite*      p_mainSite = nullptr
              ,LPFN_CALLBACK  p_callback = nullptr);
 
@@ -44,13 +44,13 @@ public:
   virtual bool StartSite();
 
   // OPTIONAL: Set the webroot of the site
-  virtual bool SetWebroot(CString p_webroot);
+  virtual bool SetWebroot(XString p_webroot);
   // Anonymous authentication?
   virtual bool GetHasAnonymousAuthentication(HANDLE p_token);
 
 private:
   // Getting the sites directory within the IIS rootdir
-  CString GetIISSiteDir();
+  XString GetIISSiteDir();
   // Init the site from the ApplicationHost.Config and web.config
   void    InitSite();
 };

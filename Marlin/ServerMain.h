@@ -2,7 +2,7 @@
 //
 // SourceFile: SeverMain.h
 //
-// Copyright (c) 2014-2021 ir. W.E. Huisman
+// Copyright (c) 2014-2022 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -24,16 +24,6 @@
 // THE SOFTWARE.
 //
 #pragma once
-
-// Event log registration numbers
-#define SVC_ERROR   ((DWORD)0xC0020001L)
-#define SVC_INFO    ((DWORD)0x40020002L)
-#define SVC_SUCCESS ((DWORD)0x00020003L)
-// BEWARE: To use, you must define
-// MessageId=0x1 as SymbolicName=SVC_ERROR
-// MessageId=0x2 as SymbolicName=SVC_INFO
-// MessageId=0x3 as SymbolicName=SVC_SUCCESS
-// in the *.MC file of your server application
 
 // Standard starting timing of services
 #define SVC_DEFAULT_SERVICE_START_PENDING    3000  // 3 seconds

@@ -4,7 +4,7 @@
 //
 // Marlin Server: Internet server/client
 // 
-// Copyright (c) 2014-2021 ir. W.E. Huisman
+// Copyright (c) 2014-2022 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -51,7 +51,7 @@ static char THIS_FILE[] = __FILE__;
 //
 //////////////////////////////////////////////////////////////////////////
 
-WebSocketServer::WebSocketServer(CString p_uri)
+WebSocketServer::WebSocketServer(XString p_uri)
                 :WebSocket(p_uri)
 {
   m_context = new WebSocketContext;
@@ -82,8 +82,6 @@ WebSocketServer::OpenSocket()
   if(m_server)
   {
     DETAILLOGS("Opening WebSocket: ",m_uri);
-    m_context->SetHandles(m_server->GetRequestQueue(),m_request);
-
     SocketListener();
 
     // Change state to opened
@@ -157,24 +155,17 @@ WebSocketServer::SocketReader(HRESULT p_error
   else if(p_final)
   {
     // Store or append the fragment
+    // Store the current fragment we just did read
+    StoreWSFrame(m_reading);
+
+    // Decide what to do and which handler to call
     if(p_utf8)
     {
-      StoreOrAppendWSFrame(m_reading);
+      OnMessage();
     }
     else
     {
-      // Store the current fragment we just did read
-      StoreWSFrame(m_reading);
-    }
-
-    // Decide what to do and which handler to call
-    if(!p_utf8)
-    {
       OnBinary();
-    }
-    else if(p_utf8 && p_final)
-    {
-      OnMessage();
     }
   }
 
@@ -183,7 +174,7 @@ WebSocketServer::SocketReader(HRESULT p_error
   {
     if(m_openWriting)
     {
-      CString reason;
+      XString reason;
       reason.Format("WebSocket [%s] closed.",m_uri.GetString());
       SendCloseSocket(WS_CLOSE_NORMAL,reason);
     }
@@ -255,7 +246,7 @@ WebSocketServer::ReceiveCloseSocket()
   HRESULT hr = m_context->GetCloseStatus(&m_closingError,&pointer,&length);
   if(SUCCEEDED(hr))
   {
-    CString encoded;
+    XString encoded;
     bool foundBom = false;
     if(TryConvertWideString((const uchar*)pointer,length,"",encoded,foundBom))
     {
@@ -278,7 +269,7 @@ WebSocketServer::CloseSocket()
 
 // Close the socket with a closing frame
 bool 
-WebSocketServer::SendCloseSocket(USHORT /*p_code*/,CString /*p_reason*/)
+WebSocketServer::SendCloseSocket(USHORT /*p_code*/,XString /*p_reason*/)
 {
   return true;
 }
@@ -310,17 +301,17 @@ WebSocketServer::ServerHandshake(HTTPMessage* p_message)
   m_logfile  = m_server->GetLogfile();
   m_logLevel = m_server->GetLogLevel();
 
-  CString wsVersion("Sec-WebSocket-Version");
-  CString wsClientKey("Sec-WebSocket-Key");
-  CString wsConnection("Connection");
-  CString wsUpgrade("Upgrade");
-  CString wsHost("Host");
+  XString wsVersion("Sec-WebSocket-Version");
+  XString wsClientKey("Sec-WebSocket-Key");
+  XString wsConnection("Connection");
+  XString wsUpgrade("Upgrade");
+  XString wsHost("Host");
 
-  CString version    = p_message->GetHeader(wsVersion);
-  CString clientKey  = p_message->GetHeader(wsClientKey);
-  CString connection = p_message->GetHeader(wsConnection);
-  CString upgrade    = p_message->GetHeader(wsUpgrade);
-  CString host       = p_message->GetHeader(wsHost);
+  XString version    = p_message->GetHeader(wsVersion);
+  XString clientKey  = p_message->GetHeader(wsClientKey);
+  XString connection = p_message->GetHeader(wsConnection);
+  XString upgrade    = p_message->GetHeader(wsUpgrade);
+  XString host       = p_message->GetHeader(wsHost);
 
   // Get optional extensions
   m_protocols  = p_message->GetHeader("Sec-WebSocket-Protocol");
@@ -400,7 +391,6 @@ WebSocketServer::RegisterSocket(HTTPMessage* p_message)
   if(req)
   {
     m_request = req->GetRequest();
-    m_context->SetRawSocketID(req->GetRawSocketID());
   }
 
   // We are now opened for business

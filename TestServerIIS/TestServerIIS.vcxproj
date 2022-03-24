@@ -46,7 +46,7 @@
     <UseDebugLibraries>true</UseDebugLibraries>
     <PlatformToolset>v143</PlatformToolset>
     <CharacterSet>MultiByte</CharacterSet>
-    <UseOfMfc>Dynamic</UseOfMfc>
+    <UseOfMfc>Static</UseOfMfc>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
@@ -54,7 +54,7 @@
     <PlatformToolset>v143</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>MultiByte</CharacterSet>
-    <UseOfMfc>Dynamic</UseOfMfc>
+    <UseOfMfc>Static</UseOfMfc>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
@@ -97,20 +97,20 @@
       </SDLCheck>
       <PreprocessorDefinitions>COMPILED_TOGETHER_WITH_MARLIN;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>$(SolutionDir)CXHibernate;$(SolutionDir)Marlin;$(SolutionDir)SQLComponents;$(SolutionDir)MarlinModule</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)BaseLibrary;$(SolutionDir)CXHibernate;$(SolutionDir)Marlin;$(SolutionDir)SQLComponents;$(SolutionDir)MarlinModule</AdditionalIncludeDirectories>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <ExceptionHandling>Async</ExceptionHandling>
       <RuntimeTypeInfo>true</RuntimeTypeInfo>
       <LanguageStandard>stdcpp17</LanguageStandard>
       <BufferSecurityCheck>false</BufferSecurityCheck>
       <MinimalRebuild />
-      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
+      <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>$(SolutionDir)Lib\</AdditionalLibraryDirectories>
-      <AdditionalDependencies>odbc32.lib;Rpcrt4.lib;httpapi.lib;winhttp.lib;crypt32.lib;secur32.lib;websocket.lib</AdditionalDependencies>
+      <AdditionalDependencies>odbc32.lib;Rpcrt4.lib;httpapi.lib;winhttp.lib;crypt32.lib;secur32.lib;websocket.lib;bcrypt.lib</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
@@ -159,7 +159,7 @@
       </SDLCheck>
       <PreprocessorDefinitions>COMPILED_TOGETHER_WITH_MARLIN;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>$(SolutionDir)CXHibernate;$(SolutionDir)Marlin;$(SolutionDir)SQLComponents;$(SolutionDir)MarlinModule</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)BaseLibrary;$(SolutionDir)CXHibernate;$(SolutionDir)Marlin;$(SolutionDir)SQLComponents;$(SolutionDir)MarlinModule</AdditionalIncludeDirectories>
       <ExceptionHandling>Async</ExceptionHandling>
       <RuntimeTypeInfo>true</RuntimeTypeInfo>
       <LanguageStandard>stdcpp17</LanguageStandard>
@@ -170,12 +170,13 @@
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>$(SolutionDir)Lib\</AdditionalLibraryDirectories>
-      <AdditionalDependencies>odbc32.lib;Rpcrt4.lib;httpapi.lib;winhttp.lib;crypt32.lib;secur32.lib;websocket.lib</AdditionalDependencies>
+      <AdditionalDependencies>odbc32.lib;Rpcrt4.lib;httpapi.lib;winhttp.lib;crypt32.lib;secur32.lib;websocket.lib;bcrypt.lib</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="CXHServerApp.h" />
     <ClInclude Include="Detail.h" />
+    <ClInclude Include="framework.h" />
     <ClInclude Include="Master.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="targetver.h" />

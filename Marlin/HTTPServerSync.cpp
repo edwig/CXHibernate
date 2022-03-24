@@ -4,7 +4,7 @@
 //
 // Marlin Server: Internet server/client
 // 
-// Copyright (c) 2014-2021 ir. W.E. Huisman
+// Copyright (c) 2014-2022 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -51,7 +51,7 @@ static char THIS_FILE[] = __FILE__;
 #define ERRORLOG(code,text)       ErrorLog (__FUNCTION__,code,text)
 #define HTTPERROR(code,text)      HTTPError(__FUNCTION__,code,text)
 
-HTTPServerSync::HTTPServerSync(CString p_name)
+HTTPServerSync::HTTPServerSync(XString p_name)
                :HTTPServerMarlin(p_name)
 {
 }
@@ -118,7 +118,7 @@ HTTPServerSync::Initialise()
 
   // STEP 7: SET THE LENGTH OF THE BACKLOG QUEUE FOR INCOMING TRAFFIC
   // Overrides for the HTTP Site. Test min/max via SetQueueLength
-  int queueLength = m_webConfig->GetParameterInteger("Server","QueueLength",m_queueLength);
+  int queueLength = m_marlinConfig->GetParameterInteger("Server","QueueLength",m_queueLength);
   SetQueueLength(queueLength);
   
   // Set backlog queue: using HttpSetRequestQueueProperty
@@ -158,10 +158,13 @@ HTTPServerSync::Initialise()
   // STEP 9: Set the hard limits
   InitHardLimits();
 
-  // STEP 10: Init the response headers to send
+  // STEP 10: Set the event stream parameters
+  InitEventstreamKeepalive();
+
+  // STEP 11: Init the response headers to send
   InitHeaders();
 
-  // STEP 11: Init the ThreadPool
+  // STEP 12: Init the ThreadPool
   InitThreadPool();
 
   // We are airborne!
@@ -199,7 +202,7 @@ HTTPServerSync::Cleanup()
   }
 
   // Try to stop and remove all groups
-  for(auto group : m_urlGroups)
+  for(auto& group : m_urlGroups)
   {
     // Gracefully stop
     group->StopGroup();
@@ -290,15 +293,19 @@ void HTTPSiteCallbackMessage(void* p_argument)
 }
 void HTTPSiteCallbackEvent(void* p_argument)
 {
-  EventStream* stream = reinterpret_cast<EventStream*>(p_argument);
-  if (stream)
+  MsgStream* dispatch = reinterpret_cast<MsgStream*>(p_argument);
+  EventStream* stream = dispatch->m_stream;
+  HTTPMessage* message = dispatch->m_message;
+  if(stream)
   {
     HTTPSite* site = stream->m_site;
     if (site)
     {
-      site->HandleEventStream(stream);
+      site->HandleEventStream(message,stream);
     }
   }
+  delete message;
+  delete dispatch;
 }
 
 static unsigned int
@@ -401,15 +408,15 @@ HTTPServerSync::RunHTTPServer()
     m_counter.Start();
 
     // Grab the senders content
-    CString   acceptTypes    = request->Headers.KnownHeaders[HttpHeaderAccept         ].pRawValue;
-    CString   contentType    = request->Headers.KnownHeaders[HttpHeaderContentType    ].pRawValue;
-    CString   acceptEncoding = request->Headers.KnownHeaders[HttpHeaderAcceptEncoding ].pRawValue;
-    CString   cookie         = request->Headers.KnownHeaders[HttpHeaderCookie         ].pRawValue;
-    CString   authorize      = request->Headers.KnownHeaders[HttpHeaderAuthorization  ].pRawValue;
-    CString   modified       = request->Headers.KnownHeaders[HttpHeaderIfModifiedSince].pRawValue;
-    CString   referrer       = request->Headers.KnownHeaders[HttpHeaderReferer        ].pRawValue;
-    CString   contentLength  = request->Headers.KnownHeaders[HttpHeaderContentLength  ].pRawValue;
-    CString   rawUrl         = CW2A(request->CookedUrl.pFullUrl);
+    XString   acceptTypes    = request->Headers.KnownHeaders[HttpHeaderAccept         ].pRawValue;
+    XString   contentType    = request->Headers.KnownHeaders[HttpHeaderContentType    ].pRawValue;
+    XString   acceptEncoding = request->Headers.KnownHeaders[HttpHeaderAcceptEncoding ].pRawValue;
+    XString   cookie         = request->Headers.KnownHeaders[HttpHeaderCookie         ].pRawValue;
+    XString   authorize      = request->Headers.KnownHeaders[HttpHeaderAuthorization  ].pRawValue;
+    XString   modified       = request->Headers.KnownHeaders[HttpHeaderIfModifiedSince].pRawValue;
+    XString   referrer       = request->Headers.KnownHeaders[HttpHeaderReferer        ].pRawValue;
+    XString   contentLength  = request->Headers.KnownHeaders[HttpHeaderContentLength  ].pRawValue;
+    XString   rawUrl         = (XString) CW2A(request->CookedUrl.pFullUrl);
     PSOCKADDR sender         = request->Address.pRemoteAddress;
     int       remDesktop     = FindRemoteDesktop(request->Headers.UnknownHeaderCount
                                                 ,request->Headers.pUnknownHeaders);
@@ -457,16 +464,19 @@ HTTPServerSync::RunHTTPServer()
       // See if we must substitute for a sub-site
       if(site && m_hasSubsites)
       {
-        CString absPath = CW2A(request->CookedUrl.pAbsPath);
+        XString absPath = (XString) CW2A(request->CookedUrl.pAbsPath);
         site = FindHTTPSite(site,absPath);
       }
 
       // Check our authentication
-      if(!CheckAuthentication(request,request->RequestId,site,rawUrl,authorize,accessToken))
+      if(site->GetAuthentication())
       {
-        // Ready with this request
-        HTTP_SET_NULL_ID(&requestId);
-        continue;
+        if(!CheckAuthentication(request,request->RequestId,site,rawUrl,authorize,accessToken))
+        {
+          // Ready with this request
+          HTTP_SET_NULL_ID(&requestId);
+          continue;
+        }
       }
 
       // Remember the context: easy in API 2.0
@@ -519,30 +529,21 @@ HTTPServerSync::RunHTTPServer()
 
       // Receiving the initiation of an event stream for the server
       acceptTypes.Trim();
+      EventStream* stream = nullptr;
       if((type == HTTPCommand::http_get) && (eventStream || acceptTypes.Left(17).CompareNoCase("text/event-stream") == 0))
       {
-        CString absolutePath = CW2A(request->CookedUrl.pAbsPath);
+        XString absolutePath = (XString) CW2A(request->CookedUrl.pAbsPath);
         if(CheckUnderDDOSAttack((PSOCKADDR_IN6)sender,absolutePath))
         {
           continue;
         }
-        EventStream* stream = SubscribeEventStream((PSOCKADDR_IN6) sender
-                                                   ,remDesktop
-                                                   ,site
-                                                   ,site->GetSite()
-                                                   ,absolutePath
-                                                   ,request->RequestId
-                                                   ,accessToken);
-        if(stream)
-        {
-          // Remember our URL
-          stream->m_baseURL = rawUrl;
-          // Check for a correct callback
-          callback = callback ? callback : HTTPSiteCallbackEvent;
-          m_pool.SubmitWork(callback,(void*)stream);
-          HTTP_SET_NULL_ID(&requestId);
-          continue;
-        }
+        stream = SubscribeEventStream((PSOCKADDR_IN6) sender
+                                      ,remDesktop
+                                      ,site
+                                      ,site->GetSite()
+                                      ,absolutePath
+                                      ,request->RequestId
+                                      ,accessToken);
       }
 
       // For all types of requests: Create the HTTPMessage
@@ -559,17 +560,8 @@ HTTPServerSync::RunHTTPServer()
       message->SetAcceptEncoding(acceptEncoding);
       message->SetContentType(contentType);
       message->SetContentLength((size_t)atoll(contentLength));
-      if(site->GetAllHeaders())
-      {
-        // If requested so, copy all headers to the message
-        message->SetAllHeaders(&request->Headers);
-      }
-      else
-      {
-        // As a minimum, always add the unknown headers
-        // in case of a 'POST', as the SOAPAction header is here too!
-        message->SetUnknownHeaders(&request->Headers);
-      }
+      message->SetAllHeaders(&request->Headers);
+      message->SetUnknownHeaders(&request->Headers);
 
       // Handle modified-since 
       // Rest of the request is then not needed any more
@@ -595,6 +587,22 @@ HTTPServerSync::RunHTTPServer()
           DETAILLOGV("Request VERB changed to: %s",message->GetVerb().GetString());
         }
       }
+
+      if(stream)
+      {
+        // Remember our URL
+        stream->m_baseURL = rawUrl;
+        // Create callback structure
+        MsgStream* dispatch = new MsgStream();
+        dispatch->m_message = message;
+        dispatch->m_stream  = stream;
+        // Check for a correct callback
+        callback = callback ? callback : HTTPSiteCallbackEvent;
+        m_pool.SubmitWork(callback,(void*)dispatch);
+        HTTP_SET_NULL_ID(&requestId);
+        continue;
+      }
+
 
       // Remember the fact that we should read the rest of the message
       message->SetReadBuffer(request->Flags & HTTP_REQUEST_FLAG_MORE_ENTITY_BODY_EXISTS);
@@ -755,7 +763,7 @@ HTTPServerSync::StopServer()
 
 // Create a new WebSocket in the subclass of our server
 WebSocket*
-HTTPServerSync::CreateWebSocket(CString p_uri)
+HTTPServerSync::CreateWebSocket(XString p_uri)
 {
   return new WebSocketServerSync(p_uri);
 }
@@ -773,7 +781,7 @@ HTTPServerSync::InitializeHttpResponse(HTTP_RESPONSE* p_response,USHORT p_status
 
 // Used for canceling a WebSocket for an event stream
 void 
-HTTPServerSync::CancelRequestStream(HTTP_OPAQUE_ID p_response)
+HTTPServerSync::CancelRequestStream(HTTP_OPAQUE_ID p_response,bool /*p_reset*/)
 {
   // Cancel the outstanding request from the request queue
   ULONG result = HttpCancelHttpRequest(m_requestQueue,p_response,NULL);
@@ -902,8 +910,8 @@ HTTPServerSync::AddUnknownHeaders(UKHeaders& p_headers)
   UKHeaders::iterator it = p_headers.begin();
   while(it != p_headers.end())
   {
-    CString name  = it->first;
-    CString value = it->second;
+    XString name  = it->first;
+    XString value = it->second;
 
     header[ind].NameLength      = (USHORT)name.GetLength();
     header[ind].RawValueLength  = (USHORT)value.GetLength();
@@ -917,15 +925,62 @@ HTTPServerSync::AddUnknownHeaders(UKHeaders& p_headers)
   return header;
 }
 
+// Sending a response as a chunk
+void
+HTTPServerSync::SendAsChunk(HTTPMessage* p_message,bool p_final /*= false*/)
+{
+  // Check if multi-part buffer or file
+  FileBuffer* buffer = p_message->GetFileBuffer();
+  if(!buffer->GetFileName().IsEmpty())
+  {
+    ERRORLOG(ERROR_INVALID_PARAMETER,"Send as chunk cannot send a file!");
+    return;
+  }
+  // Chunk encode the file buffer
+  if(!buffer->ChunkedEncoding(p_final))
+  {
+    ERRORLOG(ERROR_NOT_ENOUGH_MEMORY,"Cannot chunk-encode the message for transfer-encoding!");
+  }
+
+  // If we want to send a (g)zipped buffer, that should have been done already by now
+  p_message->SetAcceptEncoding("");
+
+  // Get the chunk number (first->next)
+  unsigned chunk = p_message->GetChunkNumber();
+  p_message->SetChunkNumber(++chunk);
+  DETAILLOGV("Transfer-encoding [Chunked] Sending chunk [%d]",chunk);
+
+  if(chunk == 1)
+  {
+    // Send the first chunk
+    SendResponse(p_message);
+  }
+  else
+  {
+    // Send all next chunks
+    HTTP_RESPONSE   response;
+    HTTP_OPAQUE_ID  requestID = p_message->GetRequestHandle();
+    int status = p_message->GetStatus();
+    InitializeHttpResponse(&response,(USHORT)status,(PSTR)GetHTTPStatusText(status));
+    SendResponseChunk(&response,requestID,buffer,p_final);
+  }
+  if(p_final)
+  {
+    // Do **NOT** send an answer twice
+    p_message->SetHasBeenAnswered();
+  }
+}
+
 // Sending response for an incoming message
 void       
 HTTPServerSync::SendResponse(HTTPMessage* p_message)
 {
   HTTP_RESPONSE   response;
-  CString         challenge;
+  XString         challenge;
   HTTP_OPAQUE_ID  requestID   = p_message->GetRequestHandle();
   FileBuffer*     buffer      = p_message->GetFileBuffer();
-  CString         contentType("application/octet-stream"); 
+  XString         contentType("application/octet-stream"); 
+  bool            moreData(false);
 
   // See if there is something to send
   if(requestID == NULL)
@@ -936,17 +991,10 @@ HTTPServerSync::SendResponse(HTTPMessage* p_message)
 
   // Respond to general HTTP status
   int status = p_message->GetStatus();
-  CString date = HTTPGetSystemTime();
+  XString date = HTTPGetSystemTime();
 
   // Initialize the HTTP response structure.
   InitializeHttpResponse(&response,(USHORT)status,(PSTR) GetHTTPStatusText(status));
-
-  // Add a known header. (octet-stream or the message content type)
-  if(!p_message->GetContentType().IsEmpty())
-  {
-    contentType = p_message->GetContentType();
-  }
-  AddKnownHeader(response,HttpHeaderContentType,contentType);
 
   // In case of a HTTP 401
   if(status == HTTP_STATUS_DENIED)
@@ -964,6 +1012,22 @@ HTTPServerSync::SendResponse(HTTPMessage* p_message)
     AddKnownHeader(response,HttpHeaderDate,date);
   }
 
+  // Add a known header. (octet-stream or the message content type)
+  if(!p_message->GetContentType().IsEmpty())
+  {
+    contentType = p_message->GetContentType();
+  }
+  else
+  {
+    XString cttype = p_message->GetHeader("Content-type");
+    if(!cttype.IsEmpty())
+    {
+      contentType = cttype;
+    }
+  }
+  p_message->DelHeader("Content-Type");
+  AddKnownHeader(response,HttpHeaderContentType,contentType);
+
   // Add the server header or suppress it
   switch(m_sendHeader)
   {
@@ -979,29 +1043,69 @@ HTTPServerSync::SendResponse(HTTPMessage* p_message)
                                           AddKnownHeader(response,HttpHeaderServer,"");
                                           break;
   }
+  p_message->DelHeader("Server");
+
+  // Cookie settings
+  bool cookiesHasSecure(false);
+  bool cookiesHasHttp(false);
+  bool cookiesHasSame(false);
+  bool cookiesSecure(false);
+  bool cookiesHttpOnly(false);
+  CookieSameSite cookiesSameSite(CookieSameSite::NoSameSite);
+
+  // Getting the site settings
+  HTTPSite* site = p_message->GetHTTPSite();
+  if(site)
+  {
+    cookiesHasSecure = site->GetCookieHasSecure();
+    cookiesHasHttp   = site->GetCookieHasHttpOnly();
+    cookiesHasSame   = site->GetCookieHasSameSite();
+
+    cookiesSecure    = site->GetCookiesSecure();
+    cookiesHttpOnly  = site->GetCookiesHttpOnly();
+    cookiesSameSite  = site->GetCookiesSameSite();
+  }
 
   // Add cookies to the unknown response headers
   // Because we can have more than one Set-Cookie: header
   // and HTTP API just supports one set-cookie.
   UKHeaders ukheaders;
   Cookies& cookies = p_message->GetCookies();
-  for(auto& cookie : cookies.GetCookies())
+  if(cookies.GetCookies().empty())
   {
-    ukheaders.insert(std::make_pair("Set-Cookie",cookie.GetSetCookieText()));
+    XString cookie = p_message->GetHeader("Set-Cookie");
+    if(!cookie.IsEmpty())
+    {
+      AddKnownHeader(response,HttpHeaderSetCookie,cookie);
+    }
   }
-
-  // Other unknown headers
-  HTTPSite* site = p_message->GetHTTPSite();
-  if(site)
+  else
   {
-    site->AddSiteOptionalHeaders(ukheaders);
-  }
+    for(auto& cookie : cookies.GetCookies())
+    {
+      if(cookiesHasSecure)  cookie.SetSecure  (cookiesSecure);
+      if(cookiesHasHttp)    cookie.SetHttpOnly(cookiesHttpOnly);
+      if(cookiesHasSame)    cookie.SetSameSite(cookiesSameSite);
 
-  // Add extra headers from the message
+      ukheaders.insert(std::make_pair("Set-Cookie",cookie.GetSetCookieText()));
+    }
+  }
+  p_message->DelHeader("Set-Cookie");
+
+
+  // Add extra headers from the message, except for content-length
+  p_message->DelHeader("Content-Length");
+
   HeaderMap* map = p_message->GetHeaderMap();
   for(HeaderMap::iterator it = map->begin(); it != map->end(); ++it)
   {
     ukheaders.insert(std::make_pair(it->first,it->second));
+  }
+
+  // Add other optional security headers like CORS etc.
+  if(site)
+  {
+    site->AddSiteOptionalHeaders(ukheaders);
   }
 
   // Possible zip the contents, and add content-encoding header
@@ -1023,15 +1127,23 @@ HTTPServerSync::SendResponse(HTTPMessage* p_message)
   response.Headers.UnknownHeaderCount = (USHORT) ukheaders.size();
   response.Headers.pUnknownHeaders    = unknown;
 
-  // Now after the compression, add the total content length
-  CString contentLength;
   size_t totalLength = buffer ? buffer->GetLength() : 0;
-#ifdef _WIN64
-  contentLength.Format("%I64u",totalLength);
-#else
-  contentLength.Format("%lu",totalLength);
-#endif
-  AddKnownHeader(response,HttpHeaderContentLength,contentLength);
+  if(p_message->GetChunkNumber())
+  {
+    moreData = true;
+    AddKnownHeader(response,HttpHeaderTransferEncoding,"chunked");
+  }
+  else
+  {
+    // Now after the compression, add the total content length
+    XString contentLength;
+  #ifdef _WIN64
+    contentLength.Format("%I64u",totalLength);
+  #else
+    contentLength.Format("%lu",totalLength);
+  #endif
+    AddKnownHeader(response,HttpHeaderContentLength,contentLength);
+  }
 
   // Dependent on the filling of FileBuffer
   // Send 1 or more buffers or the file
@@ -1041,7 +1153,7 @@ HTTPServerSync::SendResponse(HTTPMessage* p_message)
   }
   else if(buffer && buffer->GetFileName().IsEmpty())
   {
-    SendResponseBuffer(&response,requestID,buffer,totalLength);
+    SendResponseBuffer(&response,requestID,buffer,totalLength,moreData);
   }
   else
   {
@@ -1050,7 +1162,7 @@ HTTPServerSync::SendResponse(HTTPMessage* p_message)
   if(GetLastError())
   {
     // Error handler
-    CString message = GetLastErrorAsString(tls_lastError);
+    XString message = GetLastErrorAsString(tls_lastError);
     m_log->AnalysisLog(__FUNCTION__, LogType::LOG_ERROR,true,"HTTP Answer [%d:%s]",GetLastError(),message.GetString());
     // Reset the last error
     SetError(NO_ERROR);
@@ -1062,15 +1174,19 @@ HTTPServerSync::SendResponse(HTTPMessage* p_message)
   // Remove unknown header information
   delete [] unknown;
 
-  // Do **NOT** send an answer twice
-  p_message->SetHasBeenAnswered();
+  if(!p_message->GetChunkNumber())
+  {
+	// Do **NOT** send an answer twice
+	p_message->SetHasBeenAnswered();
+  }
 }
 
 bool      
 HTTPServerSync::SendResponseBuffer(PHTTP_RESPONSE p_response
                                   ,HTTP_OPAQUE_ID p_requestID
                                   ,FileBuffer*    p_buffer
-                                  ,size_t         p_totalLength)
+                                  ,size_t         p_totalLength
+                                  ,bool           p_moreData /*= false*/)
 {
   uchar* entity       = NULL;
   DWORD  result       = 0;
@@ -1100,11 +1216,13 @@ HTTPServerSync::SendResponseBuffer(PHTTP_RESPONSE p_response
   policy.Policy        = m_policy;
   policy.SecondsToLive = m_secondsToLive;
 
+  ULONG flags = p_moreData ? HTTP_SEND_RESPONSE_FLAG_MORE_DATA : 0;
+
   // Because the entity body is sent in one call, it is not
   // required to specify the Content-Length.
   result = HttpSendHttpResponse(m_requestQueue,      // ReqQueueHandle
                                 p_requestID,         // Request ID
-                                0,                   // Flags
+                                flags,               // Flags
                                 p_response,          // HTTP response
                                 &policy,             // Cache policy
                                 &bytesSent,          // bytes sent  (OPTIONAL)
@@ -1126,9 +1244,9 @@ HTTPServerSync::SendResponseBuffer(PHTTP_RESPONSE p_response
 
 void      
 HTTPServerSync::SendResponseBufferParts(PHTTP_RESPONSE  p_response
-                                         ,HTTP_OPAQUE_ID p_request
-                                         ,FileBuffer*     p_buffer
-                                         ,size_t          p_totalLength)
+                                       ,HTTP_OPAQUE_ID  p_request
+                                       ,FileBuffer*     p_buffer
+                                       ,size_t          p_totalLength)
 {
   int    transmitPart = 0;
   uchar* entityBuffer = NULL;
@@ -1292,16 +1410,64 @@ HTTPServerSync::SendResponseFileHandle(PHTTP_RESPONSE p_response
 }
 
 void      
+HTTPServerSync::SendResponseChunk(PHTTP_RESPONSE  p_response
+                                 ,HTTP_OPAQUE_ID  p_request
+                                 ,FileBuffer*     p_buffer
+                                 ,bool            p_last)
+{
+  uchar* entityBuffer = NULL;
+  size_t entityLength = 0;
+  DWORD  bytesSent    = 0;
+  DWORD  result       = 0;
+  HTTP_DATA_CHUNK dataChunk;
+  memset(&dataChunk,0,sizeof(HTTP_DATA_CHUNK));
+
+  p_buffer->GetBuffer(entityBuffer,entityLength);
+  if(entityBuffer)
+  {
+    // Add an entity chunk.
+    dataChunk.DataChunkType           = HttpDataChunkFromMemory;
+    dataChunk.FromMemory.pBuffer      = entityBuffer;
+    dataChunk.FromMemory.BufferLength = (ULONG)entityLength;
+    p_response->EntityChunkCount      = 1;
+    p_response->pEntityChunks         = &dataChunk;
+
+    // Flag to calculate the last sending part
+    ULONG flags = p_last ?  0 : HTTP_SEND_RESPONSE_FLAG_MORE_DATA;
+
+    // Next part to send
+    result = HttpSendResponseEntityBody(m_requestQueue
+                                        ,p_request
+                                        ,flags
+                                        ,1
+                                        ,&dataChunk
+                                        ,&bytesSent
+                                        ,NULL
+                                        ,NULL
+                                        ,NULL
+                                        ,NULL);
+    if(result != NO_ERROR)
+    {
+      ERRORLOG(result,"HTTP SendResponsePart error");
+    }
+    else
+    {
+      DETAILLOGV("HTTP SendResponseChunk [%d] bytes sent",entityLength);
+    }
+  }
+}
+
+void      
 HTTPServerSync::SendResponseError(PHTTP_RESPONSE p_response
                                  ,HTTP_OPAQUE_ID p_request
-                                 ,CString&       p_page
+                                 ,XString&       p_page
                                  ,int            p_error
                                  ,const char*    p_reason)
 {
   DWORD result = 0;
   DWORD bytesSent = 0;
   HTTP_DATA_CHUNK dataChunk;
-  CString sending;
+  XString sending;
 
   // Format our error page
   sending.Format(p_page,p_error,p_reason);
@@ -1354,11 +1520,11 @@ bool
 HTTPServerSync::InitEventStream(EventStream& p_stream)
 {
   // First comment to push to the stream (not an event!)
-  CString init = m_eventBOM ? ConstructBOM() : "";
+  XString init = m_eventBOM ? ConstructBOM() : XString();
   init += ":init event-stream\n";
 
   // Initialize the HTTP response structure.
-  InitializeHttpResponse(&p_stream.m_response,HTTP_STATUS_OK,"OK");
+  InitializeHttpResponse(&p_stream.m_response,HTTP_STATUS_OK,(PSTR)"OK");
 
   // Add a known header.
   AddKnownHeader(p_stream.m_response,HttpHeaderContentType,"text/event-stream");

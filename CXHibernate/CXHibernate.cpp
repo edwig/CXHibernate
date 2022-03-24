@@ -2,7 +2,7 @@
 //
 // File: CXHibernate.cpp
 //
-// Copyright (c) 1998-2018 ir. W.E. Huisman
+// Copyright (c) 2015-2022 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy of 
@@ -29,7 +29,8 @@
 #include "CXSession.h"
 #include "CXResourceFile.h"
 #include <AutoCritical.h>
-#include <WebConfig.h>
+#include <LogAnalysis.h>
+#include <GetExePath.h>
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -345,7 +346,7 @@ CXHibernate::LoadConfiguration(CString p_sessionKey,CString p_configFile /*= ""*
   }
   if(filename.Find('\\') < 0)
   {
-    filename = WebConfig::GetExePath() + filename;
+    filename = GetExePath() + filename;
   }
 
   // Loading our config
@@ -402,7 +403,7 @@ CXHibernate::SaveConfiguration(CXSession* p_session,CString p_configFile /*= ""*
   CString filename(p_configFile);
   if (filename.IsEmpty())
   {
-    filename = WebConfig::GetExePath() + HIBERNATE_CONFIG_FILE;
+    filename = GetExePath() + HIBERNATE_CONFIG_FILE;
   }
 
   // Create an XMLMessage

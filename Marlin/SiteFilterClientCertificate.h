@@ -4,7 +4,7 @@
 //
 // Marlin Server: Internet server/client
 // 
-// Copyright (c) 2014-2021 ir. W.E. Huisman
+// Copyright (c) 2014-2022 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -31,7 +31,7 @@
 class SiteFilterClientCertificate : public SiteFilter
 {
 public:
-  SiteFilterClientCertificate(unsigned p_priority,CString p_name);
+  SiteFilterClientCertificate(unsigned p_priority,XString p_name);
   virtual ~SiteFilterClientCertificate();
 
   // Handle the filter
@@ -44,8 +44,8 @@ public:
   void    SetRequestCertificate(bool p_request);
 
   bool    GetRequestCertificate()           { return m_request;       };
-  CString GetClientCertificateName()        { return m_certName;      };
-  CString GetClientCertificateThumbprint()  { return m_certThumbprint;};
+  XString GetClientCertificateName()        { return m_certName;      };
+  XString GetClientCertificateThumbprint()  { return m_certThumbprint;};
 
 private:
   void    FreeCertificate();
@@ -54,8 +54,8 @@ private:
   bool    CheckClientCertificate();
 
   bool    m_request { true };
-  CString m_certName;
-  CString m_certThumbprint;
+  XString m_certName;
+  XString m_certThumbprint;
 };
 
 inline void

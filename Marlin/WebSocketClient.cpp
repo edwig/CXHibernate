@@ -4,7 +4,7 @@
 //
 // Marlin Server: Internet server/client
 // 
-// Copyright (c) 2014-2021 ir. W.E. Huisman
+// Copyright (c) 2014-2022 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -48,7 +48,7 @@ static char THIS_FILE[] = __FILE__;
 //
 //////////////////////////////////////////////////////////////////////////
 
-WebSocketClient::WebSocketClient(CString p_uri)
+WebSocketClient::WebSocketClient(XString p_uri)
                 :WebSocket(p_uri)
 {
   LoadHTTPLibrary();
@@ -140,7 +140,6 @@ WebSocketClient::OpenSocket()
     return false;
   }
 
-
   // GET this URI (ws[s]://resource) !!
   client.SetVerb("GET");
   client.SetURL(m_uri);
@@ -154,9 +153,13 @@ WebSocketClient::OpenSocket()
   {
     client.AddHeader("Sec-WebSocket-Extensions",m_extensions);
   }
-
-  // We need all response headers for the handshake
-  client.SetReadAllHeaders(true);
+  if(!m_headers.empty())
+  {
+    for(auto& header : m_headers)
+    {
+      client.AddHeader(header.first,header.second);
+    }
+  }
 
   // We will do the WebSocket handshake on this client!
   // This keeps open the request handle for output as well
@@ -173,26 +176,34 @@ WebSocketClient::OpenSocket()
       m_socket = m_websocket_complete(handle,NULL); // WinHttpWebSocketCompleteUpgrade
       if(m_socket)
       {
-        // Close client handle first. HTTP is no longer needed
-        // WinHttpCloseHandle(handle);
-
-        // Set our timeout headers
-        AddWebSocketHeaders();
-
-        // Trying to start the listener
-        if(StartClientListner())
+        // Remember the identity key
+        HeaderMap::iterator key = client.GetResponseHeaders().find("Sec-Websocket-Accept");
+        if(key != client.GetResponseHeaders().end())
         {
-          // If we come back here the receive thread is running
-          DETAILLOGS("WebSocket open for: ",m_uri);
-          m_openReading = true;
-          m_openWriting = true;
-          OnOpen();
+          m_key = key->second;
+
+          // Set our timeout headers
+          AddWebSocketHeaders();
+
+          // Trying to start the listener
+          if(StartClientListner())
+          {
+            // If we come back here the receive thread is running
+            DETAILLOGS("WebSocket open for: ",m_uri);
+            m_openReading = true;
+            m_openWriting = true;
+            OnOpen();
+          }
+        }
+        else
+        {
+          ERRORLOG(ERROR_NOT_FOUND,"Socket upgrade to WinSocket failed. Sec-WebSocket-Accept not found\n");
         }
       }
       else
       {
         DWORD error = GetLastError();
-        CString message;
+        XString message;
         message.Format("Socket upgrade to WinSocket failed [%d] %s\n",error,GetHTTPErrorText(error).GetString());
         ERRORLOG(error,message);
       }
@@ -206,7 +217,7 @@ WebSocketClient::OpenSocket()
   else
   {
     // Error handling. Socket not found on URI
-    CString error;
+    XString error;
     error.Format("WebSocket protocol not found on URI [%s] HTTP status [%d]",m_uri.GetString(),client.GetStatus());
     ERRORLOG(ERROR_NOT_FOUND,error);
   }
@@ -222,63 +233,71 @@ WebSocketClient::CloseSocket()
   if(m_socket)
   {
     DETAILLOGS("Hard TCP/IP close for WebSocket: ",m_uri);
+    m_openReading = false;
+    m_openWriting = false;
+
     WinHttpCloseHandle(m_socket);
 
     DWORD wait = 10;
-    while(m_listener && wait <= 640)
+    while(m_listener && wait <= 6400)
     {
       Sleep(wait);
       wait *= 2;
     }
     m_socket = NULL;
+
+    // Really get rid of the thread!
+    if(m_listener)
+    {
+      TerminateThread(m_listener,0);
+    }
   }
   return true;
 }
 
 // Close the socket with a closing frame
 bool 
-WebSocketClient::SendCloseSocket(USHORT p_code,CString p_reason)
+WebSocketClient::SendCloseSocket(USHORT p_code,XString p_reason)
 {
-  if(m_socket)
+  // Already closed?
+  if(!m_socket)
   {
-    // Check if p_reason is shorter then or equal to 123 bytes 
-    DWORD length = p_reason.GetLength();
-    if(length > WS_CLOSE_MAXIMUM)
-    {
-      length = WS_CLOSE_MAXIMUM;
-    }
-    DETAILLOGV("Send close WebSocket [%d:%s] for: %s",p_code,p_reason.GetString(),m_uri.GetString());
-    DWORD error = m_websocket_close(m_socket,p_code,(void*)p_reason.GetString(),length); // WinHttpWebSocketClose
-    if(error)
-    {
-      // We could be in a tight spot (socket already closed)
-      if(error == ERROR_INVALID_OPERATION)
-      {
-        return true;
-      }
-      // Failed to send a close socket message.
-      CString message = "Failed to send WebSocket 'close' message: " + GetLastErrorAsString(error);
-      ERRORLOG(error,message);
-      return false;
-    }
-    else if(!m_closingError)
-    {
-      if(ReceiveCloseSocket() && m_closingError)
-      {
-        // The other side acknowledged the fact that they did close also
-        CloseSocket();
-      }
-    }
-    else
-    {
-      // It was an answer on an incoming 'close' message
-      // We did our answering, so close completely
-      CloseSocket();
-    }
-    OnClose();
     return true;
   }
-  return false;
+
+  // Check if p_reason is shorter then or equal to 123 bytes 
+  DWORD length = p_reason.GetLength();
+  if(length > WS_CLOSE_MAXIMUM)
+  {
+    length = WS_CLOSE_MAXIMUM;
+  }
+  DETAILLOGV("Send close WebSocket [%d:%s] for: %s",p_code,p_reason.GetString(),m_uri.GetString());
+  DWORD error = m_websocket_close(m_socket,p_code,(void*)p_reason.GetString(),length); // WinHttpWebSocketClose
+  if(error && (error != ERROR_WINHTTP_OPERATION_CANCELLED))
+  {
+    // We could be in a tight spot (socket already closed)
+    if(error == ERROR_INVALID_OPERATION)
+    {
+      return true;
+    }
+    // Failed to send a close socket message.
+    XString message = "Failed to send WebSocket 'close' message: " + GetLastErrorAsString(error);
+    ERRORLOG(error,message);
+    return false;
+  }
+  else if(!m_closingError)
+  {
+    // ReceiveCloseSocket();
+  }
+  // Tell it to the application
+  OnClose();
+
+  // The other side acknowledged the fact that they did close also
+  // It was an answer on an incoming 'close' message
+  // We did our answering, so close completely
+  CloseSocket();
+
+  return true;
 }
 
 // Decode the incoming close socket message
@@ -308,6 +327,10 @@ WebSocketClient::ReceiveCloseSocket()
       reason[received] = 0;
       m_closing = reason;
       DETAILLOGV("Closing WebSocket frame received [%d:%s]",m_closingError,m_closing.GetString());
+      WinHttpCloseHandle(m_socket);
+      m_socket = NULL;
+      m_openReading = false;
+      m_openWriting = false;
     }
     return true;
   }
@@ -386,6 +409,11 @@ WebSocketClient::SocketListener()
       m_reading = new WSFrame;
       m_reading->m_data = (BYTE*)malloc(m_fragmentsize + WS_OVERHEAD);
     }
+    // Happens on SocketClose from the server
+    if(!m_socket)
+    {
+      break;
+    }
 
     DWORD bytesRead = 0;
     WINHTTP_WEB_SOCKET_BUFFER_TYPE type;
@@ -397,13 +425,12 @@ WebSocketClient::SocketListener()
                                      ,&type);
     if(error)
     {
-      if(error == ERROR_WINHTTP_OPERATION_CANCELLED)
+      if(error != ERROR_WINHTTP_OPERATION_CANCELLED)
       {
-        // Socket handle got closed. Object is invalid now. Bail out
-        return;
+        ERRORLOG(error, "ERROR while receiving from WebSocket: " + m_uri);
+        CloseSocket();
       }
-      ERRORLOG(error,"ERROR while receiving from WebSocket: " + m_uri);
-      CloseSocket();
+      m_openReading = false;
     }
     else
     {
@@ -432,7 +459,10 @@ WebSocketClient::SocketListener()
           {
             SendCloseSocket(WS_CLOSE_NORMAL,"Socket closed!");
           }
-          OnClose();
+          else
+          {
+            OnClose();
+          }
           CloseSocket();
         }
         else if(utf8)
@@ -508,7 +538,7 @@ WebSocketClient::StartClientListner()
 
 // Client key generator for the WebSocket protocol
 // Now using the built-in key generator of WinHTTP
-CString
+XString
 WebSocketClient::GenerateKey()
 {
   // crank up the random generator

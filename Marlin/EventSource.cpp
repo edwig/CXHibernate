@@ -4,7 +4,7 @@
 //
 // Marlin Server: Internet server/client
 // 
-// Copyright (c) 2014-2021 ir. W.E. Huisman
+// Copyright (c) 2014-2022 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -30,7 +30,7 @@
 #include "ServerEvent.h"
 #include "ThreadPool.h"
 #include "HTTPClient.h"
-#include "Analysis.h"
+#include "LogAnalysis.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -42,27 +42,37 @@ static char THIS_FILE[] = __FILE__;
 #define DETAILLOG(text) if(m_client->GetLogging()) m_client->GetLogging()->AnalysisLog(__FUNCTION__,LogType::LOG_INFO, false,(text))
 #define ERRORLOG(text)  if(m_client->GetLogging()) m_client->GetLogging()->AnalysisLog(__FUNCTION__,LogType::LOG_ERROR,false,(text))
 
-// Saving the event data
-_declspec(thread) CString* eventData = NULL;
-_declspec(thread) CString* eventName = NULL;
-
-EventSource::EventSource(HTTPClient* p_client,CString p_url)
+EventSource::EventSource(HTTPClient* p_client,XString p_url)
             :m_url(p_url)
             ,m_client(p_client)
             ,m_serialize(false)
-            ,m_pool(nullptr)
+            ,m_ownPool(false)
 {
   Reset();
 }
 
 EventSource::~EventSource()
 {
-  // Stop threadpool
-  if(m_pool)
+  if(m_pool && m_ownPool)
   {
+    // Stop threadpool
     delete m_pool;
     m_pool = nullptr;
+    m_ownPool = false;
   }
+}
+
+// Set an external threadpool
+void
+EventSource::SetThreadPool(ThreadPool* p_pool)
+{
+  if(m_pool && m_ownPool)
+  {
+    // Stop threadpool
+    delete m_pool;
+  }
+  m_pool    = p_pool;
+  m_ownPool = false;
 }
 
 bool
@@ -74,6 +84,7 @@ EventSource::EventSourceInit(bool p_withCredentials)
   if(m_pool == nullptr)
   {
     m_pool = new ThreadPool(NUM_THREADS_MINIMUM,NUM_THREADS_MAXIMUM);
+    m_ownPool = true;
   }
   // Now starting the eventstream
   return m_client->StartEventStream(m_url);
@@ -121,7 +132,7 @@ EventSource::Close()
 
 // Add event listner to the source
 bool 
-EventSource::AddEventListener(CString p_event,LPFN_EVENTHANDLER p_handler,bool p_useCapture /*=false*/)
+EventSource::AddEventListener(XString p_event,LPFN_EVENTHANDLER p_handler,bool p_useCapture /*=false*/)
 {
   // Always search on lower case
   p_event.MakeLower();
@@ -188,6 +199,20 @@ EventSource::HandleLastID(ServerEvent* p_event)
   }
 }
 
+// Add application pointer
+void
+EventSource::SetApplicationData(void* p_data)
+{
+  m_appData = p_data;
+}
+
+void
+EventSource::SetSecurity(XString p_cookie, XString p_secret)
+{
+  m_cookie = p_cookie;
+  m_secret = p_secret;
+}
+
 //////////////////////////////////////////////////////////////////////////
 //
 // Default stubs for the standard listeners
@@ -207,7 +232,7 @@ EventSource::OnOpen(ServerEvent* p_event)
   // Handle onopen
   if(m_onopen)
   {
-    (*m_onopen)(p_event);
+    (*m_onopen)(p_event,m_appData);
     return;
   }
   DETAILLOG("EventSource: Unhandeled OnOpen event");
@@ -224,7 +249,7 @@ EventSource::OnError(ServerEvent* p_event)
   // Handle on error
   if(m_onerror)
   {
-    (*m_onerror)(p_event);
+    (*m_onerror)(p_event,m_appData);
     return;
   }
   DETAILLOG("EventSource: Unhandeled OnError event");
@@ -239,7 +264,12 @@ EventSource::OnMessage(ServerEvent* p_event)
   HandleLastID(p_event);
 
   // Handle on message
-  if(m_onmessage)
+  if(m_direct)
+  {
+    (*m_onmessage)(p_event, m_appData);
+    return;
+  }
+  else if(m_onmessage)
   {
     // Submit to threadpool
     m_pool->SubmitWork((LPFN_CALLBACK)m_onmessage,(void*)p_event);
@@ -259,7 +289,7 @@ EventSource::OnClose(ServerEvent* p_event)
   // Handle on error
   if(m_onclose)
   {
-    (*m_onclose)(p_event);
+    (*m_onclose)(p_event,m_appData);
     m_readyState = CLOSED_BY_SERVER;
   }
   else
@@ -272,14 +302,8 @@ EventSource::OnClose(ServerEvent* p_event)
   // Do status in the client
   m_client->OnCloseSeen();
   
-  // Remove data, in this thread
-  if(eventName)
-  {
-    delete eventName;
-    eventName = NULL;
-    delete eventData;
-    eventData = NULL;
-  }
+  m_eventName.Empty();
+  m_eventData.Empty();
 }
 
 void
@@ -291,11 +315,11 @@ EventSource::OnComment(ServerEvent* p_event)
   // Handle oncomment
   if(m_oncomment)
   {
-    (*m_oncomment)(p_event);
+    (*m_oncomment)(p_event,m_appData);
     return;
   }
   // Do the default comment handler
-  CString comment("Eventsource. Comment data received: ");
+  XString comment("Eventsource. Comment data received: ");
   comment += p_event->m_data;
   DETAILLOG(comment);
   delete p_event;
@@ -310,11 +334,11 @@ EventSource::OnRetry(ServerEvent* p_event)
   // Handle onretry
   if(m_onretry)
   {
-    (*m_onretry)(p_event);
+    (*m_onretry)(p_event,m_appData);
     return;
   }
   // Default = Log the retry
-  CString retry("Eventsource: Retry received: ");
+  XString retry("Eventsource: Retry received: ");
   retry += p_event->m_data;
   DETAILLOG(retry);
   delete p_event;
@@ -335,7 +359,7 @@ EventSource::Parse(BYTE* p_buffer,unsigned& p_length)
     return;
   }
   // Getting the raw buffer
-  CString buffer(p_buffer);
+  XString buffer(p_buffer);
 
   // normalize lines
   if(buffer.Find('\r') >= 0)
@@ -366,32 +390,29 @@ EventSource::Parse(BYTE* p_buffer,unsigned& p_length)
 
 // Parse buffer in string form
 void
-EventSource::Parse(CString& p_buffer)
+EventSource::Parse(XString& p_buffer)
 {
   ULONG   id = 0;
   int     lineNo = 0;
-  CString line;
+  XString line;
   
   GetLine(p_buffer,line);
 
-  // Set the event name, if not already set
-  if(!eventName)
+  // set the default event name
+  if(m_eventName.IsEmpty())
   {
-    // If found in leak-detection: This is declspec(thread) declared
-    // Can leak (once!) if a thread is crashed on exit of the application
-    eventData = new CString();
-    eventName = new CString("message");
+    m_eventName = "message";
   }
 
   // Try to do multiple events
   while(!line.IsEmpty())
   {
-    CString field;
-    CString value;
+    XString field;
+    XString value;
     int pos = line.Find(':');
     if(pos == 0)
     {
-      CString event("comment");
+      XString event("comment");
       // Comment line found
       DispatchEvent(&event,0,&line);
       // Get next and continue
@@ -432,7 +453,7 @@ EventSource::Parse(CString& p_buffer)
     else if(field.CompareNoCase("event") == 0)
     {
       // Our event name
-      *eventName = value;
+      m_eventName = value;
     }
     else if(field.CompareNoCase("id") == 0)
     {
@@ -443,30 +464,30 @@ EventSource::Parse(CString& p_buffer)
         // Works also for an empty line "id:"
         m_lastEventID = 0;
       }
+      else if(id > m_lastEventID)
+      {
+        m_lastEventID = id;
+      }
     }
     else if(field.CompareNoCase("data") == 0)
     {
       // Beginning of the data
       if(lineNo++)
       {
-        *eventData += "\n";
+        m_eventData += "\n";
       }
-      *eventData += value;
+      m_eventData += value;
     }
     // Get next line
     if(GetLine(p_buffer,line) == false)
     {
       // Dispatch only when we find an empty line
-      DispatchEvent(eventName,id,eventData);
+      DispatchEvent(&m_eventName,id,&m_eventData);
       // Reset line counter
       lineNo = 0;
       // Clear the event data: Could be another event in the stream buffer
-      if(eventName)
-      {
-        // If not deleted by the just dispatched OnClose event
-        eventName->Empty();
-        eventData->Empty();
-      }
+      m_eventName.Empty();
+      m_eventData.Empty();
       id = 0;
 
       // If buffer not yet drained, get a new line
@@ -480,7 +501,7 @@ EventSource::Parse(CString& p_buffer)
 
 // Get one line from the incoming buffer
 bool
-EventSource::GetLine(CString& p_buffer,CString& p_line)
+EventSource::GetLine(XString& p_buffer,XString& p_line)
 {
   // Test for a BOM at the beginning of the stream
   unsigned char* buf = reinterpret_cast<unsigned char*>(p_buffer.GetBuffer());
@@ -520,14 +541,14 @@ EventSource::GetLine(CString& p_buffer,CString& p_line)
 
 // Dispatch this event
 void
-EventSource::DispatchEvent(CString* p_event,ULONG p_id,CString* p_data)
+EventSource::DispatchEvent(XString* p_event,ULONG p_id,XString* p_data)
 {
   // Check on correct ready state of the event source
   if(m_readyState == CLOSED ||
      m_readyState == CLOSED_BY_SERVER)
   {
     // Cannot handle events
-    CString error;
+    XString error;
     error.Format("Internal error: Ready state = closed, but event received: %s:%s",(*p_event).GetString(),(*p_data).GetString());
     ERRORLOG(error);
     return;
@@ -551,7 +572,7 @@ EventSource::DispatchEvent(CString* p_event,ULONG p_id,CString* p_data)
   // Now we must have seen an Open event
   if(m_readyState != OPEN)
   {
-    CString error;
+    XString error;
     error.Format("Internal error: Ready state is not open, but event received: %s:%s",
                  (*p_event).GetString(),(*p_data).GetString());
     ERRORLOG(error);
@@ -567,7 +588,7 @@ EventSource::DispatchEvent(CString* p_event,ULONG p_id,CString* p_data)
     if(p_id && p_id < m_lastEventID)
     {
       // Already seen this event, skip it
-      CString logMessage;
+      XString logMessage;
       logMessage.Format("Dropped event with duplicate ID: %d:%s"
                         ,(int)p_id,(*p_event).GetString());
       delete theEvent;
@@ -576,7 +597,7 @@ EventSource::DispatchEvent(CString* p_event,ULONG p_id,CString* p_data)
   }
 
   // Search on lowercase
-  CString event = *p_event;
+  XString event = *p_event;
   event.MakeLower();
 
   // Handle special cases 'message' and 'error'
@@ -628,5 +649,3 @@ EventSource::DispatchEvent(CString* p_event,ULONG p_id,CString* p_data)
   // So send it to the general 'OnMessage'  handler
   OnMessage(theEvent);
 }
-
-

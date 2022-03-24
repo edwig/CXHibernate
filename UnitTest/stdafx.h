@@ -6,11 +6,10 @@
 #pragma once
 
 #include "targetver.h"
-#include "afx.h"
+#include "framework.h"
 
-// Headers for CppUnitTest
-#include "CppUnitTest.h"
-
+// Auto link to these libraries
+#include <BaseLibrary.h>
 #include <SQLComponents.h>
 #include <CXHibernate.h>
 #include <Marlin.h>

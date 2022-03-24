@@ -4,7 +4,7 @@
 //
 // Marlin Server: Internet server/client
 // 
-// Copyright (c) 2014-2021 ir. W.E. Huisman
+// Copyright (c) 2014-2022 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -52,8 +52,8 @@ static char THIS_FILE[] = __FILE__;
 
 HTTPSiteMarlin::HTTPSiteMarlin(HTTPServerMarlin* p_server
                               ,int               p_port
-                              ,CString           p_site
-                              ,CString           p_prefix
+                              ,XString           p_site
+                              ,XString           p_prefix
                               ,HTTPSite*         p_mainSite /*=nullptr*/
                               ,LPFN_CALLBACK     p_callback /*=nullptr*/)
   :HTTPSite(p_server,p_port,p_site,p_prefix,p_mainSite,p_callback)
@@ -69,19 +69,19 @@ HTTPSiteMarlin::StartSite()
   // Getting the global settings
   InitSite(m_server->GetWebConfig());
 
-  // If we have a site web.config file: read it
+  // If we have a site Marlin.config file: read it
   // Overrides the programmatical settings between HTTPServer::CreateSite and HTTPSite::StartSite
-  CString siteConfigFile = WebConfig::GetSiteConfig(m_prefixURL);
+  XString siteConfigFile = MarlinConfig::GetSiteConfig(m_prefixURL);
   if(!siteConfigFile.IsEmpty())
   {
-    WebConfig config(siteConfigFile);
+    MarlinConfig config(siteConfigFile);
     if(config.IsFilled())
     {
       InitSite(config);
     }
   }
 
-  // Now log the settings, once we read all web.config files
+  // Now log the settings, once we read all Marlin.config files
   LogSettings();
 
   // See if we have a reliable messaging WITH authentication
@@ -139,7 +139,7 @@ HTTPSiteMarlin::StartSite()
       ULONG retCode = HttpAddUrlToUrlGroup(group,uniURL.c_str(),(HTTP_URL_CONTEXT)this,0);
       if(retCode != NO_ERROR && retCode != ERROR_ALREADY_EXISTS)
       {
-        CString error;
+        XString error;
         error.Format("Cannot add URL to the URL-Group: %s",m_prefixURL.GetString());
         ERRORLOG(retCode,error);
       }
@@ -159,7 +159,7 @@ HTTPSiteMarlin::StartSite()
 }
 
 bool
-HTTPSiteMarlin::SetWebroot(CString p_webroot)
+HTTPSiteMarlin::SetWebroot(XString p_webroot)
 {
   // Cleaning the webroot is simple
   if(p_webroot.IsEmpty())
@@ -169,7 +169,7 @@ HTTPSiteMarlin::SetWebroot(CString p_webroot)
   }
 
   // Check the directory
-  CString siteWebroot;
+  XString siteWebroot;
   if(m_virtualDirectory)
   {
     // Check already done by setting virtual directory
@@ -186,7 +186,7 @@ HTTPSiteMarlin::SetWebroot(CString p_webroot)
     siteWebroot = p_webroot;
 
     // Checking the webroot of the site against the webroot of the server
-    CString serverWebroot = m_server->GetWebroot();
+    XString serverWebroot = m_server->GetWebroot();
     serverWebroot.MakeLower();
     siteWebroot  .MakeLower();
     serverWebroot.Replace("/","\\");
@@ -194,7 +194,7 @@ HTTPSiteMarlin::SetWebroot(CString p_webroot)
 
     if(siteWebroot.Find(serverWebroot) != 0)
     {
-      CString error;
+      XString error;
       ERRORLOG(ERROR_INVALID_PARAMETER,error);
       return false;
     }
@@ -214,17 +214,17 @@ HTTPSiteMarlin::SetWebroot(CString p_webroot)
 }
 
 void
-HTTPSiteMarlin::InitSite(WebConfig& p_config)
+HTTPSiteMarlin::InitSite(MarlinConfig& p_config)
 {
   // Call our main class InitSite
   HTTPSite::InitSite(p_config);
 
   // AUTHENTICATION
   // Setup the authentication of the URL group
-  CString scheme    = p_config.GetParameterString ("Authentication","Scheme",   m_scheme);
+  XString scheme    = p_config.GetParameterString ("Authentication","Scheme",   m_scheme);
   bool    ntlmCache = p_config.GetParameterBoolean("Authentication","NTLMCache",m_ntlmCache);
-  CString realm     = p_config.GetParameterString ("Authentication","Realm",    m_realm);
-  CString domain    = p_config.GetParameterString ("Authentication","Domain",   m_domain);
+  XString realm     = p_config.GetParameterString ("Authentication","Realm",    m_realm);
+  XString domain    = p_config.GetParameterString ("Authentication","Domain",   m_domain);
 
   // CHECK AND FIND the Authentication scheme
   ULONG authScheme = 0;

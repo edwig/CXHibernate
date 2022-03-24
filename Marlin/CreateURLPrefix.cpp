@@ -4,7 +4,7 @@
 //
 // Marlin Server: Internet server/client
 // 
-// Copyright (c) 2014-2021 ir. W.E. Huisman
+// Copyright (c) 2014-2022 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -34,89 +34,33 @@
 #define new DEBUG_NEW
 #undef THIS_FILE
 static char THIS_FILE[] = __FILE__;
-
 #endif
-CString GetHostName(int p_type)
+
+// Host name can be cached. 
+// Machine is going nowhere while program is running :-)
+static int  g_hostType = 0;
+static char g_hostName[NI_MAXHOST] = "";
+
+// Requesting the current hostname
+// Host names can be returned in three formats:
+//
+// HOSTNAME_SHORT  -> e.g. "myMachine" etc
+// HOSTNAME_FULL   -> e.g. "myMachine.network.org"
+//
+XString GetHostName(int p_type)
 {
-  WORD wVersionRequested;
-  WSADATA wsaData;
-  DWORD ipaddr = 0;
+  char  buffer[MAX_PATH + 1];
+  DWORD size = MAX_PATH;
+  COMPUTER_NAME_FORMAT format = p_type == HOSTNAME_FULL ? ComputerNameDnsFullyQualified : ComputerNameDnsDomain;
 
-  // Startup WinSockets
-  wVersionRequested = MAKEWORD(2,2);
-  if(WSAStartup(wVersionRequested,&wsaData))
+  if(::GetComputerNameEx(format,buffer,&size))
   {
-    // Could not start WinSockets?
-    return "";
+    return XString(buffer);
   }
-
-  // Get hour host name (short form)
-  char host[MAX_PATH];
-  if(gethostname(host,MAX_PATH) != 0)
-  {
-    strcpy_s(host,20,"localhost");
-  }
-
-  // Only named form requested
-  if(p_type == HOSTNAME_SHORT)
-  {
-    WSACleanup();
-    return host;
-  }
-
-  // Find IP address by way of addressinfo
-  struct addrinfo aiHints;
-  struct addrinfo *aiList = NULL;
-  char*  port = "80";
-
-  // Setup the hints address info structure
-  // which is passed to the getaddrinfo() function
-  memset(&aiHints, 0, sizeof(aiHints));
-  aiHints.ai_family   = AF_INET;
-  aiHints.ai_socktype = SOCK_STREAM;
-  aiHints.ai_protocol = IPPROTO_TCP;
-
-  if(getaddrinfo(host,port,&aiHints,&aiList) != 0)
-  {
-    // Cleanup again. Server will do Startup later
-    WSACleanup();
-    return "127.0.0.1";
-  }
-
-  // Get the IP address in network order
-  ipaddr = *((DWORD*) &aiList->ai_addr->sa_data[2]);
-
-  if(p_type == HOSTNAME_IP)
-  {
-    // Cleanup again. Server will do Startup later
-    WSACleanup();
-    // Convert to string
-    struct in_addr addr;
-    addr.S_un.S_addr  = ipaddr;
-
-    char buffer[MAX_PATH+1];
-    inet_ntop(AF_INET,(PVOID)&addr,buffer,MAX_PATH);
-
-    //return CString(inet_ntoa(addr));
-    return CString(buffer);
-  }
-
-  // Find Full Qualified server name
-  char buffer[MAX_PATH];
-  getnameinfo(aiList->ai_addr
-             ,sizeof(sockaddr_in)
-             ,buffer
-             ,MAX_PATH
-             ,NULL
-             ,0
-             ,NI_NAMEREQD);
-
-  // Cleanup again. Server will do Startup later
-  WSACleanup();
-  return CString(buffer);
+  return "";
 }
 
-CString
+XString
 SocketToServer(PSOCKADDR_IN6 p_address)
 {
   char host[NI_MAXHOST+1] = { 0 };
@@ -152,7 +96,7 @@ SocketToServer(PSOCKADDR_IN6 p_address)
     // See if we need to make a FULL Teredo address of this
     if(p_address && p_address->sin6_family == AF_INET6)
     {
-      CString hostname;
+      XString hostname;
       hostname.Format("[%x:%x:%x:%x:%x:%x:%x:%x]"
                      ,ntohs(p_address->sin6_addr.u.Word[0])
                      ,ntohs(p_address->sin6_addr.u.Word[1])
@@ -164,18 +108,18 @@ SocketToServer(PSOCKADDR_IN6 p_address)
                      ,ntohs(p_address->sin6_addr.u.Word[7]));
       return hostname;
     }
-    return CString(host);
+    return XString(host);
   }
   return "";
 }
 
-CString 
+XString 
 CreateURLPrefix(PrefixType p_type
                ,bool       p_secure
                ,int        p_port
-               ,CString    p_path)
+               ,XString    p_path)
 {
-  CString prefix;
+  XString prefix;
   // Empty result and set protocol
   prefix = p_secure ? "https://" : "http://";
 
@@ -196,7 +140,7 @@ CreateURLPrefix(PrefixType p_type
 
   }
   // Add port 
-  CString portNum;
+  XString portNum;
   portNum.Format(":%d",p_port);
   prefix += portNum;
 

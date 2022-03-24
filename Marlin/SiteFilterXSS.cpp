@@ -4,7 +4,7 @@
 //
 // Marlin Server: Internet server/client
 // 
-// Copyright (c) 2014-2021 ir. W.E. Huisman
+// Copyright (c) 2014-2022 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -35,7 +35,7 @@
 static char THIS_FILE[] = __FILE__;
 #endif
 
-SiteFilterXSS::SiteFilterXSS(unsigned p_priority,CString p_name)
+SiteFilterXSS::SiteFilterXSS(unsigned p_priority,XString p_name)
               :SiteFilter(p_priority,p_name)
 {
 }
@@ -48,8 +48,8 @@ SiteFilterXSS::~SiteFilterXSS()
 bool
 SiteFilterXSS::Handle(HTTPMessage* p_message)
 {
-  CString referrer = p_message->GetReferrer();
-  CString fullURL  = p_message->GetURL();
+  XString referrer = p_message->GetReferrer();
+  XString fullURL  = p_message->GetURL();
   
   // Unique call from the outside world is OK
   if(referrer.IsEmpty())

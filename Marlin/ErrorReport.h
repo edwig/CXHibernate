@@ -4,7 +4,7 @@
 //
 // Marlin Server: Internet server/client
 // 
-// Copyright (c) 2014-2021 ir. W.E. Huisman
+// Copyright (c) 2014-2022 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -46,19 +46,19 @@ public:
   virtual ~ErrorReport();
 
   // Send an error report
-  static void Report(const CString& p_subject,unsigned int p_skip,      CString  p_directory,CString  p_url);
-  static void Report(const CString& p_subject,const StackTrace& p_trace,CString  p_directory,CString  p_url);
-  static void Report(int   p_signal          ,unsigned int p_skip,      CString  p_directory,CString  p_url);
-  static bool Report(DWORD p_error,struct _EXCEPTION_POINTERS* p_exc,   CString& p_directory,CString& p_url);
+  static void Report(const XString& p_subject,unsigned int p_skip,      XString  p_directory,XString  p_url);
+  static void Report(const XString& p_subject,const StackTrace& p_trace,XString  p_directory,XString  p_url);
+  static void Report(int   p_signal          ,unsigned int p_skip,      XString  p_directory,XString  p_url);
+  static bool Report(DWORD p_error,struct _EXCEPTION_POINTERS* p_exc,   XString& p_directory,XString& p_url);
   static bool Report(DWORD p_error,struct _EXCEPTION_POINTERS* p_exc);
 
   // Multi threading
   CRITICAL_SECTION m_lock;  // Locking on a thread basis
 protected:
   // Go send an error report
-  virtual void DoReport(const CString&    p_subject
+  virtual void DoReport(const XString&    p_subject
                        ,const StackTrace& p_trace
-                       ,const CString&    p_webroot
-                       ,const CString&    p_url) const;
+                       ,const XString&    p_webroot
+                       ,const XString&    p_url) const;
 
 };

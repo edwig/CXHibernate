@@ -121,7 +121,7 @@ namespace HibernateTest
       Assert::IsTrue(res);
 
       value = TestRecordValue("master","id",1,"total");
-      Assert::AreEqual(value,"750.00");
+      Assert::AreEqual(value.GetString(),old_total.AsString().GetString());
     }
 
     void PrintMaster(Master* p_master)

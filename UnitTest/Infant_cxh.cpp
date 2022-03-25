@@ -13,31 +13,31 @@ static char THIS_FILE[] = __FILE__;
 #endif
 
 BEGIN_XML_SERIALIZE(Infant,NaturalPerson)
-  CXO_XML_SERIALIZE(CString     ,m_immunisation    ,"immunisation"    ,XDT_String);
-  CXO_XML_SERIALIZE(CString     ,m_complication    ,"complication"    ,XDT_String);
-  CXO_XML_SERIALIZE(CString     ,m_hospital        ,"hospital"        ,XDT_String);
+  CXO_XML_SERIALIZE(m_immunisation,"immunisation");
+  CXO_XML_SERIALIZE(m_complication,"complication");
+  CXO_XML_SERIALIZE(m_hospital    ,"hospital");
 END_XML_SERIALIZE
 
 BEGIN_XML_DESERIALIZE(Infant,NaturalPerson)
-  CXO_XML_DESERIALIZE(CString     ,m_immunisation    ,"immunisation"    ,XDT_String);
-  CXO_XML_DESERIALIZE(CString     ,m_complication    ,"complication"    ,XDT_String);
-  CXO_XML_DESERIALIZE(CString     ,m_hospital        ,"hospital"        ,XDT_String);
+  CXO_XML_DESERIALIZE(m_immunisation,"immunisation");
+  CXO_XML_DESERIALIZE(m_complication,"complication");
+  CXO_XML_DESERIALIZE(m_hospital    ,"hospital");
 END_XML_DESERIALIZE
 
 BEGIN_DBS_SERIALIZE(Infant,NaturalPerson)
-  CXO_DBS_SERIALIZE(CString     ,m_immunisation    ,"immunisation"    ,XDT_String);
-  CXO_DBS_SERIALIZE(CString     ,m_complication    ,"complication"    ,XDT_String);
-  CXO_DBS_SERIALIZE(CString     ,m_hospital        ,"hospital"        ,XDT_String);
+  CXO_DBS_SERIALIZE(m_immunisation,"immunisation");
+  CXO_DBS_SERIALIZE(m_complication,"complication");
+  CXO_DBS_SERIALIZE(m_hospital    ,"hospital");
 END_DBS_SERIALIZE
 
 BEGIN_DBS_DESERIALIZE(Infant,NaturalPerson)
-  CXO_DBS_DESERIALIZE(CString     ,m_immunisation    ,"immunisation"    ,XDT_String);
-  CXO_DBS_DESERIALIZE(CString     ,m_complication    ,"complication"    ,XDT_String);
-  CXO_DBS_DESERIALIZE(CString     ,m_hospital        ,"hospital"        ,XDT_String);
+  CXO_DBS_DESERIALIZE(m_immunisation,"immunisation");
+  CXO_DBS_DESERIALIZE(m_complication,"complication");
+  CXO_DBS_DESERIALIZE(m_hospital    ,"hospital");
 END_DBS_DESERIALIZE
 
 BEGIN_DESERIALIZE_GENERATOR(Infant)
-  CXO_DBS_DESERIALIZE(long, m_id, "id", XDT_Integer);
+  CXO_DBS_DESERIALIZE(m_id,"id");
 END_DESERIALIZE_GENERATOR
 
 // Static factory to create a new object if this class

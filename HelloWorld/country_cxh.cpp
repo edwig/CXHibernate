@@ -13,35 +13,35 @@ static char THIS_FILE[] = __FILE__;
 #endif
 
 BEGIN_XML_SERIALIZE(country,CXObject)
-  CXO_XML_SERIALIZE(int         ,m_id              ,"id"              ,XDT_Integer);
-  CXO_XML_SERIALIZE(CString     ,m_name            ,"name"            ,XDT_String);
-  CXO_XML_SERIALIZE(int         ,m_inhabitants     ,"inhabitants"     ,XDT_Integer);
-  CXO_XML_SERIALIZE(CString     ,m_continent       ,"continent"       ,XDT_String);
+  CXO_XML_SERIALIZE(m_id              ,"id");
+  CXO_XML_SERIALIZE(m_name            ,"name");
+  CXO_XML_SERIALIZE(m_inhabitants     ,"inhabitants");
+  CXO_XML_SERIALIZE(m_continent       ,"continent");
 END_XML_SERIALIZE
 
 BEGIN_XML_DESERIALIZE(country,CXObject)
-  CXO_XML_DESERIALIZE(int         ,m_id              ,"id"              ,XDT_Integer);
-  CXO_XML_DESERIALIZE(CString     ,m_name            ,"name"            ,XDT_String);
-  CXO_XML_DESERIALIZE(int         ,m_inhabitants     ,"inhabitants"     ,XDT_Integer);
-  CXO_XML_DESERIALIZE(CString     ,m_continent       ,"continent"       ,XDT_String);
+  CXO_XML_DESERIALIZE(m_id            ,"id");
+  CXO_XML_DESERIALIZE(m_name          ,"name");
+  CXO_XML_DESERIALIZE(m_inhabitants   ,"inhabitants");
+  CXO_XML_DESERIALIZE(m_continent     ,"continent");
 END_XML_DESERIALIZE
 
 BEGIN_DBS_SERIALIZE(country,CXObject)
-  CXO_DBS_SERIALIZE(int         ,m_id              ,"id"              ,XDT_Integer);
-  CXO_DBS_SERIALIZE(CString     ,m_name            ,"name"            ,XDT_String);
-  CXO_DBS_SERIALIZE(int         ,m_inhabitants     ,"inhabitants"     ,XDT_Integer);
-  CXO_DBS_SERIALIZE(CString     ,m_continent       ,"continent"       ,XDT_String);
+  CXO_DBS_SERIALIZE(m_id              ,"id");
+  CXO_DBS_SERIALIZE(m_name            ,"name");
+  CXO_DBS_SERIALIZE(m_inhabitants     ,"inhabitants");
+  CXO_DBS_SERIALIZE(m_continent       ,"continent");
 END_DBS_SERIALIZE
 
 BEGIN_DBS_DESERIALIZE(country,CXObject)
-  CXO_DBS_DESERIALIZE(int         ,m_id              ,"id"              ,XDT_Integer);
-  CXO_DBS_DESERIALIZE(CString     ,m_name            ,"name"            ,XDT_String);
-  CXO_DBS_DESERIALIZE(int         ,m_inhabitants     ,"inhabitants"     ,XDT_Integer);
-  CXO_DBS_DESERIALIZE(CString     ,m_continent       ,"continent"       ,XDT_String);
+  CXO_DBS_DESERIALIZE(m_id            ,"id");
+  CXO_DBS_DESERIALIZE(m_name          ,"name");
+  CXO_DBS_DESERIALIZE(m_inhabitants   ,"inhabitants");
+  CXO_DBS_DESERIALIZE(m_continent     ,"continent");
 END_DBS_DESERIALIZE
 
 BEGIN_DESERIALIZE_GENERATOR(country)
-  CXO_DBS_DESERIALIZE(long, m_id, "id", XDT_Integer);
+  CXO_DBS_DESERIALIZE(m_id, "id");
 END_DESERIALIZE_GENERATOR
 
 // Static factory to create a new object if this class

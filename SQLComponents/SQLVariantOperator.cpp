@@ -138,6 +138,14 @@ SQLVariant::operator=(XString& p_data)
 }
 
 SQLVariant& 
+SQLVariant::operator=(XString p_data)
+{
+  SetData(SQL_C_CHAR, p_data.GetString());
+  return *this;
+}
+
+
+SQLVariant& 
 SQLVariant::operator=(short p_data)
 {
   Init();

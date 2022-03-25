@@ -357,6 +357,358 @@ CXObject::OnDelete()
   return true;
 }
 
+// From the object property TO the SOAPMessage for storage or the internet
+
+void 
+CXObject::SetMsgElement(SOAPMessage& p_message,XMLElement* p_element,const char* p_name,bool& p_property)
+{
+  p_message.AddElement(p_element,p_name,XDT_Boolean | XDT_Type,p_property);
+}
+
+void 
+CXObject::SetMsgElement(SOAPMessage& p_message,XMLElement* p_element,const char* p_name,char& p_property)
+{
+  CString string;
+  string.SetAt(0,p_property);
+  p_message.AddElement(p_element,p_name,XDT_String | XDT_Type,string);
+}
+
+void 
+CXObject::SetMsgElement(SOAPMessage& p_message,XMLElement* p_element,const char* p_name,unsigned char& p_property)
+{
+  CString string;
+  string.SetAt(0,p_property);
+  p_message.AddElement(p_element,p_name,XDT_String | XDT_Type,string);
+}
+
+void 
+CXObject::SetMsgElement(SOAPMessage& p_message,XMLElement* p_element,const char* p_name,short& p_property)
+{
+  p_message.AddElement(p_element,p_name,XDT_Short | XDT_Type,(int) p_property);
+}
+
+void 
+CXObject::SetMsgElement(SOAPMessage& p_message,XMLElement* p_element,const char* p_name,unsigned short& p_property)
+{
+  p_message.AddElement(p_element,p_name,XDT_Short | XDT_Type,(int) p_property);
+}
+
+void
+CXObject::SetMsgElement(SOAPMessage& p_message,XMLElement* p_element,const char* p_name,int& p_property)
+{
+  p_message.AddElement(p_element,p_name, XDT_Integer | XDT_Type,p_property);
+}
+
+void 
+CXObject::SetMsgElement(SOAPMessage& p_message,XMLElement* p_element,const char* p_name,unsigned int& p_property)
+{
+  p_message.AddElement(p_element,p_name,XDT_PositiveInteger | XDT_Type,p_property);
+}
+
+void 
+CXObject::SetMsgElement(SOAPMessage& p_message,XMLElement* p_element,const char* p_name,float& p_property)
+{
+  p_message.AddElement(p_element,p_name,XDT_Float | XDT_Type,p_property);
+}
+
+void 
+CXObject::SetMsgElement(SOAPMessage& p_message,XMLElement* p_element,const char* p_name,double& p_property)
+{
+  p_message.AddElement(p_element,p_name,XDT_Double | XDT_Type,p_property);
+}
+
+void 
+CXObject::SetMsgElement(SOAPMessage& p_message,XMLElement* p_element,const char* p_name,__int64& p_property)
+{
+  p_message.AddElement(p_element,p_name,XDT_Integer | XDT_Type,p_property);
+}
+
+void 
+CXObject::SetMsgElement(SOAPMessage& p_message,XMLElement* p_element,const char* p_name,unsigned __int64& p_property)
+{
+  p_message.AddElement(p_element,p_name,XDT_Integer | XDT_Type,p_property);
+}
+
+void 
+CXObject::SetMsgElement(SOAPMessage& p_message,XMLElement* p_element,const char* p_name,SQLDate& p_property)
+{
+  p_message.AddElement(p_element,p_name,XDT_Date | XDT_Type,p_property.AsString());
+}
+
+void 
+CXObject::SetMsgElement(SOAPMessage& p_message,XMLElement* p_element,const char* p_name,SQLTime& p_property)
+{
+  p_message.AddElement(p_element,p_name,XDT_Time | XDT_Type,p_property.AsString());
+}
+
+void 
+CXObject::SetMsgElement(SOAPMessage& p_message,XMLElement* p_element,const char* p_name,SQLTimestamp& p_property)
+{
+  p_message.AddElement(p_element,p_name,XDT_DateTime | XDT_Type,p_property.AsString());
+}
+
+void 
+CXObject::SetMsgElement(SOAPMessage& p_message,XMLElement* p_element,const char* p_name,SQLInterval& p_property)
+{
+  p_message.AddElement(p_element,p_name,XDT_Duration | XDT_Type,p_property.AsXMLDuration());
+}
+
+void 
+CXObject::SetMsgElement(SOAPMessage& p_message,XMLElement* p_element,const char* p_name,SQLGuid& p_property)
+{
+  p_message.AddElement(p_element,p_name,XDT_String | XDT_Type,p_property.AsString());
+}
+
+void 
+CXObject::SetMsgElement(SOAPMessage& p_message,XMLElement* p_element,const char* p_name,XString& p_property)
+{
+  p_message.AddElement(p_element,p_name,XDT_String | XDT_Type,p_property);
+}
+
+void 
+CXObject::SetMsgElement(SOAPMessage& p_message,XMLElement* p_element,const char* p_name,bcd& p_property)
+{
+  p_message.AddElement(p_element,p_name,XDT_Decimal | XDT_Type,p_property);
+}
+
+// From SOAPMessage TO the object property
+void 
+CXObject::GetMsgElement(SOAPMessage& p_message,XMLElement* p_element,const char* p_name,bool& p_property)
+{
+  p_property = p_message.GetElementBoolean(p_element,p_name);
+}
+
+void 
+CXObject::GetMsgElement(SOAPMessage& p_message,XMLElement* p_element,const char* p_name,char& p_property)
+{
+  p_property = 0;
+  CString string = p_message.GetElement(p_element,p_name);
+  if(string.GetLength())
+  {
+    p_property = string.GetAt(0);
+  }
+}
+
+void 
+CXObject::GetMsgElement(SOAPMessage& p_message,XMLElement* p_element,const char* p_name,unsigned char& p_property)
+{
+  p_property = 0;
+  CString string = p_message.GetElement(p_element,p_name);
+  if(string.GetLength())
+  {
+    p_property = string.GetAt(0);
+  }
+}
+
+void 
+CXObject::GetMsgElement(SOAPMessage& p_message,XMLElement* p_element,const char* p_name,short& p_property)
+{
+  p_property = (short) p_message.GetElementInteger(p_element,p_name);
+}
+
+void 
+CXObject::GetMsgElement(SOAPMessage& p_message,XMLElement* p_element,const char* p_name,unsigned short& p_property)
+{
+  p_property = (unsigned short)p_message.GetElementInteger(p_element, p_name);
+}
+
+void 
+CXObject::GetMsgElement(SOAPMessage& p_message,XMLElement* p_element,const char* p_name,int& p_property)
+{
+  p_property = p_message.GetElementInteger(p_element,p_name);
+}
+
+void 
+CXObject::GetMsgElement(SOAPMessage& p_message,XMLElement* p_element,const char* p_name,unsigned int& p_property)
+{
+  CString string = p_message.GetElement(p_element,p_name);
+  p_property = (unsigned int) atol(string);
+}
+
+void 
+CXObject::GetMsgElement(SOAPMessage& p_message,XMLElement* p_element,const char* p_name,float& p_property)
+{
+  p_property = (float) p_message.GetElementDouble(p_element, p_name);
+}
+
+void 
+CXObject::GetMsgElement(SOAPMessage& p_message,XMLElement* p_element,const char* p_name,double& p_property)
+{
+  p_property = p_message.GetElementDouble(p_element,p_name);
+}
+
+void 
+CXObject::GetMsgElement(SOAPMessage& p_message,XMLElement* p_element,const char* p_name,__int64& p_property)
+{
+  CString string = p_message.GetElement(p_element, p_name);
+  p_property = _atoi64(string);
+}
+
+void 
+CXObject::GetMsgElement(SOAPMessage& p_message,XMLElement* p_element,const char* p_name,unsigned __int64& p_property)
+{
+  CString string = p_message.GetElement(p_element,p_name);
+  p_property = _atoi64(string);
+}
+
+void 
+CXObject::GetMsgElement(SOAPMessage& p_message,XMLElement* p_element,const char* p_name,SQLDate& p_property)
+{
+  CString string = p_message.GetElement(p_element,p_name);
+  p_property = SQLDate(string);
+}
+
+void 
+CXObject::GetMsgElement(SOAPMessage& p_message,XMLElement* p_element,const char* p_name,SQLTime& p_property)
+{
+  CString string = p_message.GetElement(p_element,p_name);
+  p_property = SQLTime(string);
+}
+
+void 
+CXObject::GetMsgElement(SOAPMessage& p_message,XMLElement* p_element,const char* p_name,SQLTimestamp& p_property)
+{
+  CString string = p_message.GetElement(p_element,p_name);
+  p_property = SQLTimestamp(string);
+}
+
+void 
+CXObject::GetMsgElement(SOAPMessage& p_message,XMLElement* p_element,const char* p_name,SQLInterval& p_property)
+{
+  CString string = p_message.GetElement(p_element,p_name);
+  p_property = SQLInterval(string);
+}
+
+void 
+CXObject::GetMsgElement(SOAPMessage& p_message,XMLElement* p_element,const char* p_name,SQLGuid& p_property)
+{
+  CString string = p_message.GetElement(p_element,p_name);
+  p_property = SQLGuid(string);
+}
+
+void 
+CXObject::GetMsgElement(SOAPMessage& p_message,XMLElement* p_element,const char* p_name,XString& p_property)
+{
+  p_property = p_message.GetElement(p_element,p_name);
+}
+
+void 
+CXObject::GetMsgElement(SOAPMessage& p_message,XMLElement* p_element,const char* p_name,bcd& p_property)
+{
+  CString string = p_message.GetElement(p_element,p_name);
+  p_property = bcd(string);
+}
+
+// From SQLRecord from the database TO the object property
+
+void 
+CXObject::GetRecordField(SQLRecord& p_record,const char* p_name,bool& p_property)
+{
+  p_property = p_record.GetFieldBool(p_name);
+}
+
+void 
+CXObject::GetRecordField(SQLRecord& p_record,const char* p_name,char& p_property)
+{
+  p_property = p_record.GetFieldChar(p_name);
+}
+
+void 
+CXObject::GetRecordField(SQLRecord& p_record,const char* p_name,unsigned char& p_property)
+{
+  p_property = p_record.GetFieldUnsignedChar(p_name);
+}
+
+void 
+CXObject::GetRecordField(SQLRecord& p_record,const char* p_name,short& p_property)
+{
+  p_property = p_record.GetFieldShort(p_name);
+}
+
+void 
+CXObject::GetRecordField(SQLRecord& p_record,const char* p_name,unsigned short& p_property)
+{
+  p_property = p_record.GetFieldUnsignedShort(p_name);
+}
+
+void
+CXObject::GetRecordField(SQLRecord& p_record,const char* p_name,int& p_property)
+{
+  p_property = p_record.GetFieldInteger(p_name);
+}
+
+void 
+CXObject::GetRecordField(SQLRecord& p_record,const char* p_name,unsigned int& p_property)
+{
+  p_property = p_record.GetFieldUnsignedInteger(p_name);
+}
+
+void 
+CXObject::GetRecordField(SQLRecord& p_record,const char* p_name,float& p_property)
+{
+  p_property = p_record.GetFieldFloat(p_name);
+}
+
+void 
+CXObject::GetRecordField(SQLRecord& p_record,const char* p_name,double& p_property)
+{
+  p_property = p_record.GetFieldDouble(p_name);
+}
+
+void 
+CXObject::GetRecordField(SQLRecord& p_record,const char* p_name,__int64& p_property)
+{
+  p_property = p_record.GetFieldInteger64(p_name);
+}
+
+void 
+CXObject::GetRecordField(SQLRecord& p_record,const char* p_name,unsigned __int64& p_property)
+{
+  p_property = p_record.GetFieldUnsignedInt64(p_name);
+}
+
+void 
+CXObject::GetRecordField(SQLRecord& p_record,const char* p_name,SQLDate& p_property)
+{
+  p_property = p_record.GetFieldSQLDate(p_name);
+}
+
+void 
+CXObject::GetRecordField(SQLRecord& p_record,const char* p_name,SQLTime& p_property)
+{
+  p_property = p_record.GetFieldSQLTime(p_name);
+}
+
+void 
+CXObject::GetRecordField(SQLRecord& p_record,const char* p_name,SQLTimestamp& p_property)
+{
+  p_property = p_record.GetFieldSQLTimestamp(p_name);
+}
+
+void 
+CXObject::GetRecordField(SQLRecord& p_record,const char* p_name,SQLInterval& p_property)
+{
+  p_property = p_record.GetFieldSQLInterval(p_name);
+}
+
+void 
+CXObject::GetRecordField(SQLRecord& p_record,const char* p_name,SQLGuid& p_property)
+{
+  p_property = p_record.GetFieldSQLGuid(p_name);
+}
+
+void 
+CXObject::GetRecordField(SQLRecord& p_record,const char* p_name,XString& p_property)
+{
+  p_property = p_record.GetFieldXString(p_name);
+}
+
+void 
+CXObject::GetRecordField(SQLRecord& p_record,const char* p_name,bcd& p_property)
+{
+  p_property = p_record.GetFieldBcd(p_name);
+}
+
 //////////////////////////////////////////////////////////////////////////
 //
 // PRIVATE

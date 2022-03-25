@@ -13,31 +13,31 @@ static char THIS_FILE[] = __FILE__;
 #endif
 
 BEGIN_XML_SERIALIZE(Cat,Animal)
-  CXO_XML_SERIALIZE(CString     ,m_color           ,"color"           ,XDT_String);
-  CXO_XML_SERIALIZE(bool        ,m_catdoor         ,"catdoor"         ,XDT_Boolean);
-  CXO_XML_SERIALIZE(bool        ,m_likesWhiskas    ,"likesWhiskas"    ,XDT_Boolean);
+  CXO_XML_SERIALIZE(m_color           ,"color");
+  CXO_XML_SERIALIZE(m_catdoor         ,"catdoor");
+  CXO_XML_SERIALIZE(m_likesWhiskas    ,"likesWhiskas");
 END_XML_SERIALIZE
 
 BEGIN_XML_DESERIALIZE(Cat,Animal)
-  CXO_XML_DESERIALIZE(CString     ,m_color           ,"color"           ,XDT_String);
-  CXO_XML_DESERIALIZE(bool        ,m_catdoor         ,"catdoor"         ,XDT_Boolean);
-  CXO_XML_DESERIALIZE(bool        ,m_likesWhiskas    ,"likesWhiskas"    ,XDT_Boolean);
+  CXO_XML_DESERIALIZE(m_color         ,"color");
+  CXO_XML_DESERIALIZE(m_catdoor       ,"catdoor");
+  CXO_XML_DESERIALIZE(m_likesWhiskas  ,"likesWhiskas");
 END_XML_DESERIALIZE
 
 BEGIN_DBS_SERIALIZE(Cat,Animal)
-  CXO_DBS_SERIALIZE(CString     ,m_color           ,"color"           ,XDT_String);
-  CXO_DBS_SERIALIZE(bool        ,m_catdoor         ,"catdoor"         ,XDT_Boolean);
-  CXO_DBS_SERIALIZE(bool        ,m_likesWhiskas    ,"likesWhiskas"    ,XDT_Boolean);
+  CXO_DBS_SERIALIZE(m_color           ,"color");
+  CXO_DBS_SERIALIZE(m_catdoor         ,"catdoor");
+  CXO_DBS_SERIALIZE(m_likesWhiskas    ,"likesWhiskas");
 END_DBS_SERIALIZE
 
 BEGIN_DBS_DESERIALIZE(Cat,Animal)
-  CXO_DBS_DESERIALIZE(CString     ,m_color           ,"color"           ,XDT_String);
-  CXO_DBS_DESERIALIZE(bool        ,m_catdoor         ,"catdoor"         ,XDT_Boolean);
-  CXO_DBS_DESERIALIZE(bool        ,m_likesWhiskas    ,"likesWhiskas"    ,XDT_Boolean);
+  CXO_DBS_DESERIALIZE(m_color         ,"color");
+  CXO_DBS_DESERIALIZE(m_catdoor       ,"catdoor");
+  CXO_DBS_DESERIALIZE(m_likesWhiskas  ,"likesWhiskas");
 END_DBS_DESERIALIZE
 
 BEGIN_DESERIALIZE_GENERATOR(Cat)
-  CXO_DBS_DESERIALIZE(long, m_id, "id", XDT_Integer);
+  CXO_DBS_DESERIALIZE(m_id,"id");
 END_DESERIALIZE_GENERATOR
 
 // Static factory to create a new object if this class

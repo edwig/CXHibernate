@@ -88,6 +88,25 @@ public:
   void        ModifyField(const char* p_name,XString&           p_field,int p_mutationID = 0);
   void        ModifyField(const char* p_name,bcd&               p_field,int p_mutationID = 0);
 
+  bool              GetFieldBool           (const char* p_name);
+  char              GetFieldChar           (const char* p_name);
+  unsigned char     GetFieldUnsignedChar   (const char* p_name);
+  short             GetFieldShort          (const char* p_name);
+  unsigned short    GetFieldUnsignedShort  (const char* p_name);
+  int               GetFieldInteger        (const char* p_name);
+  unsigned int      GetFieldUnsignedInteger(const char* p_name);
+  float             GetFieldFloat          (const char* p_name);
+  double            GetFieldDouble         (const char* p_name);
+  __int64           GetFieldInteger64      (const char* p_name);
+  unsigned __int64  GetFieldUnsignedInt64  (const char* p_name);
+  SQLDate           GetFieldSQLDate        (const char* p_name);
+  SQLTime           GetFieldSQLTime        (const char* p_name);
+  SQLTimestamp      GetFieldSQLTimestamp   (const char* p_name);
+  SQLInterval       GetFieldSQLInterval    (const char* p_name);
+  SQLGuid           GetFieldSQLGuid        (const char* p_name);
+  XString           GetFieldXString        (const char* p_name);
+  bcd               GetFieldBcd            (const char* p_name);
+
   // See if the record has been changed
   bool        IsModified();
   // See if a field is modified

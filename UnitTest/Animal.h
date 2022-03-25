@@ -41,7 +41,7 @@ public:
 protected:
   // Database persistent attributes
   int        m_id                 { 0 };
-  CString    m_animalName        ;
+  XString    m_animalName;
   bool       m_has_claws          { false };
   bool       m_has_hair           { false };
   bool       m_has_wings          { false };

@@ -79,10 +79,10 @@ CXOReg##classname _register##classname;
 
 
 // Serialization and de-serialization of your class object
-#define   CXO_DBS_SERIALIZE(c_type,property,column,XDT) p_record.ModifyField(column,property,p_mutation)
-#define CXO_DBS_DESERIALIZE(c_type,property,column,XDT) property = (c_type) p_record[ column ]
-#define   CXO_XML_SERIALIZE(c_type,property,column,XDT) AddElement(p_message,p_entity,column,XDT | XDT_Type,property)
-#define CXO_XML_DESERIALIZE(c_type,property,column,XDT) property = GetElement##c_type(p_message,p_entity,column)
+#define   CXO_DBS_SERIALIZE(property,column) p_record.ModifyField(column,property,p_mutation)
+#define CXO_DBS_DESERIALIZE(property,column) CXObject::GetRecordField(p_record,column,property);
+#define   CXO_XML_SERIALIZE(property,column) CXObject::SetMsgElement(p_message,p_entity,column,property);
+#define CXO_XML_DESERIALIZE(property,column) CXObject::GetMsgElement(p_message,p_entity,column,property);
 
 #define BEGIN_DBS_SERIALIZE(Classname,super)   void Classname::Serialize(SQLRecord& p_record,int p_mutation)\
                                                {PreSerialize(p_record);\

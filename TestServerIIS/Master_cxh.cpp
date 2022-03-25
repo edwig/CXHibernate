@@ -38,36 +38,36 @@ static char THIS_FILE[] = __FILE__;
 
 // Bring the contents of the class to a SOAPMessage 
 BEGIN_XML_SERIALIZE(Master,CXObject)
-    CXO_XML_SERIALIZE(long,   m_id,         "id",         XDT_Integer);
-    CXO_XML_SERIALIZE(long,   m_invoice,    "invoice",    XDT_Integer);
-    CXO_XML_SERIALIZE(CString,m_description,"description",XDT_String);
-    CXO_XML_SERIALIZE(bcd,    m_total,      "total",      XDT_Decimal);
+    CXO_XML_SERIALIZE(m_id,         "id");
+    CXO_XML_SERIALIZE(m_invoice,    "invoice");
+    CXO_XML_SERIALIZE(m_description,"description");
+    CXO_XML_SERIALIZE(m_total,      "total");
 END_XML_SERIALIZE
 
 // Read the contents of an object from a SOAPMessage or a SQLRecord
 BEGIN_XML_DESERIALIZE(Master,CXObject)
-  CXO_XML_DESERIALIZE(long,   m_id,         "id",         XDT_Integer);
-  CXO_XML_DESERIALIZE(long,   m_invoice,    "invoice",    XDT_Integer);
-  CXO_XML_DESERIALIZE(CString,m_description,"description",XDT_String);
-  CXO_XML_DESERIALIZE(bcd,    m_total,      "total",      XDT_Decimal);
+  CXO_XML_DESERIALIZE(m_id,         "id");
+  CXO_XML_DESERIALIZE(m_invoice,    "invoice");
+  CXO_XML_DESERIALIZE(m_description,"description");
+  CXO_XML_DESERIALIZE(m_total,      "total");
 END_XML_DESERIALIZE
 
 BEGIN_DBS_SERIALIZE(Master,CXObject)
-    CXO_DBS_SERIALIZE(long,   m_id,         "id",         XDT_Integer);
-    CXO_DBS_SERIALIZE(long,   m_invoice,    "invoice",    XDT_Integer);
-    CXO_DBS_SERIALIZE(CString,m_description,"description",XDT_String);
-    CXO_DBS_SERIALIZE(bcd,    m_total,      "total",      XDT_Decimal);
+    CXO_DBS_SERIALIZE(m_id,         "id");
+    CXO_DBS_SERIALIZE(m_invoice,    "invoice");
+    CXO_DBS_SERIALIZE(m_description,"description");
+    CXO_DBS_SERIALIZE(m_total,      "total");
 END_DBS_SERIALIZE
 
 BEGIN_DBS_DESERIALIZE(Master,CXObject)
-  CXO_DBS_DESERIALIZE(long,   m_id,         "id",         XDT_Integer);
-  CXO_DBS_DESERIALIZE(long,   m_invoice,    "invoice",    XDT_Integer);
-  CXO_DBS_DESERIALIZE(CString,m_description,"description",XDT_String);
-  CXO_DBS_DESERIALIZE(bcd,    m_total,      "total",      XDT_Decimal);
+  CXO_DBS_DESERIALIZE(m_id,         "id");
+  CXO_DBS_DESERIALIZE(m_invoice,    "invoice");
+  CXO_DBS_DESERIALIZE(m_description,"description");
+  CXO_DBS_DESERIALIZE(m_total,      "total");
 END_DBS_DESERIALIZE
 
 BEGIN_DESERIALIZE_GENERATOR(Master)
-  CXO_DBS_DESERIALIZE(long, m_id, "id", XDT_Integer);
+  CXO_DBS_DESERIALIZE(m_id, "id");
 END_DESERIALIZE_GENERATOR
 
 //////////////////////////////////////////////////////////////////////////

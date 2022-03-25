@@ -91,7 +91,7 @@ TestNumber::DeSerialize(SQLRecord& p_record)
 }
 
 BEGIN_DESERIALIZE_GENERATOR(TestNumber)
-  CXO_DBS_DESERIALIZE(long, m_id, "id", XDT_Integer);
+  CXO_DBS_DESERIALIZE(m_id, "id");
 END_DESERIALIZE_GENERATOR
 
 

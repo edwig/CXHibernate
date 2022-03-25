@@ -203,6 +203,7 @@ public:
    // Assignment operator from original data
    SQLVariant& operator  =(const char* p_data);              // SQL_C_CHAR
    SQLVariant& operator  =(XString& p_data);                 // SQL_C_CHAR
+   SQLVariant& operator  =(XString  p_data);                 // SQL_C_CHAR
    SQLVariant& operator  =(short p_data);                    // SQL_C_SHORT / SQL_C_SSHORT
    SQLVariant& operator  =(unsigned short p_data);           // SQL_C_USHORT
    SQLVariant& operator  =(int p_data);                      // SQL_C_LONG  / SQL_C_SLONG

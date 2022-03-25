@@ -28,6 +28,8 @@
 #include "SQLRecord.h"
 #include "SQLDataSet.h"
 #include "SQLVariant.h"
+#include "SQLDate.h"
+#include "SQLGuid.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -389,6 +391,188 @@ SQLRecord::ModifyField(const char* p_name,bcd& p_field,int p_mutationID /*= 0*/)
 {
   SQLVariant value(&p_field);
   ModifyField(m_dataSet->GetFieldNumber(p_name), &value, p_mutationID);
+}
+
+
+bool
+SQLRecord::GetFieldBool(const char* p_name)
+{
+  if(m_dataSet)
+  {
+    return GetField(m_dataSet->GetFieldNumber(p_name))->GetAsBoolean();
+  }
+  return false;
+}
+
+char
+SQLRecord::GetFieldChar(const char* p_name)
+{
+  if(m_dataSet)
+  {
+    return (char) GetField(m_dataSet->GetFieldNumber(p_name))->GetAsUShort();
+  }
+  return 0;
+}
+
+unsigned char
+SQLRecord::GetFieldUnsignedChar(const char* p_name)
+{
+  if(m_dataSet)
+  {
+    return (unsigned char) GetField(m_dataSet->GetFieldNumber(p_name))->GetAsUShort();
+  }
+  return 0;
+}
+
+short
+SQLRecord::GetFieldShort(const char* p_name)
+{
+  if(m_dataSet)
+  {
+    return GetField(m_dataSet->GetFieldNumber(p_name))->GetAsSShort();
+  }
+  return 0;
+}
+
+unsigned short
+SQLRecord::GetFieldUnsignedShort(const char* p_name)
+{
+  if(m_dataSet)
+  {
+    return GetField(m_dataSet->GetFieldNumber(p_name))->GetAsUShort();
+  }
+  return 0;
+}
+
+int
+SQLRecord::GetFieldInteger(const char* p_name)
+{
+  if(m_dataSet)
+  {
+    return GetField(m_dataSet->GetFieldNumber(p_name))->GetAsSLong();
+  }
+  return 0;
+}
+
+unsigned int
+SQLRecord::GetFieldUnsignedInteger(const char* p_name)
+{
+  if(m_dataSet)
+  {
+    return GetField(m_dataSet->GetFieldNumber(p_name))->GetAsULong();
+  }
+  return 0;
+}
+
+float
+SQLRecord::GetFieldFloat(const char* p_name)
+{
+  if(m_dataSet)
+  {
+    return GetField(m_dataSet->GetFieldNumber(p_name))->GetAsFloat();
+  }
+  return 0;
+}
+
+double
+SQLRecord::GetFieldDouble(const char* p_name)
+{
+  if(m_dataSet)
+  {
+    return GetField(m_dataSet->GetFieldNumber(p_name))->GetAsDouble();
+  }
+  return 0;
+}
+
+__int64
+SQLRecord::GetFieldInteger64(const char* p_name)
+{
+  if(m_dataSet)
+  {
+    return GetField(m_dataSet->GetFieldNumber(p_name))->GetAsSBigInt();
+  }
+  return 0;
+}
+
+unsigned __int64
+SQLRecord::GetFieldUnsignedInt64(const char* p_name)
+{
+  if(m_dataSet)
+  {
+    return GetField(m_dataSet->GetFieldNumber(p_name))->GetAsUBigInt();
+  }
+  return 0;
+}
+
+SQLDate
+SQLRecord::GetFieldSQLDate(const char* p_name)
+{
+  if(m_dataSet)
+  {
+    return GetField(m_dataSet->GetFieldNumber(p_name))->GetAsSQLDate();
+  }
+  return SQLDate(0,0,0);
+}
+
+SQLTime
+SQLRecord::GetFieldSQLTime(const char* p_name)
+{
+  if(m_dataSet)
+  {
+    return GetField(m_dataSet->GetFieldNumber(p_name))->GetAsSQLTime();
+  }
+  return SQLTime(0,0,0);
+}
+
+SQLTimestamp
+SQLRecord::GetFieldSQLTimestamp(const char* p_name)
+{
+  if(m_dataSet)
+  {
+    return GetField(m_dataSet->GetFieldNumber(p_name))->GetAsSQLTimestamp();
+  }
+  return SQLTimestamp(0,0,0,0,0,0);
+}
+
+SQLInterval
+SQLRecord::GetFieldSQLInterval(const char* p_name)
+{
+  if(m_dataSet)
+  {
+    return GetField(m_dataSet->GetFieldNumber(p_name))->GetAsSQLInterval();
+  }
+  return SQLInterval();
+}
+
+SQLGuid
+SQLRecord::GetFieldSQLGuid(const char* p_name)
+{
+  if(m_dataSet)
+  {
+    return GetField(m_dataSet->GetFieldNumber(p_name))->GetAsSQLGuid();
+  }
+  return SQLGuid();
+}
+
+XString
+SQLRecord::GetFieldXString(const char* p_name)
+{
+  XString string;
+  if(m_dataSet)
+  {
+    GetField(m_dataSet->GetFieldNumber(p_name))->GetAsString(string);
+  }
+  return string;
+}
+
+bcd
+SQLRecord::GetFieldBcd(const char* p_name)
+{
+  if(m_dataSet)
+  {
+    GetField(m_dataSet->GetFieldNumber(p_name))->GetAsBCD();
+  }
+  return bcd();
 }
 
 // Record is changed?

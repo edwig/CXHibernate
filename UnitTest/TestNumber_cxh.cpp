@@ -43,10 +43,11 @@ TestNumber::Serialize(SOAPMessage& p_message, XMLElement* p_entity)
   PreSerialize(p_message, p_entity);
 
   CXObject::Serialize(p_message,p_entity);
-  p_message.AddElement(p_entity, "id",     XDT_Integer | XDT_Type, m_id);
-  p_message.AddElement(p_entity, "field1", XDT_Integer | XDT_Type, m_field1);
-  p_message.AddElement(p_entity, "field2", XDT_Double  | XDT_Type, m_field2);
-  p_message.AddElement(p_entity, "field3", XDT_Decimal | XDT_Type, m_field3.AsDouble());
+
+  CXObject::SetMsgElement(p_message,p_entity,"id",    m_id);
+  CXObject::SetMsgElement(p_message,p_entity,"field1",m_field1);
+  CXObject::SetMsgElement(p_message,p_entity,"field2",m_field2);
+  CXObject::SetMsgElement(p_message,p_entity,"field3",m_field3);
 
   PostSerialize(p_message, p_entity);
 }
@@ -58,10 +59,11 @@ TestNumber::DeSerialize(SOAPMessage& p_message, XMLElement* p_entity)
   PreDeSerialize(p_message, p_entity);
 
   CXObject::DeSerialize(p_message,p_entity);
-  m_id     = p_message.GetElementInteger(p_entity, "id");
-  m_field1 = p_message.GetElementInteger(p_entity, "field1");
-  m_field2 = p_message.GetElementDouble (p_entity, "field2");
-  m_field3 = p_message.GetElementDouble (p_entity, "field3");
+
+  CXObject::GetMsgElement(p_message,p_entity,"id",m_id);
+  CXObject::GetMsgElement(p_message,p_entity,"field1",m_field1);
+  CXObject::GetMsgElement(p_message,p_entity,"field2",m_field2);
+  CXObject::GetMsgElement(p_message,p_entity,"field3",m_field3);
 
   PostDeSerialize(p_message, p_entity);
 }
@@ -72,6 +74,7 @@ TestNumber::Serialize(SQLRecord& p_record, int p_mutation /*= 0*/)
   PreSerialize(p_record);
 
   CXObject::Serialize(p_record,p_mutation);
+
   p_record.ModifyField("id",     m_id,     p_mutation);
   p_record.ModifyField("field1", m_field1, p_mutation);
   p_record.ModifyField("field2", m_field2, p_mutation);
@@ -86,10 +89,11 @@ TestNumber::DeSerialize(SQLRecord& p_record)
   PreDeSerialize(p_record);
 
   CXObject::DeSerialize(p_record);
-  m_id     = (long)   p_record["id"];
-  m_field1 = (int)    p_record["field1"];
-  m_field2 = (double) p_record["field2"];
-  m_field3 = (bcd)    p_record["field3"];
+
+  CXObject::GetRecordField(p_record,"id",    m_id);
+  CXObject::GetRecordField(p_record,"field1",m_field1);
+  CXObject::GetRecordField(p_record,"field2",m_field2);
+  CXObject::GetRecordField(p_record,"field3",m_field3);
 
   PostDeSerialize(p_record);
 }
@@ -97,10 +101,11 @@ TestNumber::DeSerialize(SQLRecord& p_record)
 void
 TestNumber::DeSerializeGenerator(SQLRecord& p_record)
 {
-  PreDeSerialize(p_record);     // Re-Sync the primary key & the record
-  m_id = (long)p_record["id"];  // Re-sync the generator column
+  // Re-Sync the primary key & the record
+  PreDeSerialize(p_record);
+  // Re-sync the generator column
+  CXObject::GetRecordField(p_record,"id",m_id);
 }
-
 
 // Create our new object factory
 // DEFINE_CXO_FACTORY(TestNumber);

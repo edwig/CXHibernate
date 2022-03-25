@@ -468,12 +468,10 @@ void PrintCXHDeSerialize(FILE* p_file,CXClass* p_class,CString p_type)
   CXAttribute* attribute = p_class->FindAttribute(index);
   while (attribute)
   {
-    fprintf(p_file,"  CXO_%sSERIALIZE(%-12s,%-18s,%-18s,%s);\n"
+    fprintf(p_file,"  CXO_%sSERIALIZE(%-18s,%-18s);\n"
                   , p_type.GetString()
-                  , CXDataTypeToString(attribute->GetDataType()).GetString()
                   , ("m_" + attribute->GetName()).GetString()
-                  , ("\"" + attribute->GetDatabaseColumn() + "\"").GetString()
-                  , DatatypeToMacro(attribute->GetDataType()).GetString());
+                  , ("\"" + attribute->GetDatabaseColumn() + "\"").GetString());
 
     // Next attribute
     attribute = p_class->FindAttribute(++index);
@@ -488,11 +486,9 @@ void PrintGenDeSerialize(FILE* p_file,CXClass* p_class)
   if(gen)
   {
     fprintf(p_file,"BEGIN_DESERIALIZE_GENERATOR(%s)\n",p_class->GetName().GetString());
-    fprintf(p_file,"  CXO_DBS_DESERIALIZE(%-12s,%-18s,%-18s,%s);\n"
-                  ,CXDataTypeToString(gen->GetDataType()).GetString()
+    fprintf(p_file,"  CXO_DBS_DESERIALIZE(%-18s,%-18s);\n"
                   ,("m_" + gen->GetName()).GetString()
-                  ,("\"" + gen->GetDatabaseColumn() + "\"").GetString()
-                  ,DatatypeToMacro(gen->GetDataType()).GetString());
+                  ,("\"" + gen->GetDatabaseColumn() + "\"").GetString());
     fprintf(p_file,"END_DESERIALIZE_GENERATOR\n");
     fprintf(p_file,"\n");
   }

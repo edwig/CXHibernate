@@ -570,7 +570,7 @@ SQLRecord::GetFieldBcd(const char* p_name)
 {
   if(m_dataSet)
   {
-    GetField(m_dataSet->GetFieldNumber(p_name))->GetAsBCD();
+    return GetField(m_dataSet->GetFieldNumber(p_name))->GetAsBCD();
   }
   return bcd();
 }

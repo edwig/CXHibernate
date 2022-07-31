@@ -17,10 +17,10 @@
     <table>MASTER</table>
     <discriminator>mas</discriminator>
     <attributes>
-      <attribute name="id" datatype="int" generator="true" isprimary="true"/>
-      <attribute name="invoice" datatype="int"/>
+      <attribute name="id"          datatype="int" generator="true" isprimary="true"/>
+      <attribute name="invoice"     datatype="int"/>
       <attribute name="description" datatype="string" maxlength="250"/>
-      <attribute name="total" datatype="bcd"/>
+      <attribute name="total"       datatype="bcd"/>
     </attributes>
     <identity name="pk_master">
       <attribute name="id" />

@@ -1,6 +1,6 @@
 /////////////////////////////////////////////////////////////////////////////////
 //
-// SourceFile: gzip.cpp
+// SourceFile: ServiceQuality.h
 //
 // Marlin Server: Internet server/client
 // 
@@ -26,13 +26,47 @@
 // THE SOFTWARE.
 //
 #pragma once
-#include <vector>
+#include <map>
+
+class QualityOption
+{
+public:
+  QualityOption() = default;
+
+  XString m_field;
+  int     m_percent { 100 };
+  // Extra option extension.
+  // Beware: Accomodates only one (1) extension!
+  XString m_extension;
+  XString m_value;
+};
+
+using QOptionMap = std::map<int,QualityOption>;
 
 //////////////////////////////////////////////////////////////////////////
 //
-// ZIPPING and UNZIPPING the buffer
+// Parsing the following HTTP headers:
+// Accept               type/subtype;q=1;level=n, */*
+// Accept-charset       charset;q=1, *
+// Accept-encoding      encoding;q=0.5, *;q=0
+// Accept-language      ln, en-gb;q=0.8 en-us;q=0.9, *
 //
-//////////////////////////////////////////////////////////////////////////
+class ServiceQuality
+{
+public:
+  ServiceQuality(XString p_header);
+ ~ServiceQuality() = default;
 
-bool gzip_compress_memory  (void *in_data,size_t in_data_size,std::vector<uint8_t>& buffer);
-bool gzip_decompress_memory(void *in_data,size_t in_data_size,std::vector<uint8_t>& buffer);
+  // Request options from the HTTP header in order of preference. Starts with 0.
+  QualityOption* GetOptionByPreference(int p_preference);
+  XString        GetStringByPreference(int p_preference);
+  // Find if a option is acceptable
+  int            GetPreferenceByName(XString p_name);
+
+private:
+  // Parsing the incoming header
+  void ParseHeader(XString p_header);
+  void ParseOption(XString p_option);
+
+  QOptionMap m_options;
+};

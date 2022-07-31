@@ -1372,7 +1372,7 @@ static SQL_OperCharSubNum(SQLVariant& p_left,SQLVariant& p_right)
 {
   bcd num = bcd(p_left.GetAsChar()) - p_right.GetAsBCD();
   XString str;
-  str = num.AsString();
+  str = num.AsString(bcd::Format::Bookkeeping,false,0);
   SQLVariant var(str);
   return var;
 }

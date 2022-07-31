@@ -49,6 +49,12 @@
 #include <locale.h>
 #include <winnls.h>
 
+#ifdef _DEBUG
+#define new DEBUG_NEW
+#undef THIS_FILE
+static char THIS_FILE[] = __FILE__;
+#endif
+
 // Theoretical maximum of numerical separators
 #define SEP_LEN 10
 
@@ -2309,7 +2315,7 @@ bcd::AsDisplayString(int p_decimals /*=2*/) const
   // Not in the bookkeeping range
   if(m_exponent > 12 || m_exponent < -2)
   {
-    return AsString();
+    return AsString(bcd::Format::Engineering,false,p_decimals);
   }
   bcd number(*this);
   number.Round(p_decimals);

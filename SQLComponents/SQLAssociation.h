@@ -64,6 +64,7 @@ public:
   SQLDataSet* GetDetail()       { return m_detail; };
   XString     GetAssocationName (int p_column);
   SQLVariant* GetAssocationValue(int p_column);
+  XString     GetSQLCondition();
 
 private:
   // Free the association columns and values

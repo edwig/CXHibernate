@@ -401,6 +401,10 @@ HTTPSite::InitSite(MarlinConfig& p_config)
   m_cookieHasSecure = p_config.HasParameter("Cookies","Secure");
   m_cookieHasHttp   = p_config.HasParameter("Cookies","HttpOnly");
   m_cookieHasSame   = p_config.HasParameter("Cookies","SameSite");
+  m_cookieHasPath   = p_config.HasParameter("Cookies","Path");
+  m_cookieHasDomain = p_config.HasParameter("Cookies","Domain");
+  m_cookieHasExpires= p_config.HasParameter("Cookies","Expires");
+  m_cookieHasMaxAge = p_config.HasParameter("Cookies","MaxAge");
 
   if(m_cookieHasSecure)
   {
@@ -413,10 +417,27 @@ HTTPSite::InitSite(MarlinConfig& p_config)
   if(m_cookieHasSame)
   {
     XString sameSite = p_config.GetParameterString("Cookies","SameSite","");
-    if(sameSite.CompareNoCase("None"))   m_cookieSameSite = CookieSameSite::None;
-    if(sameSite.CompareNoCase("Lax"))    m_cookieSameSite = CookieSameSite::Lax;
-    if(sameSite.CompareNoCase("Strict")) m_cookieSameSite = CookieSameSite::Strict;
+    if(sameSite.CompareNoCase("None")   == 0) m_cookieSameSite = CookieSameSite::None;
+    if(sameSite.CompareNoCase("Lax")    == 0) m_cookieSameSite = CookieSameSite::Lax;
+    if(sameSite.CompareNoCase("Strict") == 0) m_cookieSameSite = CookieSameSite::Strict;
   }
+  if(m_cookieHasPath)
+  {
+    m_cookiePath = p_config.GetParameterString("Cookies","Path","");
+  }
+  if(m_cookieHasDomain)
+  {
+    m_cookieDomain = p_config.GetParameterString("Cookies","Domain","");
+  }
+  if(m_cookieHasExpires)
+  {
+    m_cookieExpires = p_config.GetParameterInteger("Cookies","Expires",0);
+  }
+  if(m_cookieHasMaxAge)
+  {
+    m_cookieMaxAge = p_config.GetParameterInteger("Cookies","MaxAge",0);
+  }
+
   // Add and report the automatic headers as a last resort for responsive app's
   SetAutomaticHeaders(p_config);
 }
@@ -522,9 +543,12 @@ HTTPSite::LogSettings()
   DETAILLOGS("Site CORS allows headers           : ",       m_allowHeaders);
   DETAILLOGV("Site CORS max age of pre-flight    : %d",     m_corsMaxAge);
   DETAILLOGS("Site CORS allows credentials       : ",       m_corsCredentials ? "YES" : "NO");
-  DETAILLOGS("Site secure Cookie setting         : ",       m_cookieHasSecure ? m_cookieSecure   ? "YES" : "NO" : "NO");
-  DETAILLOGS("Site httpOnly Cookie setting       : ",       m_cookieHasHttp   ? m_cookieHttpOnly ? "YES" : "NO" : "NO");
-  DETAILLOGS("Site SameSite Cookie setting       : ",       m_cookieHasSame   ? sameSite.GetString() : "NO");
+  DETAILLOGS("Site Cookie secure setting         : ",       m_cookieHasSecure ? m_cookieSecure   ? "YES" : "NO" : "NO");
+  DETAILLOGS("Site Cookie httpOnly setting       : ",       m_cookieHasHttp   ? m_cookieHttpOnly ? "YES" : "NO" : "NO");
+  DETAILLOGS("Site Cookie sameSite setting       : ",       m_cookieHasSame   ? sameSite.GetString() : "NO");
+  DETAILLOGS("Site Cookie path setting           : ",       m_cookiePath);
+  DETAILLOGS("Site Cookie domain setting         : ",       m_cookieDomain);
+  DETAILLOGV("Site Cookie expires setting        : %d min", m_cookieExpires);
 }
 
 // Remove the site from the URL group
@@ -1918,19 +1942,47 @@ void
 HTTPSite::SetCookiesHttpOnly(bool p_only)
 {
   m_cookieHttpOnly = p_only;
-  m_cookieHasHttp  = true;
+  m_cookieHasHttp  = (p_only == true);
 }
 
 void
 HTTPSite::SetCookiesSecure(bool p_secure)
 {
   m_cookieSecure    = p_secure;
-  m_cookieHasSecure = true;
+  m_cookieHasSecure = (p_secure == true);
 }
 
 void
 HTTPSite::SetCookiesSameSite(CookieSameSite p_same)
 {
   m_cookieSameSite = p_same;
-  m_cookieHasSame  = true;
+  m_cookieHasSame  = (p_same != CookieSameSite::NoSameSite);
+}
+
+void
+HTTPSite::SetCookiesPath(XString p_path)
+{
+  m_cookiePath    = p_path;
+  m_cookieHasPath = !p_path.IsEmpty();
+}
+
+void
+HTTPSite::SetCookiesDomain(XString p_domain)
+{
+  m_cookieDomain    = p_domain;
+  m_cookieHasDomain = !p_domain.IsEmpty();
+}
+
+void
+HTTPSite::SetCookiesExpires(int p_minutes)
+{
+  m_cookieExpires    = p_minutes;
+  m_cookieHasExpires = p_minutes > 0;
+}
+
+void
+HTTPSite::SetCookiesMaxAge(int p_seconds)
+{
+  m_cookieMaxAge    = p_seconds;
+  m_cookieHasMaxAge = p_seconds > 0;
 }

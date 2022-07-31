@@ -204,6 +204,7 @@ SQLQuery::Open()
       GetLastError("Getting statement handle: ");
       throw StdException(m_lastError);
     }
+    m_connection = m_database->GetDBHandle();
   }
   else
   {
@@ -2080,6 +2081,20 @@ SQLQuery::GetParameter(int p_num)
     return it->second;
   }
   return nullptr;
+}
+
+// Getting the database handle (if any)
+HDBC
+SQLQuery::GetDatabaseHandle()
+{
+  return m_connection;
+}
+
+// Getting the statement handle (if any)
+HSTMT
+SQLQuery::GetStatementHandle()
+{
+  return m_hstmt;
 }
 
 // End of namespace

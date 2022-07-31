@@ -918,7 +918,7 @@ SQLVariant::GetAsString(XString& result)
     case SQL_C_UBIGINT:                   result.Format("%I64u",m_data.m_dataUBIGINT);
                                           break;
     case SQL_C_NUMERIC:                   { bcd num(&m_data.m_dataNUMERIC);
-                                            result = num.AsString();
+                                            result = num.AsString(bcd::Format::Bookkeeping,false,0);
                                           }
                                           break;
     case SQL_C_GUID:                      result.Format("{%04X-%04X-%04X-%02X%02X-%02X%02X%02X%02X%02X%02X}"

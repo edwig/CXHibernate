@@ -1,8 +1,10 @@
 /////////////////////////////////////////////////////////////////////////////////
 //
-// SourceFile: SQLAutoDBS.h
+// SourceFile: ExecuteShell.h
 //
-// Copyright (c) 1998-2022 ir. W.E. Huisman
+// BaseLibrary: Indispensable general objects and functions
+// 
+// Copyright (c) 2014-2022 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -23,52 +25,16 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 //
-// Version number: See SQLComponents.h
-//
 #pragma once
-#include "SQLDatabase.h"
-#include "SQLDatabasePool.h"
 
-namespace SQLComponents
-{
+// Maximum length of a command line in MS-Windows OS
+// See: https://support.microsoft.com/nl-nl/help/830473/command-prompt-cmd-exe-command-line-string-limitation
+#define MAX_COMMANDLINE 8191
 
-class SQLAutoDBS
-{
-public:
-  SQLAutoDBS(SQLDatabasePool& p_pool,XString p_connection,SQLDatabase* p_prior = nullptr)
-            :m_pool(p_pool)
-  {
-    if(p_prior)
-    {
-      m_database = p_prior;
-      m_poolDbs  = false;
-    }
-    else
-    {
-    m_database = m_pool.GetDatabase(p_connection);
-      m_poolDbs  = true;
-    }
-  }
-
- ~SQLAutoDBS()
-  {
-    if(m_database && m_poolDbs)
-    {
-      m_database->RegisterLogContext(0,nullptr,nullptr,NULL);
-      m_pool.GiveUp(m_database);
-    }
-  }
-
-  bool Invalid()             { return (m_database == nullptr);  };
-  bool Valid()               { return (m_database != nullptr);  };
-  operator SQLDatabase*()    { return  m_database; };
-  SQLDatabase* get()         { return  m_database; };
-  SQLDatabase* operator->()  { return  m_database; };
-  SQLDatabase& operator*()   { return *m_database; };
-private:
-  bool             m_poolDbs;
-  SQLDatabasePool& m_pool;
-  SQLDatabase*     m_database;
-};
-
-}
+bool
+ExecuteShell(XString  p_command
+            ,XString  p_program
+            ,XString  p_arguments
+            ,HWND     p_parent
+            ,int      p_show
+            ,XString* p_error = nullptr);

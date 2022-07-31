@@ -141,7 +141,6 @@ public:
   void SetServer(XString& p_server)             { m_cracked.m_host     = p_server;    ReparseURL();  }
   void SetPort(unsigned p_port)                 { m_cracked.m_port     = p_port;      ReparseURL();  }
   void SetAbsolutePath(XString& p_path)         { m_cracked.SetPath(p_path);          ReparseURL();  }
-  void SetExtension(XString p_ext)              { m_cracked.SetExtension(p_ext);      ReparseURL();  }
   void SetRequestHandle(HTTP_OPAQUE_ID p_req)   { m_request            = p_req;       }
   void SetAccessToken(HANDLE p_token)           { m_token              = p_token;     }
   void SetRemoteDesktop(UINT p_desktop)         { m_desktop            = p_desktop;   }
@@ -154,6 +153,7 @@ public:
   void SetSystemTime(SYSTEMTIME p_time)         { m_systemtime         = p_time;      }
   void SetHasBeenAnswered()                     { m_request            = NULL;        }
   void SetChunkNumber(int p_chunk)              { m_chunkNumber        = p_chunk;     }
+  void SetExtension(XString p_ext,bool p_reparse = true);
   void SetReadBuffer(bool p_read,size_t p_length = 0);
   void SetSender  (PSOCKADDR_IN6 p_address);
   void SetReceiver(PSOCKADDR_IN6 p_address);
@@ -164,6 +164,16 @@ public:
   void SetCookie(Cookie& p_cookie);
   void SetCookie(XString p_fromHttp);
   void SetCookie(XString p_name,XString p_value,XString p_metadata = "",bool p_secure = false,bool p_httpOnly = false);
+  void SetCookie(XString        p_name
+                ,XString        p_value
+                ,XString        p_metadata
+                ,XString        p_path
+                ,XString        p_domain
+                ,bool           p_secure   = false
+                ,bool           p_httpOnly = false
+                ,CookieSameSite p_samesite = CookieSameSite::NoSameSite
+                ,int            p_maxAge   = 0
+                ,SYSTEMTIME*    p_expires  = nullptr);
   void SetCookiePairs(XString p_cookies);     // From "Cookie:" only
   void SetCookies(Cookies& p_cookies);
   bool SetHTTPSite(HTTPSite* p_site);
@@ -242,6 +252,9 @@ public:
   // Reference system for storing the message elsewhere
   void    AddReference();
   void    DropReference();
+
+  // Operators
+  HTTPMessage& operator=(JSONMessage& p_message);
 
 private:
   // Parse raw URL to cracked URL data

@@ -1388,7 +1388,7 @@ SQLVariant
 static SQL_OperCharAddNum(SQLVariant& p_left,SQLVariant& p_right)
 {
   bcd num = bcd(p_left.GetAsChar()) + p_right.GetAsBCD();
-  SQLVariant var(num.AsString());
+  SQLVariant var(num.AsString(bcd::Format::Bookkeeping,false,0));
   return var;
 }
 

@@ -63,6 +63,8 @@ typedef struct _sql_parameter
 }
 SQLParameter;
 
+typedef void (*LPFN_CALLBACK)(void*);
+
 class AggregateInfo
 {
 public:
@@ -94,9 +96,13 @@ public:
   virtual ~SQLDataSet();
 
   // Perform query: Do SetQuery first
-  virtual bool Open(bool p_stopIfNoColumns = false);
-  // Append (read extra) into the dataset
+  virtual bool Open();
+  // Perform query on dataset (transaction not in scope)
+  virtual bool Open(SQLQuery& p_query);
+  // Append (read extra) into the dataset (new query)
   virtual bool Append();
+  // Perform append on open query
+  virtual bool Append(SQLQuery& p_query);
   // Remove result set
   virtual void Close();
   // Query done and records gotten?
@@ -145,12 +151,19 @@ public:
   virtual void SetDatabase(SQLDatabase* p_database);
   // Set SELECT one or more columns to select
   virtual void SetSelection(XString p_selection);
+  // Set the isolated query status
+  virtual void SetIsolation(bool p_isolation);
+  // Set FROM selection of several tables (more than one!)
+  virtual void SetFromTables(XString p_from);
   // Set FROM  primary table (for updates)
   virtual void SetPrimaryTable(XString p_schema, XString p_tableName, XString p_alias = "");
   // Set WHERE condition by hand
   virtual void SetWhereCondition(XString p_condition);
   // Set WHERE filters for a query
+  virtual void ResetFilters();
   virtual void SetFilters(SQLFilterSet* p_filters);
+  // Add filter to current SQLFilterSet
+  virtual void SetFilter(SQLFilter p_filter);
   // Set GROUP BY 
   virtual void SetGroupBy(XString p_groupby);
   virtual void AddGroupby(XString p_property);
@@ -164,6 +177,8 @@ public:
   virtual void SetPrimaryKeyColumn(XString p_name);
   virtual void SetPrimaryKeyColumn(WordList& p_list);
 
+  // Open will not take action if no columns selected
+  void         SetStopIfNoColumns(bool p_stop);
   // Setting the sequence/generator name to something different than "<tablename>_seq"
   void         SetSequenceName(XString p_sequence);
   // Set parameter for a query
@@ -190,6 +205,7 @@ public:
   SQLDatabase* GetDatabase();
   // Get the number of records
   int          GetNumberOfRecords();
+  int          GetSkippedRecords();
   // Get number of fields
   int          GetNumberOfFields();
   // Get the current record (number)
@@ -209,22 +225,24 @@ public:
   // Getting info about the primary key
   XString      GetPrimarySchema();
   XString      GetPrimaryTableName();
+  XString      GetPrimaryAlias();
   // Getting the sequence name
   XString      GetSequenceName();
   // Getting the query settings
   XString      GetSelection();
+  XString      GetFromTables();
   XString      GetWhereCondition();
   XString      GetGroupBy();
   XString      GetOrderBy();
   SQLFilterSet* GetHavings();
-  // Options
-  bool         GetBindPrimary();
+  // Exposing the statement for a SQLCancel
+  void         SetCancelCallback(LPFN_CALLBACK p_cancelFunction);
 
   // XML Saving and loading
   bool         XMLSave(XString p_filename,XString p_name,StringEncoding p_encoding = StringEncoding::ENC_UTF8);
   bool         XMLLoad(XString p_filename);
   void         XMLSave(XMLMessage* p_msg,XMLElement* p_dataset);
-  void         XMLLoad(XMLMessage* p_msg,XMLElement* p_dataset);
+  void         XMLLoad(XMLMessage* p_msg,XMLElement* p_dataset,LONG* p_abort = nullptr);
 
 protected:
   // Set parameters in the query
@@ -282,6 +300,7 @@ protected:
   // The query to run
   XString      m_query;
   XString      m_selection;
+  XString      m_fromTables;
   XString      m_whereCondition;
   XString      m_orderby;
   XString      m_groupby;
@@ -295,6 +314,8 @@ protected:
   WordList     m_updateColumns;
   int          m_topRecords  { 0 };
   int          m_skipRecords { 0 };
+  bool         m_stopNoColumns { false };
+  bool         m_isolation     { false };
   // Filter sets
   SQLFilterSet* m_filters { nullptr };
   SQLFilterSet* m_havings { nullptr };
@@ -309,6 +330,8 @@ protected:
   // Maximum query timing
   int          m_queryTime { 0 };
   ULONG64      m_frequency { 0 };
+  // For canceling the select operation
+  LPFN_CALLBACK m_cancelFunction { nullptr };
 };
 
 inline void 
@@ -385,6 +408,12 @@ SQLDataSet::GetPrimaryTableName()
   return m_primaryTableName;
 }
 
+inline XString
+SQLDataSet::GetPrimaryAlias()
+{
+  return m_primaryAlias;
+}
+
 inline void
 SQLDataSet::SetPrimaryKeyColumn(XString p_name)
 {
@@ -410,6 +439,12 @@ SQLDataSet::GetSelection()
 }
 
 inline XString
+SQLDataSet::GetFromTables()
+{
+  return m_fromTables;
+}
+
+inline XString
 SQLDataSet::GetWhereCondition()
 {
   return m_whereCondition;
@@ -431,6 +466,30 @@ inline SQLFilterSet*
 SQLDataSet::GetHavings()
 {
   return m_havings;
+}
+
+inline void
+SQLDataSet::SetCancelCallback(LPFN_CALLBACK p_cancelFunction)
+{
+  m_cancelFunction = p_cancelFunction;
+}
+
+inline void
+SQLDataSet::SetStopIfNoColumns(bool p_stop)
+{
+  m_stopNoColumns = p_stop;
+}
+
+inline void
+SQLDataSet::SetIsolation(bool p_isolation)
+{
+  m_isolation = p_isolation;
+}
+
+inline int
+SQLDataSet::GetSkippedRecords()
+{
+  return m_skipRecords;
 }
 
 inline void

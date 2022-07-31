@@ -983,6 +983,14 @@ SQLDate::ParseXMLDate(const XString& p_string,SQLTimestamp& p_moment)
       }
       // Store the fraction (if any)
       p_moment.SetFraction(fraction);
+
+      // Zero time. Add the offset from UTC (including daylight-savings-time)
+      if(sep6 == 'Z' || sep7 == 'Z')
+      {
+        extern SQLComponents::SQLInterval g_sql_timezone;
+        p_moment = p_moment + g_sql_timezone;
+      }
+
       return true;
     }
   }

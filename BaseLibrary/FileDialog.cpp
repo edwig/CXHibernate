@@ -2,7 +2,7 @@
 //
 // File: FileDialog.cpp
 //
-// Copyright (c) 2015-2022 ir. W.E. Huisman
+// Copyright (c) 1998-2022 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy of 
@@ -28,6 +28,12 @@
 #include <dlgs.h>
 
 #pragma warning (disable:4312)
+
+#ifdef _DEBUG
+#define new DEBUG_NEW
+#undef THIS_FILE
+static char THIS_FILE[] = __FILE__;
+#endif
 
 DocFileDialog::DocFileDialog(HWND    p_owner
                             ,bool    p_open        // true = open, false = SaveAs

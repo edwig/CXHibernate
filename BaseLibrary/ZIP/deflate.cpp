@@ -48,5 +48,7 @@
  */
 
 /* @(#) $Id$ */
+
+#include "pch.h"
 #include "deflate.d"
 

@@ -32,6 +32,12 @@
 #include "HTTPTime.h"
 #include "ConvertWideString.h"
 
+#ifdef _DEBUG
+#define new DEBUG_NEW
+#undef THIS_FILE
+static char THIS_FILE[] = __FILE__;
+#endif
+
 // XTOR: Empty cookie
 Cookie::Cookie()
 {
@@ -157,8 +163,17 @@ Cookie::GetSetCookieText()
   // Samesite setting
   if(m_sameSite != CookieSameSite::NoSameSite)
   {
-    XString value = m_sameSite == CookieSameSite::Strict ? "Strict" : m_sameSite == CookieSameSite::Lax ? "Lax" : "None";
+    XString value;
+    switch(m_sameSite)
+    {
+      case CookieSameSite::Strict: value = "Strict"; break;
+      case CookieSameSite::Lax:    value = "Lax";    break;
+      case CookieSameSite::None:   value = "None";   break;
+    }
+    if(!value.IsEmpty())
+    {
     cookie.AppendFormat("; SameSite=%s",value.GetString());
+  }
   }
   // Optional flags
   if(m_secure)
@@ -168,6 +183,10 @@ Cookie::GetSetCookieText()
   if(m_httpOnly)
   {
     cookie += "; HttpOnly";
+  }
+  if(m_maxAge)
+  {
+    cookie.AppendFormat("; Max-Age=%d",m_maxAge);
   }
   return cookie;
 }
@@ -189,7 +208,10 @@ Cookie::GetCookieText()
 void  
 Cookie::SetExpires(SYSTEMTIME* p_expires)
 {
+  if(p_expires)
+  {
   memcpy(&m_expires,p_expires,sizeof(SYSTEMTIME));
+  }
 }
 
 // Setting new system time from HTTP text

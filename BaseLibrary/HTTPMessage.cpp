@@ -38,6 +38,12 @@
 #include <xutility>
 #include <string>
 
+#ifdef _DEBUG
+#define new DEBUG_NEW
+#undef THIS_FILE
+static char THIS_FILE[] = __FILE__;
+#endif
+
 using std::wstring;
 
 // All headers. Must be in sequence with HTTPCommand
@@ -269,28 +275,32 @@ HTTPMessage::HTTPMessage(HTTPCommand p_command,SOAPMessage* p_msg)
 HTTPMessage::HTTPMessage(HTTPCommand p_command,JSONMessage* p_msg)
             :m_command(p_command)
 {
-  m_request        = p_msg->GetRequestHandle();
-  m_cookies        = p_msg->GetCookies();
-  m_contentType    = p_msg->GetContentType();
-  m_acceptEncoding = p_msg->GetAcceptEncoding();
-  m_desktop        = p_msg->GetDesktop();
-  m_sendBOM        = p_msg->GetSendBOM();
-  m_site           = p_msg->GetHTTPSite();
-  m_verbTunnel     = p_msg->GetVerbTunneling();
-  m_status         = p_msg->GetStatus();
-  m_user           = p_msg->GetUser();
-  m_password       = p_msg->GetPassword();
-  m_headers        =*p_msg->GetHeaderMap();
-  m_url            = p_msg->GetURL();
-  m_cracked        = p_msg->GetCrackedURL();
+  *this = *p_msg;
+}
+
+HTTPMessage&
+HTTPMessage::operator=(JSONMessage& p_msg)
+{
+  m_request        = p_msg.GetRequestHandle();
+  m_cookies        = p_msg.GetCookies();
+  m_contentType    = p_msg.GetContentType();
+  m_acceptEncoding = p_msg.GetAcceptEncoding();
+  m_desktop        = p_msg.GetDesktop();
+  m_sendBOM        = p_msg.GetSendBOM();
+  m_site           = p_msg.GetHTTPSite();
+  m_verbTunnel     = p_msg.GetVerbTunneling();
+  m_status         = p_msg.GetStatus();
+  m_user           = p_msg.GetUser();
+  m_password       = p_msg.GetPassword();
+  m_headers        =*p_msg.GetHeaderMap();
   memset(&m_systemtime,0,sizeof(SYSTEMTIME));
 
   // Getting the URL of all parts
-  m_url = p_msg->GetURL();
+  m_url = p_msg.GetURL();
   ParseURL(m_url);
 
   // Relay ownership of the token
-  if(DuplicateTokenEx(p_msg->GetAccessToken()
+  if(DuplicateTokenEx(p_msg.GetAccessToken()
                      ,TOKEN_DUPLICATE|TOKEN_IMPERSONATE|TOKEN_ALL_ACCESS|TOKEN_READ|TOKEN_WRITE
                      ,NULL
                      ,SecurityImpersonation
@@ -301,19 +311,19 @@ HTTPMessage::HTTPMessage(HTTPCommand p_command,JSONMessage* p_msg)
   }
 
   // Get sender (if any) from the soap message
-  memcpy(&m_sender,p_msg->GetSender(),sizeof(SOCKADDR_IN6));
+  memcpy(&m_sender,p_msg.GetSender(),sizeof(SOCKADDR_IN6));
 
   // Copy all routing
-  m_routing = p_msg->GetRouting();
+  m_routing = p_msg.GetRouting();
 
   // Setting the payload of the message
-  SetBody(p_msg->GetJsonMessage());
+  SetBody(p_msg.GetJsonMessage());
 
   // Take care of character encoding
   XString charset = FindCharsetInContentType(m_contentType);
-  StringEncoding encoding = p_msg->GetEncoding();
+  StringEncoding encoding = p_msg.GetEncoding();
 
-  if(charset.Left(6).CompareNoCase("utf-16") == 0 || p_msg->GetSendUnicode())
+  if(charset.Left(6).CompareNoCase("utf-16") == 0 || p_msg.GetSendUnicode())
   {
     encoding = StringEncoding::ENC_UTF16;
   }
@@ -335,11 +345,11 @@ HTTPMessage::HTTPMessage(HTTPCommand p_command,JSONMessage* p_msg)
   // Set body and contentLength
   if(acp == 1200)
   {
-    p_msg->SetSendUnicode(true);
-    XString soap = p_msg->GetJsonMessage(StringEncoding::ENC_Plain);
+    p_msg.SetSendUnicode(true);
+    XString soap = p_msg.GetJsonMessage(StringEncoding::ENC_Plain);
     uchar* buffer = nullptr;
     int    length = 0;
-    if(TryCreateWideString(soap,"",p_msg->GetSendBOM(),&buffer,length))
+    if(TryCreateWideString(soap,"",p_msg.GetSendBOM(),&buffer,length))
     {
       SetBody(buffer,length + 2);
       delete [] buffer;
@@ -355,10 +365,12 @@ HTTPMessage::HTTPMessage(HTTPCommand p_command,JSONMessage* p_msg)
   else
   {
     // Simply record as our body
-    SetBody(p_msg->GetJsonMessageWithBOM(encoding));
+    SetBody(p_msg.GetJsonMessageWithBOM(encoding));
   }
   // Make sure we have a server name for host headers
   CheckServer();
+
+  return *this;
 }
 
 // General DTOR
@@ -623,6 +635,32 @@ HTTPMessage::SetCookie(XString p_name
   m_cookies.AddCookie(monster);
 }
 
+void 
+HTTPMessage::SetCookie(XString        p_name
+                      ,XString        p_value
+                      ,XString        p_metadata
+                      ,XString        p_path
+                      ,XString        p_domain
+                      ,bool           p_secure   /*= false*/
+                      ,bool           p_httpOnly /*= false*/
+                      ,CookieSameSite p_samesite /*= CookieSameSite::NoSameSite*/
+                      ,int            p_maxAge   /*= 0*/
+                      ,SYSTEMTIME*    p_expires  /*= nullptr*/)
+{
+  Cookie monster;
+  monster.SetCookie(p_name,p_value,p_metadata,p_secure,p_httpOnly);
+
+  if(!p_path.IsEmpty())     monster.SetPath(p_path);
+  if(!p_domain.IsEmpty())   monster.SetDomain(p_domain);
+  if( p_expires)            monster.SetExpires(p_expires);
+  if(!p_maxAge)             monster.SetMaxAge(p_maxAge);
+  if(p_samesite != CookieSameSite::NoSameSite)
+  {
+    monster.SetSameSite(p_samesite);
+  }
+  m_cookies.AddCookie(monster);
+}
+
 // From "Cookie:" only.
 // Can have multiple cookies, but NO attributes
 void 
@@ -642,6 +680,16 @@ HTTPMessage::SetCookiePairs(XString p_cookies)
       SetCookie(p_cookies);
       return;
     }
+  }
+}
+
+void 
+HTTPMessage::SetExtension(XString p_ext,bool p_reparse /*= true*/)
+{ 
+  m_cracked.m_extension = p_ext;
+  if(p_reparse)
+  {
+    ReparseURL();
   }
 }
 
@@ -965,9 +1013,10 @@ HTTPMessage::SetMultiPartFormData(MultiPartBuffer* p_buffer)
   FormDataType type = p_buffer->GetFormDataType();
   switch(type)
   {
-    case FD_URLENCODED:  return SetMultiPartURL(p_buffer);
-    case FD_MULTIPART:   return SetMultiPartBuffer(p_buffer);
-    case FD_UNKNOWN:     [[fallthrough]];
+    case FormDataType::FD_URLENCODED:  return SetMultiPartURL(p_buffer);
+    case FormDataType::FD_MULTIPART:   [[fallthrough]];
+    case FormDataType::FD_MIXED:       return SetMultiPartBuffer(p_buffer);
+    case FormDataType::FD_UNKNOWN:     [[fallthrough]];
     default:             return false;
   }
   return false;
@@ -1030,7 +1079,11 @@ HTTPMessage::SetMultiPartBuffer(MultiPartBuffer* p_buffer)
   bool result = false;
 
   // Create the correct content type
-  XString boundary = p_buffer->CalculateBoundary();
+  XString boundary = p_buffer->GetBoundary();
+  if(boundary.IsEmpty())
+  {
+    boundary = p_buffer->CalculateBoundary();
+  } 
   XString contentType(p_buffer->GetContentType());
   contentType += "; boundary=";
   contentType += boundary;
@@ -1042,7 +1095,7 @@ HTTPMessage::SetMultiPartBuffer(MultiPartBuffer* p_buffer)
   {
     XString header = part->CreateHeader(boundary,p_buffer->GetFileExtensions());
     m_buffer.AddBuffer((uchar*)header.GetString(),(size_t)header.GetLength());
-    if(part->GetFileName().IsEmpty())
+    if(part->GetShortFileName().IsEmpty())
     {
       // Add data
       m_buffer.AddBufferCRLF((uchar*)part->GetData().GetString()
@@ -1055,7 +1108,10 @@ HTTPMessage::SetMultiPartBuffer(MultiPartBuffer* p_buffer)
       size_t size = 0L;
       FileBuffer* partBuffer = part->GetBuffer();
       partBuffer->GetBuffer(buf,size);
+      if(buf && size)
+      {
       m_buffer.AddBufferCRLF(buf,size);
+      }
     }
     // At least one part added
     result = true;

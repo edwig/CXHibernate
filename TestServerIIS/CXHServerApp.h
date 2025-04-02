@@ -34,8 +34,8 @@ extern int g_errors;
 
 // Suppressed printing. Only print when doDetails = true
 // Any testing module can turn doDetails to 'on' or 'off'
-void xprintf(const char* p_format, ...);
-void qprintf(const char* p_format, ...);
+void xprintf(const TCHAR* p_format, ...);
+void qprintf(const TCHAR* p_format, ...);
 void xerror();
 
 // This is the ServerApp of the IIS server variant (running in W3SVC)
@@ -43,7 +43,7 @@ void xerror();
 class CXHServerApp : public ServerApp
 {
 public:
-  CXHServerApp(IHttpServer* p_iis,CString p_webroot,CString p_appName);
+  CXHServerApp(IHttpServer* p_iis,PCWSTR p_webroot,PCWSTR p_appName);
   virtual ~CXHServerApp();
 
   virtual void InitInstance();
@@ -68,7 +68,7 @@ public:
   CXHServerAppFactory();
 
   virtual CXHServerApp* CreateServerApp(IHttpServer* p_iis
-                                       ,const char*  p_webroot
-                                       ,const char*  p_appName);
+                                       ,PCWSTR       p_webroot
+                                       ,PCWSTR       p_appName);
 };
 

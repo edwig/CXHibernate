@@ -4,7 +4,7 @@
 //
 // Marlin Server: Internet server/client
 // 
-// Copyright (c) 2014-2022 ir. W.E. Huisman
+// Copyright (c) 2014-2024 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -39,28 +39,28 @@ class EventStream;
 class ServerEventDriver;
 
 // Types of channel connections
-enum class EventDriverType
+// Each channel can have multiple types
+typedef enum _eventDriverType
 {
-  EDT_NotConnected = 0
- ,EDT_Sockets      = 1
- ,EDT_ServerEvents = 2
- ,EDT_LongPolling  = 3
-};
+  EDT_NotConnected = 0x00
+ ,EDT_Sockets      = 0x01
+ ,EDT_ServerEvents = 0x02
+ ,EDT_LongPolling  = 0x04
+}
+EventDriverType;
 
 typedef struct _regSocket
 {
-  WebSocket* m_socket;
-  XString    m_url;
-  UINT64     m_sender;
-  bool       m_open;
+  WebSocket* m_socket { nullptr };
+  unsigned   m_sender { 0       };
+  bool       m_open   { false   };
 }
 EventWebSocket;
 
 typedef struct _regStream
 {
-  EventStream* m_stream;
-  XString      m_url;
-  UINT64       m_sender;
+  EventStream* m_stream { nullptr };
+  unsigned     m_sender { 0 };
 }
 EventSSEStream;
 
@@ -83,8 +83,12 @@ public:
   int  SendChannel();
   // Process the receiving part of the queue
   int  Receiving();
+  // Sanity check on channel (sockets only)
+  void CheckChannel();
+  // Sanity check on channel
+  bool CheckChannelPolicy();
   // Post a new event, giving a new event numerator
-  int  PostEvent(XString p_payload,XString p_sender,EvtType p_type = EvtType::EV_Message);
+  int  PostEvent(XString p_payload,XString p_sender,EvtType p_type = EvtType::EV_Message,XString p_typeName = _T(""));
   // Flushing a channel directly
   bool FlushChannel();
   // Closing an event channel
@@ -115,17 +119,20 @@ public:
   void    OnError  (XString p_message);
   void    OnClose  (XString p_message);
   void    OnBinary (void* p_data,DWORD p_length);
-  void    OnOpenSocket (WebSocket* p_socket);
-  void    OnCloseSocket(WebSocket* p_socket);
+  void    OnOpenSocket (const WebSocket* p_socket);
+  void    OnCloseSocket(const WebSocket* p_socket);
 
 private:
   void CloseSocket(WebSocket* p_socket);
-  void CloseStream(EventStream* p_stream);
-  int  SendQueueToSocket();
-  int  SendQueueToStream();
-  int  LogLongPolling();
-  int  LogNotConnected();
+  void CloseStream(const EventStream* p_stream);
+  int  SendEventToSockets(LTEvent* p_event);
+  int  SendEventToStreams(LTEvent* p_event);
+  void LogLongPolling();
+  void LogNotConnected();
+  void PlaceInLongPollingQueue(LTEvent* p_event);
   bool RemoveEvents(int p_number);
+  bool GetNextOutgoingEvent(LTEvent*& p_event);
+  bool GetNextIncomingEvent(LTEvent*& p_event);
 
   // DATA
   XString             m_name;
@@ -142,9 +149,10 @@ private:
   UINT64              m_appData     { 0L      };
   // All events to be sent
   EventQueue          m_outQueue;
+  EventQueue          m_polQueue;
   int                 m_maxNumber   { 0 };
   int                 m_minNumber   { 0 };
-  INT64               m_lastSending { 0 };
+  bool                m_usePolling  { false };
   // All incoming events from the client
   EventQueue          m_inQueue;
   bool                m_openSeen    { false };

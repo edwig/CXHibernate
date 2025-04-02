@@ -30,9 +30,9 @@
 CXHRole 
 CXStringToRole(CString p_role)
 {
-  if(p_role.CompareNoCase("database_role")  == 0) return CXH_Database_role;
-  if(p_role.CompareNoCase("filestore_role") == 0) return CXH_Filestore_role;
-  if(p_role.CompareNoCase("internet_role")  == 0) return CXH_Internet_role;
+  if(p_role.CompareNoCase(_T("database_role"))  == 0) return CXH_Database_role;
+  if(p_role.CompareNoCase(_T("filestore_role")) == 0) return CXH_Filestore_role;
+  if(p_role.CompareNoCase(_T("internet_role"))  == 0) return CXH_Internet_role;
   return (CXHRole) 0;
 }
 
@@ -41,9 +41,9 @@ CXRoleToString(CXHRole p_role)
 {
   switch (p_role)
   {
-    case CXH_Database_role:  return "database_role";
-    case CXH_Filestore_role: return "filestore_role";
-    case CXH_Internet_role:  return "internet_role";
+    case CXH_Database_role:  return _T("database_role");
+    case CXH_Filestore_role: return _T("filestore_role");
+    case CXH_Internet_role:  return _T("internet_role");
   }
-  return "";
+  return _T("");
 }

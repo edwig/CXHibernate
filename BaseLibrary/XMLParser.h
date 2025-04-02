@@ -2,7 +2,7 @@
 //
 // SourceFile: XMLParser.h
 //
-// Copyright (c) 2014-2022 ir. W.E. Huisman
+// Copyright (c) 2014-2025 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -31,13 +31,10 @@
 class Entity
 {
 public:
-  const char* m_entity;
-  int         m_length;
-  const char  m_char;
+  const TCHAR* m_entity;
+  int          m_length;
+  const TCHAR  m_char;
 };
-
-// Pointer type for processing
-using uchar = unsigned char;
 
 // Current number of entities recognized
 constexpr auto NUM_ENTITY = 5;
@@ -47,22 +44,22 @@ class XMLParser
 {
 public:
   XMLParser() = default;
-  XMLParser(XMLMessage* p_message);
+  explicit XMLParser(XMLMessage* p_message);
 
   // Parse a complete XML message string
   void          ParseMessage(XString& p_message,WhiteSpace p_whiteSpace = WhiteSpace::PRESERVE_WHITESPACE);
   // Parse from a beginning node
   void          ParseForNode(XMLElement* p_node,XString& p_message,WhiteSpace p_whiteSpace = WhiteSpace::PRESERVE_WHITESPACE);
-  // Setting message to UTF-8 encryption
-  void          SetUTF8();
 
   // Print string with entities and optionally as UTF8 again
   static XString PrintXmlString (const XString& p_string, bool p_utf8 = false);
-  static XString PrintJsonString(const XString& p_string, StringEncoding p_encoding = StringEncoding::ENC_Plain);
+  static XString PrintJsonString(const XString& p_string);
+  // Check special chars not supported in Windows-1252, not supported in ISO8859
+  static int     UnicodeISO8859Check(int p_number);
 
 protected:
   // Set the internal error
-  void          SetError(XmlError p_error,const uchar* p_text,bool p_throw = true);
+  void          SetError(XmlError p_error,LPCTSTR p_text,bool p_throw = true);
   // Skipping whitespace
   void          SkipWhiteSpace();
   // Skip whitespace outside tags
@@ -82,31 +79,26 @@ protected:
   // Get quoted string from message
   XString       GetQuotedString();
   // Get a character from message including '& translation'
-  unsigned char ValueChar();
+  _TUCHAR       ValueChar();
   // Conversion of xdigit to a numeric value
   int           XDigitToValue(int ch);
     // Is an alphanumeric char
-  int           IsAlpha        (unsigned char p_char);
-  int           IsAlphaNummeric(unsigned char p_char);
+  int           IsAlpha        (_TUCHAR p_char);
+  int           IsAlphaNummeric(_TUCHAR p_char);
   // Need special token
-  void          NeedToken(char p_token);
+  void          NeedToken(_TUCHAR p_token);
   // Create a new element
   void          MakeElement(XString& p_namespace,XString& p_name);
 
   // Message being parsed
   XMLMessage*   m_message    { nullptr };
-  bool          m_utf8       { false   };
   unsigned      m_spaces     { 0 };
   unsigned      m_elements   { 0 };
   WhiteSpace    m_whiteSpace { WhiteSpace::PRESERVE_WHITESPACE };
+  XString       m_encoding;
   // Parsing was advanced to here
-  uchar*        m_pointer    { nullptr };
+  _TUCHAR*      m_pointer    { nullptr };
   XMLElement*   m_element    { nullptr };
   XMLElement*   m_lastElement{ nullptr };
 };
 
-inline void 
-XMLParser::SetUTF8()
-{
-  m_utf8 = true;
-}

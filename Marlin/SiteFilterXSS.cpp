@@ -4,7 +4,7 @@
 //
 // Marlin Server: Internet server/client
 // 
-// Copyright (c) 2014-2022 ir. W.E. Huisman
+// Copyright (c) 2014-2024 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -29,10 +29,12 @@
 #include "SiteFilterXSS.h"
 #include "SiteHandler.h"
 
+#ifdef _AFX
 #ifdef _DEBUG
 #define new DEBUG_NEW
 #undef THIS_FILE
 static char THIS_FILE[] = __FILE__;
+#endif
 #endif
 
 SiteFilterXSS::SiteFilterXSS(unsigned p_priority,XString p_name)
@@ -66,7 +68,7 @@ SiteFilterXSS::Handle(HTTPMessage* p_message)
   {
     int status = HTTP_STATUS_FORBIDDEN;
     // Tell the log that we are very sorry
-    SITE_ERRORLOG(status,"Detected Cross-Site-Scripting from: " + referrer);
+    SITE_ERRORLOG(status,_T("Detected Cross-Site-Scripting from: ") + referrer);
 
     // Bounce the HTTPMessage immediately as a 403: Status forbidden
     p_message->Reset();

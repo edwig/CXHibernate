@@ -2,7 +2,7 @@
 //
 // SourceFile: SeverMain.h
 //
-// Copyright (c) 2014-2022 ir. W.E. Huisman
+// Copyright (c) 2014-2024 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -38,7 +38,7 @@ void WINAPI SvcCtrlHandler(DWORD);
 
 // Prototypes of all other functions
 void        ReadConfig();
-int         SvcInstall(char* username,char* password);
+int         SvcInstall(LPCTSTR username,LPCTSTR password);
 int         SvcDelete();
 void        SvcInit(DWORD,LPTSTR *); 
 void        ReportSvcStatus(DWORD,DWORD,DWORD);

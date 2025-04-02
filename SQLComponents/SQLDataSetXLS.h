@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////
 //
-// Copyright (c) 1998-2022 ir. W.E. Huisman
+// Copyright (c) 1998-2025 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy of 
@@ -96,7 +96,7 @@ public:
 
 private:
   // Open a text delimited file for reading or writing
-  bool  Open(); 
+  virtual bool Open() override; 
   // Close and forget the spreadsheet
   virtual void Close() override;
   // Convert Excel column in alphabet into column number

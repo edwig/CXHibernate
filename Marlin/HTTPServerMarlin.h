@@ -4,7 +4,7 @@
 //
 // Marlin Server: Internet server/client
 // 
-// Copyright (c) 2014-2022 ir. W.E. Huisman
+// Copyright (c) 2014-2024 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -31,38 +31,38 @@
 class HTTPServerMarlin : public HTTPServer
 {
 public:
-  HTTPServerMarlin(XString p_name);
+  explicit HTTPServerMarlin(XString p_name);
   virtual ~HTTPServerMarlin();
 
   // Running the server 
-  virtual void       Run();
+  virtual void       Run() override;
   // Stop the server
-  virtual void       StopServer();
+  virtual void       StopServer() override;
   // Initialise a HTTP server and server-session
-  virtual bool       Initialise();
+  virtual bool       Initialise() override;
   // Return a version string
-  virtual XString    GetVersion();
+  virtual XString    GetVersion() override;
   // Create a site to bind the traffic to
   virtual HTTPSite*  CreateSite(PrefixType    p_type
                                ,bool          p_secure
                                ,int           p_port
                                ,XString       p_baseURL
                                ,bool          p_subsite  = false
-                               ,LPFN_CALLBACK p_callback = nullptr);
+                               ,LPFN_CALLBACK p_callback = nullptr) override;
   // Delete a site from the remembered set of sites
-  virtual bool       DeleteSite(int p_port,XString p_baseURL,bool p_force = false);
+  virtual bool       DeleteSite(int p_port,XString p_baseURL,bool p_force = false) override;
   // Receive (the rest of the) incoming HTTP request
-  virtual bool       ReceiveIncomingRequest(HTTPMessage* p_message);
+  virtual bool       ReceiveIncomingRequest(HTTPMessage* p_message,Encoding p_enconding) override;
   // Create a new WebSocket in the subclass of our server
-  virtual WebSocket* CreateWebSocket(XString p_uri);
+  virtual WebSocket* CreateWebSocket(XString p_uri) override;
   // Receive the WebSocket stream and pass on the the WebSocket
-  virtual void       ReceiveWebSocket(WebSocket* p_socket,HTTP_OPAQUE_ID p_request);
+  virtual void       ReceiveWebSocket(WebSocket* p_socket,HTTP_OPAQUE_ID p_request) override;
   // Flushing a WebSocket intermediate
-  virtual bool       FlushSocket(HTTP_OPAQUE_ID p_request,XString p_prefix);
+  virtual bool       FlushSocket(HTTP_OPAQUE_ID p_request,XString p_prefix) override;
   // Sending response for an incoming message
-  virtual void       SendResponse(HTTPMessage* p_message);
+  virtual void       SendResponse(HTTPMessage* p_message) override;
   // Sending a response as a chunk
-  virtual void       SendAsChunk(HTTPMessage* p_message,bool p_final = false);
+  virtual void       SendAsChunk(HTTPMessage* p_message,bool p_final = false) override;
 
   // FUNCTIONS FOR STAND-ALONE SERVER
 
@@ -73,25 +73,27 @@ public:
                             ,XString p_realm
                             ,XString p_domain);
   // Remove an URLGroup. Called by HTTPURLGroup itself
-  void          RemoveURLGroup(HTTPURLGroup* p_group);
+  void          RemoveURLGroup(const HTTPURLGroup* p_group);
+  // Initialize the logging of the HTTPSYS driver
+  void          InitHTTPLogging();
 
 protected:
   // Cleanup the server
-  virtual void Cleanup();
+  virtual void Cleanup() override;
   // Initialise general server header settings
-  virtual void InitHeaders();
+  virtual void InitHeaders() override;
   // Init the stream response
-  virtual bool InitEventStream(EventStream& p_stream);
+  virtual bool InitEventStream(EventStream& p_stream) override;
   // Used for canceling a WebSocket for an event stream
-  virtual void CancelRequestStream(HTTP_OPAQUE_ID p_response,bool p_reset = false);
+  virtual void CancelRequestStream(HTTP_OPAQUE_ID p_response,bool p_reset = false) override;
 
 private:
   // For the handling of the event streams: Sending a chunk to an event stream
   virtual bool SendResponseEventBuffer(HTTP_OPAQUE_ID     p_request
                                       ,CRITICAL_SECTION*  p_lock
-                                      ,const char*        p_buffer
+                                      ,BYTE**             p_buffer
                                       ,size_t             p_totalLength
-                                      ,bool               p_continue = true);
+                                      ,bool               p_continue = true) override;
 
   // PRIVATE DATA of the stand-alone HTTPServer
   URLGroupMap             m_urlGroups;              // All URL Groups

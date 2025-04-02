@@ -13,10 +13,12 @@
 #include "BaseLibrary.h"
 #include "CRC32.h"
 
+#ifdef _AFX
 #ifdef _DEBUG
 #define new DEBUG_NEW
 #undef THIS_FILE
 static char THIS_FILE[] = __FILE__;
+#endif
 #endif
 
 const DWORD CrcTableOffset32[256] =
@@ -310,8 +312,7 @@ const DWORD CrcTableOffset88[256] =
 DWORD 
 ComputeCRC32(DWORD dwCRC, LPCVOID pv, UINT cbLength)
 {
-  DWORD dw2nd32 = 0;
-  const unsigned char* pbBuffer = (const unsigned char *)pv;
+  const unsigned char* pbBuffer = reinterpret_cast<const unsigned char *>(pv);
   
   const UINT cbAlignedOffset         =  ((cbLength < sizeof(DWORD)) ? 0 : (UINT)((DWORD_PTR)pv % sizeof(DWORD)));
   const UINT cbInitialUnalignedBytes =  ((cbAlignedOffset == 0)     ? 0 : (sizeof(DWORD) - cbAlignedOffset));
@@ -325,14 +326,14 @@ ComputeCRC32(DWORD dwCRC, LPCVOID pv, UINT cbLength)
 
   for(UINT i=0; i < cbRunningLength/8; ++i)
   {
-    dwCRC ^= *(DWORD *)pbBuffer;
+    dwCRC ^= *(DWORD*)pbBuffer;
     dwCRC = CrcTableOffset88[ dwCRC        & 0x000000FF] ^
             CrcTableOffset80[(dwCRC >>  8) & 0x000000FF] ^
             CrcTableOffset72[(dwCRC >> 16) & 0x000000FF] ^
             CrcTableOffset64[(dwCRC >> 24) & 0x000000FF];
     pbBuffer += 4;
        
-    dw2nd32 = (*(DWORD *)pbBuffer);
+    DWORD dw2nd32 = (*(DWORD *)pbBuffer);
     dwCRC   = dwCRC ^ 
               CrcTableOffset56[ dw2nd32        & 0x000000FF] ^
               CrcTableOffset48[(dw2nd32 >>  8) & 0x000000FF] ^

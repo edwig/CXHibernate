@@ -2,7 +2,7 @@
 //
 // File: SQLDriverManager.h
 //
-// Copyright (c) 1998-2022 ir. W.E. Huisman
+// Copyright (c) 1998-2025 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy of 
@@ -45,14 +45,14 @@ namespace SQLComponents
 // Structure to hold information about a DSN (DataSourceName)
 typedef struct _datasource
 {
-  XString m_datasource;     // DSN Name
-  XString m_description;    // Description seen in MS-Windows
-  XString m_username;       // Default user name to use
-  XString m_password;       // Password to use
-  bool    m_system;         // DSN is a system-wide datasource name
-  bool    m_default;        // DSN is to be used by default in our system
-  bool    m_changed;        // DSN is changed. Write back to ...
-  bool    m_dataConnection; // DSN is for a end-user data connection
+  XString m_datasource;                 // DSN Name
+  XString m_description;                // Description seen in MS-Windows
+  XString m_username;                   // Default user name to use
+  XString m_password;                   // Password to use
+  bool    m_system          { false };  // DSN is a system-wide datasource name
+  bool    m_default         { false };  // DSN is to be used by default in our system
+  bool    m_changed         { false };  // DSN is changed. Write back to ...
+  bool    m_dataConnection  { false };  // DSN is for a end-user data connection
 }
 DataSource;
 

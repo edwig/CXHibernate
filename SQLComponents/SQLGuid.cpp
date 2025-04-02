@@ -2,7 +2,7 @@
 //
 // File: SQLGuid.cpp
 //
-// Copyright (c) 1998-2022 ir. W.E. Huisman
+// Copyright (c) 1998-2025 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy of 
@@ -36,6 +36,12 @@
 static char THIS_FILE[] = __FILE__;
 #endif
 
+#ifdef UNICODE
+#define RPC_TSTR RPC_WSTR
+#else
+#define RPC_TSTR RPC_CSTR
+#endif
+
 namespace SQLComponents
 {
 
@@ -43,7 +49,7 @@ namespace SQLComponents
 SQLGuid::SQLGuid()
 {
   // Set the guid to zeros
-  memset((void*)&m_guid, 0, sizeof(SQLGUID));
+  memset(reinterpret_cast<void*>(&m_guid),0,sizeof(SQLGUID));
 }
 
 // XTOR from other SQLGuid
@@ -77,7 +83,7 @@ bool
 SQLGuid::Set(const XString p_string)
 {
   m_initialized = false;
-  if(UuidFromString((unsigned char*)p_string.GetString(),&m_guid) == RPC_S_OK)
+  if(UuidFromString(reinterpret_cast<RPC_TSTR>(const_cast<TCHAR*>(p_string.GetString())),&m_guid) == RPC_S_OK)
   {
     m_initialized = true;
   }
@@ -89,37 +95,37 @@ bool
 SQLGuid::Set(const SQLGUID* p_guid)
 {
   memcpy(&m_guid,p_guid,sizeof(SQLGUID));
-  return (m_initialized = true);
+  m_initialized = true;
+  return true;
 }
 
 // Is a valid initialized GUID
 bool
-SQLGuid::IsValid()
+SQLGuid::IsValid() const
 {
   return m_initialized;
 }
 
 // Get as a XString
 XString 
-SQLGuid::AsString()
+SQLGuid::AsString() const
 {
   XString guid;
   if(m_initialized)
   {
-    RPC_CSTR guidString = nullptr;
+    RPC_TSTR guidString = nullptr;
     // Convert the GUID to a string
     if(UuidToString(&m_guid,&guidString) == RPC_S_OK)
     {
       // And convert to a XString
-      guid = XString(guidString);
-      RpcStringFree(&guidString);
+      guid = XString(reinterpret_cast<LPCTSTR>(guidString));
     }
   }
   return guid;
 }
 
-SQLGUID* 
-SQLGuid::AsGUID()
+const SQLGUID* 
+SQLGuid::AsGUID() const
 {
   return &m_guid;
 }

@@ -4,7 +4,7 @@
 //
 // Marlin Server: Internet server/client
 // 
-// Copyright (c) 2014-2022 ir. W.E. Huisman
+// Copyright (c) 2014-2024 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -26,7 +26,8 @@
 // THE SOFTWARE.
 //
 #pragma once
-#include "WebSocket.h"
+#include "WebSocketMain.h"
+#define WEBSOCKET_HEADER 0x77884321
 
 //////////////////////////////////////////////////////////////////////////
 //
@@ -37,25 +38,31 @@
 class WebSocketServerIIS: public WebSocket
 {
 public:
-  WebSocketServerIIS(XString p_uri);
+  explicit WebSocketServerIIS(XString p_uri);
   virtual ~WebSocketServerIIS();
 
   // FUNCTIONS
 
   // Reset the socket
-  virtual void Reset();
+  virtual void Reset() override;
   // Open the socket
-  virtual bool OpenSocket();
+  virtual bool OpenSocket() override;
   // Close the socket unconditionally
-  virtual bool CloseSocket();
+  virtual bool CloseSocket() override;
   // Close the socket with a closing frame
-  virtual bool SendCloseSocket(USHORT p_code,XString p_reason);
+  virtual bool SendCloseSocket(USHORT p_code,XString p_reason) override;
   // Write fragment to a WebSocket
-  virtual bool WriteFragment(BYTE* p_buffer,DWORD p_length,Opcode p_opcode,bool p_last = true);
+  virtual bool WriteFragment(BYTE* p_buffer,DWORD p_length,Opcode p_opcode,bool p_last = true) override;
   // Register the server request for sending info
-  virtual bool RegisterSocket(HTTPMessage* p_message);
+  virtual bool RegisterSocket(HTTPMessage* p_message) override;
   // Perform the server handshake
-  virtual bool ServerHandshake(HTTPMessage* p_message);
+  virtual bool ServerHandshake(HTTPMessage* p_message) override;
+  // DETECT and decoded close connection (use in 'OnClose')
+  virtual bool GetCloseSocket(USHORT& p_code,XString& p_reason) override;
+  // Detected a closing status on read-completion
+  virtual void SetClosingStatus(USHORT p_code) override;
+  // Send a ping/pong keep alive message
+  virtual bool SendKeepAlive() override;
 
   // To be called for ASYNC I/O completion!
   void    SocketReader(HRESULT p_error,DWORD p_bytes,BOOL p_utf8,BOOL p_final,BOOL p_close);
@@ -65,6 +72,10 @@ public:
   // Dispatch an extra write action
   void    SocketDispatch();
   void    PostCompletion(DWORD dwErrorCode,DWORD dwNumberOfBytes);
+
+  // Private data for the server variant of the WebSocket
+  ULONG               m_header { WEBSOCKET_HEADER };
+
 protected:
   // Decode the incoming close socket message
   bool    ReceiveCloseSocket();

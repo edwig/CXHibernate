@@ -4,7 +4,7 @@
 //
 // BaseLibrary: Indispensable general objects and functions
 // 
-// Copyright (c) 2014-2022 ir. W.E. Huisman
+// Copyright (c) 2014-2025 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -43,20 +43,20 @@ public:
     memset(&m_version_info, 0, sizeof(m_version_info));
   }
 
-  XString					 m_file_name;
-  XString					 m_file_path;
-  XString					 m_full_path;
+  XString          m_file_name;
+  XString          m_file_path;
+  XString          m_full_path;
   
-  XString					 m_load_address;
+  XString          m_load_address;
 
-  XString					 m_company_name;
-  XString					 m_file_description;
-  XString					 m_fileversion;
-  XString					 m_internal_name;
-  XString					 m_legal_copyright;
-  XString					 m_original_filename;
-  XString					 m_product_name;
-  XString				   m_product_version;
+  XString          m_company_name;
+  XString          m_file_description;
+  XString          m_fileversion;
+  XString          m_internal_name;
+  XString	         m_legal_copyright;
+  XString          m_original_filename;
+  XString          m_product_name;
+  XString          m_product_version;
 
   XString          m_trademarks;
   XString          m_private_build;
@@ -90,7 +90,7 @@ public:
   void GetApplicInfo();			//	Application information
   void GetModuleInfo();			//	Loaded modules
 
-  void WriteToFile(XString const& Filename) const;
+  void WriteToFile(XString const& p_filename) const;
 
   using ModuleList = std::vector<Module*>;
 
@@ -117,11 +117,11 @@ public:
   ModuleList  m_modules;
 private:
   static
-  XString             ReadLangString(LPVOID      pVI
-                                    ,char const* pszFormatString
-                                    ,DWORD       dwLang
-                                    ,char const* pszStringName);
-  bool                isWin10AnniversaryOrHigher();
+  XString             ReadLangString(LPVOID  pVI
+                                    ,PTCHAR  pszFormatString
+                                    ,DWORD   dwLang
+                                    ,PTCHAR  pszStringName);
+  bool                IsWin10AnniversaryOrHigher();
   RTL_OSVERSIONINFOW  getRealOSVersion();
   bool				        m_use_psapi;
 

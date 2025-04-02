@@ -57,7 +57,7 @@ namespace HibernateTest
 
     TEST_METHOD(T01_SelectSubject)
     {
-      Logger::WriteMessage("T01_SelectSubject shows first subject in database");
+      Logger::WriteMessage(_T("T01_SelectSubject shows first subject in database"));
       OpenSession();
 
       try
@@ -74,7 +74,7 @@ namespace HibernateTest
 
     TEST_METHOD(T02_SelectNaturalPerson)
     {
-      Logger::WriteMessage("T02_SelectNaturalPerson shows a real person from the database");
+      Logger::WriteMessage(_T("T02_SelectNaturalPerson shows a real person from the database"));
       OpenSession();
 
       try
@@ -91,7 +91,7 @@ namespace HibernateTest
 
     TEST_METHOD(T03_SelectSupplier)
     {
-      Logger::WriteMessage("T03_SelectSupplier shows a supplier from the database");
+      Logger::WriteMessage(_T("T03_SelectSupplier shows a supplier from the database"));
       OpenSession();
 
       try
@@ -108,7 +108,7 @@ namespace HibernateTest
     
     TEST_METHOD(T04_SelectInfant)
     {
-      Logger::WriteMessage("T04_SelectInfant shows a child from the database");
+      Logger::WriteMessage(_T("T04_SelectInfant shows a child from the database"));
       OpenSession();
 
       try
@@ -125,20 +125,20 @@ namespace HibernateTest
 
     TEST_METHOD(T05_InsertDeleteNaturalPerson)
     {
-      Logger::WriteMessage("T05_InsertNaturalPerson in the database");
+      Logger::WriteMessage(_T("T05_InsertNaturalPerson in the database"));
 
       try
       {
         OpenSession();
 
         NaturalPerson* person = (NaturalPerson*) m_session->CreateObject(NaturalPerson::ClassName());
-        person->SetName("Test person 1");
-        person->SetAdresline1("Downingstreet 10");
-        person->SetAdresline2("London, City of Westminster");
+        person->SetName(_T("Test person 1"));
+        person->SetAdresline1(_T("Downingstreet 10"));
+        person->SetAdresline2(_T("London, City of Westminster"));
         person->SetAccount_id(665512);
-        person->SetFirstname("Florian-Robert");
-        person->SetDate_of_birth(SQLDate("12-03-1992"));
-        person->SetLength(bcd("180"));
+        person->SetFirstname(_T("Florian-Robert"));
+        person->SetDate_of_birth(SQLDate(_T("12-03-1992")));
+        person->SetLength(bcd(_T("180")));
 
         if(m_session->Save(person))
         {
@@ -147,19 +147,19 @@ namespace HibernateTest
 
           if(m_session->Delete(person))
           {
-            Logger::WriteMessage("Person deleted again");
+            Logger::WriteMessage(_T("Person deleted again"));
           }
           else
           {
             CString error;
-            error.Format("Person with ID [%d] is ***NOT*** deleted",id);
+            error.Format(_T("Person with ID [%d] is ***NOT*** deleted"),id);
             Logger::WriteMessage(error);
             Assert::Fail();
           }
         }
         else
         {
-          Logger::WriteMessage("Person ***NOT*** saved");
+          Logger::WriteMessage(_T("Person ***NOT*** saved"));
           Assert::Fail();
         }
       }
@@ -172,7 +172,7 @@ namespace HibernateTest
 
     TEST_METHOD(T06_UpdateNaturalPerson)
     {
-      Logger::WriteMessage("T06_UpdateNaturalPerson shows updating a person in the database");
+      Logger::WriteMessage(_T("T06_UpdateNaturalPerson shows updating a person in the database"));
 
       try
       {
@@ -184,7 +184,7 @@ namespace HibernateTest
 
         int account = person->GetAccount_id();
 
-        SQLDate birth("15-05-1962");
+        SQLDate birth(_T("15-05-1962"));
         person->SetDate_of_birth(birth);
         person->SetAccount_id(567123);
 
@@ -208,11 +208,11 @@ namespace HibernateTest
     void PrintSubject(Subject* p_subject)
     {
       CString text;
-      text.Format("Subject with ID : %d",p_subject->GetId());         Logger::WriteMessage(text);
-      text.Format("Name of subject : %s",p_subject->GetName());       Logger::WriteMessage(text);
-      text.Format("Adresline 1     : %s",p_subject->GetAdresline1()); Logger::WriteMessage(text);
-      text.Format("Adresline 2     : %s",p_subject->GetAdresline2()); Logger::WriteMessage(text);
-      text.Format("Account ID      : %d",p_subject->GetAccount_id()); Logger::WriteMessage(text);
+      text.Format(_T("Subject with ID : %d"),p_subject->GetId());         Logger::WriteMessage(text);
+      text.Format(_T("Name of subject : %s"),p_subject->GetName());       Logger::WriteMessage(text);
+      text.Format(_T("Adresline 1     : %s"),p_subject->GetAdresline1()); Logger::WriteMessage(text);
+      text.Format(_T("Adresline 2     : %s"),p_subject->GetAdresline2()); Logger::WriteMessage(text);
+      text.Format(_T("Account ID      : %d"),p_subject->GetAccount_id()); Logger::WriteMessage(text);
     }
 
     void PrintNaturalPerson(NaturalPerson* p_person)
@@ -220,9 +220,9 @@ namespace HibernateTest
       PrintSubject(p_person);
 
       CString text;
-      text.Format("Firstname       : %s",p_person->GetFirstname());                Logger::WriteMessage(text);
-      text.Format("Date of birth   : %s",p_person->GetDate_of_birth().AsString()); Logger::WriteMessage(text);
-      text.Format("Length in cm    : %s",p_person->GetLength().AsString());        Logger::WriteMessage(text);
+      text.Format(_T("Firstname       : %s"),p_person->GetFirstname());                Logger::WriteMessage(text);
+      text.Format(_T("Date of birth   : %s"),p_person->GetDate_of_birth().AsString()); Logger::WriteMessage(text);
+      text.Format(_T("Length in cm    : %s"),p_person->GetLength().AsString());        Logger::WriteMessage(text);
     }
 
     void PrintSupplier(Supplier* p_supplier)
@@ -230,10 +230,10 @@ namespace HibernateTest
       PrintSubject(p_supplier);
 
       CString text;
-      text.Format("Delivery address: %s",p_supplier->GetDeliveryAddress());         Logger::WriteMessage(text);
-      text.Format("Balance         : %s",p_supplier->GetBalance().AsString());      Logger::WriteMessage(text);
-      text.Format("Open orders     : %s",p_supplier->GetOpen_orders().AsString());  Logger::WriteMessage(text);
-      text.Format("Open billings   : %s",p_supplier->GetOpen_billings().AsString());Logger::WriteMessage(text);
+      text.Format(_T("Delivery address: %s"),p_supplier->GetDeliveryAddress());         Logger::WriteMessage(text);
+      text.Format(_T("Balance         : %s"),p_supplier->GetBalance().AsString());      Logger::WriteMessage(text);
+      text.Format(_T("Open orders     : %s"),p_supplier->GetOpen_orders().AsString());  Logger::WriteMessage(text);
+      text.Format(_T("Open billings   : %s"),p_supplier->GetOpen_billings().AsString());Logger::WriteMessage(text);
     }
 
     void PrintInfant(Infant* p_infant)
@@ -241,9 +241,9 @@ namespace HibernateTest
       PrintNaturalPerson(p_infant);
 
       CString text;
-      text.Format("Immunisation    : %s",p_infant->GetImmunisation()); Logger::WriteMessage(text);
-      text.Format("Complications   : %s",p_infant->GetComplication()); Logger::WriteMessage(text);
-      text.Format("Hospital        : %s",p_infant->GetHospital());     Logger::WriteMessage(text);
+      text.Format(_T("Immunisation    : %s"),p_infant->GetImmunisation()); Logger::WriteMessage(text);
+      text.Format(_T("Complications   : %s"),p_infant->GetComplication()); Logger::WriteMessage(text);
+      text.Format(_T("Hospital        : %s"),p_infant->GetHospital());     Logger::WriteMessage(text);
     }
 
     // Open a CXHibernate session by config file
@@ -257,18 +257,18 @@ namespace HibernateTest
 
       try
       {
-        m_session = hibernate.CreateSession("x1","onetable.cfg.xml");
+        m_session = hibernate.CreateSession(_T("x1"),_T("onetable.cfg.xml"));
         if(m_session)
         {
           // We are a database session
-          m_session->SetDatabaseConnection("hibtest","sysdba","altijd");
+          m_session->SetDatabaseConnection(_T("hibtest"),_T("sysdba"),_T("altijd"));
 
           return true;
         }
       }
       catch(StdException& er)
       {
-        Assert::AreEqual("",er.GetErrorMessage());
+        Assert::AreEqual(_T(""),er.GetErrorMessage());
       }
       Assert::Fail();
     }

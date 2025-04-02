@@ -4,7 +4,7 @@
 //
 // Marlin Server: Internet server/client
 // 
-// Copyright (c) 2014-2022 ir. W.E. Huisman
+// Copyright (c) 2014-2024 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -35,31 +35,32 @@
 #include "Stdafx.h"
 #include "AutoCritical.h"
 #include "MarlinModule.h"
-#include "WebConfigIIS.h"
 #include "RunRedirect.h"
 #include "ServiceReporting.h"
 #include "StdException.h"
 #include "IISDebug.h"
+#include <ConvertWideString.h>
+#include <winhttp.h>
 #include <io.h>
 
+#ifdef _AFX
 #ifdef _DEBUG
 #define new DEBUG_NEW
 #undef THIS_FILE
 static char THIS_FILE[] = __FILE__;
 #endif
-
-#define MODULE_XSS  "XSSBlocking"
+#endif
 
 // GLOBALS Needed for the module
-       AppPool       g_IISApplicationPool;   // All applications in the application pool
-static WebConfigIIS* g_config  { nullptr };  // The ApplicationHost.config information only!
-static wchar_t       g_moduleName[SERVERNAME_BUFFERSIZE + 1] = L"";
-static bool          g_debugMode = false;
-       char          g_adminEmail[MAX_PATH];
+AppPool       g_IISApplicationPool;   // All applications in the application pool
+wchar_t       g_IISModuleName[SERVERNAME_BUFFERSIZE + 1] = L"";
+bool          g_IISDebugMode = false;
+wchar_t       g_IISAdminEmail[MAX_PATH];
+IHttpServer*  g_IISServer    = nullptr;
 
 // Logging macro for this file only
-#define DETAILLOG(text)    SvcReportInfoEvent(false,text);
-#define ERRORLOG(text)     SvcReportErrorEvent(0,false,__FUNCTION__,text);
+#define DETAILLOG(text)    SvcReportInfoEvent(false,text)
+#define ERRORLOG(text)     SvcReportErrorEvent(0,false,_T(__FUNCTION__),text)
 
 //////////////////////////////////////////////////////////////////////////
 //
@@ -84,14 +85,11 @@ RegisterModule(DWORD                        p_version
               ,IHttpModuleRegistrationInfo* p_moduleInfo
               ,IHttpServer*                 p_server)
 {
-  TRACE("REGISTER MODULE\n");
-
-  // Global name for the WMI Service event registration
-  PRODUCT_NAME = "Marlin_for_IIS";
-  strcpy_s(g_svcname,SERVICE_NAME_LENGTH,PRODUCT_NAME);
-
   // Declaration of the start log function
   void ApplicationConfigStart(DWORD p_version);
+
+  // Global name for the WMI Service event registration
+  _tcscpy_s(g_svcname,SERVICE_NAME_LENGTH,_T("Marlin_for_IIS"));
 
   // What we want to have from IIS
   DWORD globalEvents = GL_APPLICATION_START |       // Starting application pool
@@ -99,31 +97,31 @@ RegisterModule(DWORD                        p_version
   DWORD moduleEvents = RQ_RESOLVE_REQUEST_CACHE |   // Request is found in the cache or from internet
                        RQ_EXECUTE_REQUEST_HANDLER;  // Request is authenticated, ready for processing
   // Add RQ_BEGIN_REQUEST only for debugging purposes!!
-  if(g_debugMode)
+  if(g_IISDebugMode)
   {
     // First point to intercept the IIS integrated pipeline
     moduleEvents |= RQ_BEGIN_REQUEST;
   }
 
   // First moment IIS is calling us.
-  // Read the ApplicationConfig file of IIS
+  // Find the debugging status for this session
   // Start/Restart the logging in the WMI
   ApplicationConfigStart(p_version);
 
   // Preserving the server in a global pointer
-  if(g_iisServer == nullptr)
+  if(g_IISServer == nullptr)
   {
-    g_iisServer = p_server;
+    g_IISServer = p_server;
   }
   else
   {
     // Already registered
-    ERRORLOG("MarlinModule registered more than once in the global IIS module registry!");
+    ERRORLOG(_T("MarlinModule registered more than once in the global IIS module registry!"));
     return S_OK;
   }
 
   // Register name of our module
-  wcsncpy_s(g_moduleName,SERVERNAME_BUFFERSIZE,p_moduleInfo->GetName(),SERVERNAME_BUFFERSIZE);
+  wcsncpy_s(g_IISModuleName,SERVERNAME_BUFFERSIZE,p_moduleInfo->GetName(),SERVERNAME_BUFFERSIZE);
 
   // Register global notifications to process
   HRESULT hr = p_moduleInfo->SetGlobalNotifications(new MarlinGlobalFactory(),globalEvents);
@@ -132,12 +130,12 @@ RegisterModule(DWORD                        p_version
     hr = p_moduleInfo->SetPriorityForGlobalNotification(globalEvents,PRIORITY_ALIAS_FIRST);
     if(hr != S_OK)
     {
-      ERRORLOG("Notification priority setting FAILED. Continue with lower priority!!");
+      ERRORLOG(_T("Notification priority setting FAILED. Continue with lower priority!!"));
     }
   }
   else
   {
-    ERRORLOG("Setting global notifications for a MarlinFactory FAILED");
+    ERRORLOG(_T("Setting global notifications for a MarlinFactory FAILED"));
     return hr;
   }
 
@@ -148,16 +146,16 @@ RegisterModule(DWORD                        p_version
     hr = p_moduleInfo->SetPriorityForRequestNotification(moduleEvents,PRIORITY_ALIAS_FIRST);
     if(hr != S_OK)
     {
-      ERRORLOG("Request priority setting FAILED. Continue with lower priority!!");
+      ERRORLOG(_T("Request priority setting FAILED. Continue with lower priority!!"));
     }
   }
   else
   {
-    ERRORLOG("Setting request notifications for a MarlinModule FAILED");
+    ERRORLOG(_T("Setting request notifications for a MarlinModule FAILED"));
     return hr;
   }
   // Registration complete. Possibly NOT with highest priority.
-  DETAILLOG("Marlin native module registered for IIS notifications.");
+  DETAILLOG(_T("Marlin native module registered for IIS notifications."));
   return S_OK;
 }
 
@@ -171,48 +169,31 @@ RegisterModule(DWORD                        p_version
 void
 ApplicationConfigStart(DWORD p_version)
 {
-  bool read = false;
-
   // See if we have a debug.txt in the "%windir%\system32\inetsrv\" directory
   XString debugPath;
-  if(!debugPath.GetEnvironmentVariable("windir"))
+  if(!debugPath.GetEnvironmentVariable(_T("windir")))
   {
-    debugPath = "C:\\Windows";
+    debugPath = _T("C:\\Windows");
   }
-  debugPath += "\\system32\\inetsrv\\debug.txt";
-  if(_access(debugPath.GetString(),0) == 0)
+  debugPath += _T("\\system32\\inetsrv\\debug.txt");
+  if(_taccess(debugPath.GetString(),0) == 0)
   {
-    g_debugMode = true;
-  }
-
-  // Depending on the application pool settings, we are sometimes
-  // called more than once, so see if the log is not already started
-  if(g_config == nullptr)
-  {
-    g_config = new WebConfigIIS();
-    // Only reads system wide "ApplicationHost.Config"
-    read = g_config->ReadConfig();
+    g_IISDebugMode = true;
   }
 
   // Tell that we started the module.
   SvcReportInfoEvent(true
-                    ,"Marlin native module called by IIS version %d.%d. ApplicationHost.Config read: %s"
+                    ,_T("Marlin native module called by IIS version %d.%d. Debug mode: %s")
                     ,p_version / 0x10000
                     ,p_version % 0x10000
-                    ,read ? "OK" : "ERROR");
+                    ,g_IISDebugMode ? _T("ON") : _T("OFF"));
 }
 
 // Stopping the ApplicationHost.Config
 void
 ApplicationConfigStop()
 {
-  // Removing the application config registration
-  if(g_config)
-  {
-    delete g_config;
-    g_config = nullptr;
-  }
-  SvcReportInfoEvent(false,"ApplicationHost.Config unloaded. Marlin native module stopped.");
+  SvcReportInfoEvent(false,_T("ApplicationHost.Config unloaded. Marlin native module stopped."));
 }
 
 // End of Extern "C" calls
@@ -222,31 +203,29 @@ ApplicationConfigStop()
 // and must stop the complete pool (w3wp.exe) process
 void Unhealthy(XString p_error, HRESULT p_code)
 {
-  USES_CONVERSION;
-
   // Print to the MS-Windows WMI
   ERRORLOG(p_error);
-  CComBSTR werr = A2W(p_error);
+  CComBSTR werr(p_error);
   // Report to IIS to kill the application with **this** reason
-  g_iisServer->ReportUnhealthy(werr, p_code);
+  g_IISServer->ReportUnhealthy(werr,p_code);
 
   _set_se_translator(SeTranslator);
   try
   {
     // Stopping the application pool
-    XString appPoolName = W2A(g_iisServer->GetAppPoolName());
+    XString appPoolName = g_IISServer->GetAppPoolName();
     XString command;
     XString parameters;
-    if(!command.GetEnvironmentVariable("WINDIR"))
+    if(!command.GetEnvironmentVariable(_T("WINDIR")))
     {
-      command = "C:\\windows";
+      command = _T("C:\\windows");
     }
-    command += "\\system32\\inetsrv\\appcmd.exe";
-    parameters.Format("stop apppool \"%s\"",appPoolName.GetString());
+    command += _T("\\system32\\inetsrv\\appcmd.exe");
+    parameters.Format(_T("stop apppool \"%s\""),appPoolName.GetString());
 
     // Stopping the application pool will be called like this
     XString logging;
-    logging.Format("W3WP.EXE Stopped by: %s %s",command.GetString(),parameters.GetString());
+    logging.Format(_T("W3WP.EXE Stopped by: %s %s"),command.GetString(),parameters.GetString());
     DETAILLOG(logging);
 
     // STOP!
@@ -257,9 +236,12 @@ void Unhealthy(XString p_error, HRESULT p_code)
   {
     // PROGRAM ALREADY DEAD!!
   }
-  // Program is dead after this point. 
-  // AFTER CALING THIS FUNCTION, YOU SHOULD END THE MODULE WITH:
-  // return GL_NOTIFICATION_CONTINUE;
+  // Safer to completely terminate the W3WP.exe process!!
+  HANDLE hProc = OpenProcess(PROCESS_TERMINATE,FALSE,GetCurrentProcessId());
+  if(hProc)
+  {
+    TerminateProcess(hProc,-3);
+  }
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -285,18 +267,15 @@ MarlinGlobalFactory::OnGlobalApplicationStart(_In_ IHttpApplicationStartProvider
 {
   // One application start at the time
   AutoCritSec lock(&m_lock);
-  USES_CONVERSION;
 
   IHttpApplication* httpapp = p_provider->GetApplication();
-  XString appName    = W2A(httpapp->GetApplicationId());
-  XString configPath = W2A(httpapp->GetAppConfigPath());
-  XString physical   = W2A(httpapp->GetApplicationPhysicalPath());
-  XString webroot    = ExtractWebroot(configPath,physical);
-  XString appSite    = ExtractAppSite(configPath);
-
-  // IIS Guarantees that every app site is on an unique port
-  int applicationPort = g_config->GetSitePort(appSite,INTERNET_DEFAULT_HTTPS_PORT);
-  XString application = g_config->GetSiteName(appSite);
+  XString appName     = httpapp->GetApplicationId();
+  XString configPath  = httpapp->GetAppConfigPath();
+  XString physical    = httpapp->GetApplicationPhysicalPath();
+  XString webroot     = ExtractWebroot(configPath,physical);
+  XString appSite     = ExtractAppSite(configPath);
+  int applicationPort = INTERNET_DEFAULT_HTTPS_PORT;
+  XString application = appSite;
   
   if(!ModuleInHandlers(configPath))
   {
@@ -304,13 +283,17 @@ MarlinGlobalFactory::OnGlobalApplicationStart(_In_ IHttpApplicationStartProvider
     return GL_NOTIFICATION_CONTINUE;
   }
 
+  // IIS Guarantees that every app site is on an unique port
+  ApplicationNameAndPort(configPath,application,applicationPort);
+
   // Starting the following application
-  XString message("Starting IIS Application\n");
-  message += "IIS ApplicationID/name: " + appName;
-  message += "IIS Configuration path: " + configPath;
-  message += "IIS Physical path     : " + physical;
-  message += "IIS Extracted webroot : " + webroot;
-  message += "IIS Application       : " + application;
+  XString message(_T("Starting IIS Application"));
+  message += XString(_T("\r\nIIS ApplicationID/name: ")) + appName;
+  message += XString(_T("\r\nIIS Configuration path: ")) + configPath;
+  message += XString(_T("\r\nIIS Physical path     : ")) + physical;
+  message += XString(_T("\r\nIIS Extracted webroot : ")) + webroot;
+  message += XString(_T("\r\nIIS Application       : ")) + application;
+  message.AppendFormat(_T("\r\nIIS Application port  : %d"),applicationPort);
   DETAILLOG(message.GetString());
 
   _set_se_translator(SeTranslator);
@@ -323,7 +306,7 @@ MarlinGlobalFactory::OnGlobalApplicationStart(_In_ IHttpApplicationStartProvider
       // Already started this application
       // Keep fingers crossed that another application implements this port!!!
       XString error;
-      error.Format("Application [%s] on port [%d] already started. ANOTHER application must implement this port!!"
+      error.Format(_T("Application [%s] on port [%d] already started. ANOTHER application must implement this port!!")
                    ,application.GetString(),applicationPort);
       Unhealthy(error,ERROR_DUP_NAME);
       return GL_NOTIFICATION_CONTINUE;
@@ -331,7 +314,7 @@ MarlinGlobalFactory::OnGlobalApplicationStart(_In_ IHttpApplicationStartProvider
 
     // Create a new pool application
     PoolApp* poolapp = new PoolApp();
-    if(poolapp->LoadPoolApp(httpapp,webroot,physical,application))
+    if(poolapp->LoadPoolApp(httpapp,configPath,webroot,physical,application,appSite))
     {
       // Keep application in our IIS application pool
       g_IISApplicationPool.insert(std::make_pair(applicationPort,poolapp));
@@ -348,9 +331,8 @@ MarlinGlobalFactory::OnGlobalApplicationStart(_In_ IHttpApplicationStartProvider
   catch(StdException& ex)
   {
     XString error;
-    error.Format("Marlin found an error while starting application [%s] %s",appName.GetString(),ex.GetErrorMessage().GetString());
+    error.Format(_T("Marlin found an error while starting application [%s] %s"),appName.GetString(),ex.GetErrorMessage().GetString());
     ERRORLOG(error);
-    ErrorReport::Report(ERROR_SERVICE_NEVER_STARTED,0,webroot,"Crash_");
   }
   return GL_NOTIFICATION_HANDLED;
 };
@@ -361,52 +343,41 @@ GLOBAL_NOTIFICATION_STATUS
 MarlinGlobalFactory::OnGlobalApplicationStop(_In_ IHttpApplicationStartProvider* p_provider)
 {
   AutoCritSec lock(&m_lock);
-  USES_CONVERSION;
 
   IHttpApplication* httpapp = p_provider->GetApplication();
-  XString appName    = W2A(httpapp->GetApplicationId());
-  XString configPath = W2A(httpapp->GetAppConfigPath());
-  XString physical   = W2A(httpapp->GetApplicationPhysicalPath());
+  XString configPath = httpapp->GetAppConfigPath();
   XString appSite    = ExtractAppSite(configPath);
-  XString webroot    = ExtractWebroot(configPath,physical);
+  PoolApp* poolapp   = nullptr;
 
-  // IIS Guarantees that every app site is on an unique port
-  int applicationPort = g_config->GetSitePort(appSite,INTERNET_DEFAULT_HTTPS_PORT);
-  XString application = g_config->GetSiteName(appSite);
-
-  // Find our application in the application pool
-  AppPool::iterator it = g_IISApplicationPool.find(applicationPort);
+  // Find the application in our application pool by IIS original site name
+  AppPool::iterator it = g_IISApplicationPool.begin();
+  while(it != g_IISApplicationPool.end())
+  {
+    if(it->second->m_appSite.Compare(appSite) == 0)
+    {
+      poolapp = it->second;
+      break;
+    }
+    ++it;
+  }
   if(it == g_IISApplicationPool.end())
   {
     // Not our application to stop. Continue silently!
     return GL_NOTIFICATION_CONTINUE;
   }
-  PoolApp* poolapp = it->second;
+
+  // This is our application to stop
   ServerApp* app = poolapp->m_application;
 
   // Tell that we are stopping
-  XString stopping("Marlin stopping application: ");
-  stopping += application;
+  XString stopping(_T("Marlin stopping application: "));
+  stopping += appSite;
   DETAILLOG(stopping);
 
+  // Really stop the application (if only once in the pool)
   if(CountAppPoolApplications(app) == 1)
   {
-    _set_se_translator(SeTranslator);
-    try
-    {
-      // STOP!!
-      app->UnloadSites();
-
-      // Let the application stop itself 
-      app->ExitInstance();
-    }
-    catch(StdException& ex)
-    {
-      XString error;
-      error.Format("Marlin found an error while stopping application [%s] %s",appName.GetString(),ex.GetErrorMessage().GetString());
-      ERRORLOG(error);
-      ErrorReport::Report(ERROR_SERVICE_NOTIFICATION,0,webroot,"Crash_");
-    }
+    (*poolapp->m_exitServerApp)(app);
   }
   // Destroy the application and the IIS pool app
   // And possibly unload the application DLL
@@ -419,7 +390,7 @@ MarlinGlobalFactory::OnGlobalApplicationStop(_In_ IHttpApplicationStartProvider*
   if (hmodule != NULL && !StillUsed(hmodule))
   {
     FreeLibrary(hmodule);
-    DETAILLOG("Unloaded the application DLL");
+    DETAILLOG(_T("Unloaded the application DLL"));
   }
 
   return GL_NOTIFICATION_HANDLED;
@@ -429,7 +400,7 @@ int
 MarlinGlobalFactory::CountAppPoolApplications(ServerApp* p_application)
 {
   int count = 0;
-  for(auto& app : g_IISApplicationPool)
+  for(const auto& app : g_IISApplicationPool)
   {
     if(app.second->m_application == p_application)
     {
@@ -466,7 +437,7 @@ MarlinGlobalFactory::ExtractWebroot(XString p_configPath,XString p_physicalPath)
     if(config.Compare(physic) == 0)
     {
       XString webroot = p_physicalPath.Left(lastPosPhys);
-      webroot += "\\";
+      webroot += _T("\\");
       return webroot;
     }
   }
@@ -485,7 +456,7 @@ MarlinGlobalFactory::ExtractAppSite(XString p_configPath)
   {
     return p_configPath.Mid(pos + 1);
   }
-  return "";
+  return _T("");
 }
 
 // See if the module is still used by one of the websites in the application pool
@@ -493,7 +464,7 @@ MarlinGlobalFactory::ExtractAppSite(XString p_configPath)
 bool    
 MarlinGlobalFactory::StillUsed(const HMODULE& p_module)
 {
-  for(auto& app : g_IISApplicationPool)
+  for(const auto& app : g_IISApplicationPool)
   {
     if(app.second->m_module == p_module)
     {
@@ -509,7 +480,7 @@ MarlinGlobalFactory::StillUsed(const HMODULE& p_module)
 bool
 MarlinGlobalFactory::ModuleInHandlers(const XString& p_configPath)
 {
-  IAppHostAdminManager* manager = g_iisServer->GetAdminManager();
+  IAppHostAdminManager* manager = g_IISServer->GetAdminManager();
 
   // Finding all HTTP Handlers in the configuration
   IAppHostElement* handlersElement = nullptr;
@@ -536,9 +507,100 @@ MarlinGlobalFactory::ModuleInHandlers(const XString& p_configPath)
 
           if(childElement->GetPropertyByName(CComBSTR(L"modules"),&prop) == S_OK && prop->get_Value(&vvar) == S_OK && vvar.vt == VT_BSTR)
           {
-            if(wcsncmp(vvar.bstrVal,g_moduleName,SERVERNAME_BUFFERSIZE) == 0)
+            if(wcsncmp(vvar.bstrVal,g_IISModuleName,SERVERNAME_BUFFERSIZE) == 0)
             {
               // At least one of the handlers of the website refers to this module and wants to use it.
+              return true;
+            }
+          }
+        }
+      }
+    }
+  }
+  return false;
+}
+
+// Finding the 'real' application name (correct case) and first binded internet port.
+bool
+MarlinGlobalFactory::ApplicationNameAndPort(const XString& p_configPath,XString& p_application,int& p_port)
+{
+  IAppHostAdminManager* manager = g_IISServer->GetAdminManager();
+  if(manager == nullptr)
+  {
+    return false;
+  }
+
+  // Finding all HTTP Handlers in the configuration
+  IAppHostElement* handlersElement = nullptr;
+  if(manager->GetAdminSection(CComBSTR(L"system.applicationHost/sites"),CComBSTR(p_configPath),&handlersElement) == S_OK)
+  {
+    IAppHostElementCollection* handlersCollection = nullptr;
+    handlersElement->get_Collection(&handlersCollection);
+    if(handlersCollection)
+    {
+      DWORD dwElementCount = 0;
+      handlersCollection->get_Count(&dwElementCount);
+      for(USHORT dwElement = 0; dwElement < dwElementCount; ++dwElement)
+      {
+        VARIANT vtItemIndex;
+        vtItemIndex.vt = VT_I2;
+        vtItemIndex.iVal = dwElement;
+
+        IAppHostElement* childElement = nullptr;
+        if(handlersCollection->get_Item(vtItemIndex,&childElement) == S_OK)
+        {
+          IAppHostProperty* prop = nullptr;
+          VARIANT vvar;
+          vvar.bstrVal = 0;
+
+          if(childElement->GetPropertyByName(CComBSTR(L"name"),&prop) == S_OK && prop->get_Value(&vvar) == S_OK && vvar.vt == VT_BSTR)
+          {
+            CComBSTR applic(p_application);
+            if(_wcsnicmp(vvar.bstrVal,applic.m_str,p_application.GetLength()) == 0)
+            {
+              // We found our site
+              CString realapp(vvar.bstrVal);
+              p_application = realapp;
+
+              IAppHostElement* bindingsElement = nullptr;
+              childElement->GetElementByName(CComBSTR(L"bindings"),&bindingsElement);
+              if(bindingsElement)
+              {
+                IAppHostElementCollection* bindingsCollection = nullptr;
+                bindingsElement->get_Collection(&bindingsCollection);
+                if(bindingsCollection)
+                {
+                  DWORD bindElementCount = 0;
+                  bindingsCollection->get_Count(&bindElementCount);
+                  for(USHORT bElem = 0;bElem < bindElementCount;++bElem)
+                  {
+                    VARIANT bindIndex;
+                    bindIndex.vt   = VT_I2;
+                    bindIndex.iVal = bElem;
+
+                    IAppHostElement* bindElement = nullptr;
+                    bindingsCollection->get_Item(bindIndex,&bindElement);
+                    if(bindElement)
+                    {
+                      IAppHostProperty* bindprop = nullptr;
+                      VARIANT bindvar;
+                      bindvar.bstrVal = 0;
+                      if(bindElement->GetPropertyByName(CComBSTR(L"bindingInformation"),&prop) == S_OK && prop->get_Value(&bindvar) == S_OK && bindvar.vt == VT_BSTR)
+                      {
+                        // Finds something like '*:433:' or '+:80:'
+                        CString binding(bindvar.bstrVal);
+                        int pos = binding.Find(':');
+                        if(pos > 0)
+                        {
+                          // This is our port!
+                          p_port = _ttoi(binding.Mid(pos + 1));
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+              // Ready with site collection
               return true;
             }
           }
@@ -558,10 +620,10 @@ MarlinGlobalFactory::Terminate()
   if(!g_IISApplicationPool.empty())
   {
     XString error;
-    error.Format("Not all applications where stopped. Still running: %d",(int) g_IISApplicationPool.size());
+    error.Format(_T("Not all applications where stopped. Still running: %d"),(int) g_IISApplicationPool.size());
     ERRORLOG(error);
   }
-  DETAILLOG("GlobalFactory terminated");
+  DETAILLOG(_T("GlobalFactory terminated"));
   // Strange but true: See MSDN documentation. 
   // Last possible moment to delete current object
   delete this;
@@ -597,7 +659,7 @@ MarlinModuleFactory::GetHttpModule(OUT CHttpModule**     p_module
   //Test for an error
   if(!requestModule)
   {
-    ERRORLOG("Failed: APP pool cannot find the requested Marlin module!");
+    ERRORLOG(_T("Failed: APP pool cannot find the requested Marlin module!"));
     return HRESULT_FROM_WIN32(ERROR_NOT_ENOUGH_MEMORY);
   }
   // Return a pointer to the module
@@ -657,8 +719,9 @@ MarlinModule::OnBeginRequest(IN IHttpContext*       p_context,
     // Finding the raw HTT_REQUEST from the HTTPServer API 2.0
     const PHTTP_REQUEST rawRequest = request->GetRawHttpRequest();
     // This is the call we are getting
-    XString logging("Request for: ");
-    logging += rawRequest->pRawUrl;
+    XString logging(_T("Request for: "));
+    XString url(rawRequest->pRawUrl);
+    logging += url;
     DETAILLOG(logging);
 
     // Here we can debug IIS variables, before other functionality is called!
@@ -701,25 +764,25 @@ MarlinModule::OnResolveRequestCache(IN IHttpContext*       p_context,
   IHttpResponse* response = p_context->GetResponse();
   if(request == nullptr || response == nullptr)
   {
-    ERRORLOG("No request or response objects");
+    ERRORLOG(_T("No request or response objects"));
     return status;
   }
 
   // Detect Cross Site Scripting (XSS) and block if detected
-  if(app->m_config.GetSetting(MODULE_XSS).CompareNoCase("true") == 0)
+  if(app->m_xssBlocking)
   {
     // Detect Cross Site Scripting (XSS)
-    HRESULT hr = p_context->GetServerVariable("SERVER_NAME", &serverName, &size);
+    HRESULT hr = p_context->GetServerVariable("SERVER_NAME",&serverName, &size);
     if (hr == S_OK)
     {
       hr = p_context->GetServerVariable("HTTP_REFERER", &referer, &size);
       if (hr == S_OK)
       {
-        if (strstr(referer, serverName) == 0)
+        if(strstr(referer,serverName) == 0)
         {
           XString message("XSS Detected!! Referrer not our server!");
-          message += XString("SERVER_NAME : ") + serverName;
-          message += XString("HTTP_REFERER: ") + referer;
+          message += XString("SERVER_NAME : ") + LPCSTRToString(serverName);
+          message += XString("HTTP_REFERER: ") + LPCSTRToString(referer);
           ERRORLOG(message);
           response->SetStatus(HTTP_STATUS_BAD_REQUEST,"XSS Detected");
           return RQ_NOTIFICATION_FINISH_REQUEST;
@@ -731,14 +794,14 @@ MarlinModule::OnResolveRequestCache(IN IHttpContext*       p_context,
   const PHTTP_REQUEST rawRequest = request->GetRawHttpRequest();
   if(rawRequest == nullptr)
   {
-    ERRORLOG("Abort: IIS did not provide a raw request object!");
+    ERRORLOG(_T("Abort: IIS did not provide a raw request object!"));
     return status;
   }
 
   // This is the call we are getting
-  if(g_debugMode)
+  if(g_IISDebugMode)
   {
-    PCSTR url = rawRequest->pRawUrl;
+    XString url = LPCSTRToString(rawRequest->pRawUrl);
     DETAILLOG(url);
   }
   // Find our marlin representation of the site
@@ -750,10 +813,10 @@ MarlinModule::OnResolveRequestCache(IN IHttpContext*       p_context,
   {
     // Not our request: Other app running on this machine!
     // This is why it is wasteful to use IIS for our internet server!
-    if(g_debugMode)
+    if(g_IISDebugMode)
     {
-      XString message("Rejected HTTP call: ");
-      message += rawRequest->pRawUrl;
+      XString message(_T("Rejected HTTP call: "));
+      message += XString(rawRequest->pRawUrl);
       ERRORLOG(message);
     }
     // Let someone else handle this call (if any :-( )
@@ -762,13 +825,19 @@ MarlinModule::OnResolveRequestCache(IN IHttpContext*       p_context,
 
   // Grab an event stream, if it was present, otherwise continue to the next handler
   // Use the HTTPServer() method GetHTTPStreamFromRequest to see if we must turn it into a stream
-  bool stream = (*app->m_getHttpStream)(serverapp,p_context,site,rawRequest);
-  if(stream)
+  int stream = (*app->m_getHttpStream)(serverapp,p_context,site,rawRequest);
+  if( stream > 0)
   {
     // If we turn into a stream, more notifications are pending
     // This means the context of this request will **NOT** end
     status = RQ_NOTIFICATION_PENDING;
   }
+  else if(stream < 0)
+  {
+    // In case of a failed stream (authentication, DDOS attack etc)
+    status = RQ_NOTIFICATION_FINISH_REQUEST;
+  }
+  // OR NOT a stream: return RQ_NOTIFICATION_CONTINUE
   return status;
 }
 
@@ -803,12 +872,12 @@ MarlinModule::OnExecuteRequestHandler(IN IHttpContext*       p_context,
   IHttpResponse* response = p_context->GetResponse();
   if (request == nullptr || response == nullptr)
   {
-    ERRORLOG("No request or response objects");
+    ERRORLOG(_T("No request or response objects"));
     return status;
   }
 
   // Detect Cross Site Scripting (XSS) and block if detected
-  if(app->m_config.GetSetting(MODULE_XSS).CompareNoCase("true") == 0)
+  if(app->m_xssBlocking)
   {
     HRESULT hr = p_context->GetServerVariable("SERVER_NAME", &serverName, &size);
     if (hr == S_OK)
@@ -817,8 +886,8 @@ MarlinModule::OnExecuteRequestHandler(IN IHttpContext*       p_context,
       if((hr == S_OK) && (strstr(referer, serverName) == 0))
       {
         XString message("XSS Detected!! Referrer not our server!");
-        message += XString("SERVER_NAME : ") + serverName;
-        message += XString("HTTP_REFERER: ") + referer;
+        message += XString("SERVER_NAME : ") + LPCSTRToString(serverName);
+        message += XString("HTTP_REFERER: ") + LPCSTRToString(referer);
         ERRORLOG(message);
         response->SetStatus(HTTP_STATUS_BAD_REQUEST,"XSS Detected");
         return RQ_NOTIFICATION_FINISH_REQUEST;
@@ -830,14 +899,14 @@ MarlinModule::OnExecuteRequestHandler(IN IHttpContext*       p_context,
   const PHTTP_REQUEST rawRequest = request->GetRawHttpRequest();
   if(rawRequest == nullptr)
   {
-    ERRORLOG("Abort: IIS did not provide a raw request object!");
+    ERRORLOG(_T("Abort: IIS did not provide a raw request object!"));
     return status;
   }
 
   // This is the call we are getting
-  if(g_debugMode)
+  if(g_IISDebugMode)
   {
-    PCSTR url = rawRequest->pRawUrl;
+    XString url = LPCSTRToString(rawRequest->pRawUrl);
     DETAILLOG(url);
   }
 
@@ -850,10 +919,10 @@ MarlinModule::OnExecuteRequestHandler(IN IHttpContext*       p_context,
   {
     // Not our request: Other app running on this machine!
     // This is why it is wasteful to use IIS for our internet server!
-    if(g_debugMode)
+    if(g_IISDebugMode)
     {
-      XString message("Rejected HTTP call: ");
-      message += rawRequest->pRawUrl;
+      XString message(_T("Rejected HTTP call: "));
+      message += LPCSTRToString(rawRequest->pRawUrl);
       ERRORLOG(message);
     }
     // Let someone else handle this call (if any :-( )
@@ -878,7 +947,7 @@ MarlinModule::OnExecuteRequestHandler(IN IHttpContext*       p_context,
   }
   else
   {
-    ERRORLOG("Cannot handle the request: IIS did not provide enough info for a HTTPMessage.");
+    ERRORLOG(_T("Cannot handle the request: IIS did not provide enough info for a HTTPMessage."));
     status = RQ_NOTIFICATION_CONTINUE;
   }
   return status;
@@ -907,7 +976,7 @@ MarlinModule::GetServerPort(IHttpContext* p_context)
   char  portNumber[20];
   int   serverPort = INTERNET_DEFAULT_HTTP_PORT;
   DWORD size = 20;
-  PCSTR port = (PCSTR) &portNumber[0];
+  PCSTR port = reinterpret_cast<PCSTR>(&portNumber[0]);
   HRESULT hr = p_context->GetServerVariable("SERVER_PORT",&port,&size);
   if(SUCCEEDED(hr))
   {

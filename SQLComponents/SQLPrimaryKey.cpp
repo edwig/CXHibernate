@@ -2,7 +2,7 @@
 //
 // File: SQLPrimaryKey.cpp
 //
-// Copyright (c) 1998-2022 ir. W.E. Huisman
+// Copyright (c) 1998-2025 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy of 
@@ -42,8 +42,8 @@ SQLPrimaryKey::SQLPrimaryKey()
 }
 
 SQLPrimaryKey::SQLPrimaryKey(WordList p_fields)
+              :m_fields(p_fields)
 {
-  m_fields = p_fields;
 }
 
 SQLPrimaryKey::~SQLPrimaryKey()
@@ -54,7 +54,7 @@ SQLPrimaryKey::~SQLPrimaryKey()
 void
 SQLPrimaryKey::Reset()
 {
-  for (auto& var : m_values)
+  for(const auto var : m_values)
   {
     delete var;
   }
@@ -66,13 +66,13 @@ SQLPrimaryKey::Reset()
 
 // SETTERS
 void
-SQLPrimaryKey::SetFields(WordList p_fields)
+SQLPrimaryKey::SetFields(const WordList p_fields)
 {
   m_fields = p_fields;
 }
 
 void
-SQLPrimaryKey::SetValues(VariantSet* p_values)
+SQLPrimaryKey::SetValues(const VariantSet* p_values)
 {
   m_values = *p_values;
   GetOptimizedObject();
@@ -82,7 +82,7 @@ SQLPrimaryKey::SetValues(VariantSet* p_values)
 // Really? Are you sure? Should you do this?
 // Only touch this when processing PSM!
 void
-SQLPrimaryKey::SetStatus(PKStatus p_status)
+SQLPrimaryKey::SetStatus(const PKStatus p_status)
 {
   m_status = p_status;
 }
@@ -114,7 +114,7 @@ SQLPrimaryKey::GetPrimaryFields()
 {
   XString fields;
 
-  for(auto& field : m_fields)
+  for(const auto& field : m_fields)
   {
     if(fields.GetLength())
     {
@@ -131,7 +131,7 @@ SQLPrimaryKey::GetPrimaryValue()
 {
   XString total;
 
-  for(auto& val : m_values)
+  for(const auto val : m_values)
   {
     if(total.GetLength())
     {
@@ -183,12 +183,12 @@ SQLPrimaryKey::GetCondition()
   {
     if(!condition.IsEmpty())
     {
-      condition += " AND ";
+      condition += _T(" AND ");
     }
 
     (*vl)->GetAsString(key);
     condition += *it;
-    condition += " = ";
+    condition += _T(" = ");
     if((*vl)->IsNumericType())
     {
       condition += key;
@@ -204,6 +204,16 @@ SQLPrimaryKey::GetCondition()
     ++vl;
   }
   return condition;
+}
+
+void 
+SQLPrimaryKey::AddField(XString p_field,SQLVariant& p_value)
+{
+  SQLVariant* value = new SQLVariant(p_value);
+
+  m_fields.push_back(p_field);
+  m_values.push_back(value);
+  m_status = PKStatus::PK_Created;
 }
 
 void
@@ -223,13 +233,13 @@ SQLPrimaryKey::AddValue(SQLVariant* p_val,bool p_replace /*=false*/)
 }
 
 SQLPrimaryKey& 
-SQLPrimaryKey::operator=(SQLPrimaryKey& p_other)
+SQLPrimaryKey::operator=(const SQLPrimaryKey& p_other)
 {
   m_fields = p_other.m_fields;
   m_object = p_other.m_object;
   m_status = p_other.m_status;
 
-  for(auto& var : p_other.m_values)
+  for(const auto& var : p_other.m_values)
   {
     m_values.push_back(new SQLVariant(var));
   }

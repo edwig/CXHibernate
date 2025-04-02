@@ -22,20 +22,20 @@ void StartSession()
     if(g_session)
     {
       // Where we have our filestore
-      g_session->SetFilestore("C:\\WWW\\Testing");
+      g_session->SetFilestore(_T("C:\\WWW\\Testing"));
 
       // We are a database session
-      g_session->SetDatabaseConnection("Testing","sysdba","altijd");
+      g_session->SetDatabaseConnection(_T("Testing"),_T("sysdba"),_T("altijd"));
     }
     else
     {
-      printf("ERROR: No Hibernate session started.\n");
+      _tprintf(_T("ERROR: No Hibernate session started.\n"));
       exit(-3);
     }
   }
   catch (StdException& er)
   {
-    printf("Error while creating Hibernate session: %s\n",er.GetErrorMessage().GetString());
+    _tprintf(_T("Error while creating Hibernate session: %s\n"),er.GetErrorMessage().GetString());
     exit(-3);
   }
 }
@@ -56,37 +56,37 @@ void CloseSession()
 void
 WaitForKey()
 {
-  char buffer[256];
+  TCHAR buffer[256];
   size_t readIn = 0;
-  _cgets_s(buffer, 256, &readIn);
+  _cgetts_s(buffer, 256, &readIn);
 }
 
-int main()
+int _tmain()
 {
   // initialize MFC and print and error on failure
   if(!AfxWinInit(::GetModuleHandle(NULL),NULL,::GetCommandLine(), 0))
   {
     CString command = ::GetCommandLine();
-    CString message = "Fatal Error in TestServer: MFC initialization failed " + command;
-    fprintf(stderr, message + "\n");
+    CString message = _T("Fatal Error in TestServer: MFC initialization failed ") + command;
+    _ftprintf(stderr, message + _T("\n"));
     return -3;
   }
 
   // Print who we are
-  printf("CXHibernate test server program\n");
-  printf("===============================\n");
+  _tprintf(_T("CXHibernate test server program\n"));
+  _tprintf(_T("===============================\n"));
 
   // Start our CX-Hibernate session
   StartSession();
 
   // Use this namespace
-  CString namesp("http://www.cxhibernate.org/");
-  CString url("http://localhost:1959/CXServer/");
+  CString namesp(_T("http://www.cxhibernate.org/"));
+  CString url(_T("http://localhost:1959/CXServer/"));
 
   // Create a server
   CXServer cxserver(g_session
-                   ,"CXTestServer"
-                   ,"C:\\WWW\\"
+                   ,_T("CXTestServer")
+                   ,_T("C:\\WWW\\")
                    ,url
                    ,PrefixType::URLPRE_Strong
                    ,namesp
@@ -108,24 +108,24 @@ int main()
   // to service the CX-webservice interface
   if(cxserver.RunService() == false)
   {
-    printf("Could not start the CX-Hibernate test server!\n");
-    printf("Check the URL reservations on your machine!\n");
+    _tprintf(_T("Could not start the CX-Hibernate test server!\n"));
+    _tprintf(_T("Check the URL reservations on your machine!\n"));
     exit(-5);
   }
 
-  printf("\n"
-        "Server running....\n"
-        "Waiting to be called by test clients...\n"
-        "\n");
+  _tprintf(_T("\n")
+        _T("Server running....\n")
+        _T("Waiting to be called by test clients...\n")
+        _T("\n"));
   // Wait for key to occur
   WaitForKey();
 
   // Try stopping the server
-  printf("Stopping the server\n");
+  _tprintf(_T("Stopping the server\n"));
   cxserver.Stop();
 
   // See if the server is indeed in stopped state
-  printf("The server is %s\n", cxserver.IsRunning() ? "still running!\n" : "stopped.\n");
+  _tprintf(_T("The server is %s\n"), cxserver.IsRunning() ? _T("still running!\n") : _T("stopped.\n"));
 
   // As a last step, close our Hibernate session
   CloseSession();

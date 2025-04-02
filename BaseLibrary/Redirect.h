@@ -4,7 +4,7 @@
 //
 // Marlin Component: Internet server/client
 // 
-// Copyright (c) 2014-2022 ir. W.E. Huisman
+// Copyright (c) 2014-2025 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -26,11 +26,17 @@
 // THE SOFTWARE.
 //
 #pragma once
+#include "AutoCritical.h"
 
 // Command line length in NT technology
-#define BUFFER_SIZE 8192
+#define BUFFER_SIZE             8192
 // Maximum wait 1 minute for input idle
 #define MAXWAIT_FOR_INPUT_IDLE 60000
+// After the process we must wait for the stdout to be completely read
+#define DRAIN_STDOUT_MAXWAIT   10000
+#define DRAIN_STDOUT_INTERVAL     50
+// END-OF-TRANSMISSION is ASCII 4
+#define EOT '\x4'
 
 /////////////////////////////////////////////////////////////////////////////
 // Redirect class
@@ -43,21 +49,23 @@ public:
  ~Redirect();
 
   // Actual interface. Use these.
-  BOOL StartChildProcess(LPCSTR lpszCmdLine,UINT uShowChildWindow = SW_HIDE,BOOL bWaitForInputIdle = FALSE);
+  BOOL StartChildProcess(LPTSTR lpszCmdLine,UINT uShowChildWindow = SW_HIDE,BOOL bWaitForInputIdle = FALSE);
   BOOL IsChildRunning() const;
   void TerminateChildProcess();
-  int  WriteChildStdIn(LPCSTR lpszInput);
+  int  WriteChildStdIn(PTCHAR lpszInput);
   void SetTimeoutIdle(ULONG p_timeout);
   void CloseChildStdIn();
+  bool SetStreamCharset(XString p_charset);
 
   // Virtual interface. Derived class must implement this!!
-  virtual void OnChildStarted    (LPCSTR lpszCmdLine) = 0;
-  virtual void OnChildStdOutWrite(LPCSTR lpszOutput)  = 0;
-  virtual void OnChildStdErrWrite(LPCSTR lpszOutput)  = 0;
-  virtual void OnChildTerminate  ()                   = 0;
+  virtual void OnChildStarted    (LPCTSTR lpszCmdLine) = 0;
+  virtual void OnChildStdOutWrite(LPCTSTR lpszOutput)  = 0;
+  virtual void OnChildStdErrWrite(LPCTSTR lpszOutput)  = 0;
+  virtual void OnChildTerminate  ()                    = 0;
 
   mutable int m_exitCode;
   mutable int m_eof_input;
+  mutable int m_eof_error;
   mutable int m_terminated;
 protected:
   HANDLE m_hExitEvent;
@@ -76,14 +84,14 @@ protected:
   // Max wait time for InputIdle status of the child process
   ULONG  m_timeoutIdle;
 
-  HANDLE PrepAndLaunchRedirectedChild(LPCSTR lpszCmdLine
+  HANDLE PrepAndLaunchRedirectedChild(PTCHAR lpszCmdLine
                                      ,HANDLE hStdOut
                                      ,HANDLE hStdIn
                                      ,HANDLE hStdErr
                                      ,UINT   uShowChildWindow  = SW_HIDE
                                      ,BOOL   bWaitForInputIdle = FALSE);
 
-  static BOOL m_bRunThread;
+  BOOL m_bRunThread;
   static unsigned int WINAPI staticStdOutThread(void* pRedirect)
   { 
     Redirect* redir = reinterpret_cast<Redirect*>(pRedirect);
@@ -102,4 +110,18 @@ protected:
   int StdOutThread(HANDLE hStdOutRead);
   int StdErrThread(HANDLE hStdErrRead);
   int ProcessThread();
+
+protected:
+  // Unicode / 8-bits variants
+  int StdOutThreadUnicode(HANDLE hStdOutRead);
+  int StdErrThreadUnicode(HANDLE hStdErrRead);
+  int StdOutThread8Bits  (HANDLE hStdOutRead);
+  int StdErrThread8Bits  (HANDLE hStdErrRead);
+  int WriteChildStdInputUnicode(PTCHAR lpszInput);
+  int WriteChildStdInput8Bits  (PTCHAR lpszInput);
+  //  Data
+  XString          m_streamCharset;
+  bool             m_charsetIsCurrent;
+  bool             m_charsetIs16Bit;
+  CRITICAL_SECTION m_critical;
 };

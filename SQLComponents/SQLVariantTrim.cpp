@@ -2,7 +2,7 @@
 //
 // File: SQLVariantTrim.cpp
 //
-// Copyright (c) 1998-2022 ir. W.E. Huisman
+// Copyright (c) 1998-2025 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy of 
@@ -27,6 +27,7 @@
 #include "SQLComponents.h"
 #include "SQLVariant.h"
 #include "SQLVariantTrim.h"
+#include "SQLDataType.h"
 #include <float.h>
 
 #ifdef _DEBUG
@@ -47,9 +48,9 @@ namespace SQLComponents
 void SQL_ThrowErrorTruncate(int p_from,int p_to)
 {
   XString error;
-  const char* from = SQLVariant::FindDatatype(p_from);
-  const char* to   = SQLVariant::FindDatatype(p_to);
-  error.Format("Cannot truncate %s to %s",from,to);
+  LPCTSTR from = SQLDataType::FindDatatype(p_from);
+  LPCTSTR to   = SQLDataType::FindDatatype(p_to);
+  error.Format(_T("Cannot truncate %s to %s"),from,to);
   throw StdException(error);
 }
 
@@ -72,7 +73,7 @@ SQL_ULongToLong(unsigned long p_value)
 long
 SQL_FloatToLong(float p_value)
 {
-  if(p_value > LONG_MAX || p_value < LONG_MIN)
+  if(p_value > LONG_MAX || p_value < (float)LONG_MIN)
   {
     SQL_ThrowErrorTruncate(SQL_C_FLOAT,SQL_C_LONG);
   }
@@ -82,7 +83,7 @@ SQL_FloatToLong(float p_value)
 long
 SQL_DoubleToLong(double p_value)
 {
-  if(p_value > LONG_MAX || p_value < LONG_MIN)
+  if(p_value > LONG_MAX || p_value < (double)LONG_MIN)
   {
     SQL_ThrowErrorTruncate(SQL_C_DOUBLE,SQL_C_LONG);
   }
@@ -92,7 +93,7 @@ SQL_DoubleToLong(double p_value)
 long
 SQL_BIGINTToLong(SQLBIGINT p_value)
 {
-  if(p_value > LONG_MAX || p_value < LONG_MIN)
+  if(p_value > LONG_MAX || p_value < (SQLBIGINT)LONG_MIN)
   {
     SQL_ThrowErrorTruncate(SQL_C_SBIGINT,SQL_C_LONG);
   }
@@ -312,7 +313,7 @@ SQL_FloatToTinyInt(float p_value)
 char
 SQL_DoubleToTinyInt(double p_value)
 {
-  if(p_value > _I8_MAX || p_value < _I8_MIN)
+  if(p_value > _I8_MAX || p_value < (double)_I8_MIN)
   {
     SQL_ThrowErrorTruncate(SQL_C_DOUBLE,SQL_C_STINYINT);
   }

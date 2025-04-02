@@ -4,7 +4,7 @@
 //
 // Marlin Server: Internet server/client
 // 
-// Copyright (c) 2014-2022 ir. W.E. Huisman
+// Copyright (c) 2014-2024 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -33,10 +33,12 @@
 #include <winhttp.h>
 #include <io.h>
 
+#ifdef _AFX
 #ifdef _DEBUG
 #define new DEBUG_NEW
 #undef THIS_FILE
 static char THIS_FILE[] = __FILE__;
+#endif
 #endif
 
 bool
@@ -68,15 +70,15 @@ SiteHandlerDelete::Handle(HTTPMessage* p_message)
   p_message->SetStatus(HTTP_STATUS_DENIED);
 
   // Check existence
-  if(_access(pathname,0) == 0)
+  if(_taccess(pathname,0) == 0)
   {
     // Check for write access
-    if(_access(pathname,2) == 0)
+    if(_taccess(pathname,2) == 0)
     {
       if(DeleteFile(pathname))
       {
         p_message->SetStatus(HTTP_STATUS_OK);
-        SITE_DETAILLOGS("HTTP DELETE: ",pathname);
+        SITE_DETAILLOGS(_T("HTTP DELETE: "),pathname);
       }
       else
       {
@@ -84,7 +86,7 @@ SiteHandlerDelete::Handle(HTTPMessage* p_message)
         DWORD error = GetLastError();
         p_message->SetStatus(HTTP_STATUS_SERVER_ERROR);
         XString text;
-        text.Format("FAILED: HTTP DELETE: %s",pathname.GetString());
+        text.Format(_T("FAILED: HTTP DELETE: %s"),pathname.GetString());
         SITE_ERRORLOG(error,text);
       }
     }
@@ -95,7 +97,7 @@ SiteHandlerDelete::Handle(HTTPMessage* p_message)
     // File does not exist, or no read access
     p_message->SetStatus(HTTP_STATUS_NOT_FOUND);
     XString text;
-    text.Format("HTTP DELETE: File not found: %s\n",pathname.GetString());
+    text.Format(_T("HTTP DELETE: File not found: %s\n"),pathname.GetString());
     SITE_ERRORLOG(ERROR_FILE_NOT_FOUND,text);
   }
   // Ready with the put

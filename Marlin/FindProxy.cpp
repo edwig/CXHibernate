@@ -4,7 +4,7 @@
 //
 // Marlin Server: Internet server/client
 // 
-// Copyright (c) 2014-2022 ir. W.E. Huisman
+// Copyright (c) 2014-2024 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -27,11 +27,14 @@
 //
 #include "stdafx.h"
 #include "FindProxy.h"
+#include <ConvertWideString.h>
 
+#ifdef _AFX
 #ifdef _DEBUG
 #define new DEBUG_NEW
 #undef THIS_FILE
 static char THIS_FILE[] = __FILE__;
+#endif
 #endif
 
 FindProxy::FindProxy()
@@ -52,8 +55,6 @@ FindProxy::~FindProxy()
 XString
 FindProxy::Find(const XString& p_url,bool p_secure)
 {
-  USES_CONVERSION;
-
   // If already initialized
   if(!m_lastUsedDst.IsEmpty() && (m_lastUsedDst == p_url))
   {
@@ -73,16 +74,18 @@ FindProxy::Find(const XString& p_url,bool p_secure)
   {
     if(cfg.lpszProxy)
     {
-      proxy = CW2A(cfg.lpszProxy);
+      std::wstring wproxy(cfg.lpszProxy);
+      proxy = WStringToString(wproxy);
       if(!!cfg.lpszProxyBypass)
       {
-        m_ignored = CW2A(cfg.lpszProxyBypass);
+        std::wstring bypass(cfg.lpszProxyBypass);
+        m_ignored = WStringToString(bypass);
       }
     }
     LPWSTR autoCfgUrl = cfg.lpszAutoConfigUrl;
     if(proxy.IsEmpty() && (cfg.fAutoDetect || !!autoCfgUrl))
     {
-      //check for autoproxy settings
+      //check for auto proxy settings
       WINHTTP_AUTOPROXY_OPTIONS autoOpts = { 0, };
       autoOpts.fAutoLogonIfChallenged = TRUE;
       if(cfg.fAutoDetect)
@@ -95,7 +98,7 @@ FindProxy::Find(const XString& p_url,bool p_secure)
         autoOpts.lpszAutoConfigUrl = autoCfgUrl;
         autoOpts.dwFlags |= WINHTTP_AUTOPROXY_CONFIG_URL;
       }
-      Internet internet   = { ::WinHttpOpen(L"", WINHTTP_ACCESS_TYPE_DEFAULT_PROXY, WINHTTP_NO_PROXY_NAME, WINHTTP_NO_PROXY_BYPASS, 0) };
+      Internet internet { ::WinHttpOpen(L"", WINHTTP_ACCESS_TYPE_DEFAULT_PROXY, WINHTTP_NO_PROXY_NAME, WINHTTP_NO_PROXY_BYPASS, 0) };
       if(m_info)
       {
         delete m_info;
@@ -103,15 +106,17 @@ FindProxy::Find(const XString& p_url,bool p_secure)
       m_info = new ProxyInfo();
 
       WINHTTP_PROXY_INFO &autoCfg = m_info->cfg;
-      if(internet.hInter && ::WinHttpGetProxyForUrl(internet.hInter, A2CW(p_url), &autoOpts, &autoCfg))
+      if(internet.hInter && ::WinHttpGetProxyForUrl(internet.hInter, StringToWString(p_url).c_str(),&autoOpts,&autoCfg))
       {
         if(autoCfg.lpszProxy && autoCfg.dwAccessType != WINHTTP_ACCESS_TYPE_NO_PROXY)
         {
           m_perDest = true;
-          proxy = CW2A(autoCfg.lpszProxy);
+          std::wstring wproxy(autoCfg.lpszProxy);
+          proxy = WStringToString(wproxy);
           if(!!autoCfg.lpszProxyBypass)
           {
-            m_ignored = CW2A(autoCfg.lpszProxyBypass);
+            std::wstring bypass(autoCfg.lpszProxyBypass);
+            m_ignored = WStringToString(bypass);
           }
         }
       }
@@ -140,17 +145,20 @@ FindProxy::SetInfo(XString p_proxy,XString p_bypass)
   {
     m_info = new ProxyInfo();
   }
-  USES_CONVERSION;
-
   m_proxy   = p_proxy;
   m_ignored = p_bypass;
 
-  m_wProxy   = A2CW(m_proxy);
-  m_wIgnored = A2CW(m_ignored);
+#ifdef _UNICODE
+  m_wProxy   = p_proxy;
+  m_wIgnored = m_ignored;
+#else
+  m_wProxy   = StringToWString(m_proxy);
+  m_wIgnored = StringToWString(m_ignored);
+#endif
 
   m_info->cfg.dwAccessType    = WINHTTP_ACCESS_TYPE_NAMED_PROXY;
-  m_info->cfg.lpszProxy       = (LPWSTR) m_wProxy.c_str();
-  m_info->cfg.lpszProxyBypass = (LPWSTR) m_wIgnored.c_str();
+  m_info->cfg.lpszProxy       = reinterpret_cast<LPWSTR>(const_cast<wchar_t*>(m_wProxy.  c_str()));
+  m_info->cfg.lpszProxyBypass = reinterpret_cast<LPWSTR>(const_cast<wchar_t*>(m_wIgnored.c_str()));
 }
 
 void
@@ -173,18 +181,18 @@ FindProxy::FindUniqueProxy(XString p_proxyList,bool p_secure)
     // Secure proxy goes before insecure proxy
     if(p_secure)
     {
-      if(part.Find("https=") == 0)
+      if(part.Find(_T("https=")) == 0)
       {
-        part.Replace("=","://");
+        part.Replace(_T("="),_T("://"));
         m_proxy = part;
         return;
       }
     }
     else
     {
-      if(part.Find("http=") == 0)
+      if(part.Find(_T("http=")) == 0)
       {
-        part.Replace("=","://");
+        part.Replace(_T("="),_T("://"));
         m_proxy = part;
         return;
       }

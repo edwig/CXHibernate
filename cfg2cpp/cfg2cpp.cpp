@@ -11,52 +11,52 @@
 
 typedef struct _typeMacro
 {
-  int         m_value;
-  const char* m_name;
-  const char* m_initialization;
+  int          m_value;
+  const TCHAR* m_name;
+  const TCHAR* m_initialization;
 }
 TypeMacro;
 
 TypeMacro tmacro[] =
 {
-   { SQL_C_CHAR,                      "XDT_String"            ,""       }
-  ,{ SQL_C_LONG,                      "XDT_Integer"           ,"0"      }
-  ,{ SQL_C_SLONG,                     "XDT_Integer"           ,"0"      }
-  ,{ SQL_C_BIT,                       "XDT_Boolean"           ,"false"  }
-  ,{ SQL_C_NUMERIC,                   "XDT_Decimal"           ,""       }
-  ,{ SQL_C_ULONG,                     "XDT_UnsignedInt"       ,"0"      }
-  ,{ SQL_C_SHORT,                     "XDT_Short"             ,"0"      }
-  ,{ SQL_C_SSHORT,                    "XDT_Short"             ,"0"      }
-  ,{ SQL_C_USHORT,                    "XDT_UnsignedShort"     ,"0"      }
-  ,{ SQL_C_LONG,                      "XDT_Long"              ,"0"      }
-  ,{ SQL_C_ULONG,                     "XDT_UnsignedLong"      ,"0"      }
-  ,{ SQL_C_TINYINT,                   "XDT_Byte"              ,"0"      }
-  ,{ SQL_C_STINYINT,                  "XDT_Byte"              ,"0"      }
-  ,{ SQL_C_UTINYINT,                  "XDT_UnsignedByte"      ,"0"      }
-  ,{ SQL_C_SBIGINT,                   "XDT_Decimal"           ,"0"      }
-  ,{ SQL_C_UBIGINT,                   "XDT_Decimal"           ,"0"      }
-  ,{ SQL_C_FLOAT,                     "XDT_Float"             ,"0.0"    }
-  ,{ SQL_C_DOUBLE,                    "XDT_Decimal"           ,"0.0"    }
-  ,{ SQL_C_DATE,                      "XDT_Date"              ,""       }
-  ,{ SQL_C_TYPE_DATE,                 "XDT_Date"              ,""       }
-  ,{ SQL_C_TIME,                      "XDT_Time"              ,""       }
-  ,{ SQL_C_TYPE_TIME,                 "XDT_Time"              ,""       }
-  ,{ SQL_C_TIMESTAMP,                 "XDT_DateTimeStamp"     ,""       }
-  ,{ SQL_C_TYPE_TIMESTAMP,            "XDT_DateTimeStamp"     ,""       }
-  ,{ SQL_C_GUID,                      "XDT_String"            ,""       }
-  ,{ SQL_C_INTERVAL_DAY_TO_SECOND,    "XDT_DayTimeDuration"   ,""       }
-  ,{ SQL_C_INTERVAL_YEAR_TO_MONTH,    "XDT_DayTimeDuration"   ,""       }
-  ,{ SQL_C_INTERVAL_HOUR_TO_SECOND,   "XDT_DayTimeDuration"   ,""       }
-  ,{ SQL_C_INTERVAL_HOUR_TO_MINUTE,   "XDT_DayTimeDuration"   ,""       }
-  ,{ SQL_C_INTERVAL_DAY_TO_MINUTE,    "XDT_DayTimeDuration"   ,""       }
-  ,{ SQL_C_INTERVAL_DAY_TO_HOUR,      "XDT_DayTimeDuration"   ,""       }
-  ,{ SQL_C_INTERVAL_MINUTE_TO_SECOND, "XDT_DayTimeDuration"   ,""       }
-  ,{ SQL_C_INTERVAL_YEAR,             "XDT_YearMonthDuration" ,""       }
-  ,{ SQL_C_INTERVAL_MONTH,            "XDT_YearMonthDuration" ,""       }
-  ,{ SQL_C_INTERVAL_DAY,              "XDT_DayTimeDuration"   ,""       }
-  ,{ SQL_C_INTERVAL_HOUR,             "XDT_DayTimeDuration"   ,""       }
-  ,{ SQL_C_INTERVAL_MINUTE,           "XDT_DayTimeDuration"   ,""       }
-  ,{ SQL_C_INTERVAL_SECOND,           "XDT_DayTimeDuration"   ,""       }
+   { SQL_C_CHAR,                      _T("XDT_String")            ,_T("")       }
+  ,{ SQL_C_LONG,                      _T("XDT_Integer")           ,_T("0")      }
+  ,{ SQL_C_SLONG,                     _T("XDT_Integer")           ,_T("0")      }
+  ,{ SQL_C_BIT,                       _T("XDT_Boolean")           ,_T("false")  }
+  ,{ SQL_C_NUMERIC,                   _T("XDT_Decimal")           ,_T("")       }
+  ,{ SQL_C_ULONG,                     _T("XDT_UnsignedInt")       ,_T("0")      }
+  ,{ SQL_C_SHORT,                     _T("XDT_Short")             ,_T("0")      }
+  ,{ SQL_C_SSHORT,                    _T("XDT_Short")             ,_T("0")      }
+  ,{ SQL_C_USHORT,                    _T("XDT_UnsignedShort")     ,_T("0")      }
+  ,{ SQL_C_LONG,                      _T("XDT_Long")              ,_T("0")      }
+  ,{ SQL_C_ULONG,                     _T("XDT_UnsignedLong")      ,_T("0")      }
+  ,{ SQL_C_TINYINT,                   _T("XDT_Byte")              ,_T("0")      }
+  ,{ SQL_C_STINYINT,                  _T("XDT_Byte")              ,_T("0")      }
+  ,{ SQL_C_UTINYINT,                  _T("XDT_UnsignedByte")      ,_T("0")      }
+  ,{ SQL_C_SBIGINT,                   _T("XDT_Decimal")           ,_T("0")      }
+  ,{ SQL_C_UBIGINT,                   _T("XDT_Decimal")           ,_T("0")      }
+  ,{ SQL_C_FLOAT,                     _T("XDT_Float")             ,_T("0.0")    }
+  ,{ SQL_C_DOUBLE,                    _T("XDT_Decimal")           ,_T("0.0")    }
+  ,{ SQL_C_DATE,                      _T("XDT_Date")              ,_T("")       }
+  ,{ SQL_C_TYPE_DATE,                 _T("XDT_Date")              ,_T("")       }
+  ,{ SQL_C_TIME,                      _T("XDT_Time")              ,_T("")       }
+  ,{ SQL_C_TYPE_TIME,                 _T("XDT_Time")              ,_T("")       }
+  ,{ SQL_C_TIMESTAMP,                 _T("XDT_DateTimeStamp")     ,_T("")       }
+  ,{ SQL_C_TYPE_TIMESTAMP,            _T("XDT_DateTimeStamp")     ,_T("")       }
+  ,{ SQL_C_GUID,                      _T("XDT_String")            ,_T("")       }
+  ,{ SQL_C_INTERVAL_DAY_TO_SECOND,    _T("XDT_DayTimeDuration")   ,_T("")       }
+  ,{ SQL_C_INTERVAL_YEAR_TO_MONTH,    _T("XDT_DayTimeDuration")   ,_T("")       }
+  ,{ SQL_C_INTERVAL_HOUR_TO_SECOND,   _T("XDT_DayTimeDuration")   ,_T("")       }
+  ,{ SQL_C_INTERVAL_HOUR_TO_MINUTE,   _T("XDT_DayTimeDuration")   ,_T("")       }
+  ,{ SQL_C_INTERVAL_DAY_TO_MINUTE,    _T("XDT_DayTimeDuration")   ,_T("")       }
+  ,{ SQL_C_INTERVAL_DAY_TO_HOUR,      _T("XDT_DayTimeDuration")   ,_T("")       }
+  ,{ SQL_C_INTERVAL_MINUTE_TO_SECOND, _T("XDT_DayTimeDuration")   ,_T("")       }
+  ,{ SQL_C_INTERVAL_YEAR,             _T("XDT_YearMonthDuration") ,_T("")       }
+  ,{ SQL_C_INTERVAL_MONTH,            _T("XDT_YearMonthDuration") ,_T("")       }
+  ,{ SQL_C_INTERVAL_DAY,              _T("XDT_DayTimeDuration")   ,_T("")       }
+  ,{ SQL_C_INTERVAL_HOUR,             _T("XDT_DayTimeDuration")   ,_T("")       }
+  ,{ SQL_C_INTERVAL_MINUTE,           _T("XDT_DayTimeDuration")   ,_T("")       }
+  ,{ SQL_C_INTERVAL_SECOND,           _T("XDT_DayTimeDuration")   ,_T("")       }
 };
 
 static CString g_configFile;
@@ -70,7 +70,7 @@ CString DatatypeToMacro(int p_datatype)
       return tmacro[ind].m_name;
     }
   }
-  return "<ERROR>";
+  return _T("<ERROR>");
 }
 
 CString DatatypeToInitialization(int p_datatype)
@@ -82,14 +82,14 @@ CString DatatypeToInitialization(int p_datatype)
       return tmacro[ind].m_initialization;
     }
   }
-  return "";
+  return _T("");
 }
 
 CString InitCapital(CString p_name)
 {
-  if(p_name.GetLength() && isalpha(p_name.GetAt(0)))
+  if(p_name.GetLength() && _istalpha(p_name.GetAt(0)))
   {
-    p_name.SetAt(0,toupper(p_name.GetAt(0)));
+    p_name.SetAt(0,_totupper(p_name.GetAt(0)));
   }
   return p_name;
 }
@@ -103,49 +103,49 @@ void WriteInterfaceHeader(FILE* p_file,CXClass* p_class)
     superclass = p_class->GetSuperClass()->GetName();
   }
 
-  fprintf(p_file,"// Interface definition file for class: %s\n",classname.GetString());
-  fprintf(p_file,"// Automatically generated by: CX-Hibernate\n");
-  fprintf(p_file,"// File: %s.h\n",classname.GetString());
-  fprintf(p_file,"//\n");
-  fprintf(p_file,"#pragma once\n");
-  fprintf(p_file,"#include <CXObject.h>\n");
+  _ftprintf(p_file,_T("// Interface definition file for class: %s\n"),classname.GetString());
+  _ftprintf(p_file,_T("// Automatically generated by: CX-Hibernate\n"));
+  _ftprintf(p_file,_T("// File: %s.h\n"),classname.GetString());
+  _ftprintf(p_file,_T("//\n"));
+  _ftprintf(p_file,_T("#pragma once\n"));
+  _ftprintf(p_file,_T("#include <CXObject.h>\n"));
 
   if(!superclass.IsEmpty())
   {
-    fprintf(p_file,"#include \"%s.h\"\n",superclass.GetString());
+    _ftprintf(p_file,_T("#include \"%s.h\"\n"),superclass.GetString());
   }
 
-  fprintf(p_file,"#include <bcd.h>\n");
-  fprintf(p_file,"#include <SQLDate.h>\n");
-  fprintf(p_file,"#include <SQLTime.h>\n");
-  fprintf(p_file,"#include <SQLTimestamp.h>\n");
-  fprintf(p_file,"#include <SQLInterval.h>\n");
-  fprintf(p_file,"#include <SQLGuid.h>\n");
-  fprintf(p_file,"#include <SQLVariant.h>\n");
-  fprintf(p_file,"\n");
+  _ftprintf(p_file,_T("#include <bcd.h>\n"));
+  _ftprintf(p_file,_T("#include <SQLDate.h>\n"));
+  _ftprintf(p_file,_T("#include <SQLTime.h>\n"));
+  _ftprintf(p_file,_T("#include <SQLTimestamp.h>\n"));
+  _ftprintf(p_file,_T("#include <SQLInterval.h>\n"));
+  _ftprintf(p_file,_T("#include <SQLGuid.h>\n"));
+  _ftprintf(p_file,_T("#include <SQLVariant.h>\n"));
+  _ftprintf(p_file,_T("\n"));
 }
 
 void WriteInterfaceClass(FILE* p_file,CXClass* p_class)
 {
   CString classname  = p_class->GetName();
-  CString superclass = p_class->GetSuperClass() ? p_class->GetSuperClass()->GetName() : CString("CXObject");
+  CString superclass = p_class->GetSuperClass() ? p_class->GetSuperClass()->GetName() : CString(_T("CXObject"));
 
-  fprintf(p_file,"class %s : public %s\n",classname.GetString(),superclass.GetString());
-  fprintf(p_file,"{\n");
-  fprintf(p_file,"public:\n");
-  fprintf(p_file,"  // CTOR of an CXObject derived class\n");
-  fprintf(p_file,"  %s();\n",classname.GetString());
-  fprintf(p_file,"  // DTOR of an CXObject derived class\n");
-  fprintf(p_file,"  virtual ~%s();\n",classname.GetString());
-  fprintf(p_file,"\n");
-  fprintf(p_file,"  // Serialization of our persistent objects\n");
-  fprintf(p_file,"  DECLARE_CXO_SERIALIZATION;\n");
-  fprintf(p_file,"\n");
+  _ftprintf(p_file,_T("class %s : public %s\n"),classname.GetString(),superclass.GetString());
+  _ftprintf(p_file,_T("{\n"));
+  _ftprintf(p_file,_T("public:\n"));
+  _ftprintf(p_file,_T("  // CTOR of an CXObject derived class\n"));
+  _ftprintf(p_file,_T("  %s();\n"),classname.GetString());
+  _ftprintf(p_file,_T("  // DTOR of an CXObject derived class\n"));
+  _ftprintf(p_file,_T("  virtual ~%s();\n"),classname.GetString());
+  _ftprintf(p_file,_T("\n"));
+  _ftprintf(p_file,_T("  // Serialization of our persistent objects\n"));
+  _ftprintf(p_file,_T("  DECLARE_CXO_SERIALIZATION;\n"));
+  _ftprintf(p_file,_T("\n"));
 }
 
 void WriteInterfaceGetters(FILE* p_file,CXClass* p_class)
 {
-  fprintf(p_file,"  // GETTERS\n");
+  _ftprintf(p_file,_T("  // GETTERS\n"));
 
   int index = 0;
   CXAttribute* attribute = p_class->FindAttribute(index);
@@ -153,24 +153,24 @@ void WriteInterfaceGetters(FILE* p_file,CXClass* p_class)
   {
     CString type = CXDataTypeToString(attribute->GetDataType());
     CString getter = attribute->GetName();
-    CString member = "m_" + getter;
-    getter = "Get" + InitCapital(getter);
-    getter += "()";
-    member += ";";
+    CString member = _T("m_") + getter;
+    getter = _T("Get") + InitCapital(getter);
+    getter += _T("()");
+    member += _T(";");
 
-    fprintf(p_file,"  %-10s %-20s { return %-20s };\n"
+    _ftprintf(p_file,_T("  %-10s %-20s { return %-20s };\n")
                   ,type.GetString()
                   ,getter.GetString()
                   ,member.GetString());
     // Next attribute
     attribute = p_class->FindAttribute(++index);
   }
-  fprintf(p_file,"\n");
+  _ftprintf(p_file,_T("\n"));
 }
 
 void WriteInterfaceSetters(FILE* p_file,CXClass* p_class)
 {
-  fprintf(p_file, "  // SETTERS\n");
+  _ftprintf(p_file, _T("  // SETTERS\n"));
 
   int index = 0;
   CXAttribute* attribute = p_class->FindAttribute(index);
@@ -178,12 +178,12 @@ void WriteInterfaceSetters(FILE* p_file,CXClass* p_class)
   {
     CString type   = CXDataTypeToString(attribute->GetDataType());
     CString setter = attribute->GetName();
-    CString member = "m_" + setter;
-    CString param  = "p_" + setter;
-    CString assign = param + ";";
+    CString member = _T("m_") + setter;
+    CString param  = _T("p_") + setter;
+    CString assign = param + _T(";");
     setter = InitCapital(setter);
 
-    fprintf(p_file,"  void       Set%-20s(%-10s %-20s) { %-20s = %-20s };\n"
+    _ftprintf(p_file,_T("  void       Set%-20s(%-10s %-20s) { %-20s = %-20s };\n")
                   ,setter.GetString()
                   ,type  .GetString()
                   ,param .GetString()
@@ -192,7 +192,7 @@ void WriteInterfaceSetters(FILE* p_file,CXClass* p_class)
     // Next attribute
     attribute = p_class->FindAttribute(++index);
   }
-  fprintf(p_file,"\n");
+  _ftprintf(p_file,_T("\n"));
 }
 
 void WriteInterfaceAssocs(FILE* p_file, CXClass* p_class)
@@ -205,11 +205,11 @@ void WriteInterfaceAssocs(FILE* p_file, CXClass* p_class)
     CString type = CXAssocTypeToSTring(assoc->m_assocType);
     CString otherclass  = assoc->m_primaryTable;
     CString association = assoc->m_constraintName;
-    CString resulttype  = assoc->m_assocType == ASSOC_MANY_TO_ONE ? otherclass : CString("CXResultSet");
+    CString resulttype  = assoc->m_assocType == ASSOC_MANY_TO_ONE ? otherclass : CString(_T("CXResultSet"));
 
-    fprintf(p_file,"  // Association %s to class %s\n",type.GetString(),otherclass.GetString());
-    fprintf(p_file,"  %s* Get%s(CXSession* p_session);\n",resulttype.GetString(),association.GetString());
-    fprintf(p_file,"\n");
+    _ftprintf(p_file,_T("  // Association %s to class %s\n"),type.GetString(),otherclass.GetString());
+    _ftprintf(p_file,_T("  %s* Get%s(CXSession* p_session);\n"),resulttype.GetString(),association.GetString());
+    _ftprintf(p_file,_T("\n"));
 
     // next association
     assoc = p_class->FindAssociation(++index);
@@ -218,49 +218,49 @@ void WriteInterfaceAssocs(FILE* p_file, CXClass* p_class)
 
 void WriteInterfaceMembers(FILE* p_file,CXClass* p_class)
 {
-  fprintf(p_file,"protected:\n");
-  fprintf(p_file,"  // Database persistent attributes\n");
+  _ftprintf(p_file,_T("protected:\n"));
+  _ftprintf(p_file,_T("  // Database persistent attributes\n"));
 
   int index = 0;
   CXAttribute* attribute = p_class->FindAttribute(index);
   while (attribute)
   {
     CString type   = CXDataTypeToString(attribute->GetDataType());
-    CString member = "m_" + attribute->GetName();
+    CString member = _T("m_") + attribute->GetName();
     CString init   = DatatypeToInitialization(attribute->GetDataType());
     
-    fprintf(p_file,"  %-10s %-20s",type.GetString(),member.GetString());
+    _ftprintf(p_file,_T("  %-10s %-20s"),type.GetString(),member.GetString());
     if (!init.IsEmpty())
     {
-      fprintf(p_file," { %s }",init.GetString());
+      _ftprintf(p_file,_T(" { %s }"),init.GetString());
     }
-    fprintf(p_file,";\n");
+    _ftprintf(p_file,_T(";\n"));
 
     // Next attribute
     attribute = p_class->FindAttribute(++index);
   }
-  fprintf(p_file, "\n");
+  _ftprintf(p_file, _T("\n"));
 }
 
 void WriteInterfaceFooter(FILE* p_file,CXClass* p_class)
 {
-  fprintf(p_file,"private:\n");
-  fprintf(p_file,"  // Transient attributes go here\n");
-  fprintf(p_file,"};\n");
+  _ftprintf(p_file,_T("private:\n"));
+  _ftprintf(p_file,_T("  // Transient attributes go here\n"));
+  _ftprintf(p_file,_T("};\n"));
 }
 
 void WriteInterface(CXClass* p_class)
 {
   CString classname = p_class->GetName();
-  CString filename  = classname + ".h";
+  CString filename  = classname + _T(".h");
   FILE* file = nullptr;
-  int error = fopen_s(&file, filename, "w");
+  int error = _tfopen_s(&file, filename, _T("w"));
   if (error)
   {
-    printf("OS error [%d] opening file: %s\n", error, filename.GetString());
+    _tprintf(_T("OS error [%d] opening file: %s\n"), error, filename.GetString());
     return;
   }
-  printf("Writing output to: %s\n", filename.GetString());
+  _tprintf(_T("Writing output to: %s\n"), filename.GetString());
 
   WriteInterfaceHeader (file, p_class);
   WriteInterfaceClass  (file, p_class);
@@ -282,36 +282,36 @@ void WriteCPPHeader(FILE* p_file,CXClass* p_class)
     superclass = p_class->GetSuperClass()->GetName();
   }
 
-  fprintf(p_file,"// Implementation file for class: %s\n",classname.GetString());
-  fprintf(p_file,"// Automatically generated by: CX-Hibernate\n");
-  fprintf(p_file,"//\n");
-  fprintf(p_file,"#include \"stdafx.h\"\n");
-  fprintf(p_file,"#include \"%s.h\"\n",classname.GetString());
+  _ftprintf(p_file,_T("// Implementation file for class: %s\n"),classname.GetString());
+  _ftprintf(p_file,_T("// Automatically generated by: CX-Hibernate\n"));
+  _ftprintf(p_file,_T("//\n"));
+  _ftprintf(p_file,_T("#include \"stdafx.h\"\n"));
+  _ftprintf(p_file,_T("#include \"%s.h\"\n"),classname.GetString());
 
   if(!superclass.IsEmpty())
   {
-    fprintf(p_file,"#include \"%s.h\"\n",superclass.GetString());
+    _ftprintf(p_file,_T("#include \"%s.h\"\n"),superclass.GetString());
   }
 
-  fprintf(p_file,"\n");
-  fprintf(p_file,"#ifdef _DEBUG\n");
-  fprintf(p_file,"#define new DEBUG_NEW\n");
-  fprintf(p_file,"#undef THIS_FILE\n");
-  fprintf(p_file,"static char THIS_FILE[] = __FILE__;\n");
-  fprintf(p_file,"#endif\n");
-  fprintf(p_file,"\n");
-  fprintf(p_file,"// CTOR for class\n");
-  fprintf(p_file,"%s::%s()\n",classname.GetString(),classname.GetString());
-  fprintf(p_file,"{\n");
-  fprintf(p_file,"  // Things to do in the constructor\n");
-  fprintf(p_file,"}\n");
-  fprintf(p_file,"\n");
-  fprintf(p_file,"// DTOR for class\n");
-  fprintf(p_file,"%s::~%s()\n",classname.GetString(),classname.GetString());
-  fprintf(p_file,"{\n");
-  fprintf(p_file,"  // Things to do in the destructor\n");
-  fprintf(p_file,"}\n");
-  fprintf(p_file,"\n");
+  _ftprintf(p_file,_T("\n"));
+  _ftprintf(p_file,_T("#ifdef _DEBUG\n"));
+  _ftprintf(p_file,_T("#define new DEBUG_NEW\n"));
+  _ftprintf(p_file,_T("#undef THIS_FILE\n"));
+  _ftprintf(p_file,_T("static char THIS_FILE[] = __FILE__;\n"));
+  _ftprintf(p_file,_T("#endif\n"));
+  _ftprintf(p_file,_T("\n"));
+  _ftprintf(p_file,_T("// CTOR for class\n"));
+  _ftprintf(p_file,_T("%s::%s()\n"),classname.GetString(),classname.GetString());
+  _ftprintf(p_file,_T("{\n"));
+  _ftprintf(p_file,_T("  // Things to do in the constructor\n"));
+  _ftprintf(p_file,_T("}\n"));
+  _ftprintf(p_file,_T("\n"));
+  _ftprintf(p_file,_T("// DTOR for class\n"));
+  _ftprintf(p_file,_T("%s::~%s()\n"),classname.GetString(),classname.GetString());
+  _ftprintf(p_file,_T("{\n"));
+  _ftprintf(p_file,_T("  // Things to do in the destructor\n"));
+  _ftprintf(p_file,_T("}\n"));
+  _ftprintf(p_file,_T("\n"));
 }
 
 void WriteAssocOneToMany(FILE* p_file,CXClass* p_class,CXAssociation* p_assoc)
@@ -335,21 +335,21 @@ void WriteAssocOneToMany(FILE* p_file,CXClass* p_class,CXAssociation* p_assoc)
     }
   }
 
-  fprintf(p_file,"// Getting a one-to-many association's objects from %s\n",classname.GetString());
-  fprintf(p_file,"CXResultSet\n");
-  fprintf(p_file,"%s::Get%s(CXSession* p_session)\n",classname.GetString(),association.GetString());
-  fprintf(p_file,"{\n");
+  _ftprintf(p_file,_T("// Getting a one-to-many association's objects from %s\n"),classname.GetString());
+  _ftprintf(p_file,_T("CXResultSet\n"));
+  _ftprintf(p_file,_T("%s::Get%s(CXSession* p_session)\n"),classname.GetString(),association.GetString());
+  _ftprintf(p_file,_T("{\n"));
   if(optimized)
   {
-    fprintf(p_file,"  return p_session->FollowAssociation(ClassName(),%s::ClassName(),m_%s);\n",otherclass.GetString(),key.GetString());
+    _ftprintf(p_file,_T("  return p_session->FollowAssociation(ClassName(),%s::ClassName(),m_%s);\n"),otherclass.GetString(),key.GetString());
   }
   else
   {
-    fprintf(p_file,"  VariantSet set = GetPrimaryKey();\n");
-    fprintf(p_file,"  return p_session->FollowAssociation(ClassName(),%s::ClassName(),set);\n",otherclass.GetString());
+    _ftprintf(p_file,_T("  VariantSet set = GetPrimaryKey();\n"));
+    _ftprintf(p_file,_T("  return p_session->FollowAssociation(ClassName(),%s::ClassName(),set);\n"),otherclass.GetString());
   }
-  fprintf(p_file,"}\n");
-  fprintf(p_file,"\n");
+  _ftprintf(p_file,_T("}\n"));
+  _ftprintf(p_file,_T("\n"));
 }
 
 void WriteAssocManyToOne(FILE* p_file,CXClass* p_class,CXAssociation* p_assoc)
@@ -373,32 +373,32 @@ void WriteAssocManyToOne(FILE* p_file,CXClass* p_class,CXAssociation* p_assoc)
     }
   }
 
-  fprintf(p_file,"// Getting a many-to-one association's object from Master\n");
-  fprintf(p_file,"%s*\n",otherclass.GetString());
-  fprintf(p_file,"%s::Get%s(CXSession* p_session)\n",classname.GetString(),association.GetString());
-  fprintf(p_file,"{\n");
+  _ftprintf(p_file,_T("// Getting a many-to-one association's object from Master\n"));
+  _ftprintf(p_file,_T("%s*\n"),otherclass.GetString());
+  _ftprintf(p_file,_T("%s::Get%s(CXSession* p_session)\n"),classname.GetString(),association.GetString());
+  _ftprintf(p_file,_T("{\n"));
   if(optimized)
   {
-    fprintf(p_file,"  CXResultSet set = p_session->FollowAssociation(ClassName(),%s::ClassName(),m_%s);\n",otherclass.GetString(),key.GetString());
+    _ftprintf(p_file,_T("  CXResultSet set = p_session->FollowAssociation(ClassName(),%s::ClassName(),m_%s);\n"),otherclass.GetString(),key.GetString());
   }
   else
   {
     int index = 1;
-    fprintf(p_file,"  VariantSet values\n");
+    _ftprintf(p_file,_T("  VariantSet values\n"));
     for(auto& attrib : p_assoc->m_attributes)
     {
-      fprintf(p_file,"  SQLVariant var%d(m_%s)\n",index,attrib->GetName().GetString());
-      fprintf(p_file,"  values.push_back(var%d);\n",index);
+      _ftprintf(p_file,_T("  SQLVariant var%d(m_%s)\n"),index,attrib->GetName().GetString());
+      _ftprintf(p_file,_T("  values.push_back(var%d);\n"),index);
     }
-    fprintf(p_file,"  CXResultSet set = p_session->FollowAssociation(ClassName(),%s::ClassName(),values);\n",otherclass.GetString());
+    _ftprintf(p_file,_T("  CXResultSet set = p_session->FollowAssociation(ClassName(),%s::ClassName(),values);\n"),otherclass.GetString());
   }
-  fprintf(p_file,"  if(set.size() == 1)\n");
-  fprintf(p_file,"  {\n");
-  fprintf(p_file,"    return (%s*)set.front();\n",otherclass.GetString());
-  fprintf(p_file,"  }\n");
-  fprintf(p_file,"  return nullptr;\n");
-  fprintf(p_file,"}\n");
-  fprintf(p_file,"\n");
+  _ftprintf(p_file,_T("  if(set.size() == 1)\n"));
+  _ftprintf(p_file,_T("  {\n"));
+  _ftprintf(p_file,_T("    return (%s*)set.front();\n"),otherclass.GetString());
+  _ftprintf(p_file,_T("  }\n"));
+  _ftprintf(p_file,_T("  return nullptr;\n"));
+  _ftprintf(p_file,_T("}\n"));
+  _ftprintf(p_file,_T("\n"));
 }
 
 void WriteCPPAssocs(FILE* p_file,CXClass* p_class)
@@ -423,15 +423,15 @@ void WriteCPPAssocs(FILE* p_file,CXClass* p_class)
 void WriteCPPFile(CXClass* p_class)
 {
   CString classname = p_class->GetName();
-  CString filename  = classname + ".cpp";
+  CString filename  = classname + _T(".cpp");
   FILE* file = nullptr;
-  int error = fopen_s(&file, filename, "w");
+  int error = _tfopen_s(&file, filename, _T("w"));
   if (error)
   {
-    printf("OS error [%d] opening file: %s\n", error, filename.GetString());
+    _tprintf(_T("OS error [%d] opening file: %s\n"), error, filename.GetString());
     return;
   }
-  printf("Writing output to: %s\n", filename.GetString());
+  _tprintf(_T("Writing output to: %s\n"), filename.GetString());
 
   WriteCPPHeader(file,p_class);
   WriteCPPAssocs(file,p_class);
@@ -441,43 +441,43 @@ void WriteCPPFile(CXClass* p_class)
 
 void PrintCXHFileHeader(FILE* p_file,CXClass* p_class)
 {
-  fprintf(p_file,"// (De-)Serializing factories for class: %s\n",p_class->GetName().GetString());
-  fprintf(p_file,"// Generated by CX-Hibernate cfg2cpp tool\n");
-  fprintf(p_file,"// \n");
-  fprintf(p_file,"#include \"stdafx.h\"\n");
-  fprintf(p_file,"#include \"%s.h\"\n",p_class->GetName().GetString());
-  fprintf(p_file,"#include <SQLRecord.h>\n");
-  fprintf(p_file,"#include <SOAPMessage.h>\n");
-  fprintf(p_file,"\n");
-  fprintf(p_file,"#ifdef _DEBUG\n");
-  fprintf(p_file,"#define new DEBUG_NEW\n");
-  fprintf(p_file,"#undef THIS_FILE\n");
-  fprintf(p_file,"static char THIS_FILE[] = __FILE__;\n");
-  fprintf(p_file,"#endif\n");
-  fprintf(p_file, "\n");
+  _ftprintf(p_file,_T("// (De-)Serializing factories for class: %s\n"),p_class->GetName().GetString());
+  _ftprintf(p_file,_T("// Generated by CX-Hibernate cfg2cpp tool\n"));
+  _ftprintf(p_file,_T("// \n"));
+  _ftprintf(p_file,_T("#include \"stdafx.h\"\n"));
+  _ftprintf(p_file,_T("#include \"%s.h\"\n"),p_class->GetName().GetString());
+  _ftprintf(p_file,_T("#include <SQLRecord.h>\n"));
+  _ftprintf(p_file,_T("#include <SOAPMessage.h>\n"));
+  _ftprintf(p_file,_T("\n"));
+  _ftprintf(p_file,_T("#ifdef _DEBUG\n"));
+  _ftprintf(p_file,_T("#define new DEBUG_NEW\n"));
+  _ftprintf(p_file,_T("#undef THIS_FILE\n"));
+  _ftprintf(p_file,_T("static char THIS_FILE[] = __FILE__;\n"));
+  _ftprintf(p_file,_T("#endif\n"));
+  _ftprintf(p_file, _T("\n"));
 }
 
 void PrintCXHDeSerialize(FILE* p_file,CXClass* p_class,CString p_type)
 {
   CString classname = p_class->GetName();
-  CString superclass = p_class->GetSuperClass() ? p_class->GetSuperClass()->GetName() : CString("CXObject");
+  CString superclass = p_class->GetSuperClass() ? p_class->GetSuperClass()->GetName() : CString(_T("CXObject"));
 
-  fprintf(p_file,"BEGIN_%sSERIALIZE(%s,%s)\n",p_type.GetString(),classname.GetString(),superclass.GetString());
+  _ftprintf(p_file,_T("BEGIN_%sSERIALIZE(%s,%s)\n"),p_type.GetString(),classname.GetString(),superclass.GetString());
 
   int index = 0;
   CXAttribute* attribute = p_class->FindAttribute(index);
   while (attribute)
   {
-    fprintf(p_file,"  CXO_%sSERIALIZE(%-18s,%-18s);\n"
+    _ftprintf(p_file,_T("  CXO_%sSERIALIZE(%-18s,%-18s);\n")
                   , p_type.GetString()
-                  , ("m_" + attribute->GetName()).GetString()
-                  , ("\"" + attribute->GetDatabaseColumn() + "\"").GetString());
+                  , (_T("m_") + attribute->GetName()).GetString()
+                  , (_T("\"") + attribute->GetDatabaseColumn() + _T("\"")).GetString());
 
     // Next attribute
     attribute = p_class->FindAttribute(++index);
   }
-  fprintf(p_file,"END_%sSERIALIZE\n",p_type.GetString());
-  fprintf(p_file,"\n");
+  _ftprintf(p_file,_T("END_%sSERIALIZE\n"),p_type.GetString());
+  _ftprintf(p_file,_T("\n"));
 }
 
 void PrintGenDeSerialize(FILE* p_file,CXClass* p_class)
@@ -485,46 +485,46 @@ void PrintGenDeSerialize(FILE* p_file,CXClass* p_class)
   CXAttribute* gen = p_class->FindGenerator();
   if(gen)
   {
-    fprintf(p_file,"BEGIN_DESERIALIZE_GENERATOR(%s)\n",p_class->GetName().GetString());
-    fprintf(p_file,"  CXO_DBS_DESERIALIZE(%-18s,%-18s);\n"
-                  ,("m_" + gen->GetName()).GetString()
-                  ,("\"" + gen->GetDatabaseColumn() + "\"").GetString());
-    fprintf(p_file,"END_DESERIALIZE_GENERATOR\n");
-    fprintf(p_file,"\n");
+    _ftprintf(p_file,_T("BEGIN_DESERIALIZE_GENERATOR(%s)\n"),p_class->GetName().GetString());
+    _ftprintf(p_file,_T("  CXO_DBS_DESERIALIZE(%-18s,%-18s);\n")
+                  ,(_T("m_") + gen->GetName()).GetString()
+                  ,(_T("\"") + gen->GetDatabaseColumn() + _T("\"")).GetString());
+    _ftprintf(p_file,_T("END_DESERIALIZE_GENERATOR\n"));
+    _ftprintf(p_file,_T("\n"));
   }
 }
 
 void PrintCXHFactory(FILE* p_file, CXClass* p_class)
 {
-  fprintf(p_file,"// Static factory to create a new object if this class\n");
-  fprintf(p_file, "DEFINE_CXO_FACTORY(%s);\n", p_class->GetName().GetString());
-  fprintf(p_file, "\n");
+  _ftprintf(p_file,_T("// Static factory to create a new object if this class\n"));
+  _ftprintf(p_file, _T("DEFINE_CXO_FACTORY(%s);\n"), p_class->GetName().GetString());
+  _ftprintf(p_file, _T("\n"));
 }
 
 void WriteCXHFile(CXClass* p_class)
 {
-  CString filename = p_class->GetName() + "_cxh.cpp";
+  CString filename = p_class->GetName() + _T("_cxh.cpp");
   FILE* file = nullptr;
-  int error = fopen_s(&file,filename,"w");
+  int error = _tfopen_s(&file,filename,_T("w"));
   if (error)
   {
-    printf("OS error [%d] opening file: %s\n",error,filename.GetString());
+    _tprintf(_T("OS error [%d] opening file: %s\n"),error,filename.GetString());
     return;
   }
-  printf("Writing output to: %s\n",filename.GetString());
+  _tprintf(_T("Writing output to: %s\n"),filename.GetString());
 
   PrintCXHFileHeader (file, p_class);
-  PrintCXHDeSerialize(file, p_class,"XML_");
-  PrintCXHDeSerialize(file, p_class,"XML_DE");
-  PrintCXHDeSerialize(file, p_class,"DBS_");
-  PrintCXHDeSerialize(file, p_class,"DBS_DE");
+  PrintCXHDeSerialize(file, p_class,_T("XML_"));
+  PrintCXHDeSerialize(file, p_class,_T("XML_DE"));
+  PrintCXHDeSerialize(file, p_class,_T("DBS_"));
+  PrintCXHDeSerialize(file, p_class,_T("DBS_DE"));
   PrintGenDeSerialize(file, p_class);
   PrintCXHFactory    (file, p_class);
 
   fclose(file);
 }
 
-CString GetParameters(int argc,char** argv)
+CString GetParameters(int argc,TCHAR** argv)
 {
   int index = 1;
   CString classname;
@@ -534,9 +534,9 @@ CString GetParameters(int argc,char** argv)
   {
     CString param(argv[index]);
 
-    if(param.GetAt(0) == '/')
+    if(param.GetAt(0) == _T('/'))
     {
-      if(param.Left(8).CompareNoCase("/config:") == 0)
+      if(param.Left(8).CompareNoCase(_T("/config:")) == 0)
       {
         g_configFile = param.Mid(8);
       }
@@ -555,23 +555,23 @@ CString GetParameters(int argc,char** argv)
   // In case of an error: print usage of the tool
   if(error || classname.IsEmpty())
   {
-    printf("USAGE: cfg2cpp [/config:hibernate.cfg.xml] classname\n");
+    _tprintf(_T("USAGE: cfg2cpp [/config:hibernate.cfg.xml] classname\n"));
     exit(-3);
   }
   return classname;
 }
 
-int main(int argc,char** argv)
+int _tmain(int argc,TCHAR** argv)
 {
-  printf("CFG2CPP Hibernate.cfg.xml to *.cpp file converter\n");
-  printf("Copyright (c) ir. W.E. Huisman\n");
-  printf("Version: %s of %s\n", HIBERNATE_VERSION,HIBERNATE_DATE);
-  printf("\n");
+  _tprintf(_T("CFG2CPP Hibernate.cfg.xml to *.cpp file converter\n"));
+  _tprintf(_T("Copyright (c) ir. W.E. Huisman\n"));
+  _tprintf(_T("Version: %s of %s\n"), HIBERNATE_VERSION,HIBERNATE_DATE);
+  _tprintf(_T("\n"));
 
   CString classname = GetParameters(argc,argv);
 
-  printf("Creating session\n");
-  printf("Reading configuration file: %s\n",g_configFile.GetString());
+  _tprintf(_T("Creating session\n"));
+  _tprintf(_T("Reading configuration file: %s\n"),g_configFile.GetString());
 
   // Tools: set incomplete mode!!
   hibernate.SetIncomplete(true);
@@ -579,10 +579,10 @@ int main(int argc,char** argv)
   try
   {
     // Request a session
-    CXSession* session = hibernate.CreateSession("",g_configFile);
+    CXSession* session = hibernate.CreateSession(_T(""),g_configFile);
     if(session)
     {
-      printf("Finding our class: %s\n",classname.GetString());
+      _tprintf(_T("Finding our class: %s\n"),classname.GetString());
       CXClass* cl = session->FindClass(classname);
       if(cl)
       {
@@ -592,19 +592,19 @@ int main(int argc,char** argv)
       }
       else
       {
-        printf("ERROR: Cannot find classname: %s\n",classname.GetString());
+        _tprintf(_T("ERROR: Cannot find classname: %s\n"),classname.GetString());
       }
       session->CloseSession();
     }
     else
     {
-      printf("ERROR: Cannot create a hibernate session\n");
-      printf("Have you defined a correct 'hibernate.cfg.xml' file?\n");
+      _tprintf(_T("ERROR: Cannot create a hibernate session\n"));
+      _tprintf(_T("Have you defined a correct 'hibernate.cfg.xml' file?\n"));
     }
   }
   catch(StdException& ex)
   {
-    printf("ERROR: %s\n",ex.GetErrorMessage().GetString());
+    _tprintf(_T("ERROR: %s\n"),ex.GetErrorMessage().GetString());
   }
   return 0;
 }

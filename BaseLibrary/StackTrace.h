@@ -4,7 +4,7 @@
 //
 // BaseLibrary: Indispensable general objects and functions
 // 
-// Copyright (c) 2014-2022 ir. W.E. Huisman
+// Copyright (c) 2014-2025 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -40,8 +40,8 @@ public:
   enum { MaxFrames = 64 };
 
   // Construction
-  StackTrace(unsigned int p_skip = 0);
-  StackTrace(CONTEXT* p_context, unsigned int p_skip = 0)
+  explicit StackTrace(unsigned int p_skip = 0);
+  explicit StackTrace(CONTEXT* p_context, unsigned int p_skip = 0)
   {
     Process(p_context, p_skip);
   }
@@ -58,18 +58,18 @@ private:
   // Frame in a stacktrace
   struct Frame
   {
-    DWORD_PTR  m_address;
+    DWORD_PTR  m_address { NULL };
     XString    m_module;
     XString    m_function;
-    DWORD_PTR  m_offset;
+    DWORD_PTR  m_offset  { NULL };
     XString    m_fileName;
-    DWORD      m_line;
+    DWORD      m_line    { 0 };
   };
   // Full trace
   typedef std::list<Frame> Trace;
   Trace   m_trace;
 
-  // Getting the stacktrace
+  // Getting the StackTrace
   void Process(CONTEXT *p_context, unsigned int p_skip);
 };
 

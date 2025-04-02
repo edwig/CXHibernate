@@ -21,17 +21,14 @@
 // WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION 
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
-// Last version date: See CXHibernate.h
-// Version number:    See CXHibernate.h
-//
 #pragma once
 #include "CXObjectFactory.h"
 #include "CXStaticInitialization.h"
 #include <vector>
 #include <map>
 
-#define HIBERNATE_VERSION "1.3.0"
-#define HIBERNATE_DATE    "24-03-2022"
+#define HIBERNATE_VERSION _T("1.4.0")
+#define HIBERNATE_DATE    _T("02-04-2025")
 
 #define CXH_LOG_NOTHING       0   // Logging is OFF
 #define CXH_LOG_ERRORS        1   // Only error logging
@@ -50,7 +47,7 @@ typedef enum _map_strategy
 }
 MapStrategy;
 
-#define HIBERNATE_CONFIG_FILE "hibernate.cfg.xml"
+#define HIBERNATE_CONFIG_FILE _T("hibernate.cfg.xml")
 
 // Maximum number of classes that can be initialized
 // by the object factories. De- or increase at your own leisure.
@@ -70,15 +67,15 @@ public:
   // FUNCTIONS
 
   // Log a message to the hibernate logfile
-  void         Log(int p_level, bool p_format, const char* p_text, ...);
+  void         Log(int p_level, bool p_format,LPCTSTR p_text, ...);
   // Loading and saving the general configuration XML
-  CXSession*   LoadConfiguration(CString p_sessionKey, CString p_configFile = "");
-  bool         SaveConfiguration(CXSession* p_session, CString p_configFile = "");
+  CXSession*   LoadConfiguration(CString p_sessionKey, CString p_configFile = _T(""));
+  bool         SaveConfiguration(CXSession* p_session, CString p_configFile = _T(""));
 
   // Getting a (possibly existing) session
-  CXSession*   GetSession(CString p_sessionKey = "");
+  CXSession*   GetSession(CString p_sessionKey = _T(""));
   // Create a new Hibernate session
-  CXSession*   CreateSession(CString p_sessionKey = "",CString p_configFile = "");
+  CXSession*   CreateSession(CString p_sessionKey = _T(""),CString p_configFile = _T(""));
   // Adding a externally created session (but we now own it). You **MUST** supply a session key
   void         AddSession(CXSession* p_session, CString p_sessionKey);
   // Removing a session
@@ -152,10 +149,20 @@ extern CXHibernate hibernate;
 
 // Selecting the right library to link with automatically
 // So we do not need to worry about which library to use in the linker settings
+#ifdef _UNICODE
+#if defined _M_IX86
+#define CXH_PLATFORM "Ux86"
+#else
+#define CXH_PLATFORM "Ux64"
+#endif
+
+#else // _UNICODE
+
 #if defined _M_IX86
 #define CXH_PLATFORM "x86"
 #else
 #define CXH_PLATFORM "x64"
+#endif
 #endif
 
 #if defined _DEBUG

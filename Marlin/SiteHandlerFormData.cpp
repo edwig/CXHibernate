@@ -4,7 +4,7 @@
 //
 // Marlin Server: Internet server/client
 // 
-// Copyright (c) 2014-2022 ir. W.E. Huisman
+// Copyright (c) 2014-2024 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -32,10 +32,12 @@
 #include "HTTPServer.h"
 #include <winhttp.h>
 
+#ifdef _AFX
 #ifdef _DEBUG
 #define new DEBUG_NEW
 #undef THIS_FILE
 static char THIS_FILE[] = __FILE__;
+#endif
 #endif
 
 bool
@@ -79,7 +81,7 @@ SiteHandlerFormData::Handle(HTTPMessage* p_message)
         else
         {
           ++errors;
-          SITE_ERRORLOG(ERROR_NO_DATA,"Internal error in form-data MultiPartBuffer");
+          SITE_ERRORLOG(ERROR_NO_DATA,_T("Internal error in form-data MultiPartBuffer"));
         }
       }
       // Now ready with all the parts. Do the post-handling
@@ -88,13 +90,13 @@ SiteHandlerFormData::Handle(HTTPMessage* p_message)
     else
     {
       ++errors;
-      SITE_ERRORLOG(ERROR_NO_DATA,"Multi-part form-data not parsed. Internal error in MultiPartBuffer");
+      SITE_ERRORLOG(ERROR_NO_DATA,_T("Multi-part form-data not parsed. Internal error in MultiPartBuffer"));
     }
   }
   else
   {
     ++errors;
-    SITE_ERRORLOG(ERROR_NO_DATA,"NO legal multi-part buffer, or no multi-part content-type");
+    SITE_ERRORLOG(ERROR_NO_DATA,_T("NO legal multi-part buffer, or no multi-part content-type"));
   }
 
   if(errors)
@@ -112,7 +114,7 @@ SiteHandlerFormData::Handle(HTTPMessage* p_message)
 int
 SiteHandlerFormData::PreHandleBuffer(HTTPMessage* /*p_message*/,MultiPartBuffer* p_buffer)
 {
-  SITE_DETAILLOGV("Pre-handling form-data. Number of bufferparts: %d",p_buffer->GetParts());
+  SITE_DETAILLOGV(_T("Pre-handling form-data. Number of bufferparts: %d"),p_buffer->GetParts());
   return 0;
 }
 
@@ -121,8 +123,8 @@ SiteHandlerFormData::PreHandleBuffer(HTTPMessage* /*p_message*/,MultiPartBuffer*
 int
 SiteHandlerFormData::HandleData(HTTPMessage* /*p_message*/,MultiPart* p_part)
 {
-  SITE_DETAILLOGS("Handling form-data data-part: ",p_part->GetName());
-  SITE_ERRORLOG(ERROR_BAD_COMMAND,"Default multipart/form-data data-handler. Override me!");
+  SITE_DETAILLOGS(_T("Handling form-data data-part: "),p_part->GetName());
+  SITE_ERRORLOG(ERROR_BAD_COMMAND,_T("Default multipart/form-data data-handler. Override me!"));
   return 1;
 }
 
@@ -131,8 +133,8 @@ SiteHandlerFormData::HandleData(HTTPMessage* /*p_message*/,MultiPart* p_part)
 int
 SiteHandlerFormData::HandleFile(HTTPMessage* /*p_message*/,MultiPart* p_part)
 {
-  SITE_DETAILLOGV("Handling form-data file-part: [%s] %s",p_part->GetName().GetString(),p_part->GetShortFileName().GetString());
-  SITE_ERRORLOG(ERROR_BAD_COMMAND,"Default multipart/form-data file-handler. Override me!");
+  SITE_DETAILLOGV(_T("Handling form-data file-part: [%s] %s"),p_part->GetName().GetString(),p_part->GetShortFileName().GetString());
+  SITE_ERRORLOG(ERROR_BAD_COMMAND,_T("Default multipart/form-data file-handler. Override me!"));
   return 1;
 }
 
@@ -141,6 +143,6 @@ SiteHandlerFormData::HandleFile(HTTPMessage* /*p_message*/,MultiPart* p_part)
 int
 SiteHandlerFormData::PostHandleBuffer(HTTPMessage* /*p_message*/,MultiPartBuffer* p_buffer)
 {
-  SITE_DETAILLOGV("Post-handling form-data. Number of bufferparts: %d",p_buffer->GetParts());
+  SITE_DETAILLOGV(_T("Post-handling form-data. Number of bufferparts: %d"),p_buffer->GetParts());
   return 0;
 }

@@ -1,10 +1,10 @@
 /////////////////////////////////////////////////////////////////////////////////
 //
-// SourceFile: DefuseBOM.h
+// SourceFile: AuthenticationHeader.h
 //
 // BaseLibrary: Indispensable general objects and functions
-// 
-// Copyright (c) 2014-2022 ir. W.E. Huisman
+//
+// Copyright (c) 2014-2025 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -26,37 +26,9 @@
 // THE SOFTWARE.
 //
 #pragma once
+#include "XString.h"
 
-// Result of the defusion process
-enum class BOMOpenResult
-{
-  BOR_NoString
- ,BOR_NoBom
- ,BOR_Bom
- ,BOR_OpenedIncompatible
-};
+// These functions are meant to be used in conjunction with your own HTTP X-<app>-Authentication header
 
-// Type of BOM found to defuse
-// As found on: https://en.wikipedia.org/wiki/Byte_order_mark
-enum class BOMType
-{
-  BT_NO_BOM
- ,BT_BE_UTF1
- ,BT_BE_UTF7
- ,BT_BE_UTF8
- ,BT_BE_UTF16
- ,BT_BE_UTF32
- ,BT_BE_CSCU
- ,BT_LE_UTF8
- ,BT_LE_UTF16
- ,BT_LE_UTF32
- ,BT_UTF_EBCDIC
- ,BT_BOCU_1
- ,BT_GB_18030
-};
-
-// Check for a Byte-Order-Mark (BOM)
-BOMOpenResult CheckForBOM(const unsigned char* p_pointer
-                         ,BOMType&             p_type
-                         ,unsigned int&        p_skip);
-
+XString CreateAuthentication(XString p_user,XString p_password);
+bool    DecodeAuthentication(XString p_scramble,XString& p_user,XString& p_password);

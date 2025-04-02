@@ -4,7 +4,7 @@
 //
 // Marlin Server: Internet server/client
 // 
-// Copyright (c) 2014-2022 ir. W.E. Huisman
+// Copyright (c) 2014-2024 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -28,10 +28,12 @@
 #include "stdafx.h"
 #include "SiteHandlerWebDAV.h"
 
+#ifdef _AFX
 #ifdef _DEBUG
 #define new DEBUG_NEW
 #undef THIS_FILE
 static char THIS_FILE[] = __FILE__;
+#endif
 #endif
 
 bool  
@@ -76,7 +78,7 @@ SiteHandlerWebDAV::PostHandle(HTTPMessage* p_message)
     // send our answer 
     p_message->SetCommand(HTTPCommand::http_response);
     m_site->SendResponse(p_message);
-    SITE_DETAILLOGS("Answered a WEBDAV message from: ", SocketToServer(p_message->GetSender()));
+    SITE_DETAILLOGS(_T("Answered a WEBDAV message from: "), SocketToServer(p_message->GetSender()));
   }
 }
 

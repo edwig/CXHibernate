@@ -4,7 +4,7 @@
 //
 // Marlin Server: Internet server/client
 // 
-// Copyright (c) 2014-2022 ir. W.E. Huisman
+// Copyright (c) 2014-2024 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -54,7 +54,7 @@ using TypeMap      = std::map<XString,XMLElement*>;
 class WSDLCache
 {
 public:
-  WSDLCache(bool p_server = true);
+  explicit WSDLCache(bool p_server = true);
  ~WSDLCache();
 
   // Reset the complete WSDLCache

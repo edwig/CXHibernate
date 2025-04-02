@@ -4,7 +4,7 @@
 //
 // Marlin Server: Internet server/client
 // 
-// Copyright (c) 2014-2022 ir. W.E. Huisman
+// Copyright (c) 2014-2024 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -36,21 +36,35 @@
 #include "ConvertWideString.h"
 #include "WebSocketServer.h"
 #include "ServiceReporting.h"
+#include "HTTPSYS_Websocket.h"
 #include <httpserv.h>
+#include <assert.h>
 
+#ifdef _AFX
 #ifdef _DEBUG
 #define new DEBUG_NEW
 #undef THIS_FILE
 static char THIS_FILE[] = __FILE__;
 #endif
+#endif
 
 // Logging macro's
-#define DETAILLOG1(text)          if(MUSTLOG(HLL_LOGGING) && m_log) { DetailLog (__FUNCTION__,LogType::LOG_INFO,text); }
-#define DETAILLOGS(text,extra)    if(MUSTLOG(HLL_LOGGING) && m_log) { DetailLogS(__FUNCTION__,LogType::LOG_INFO,text,extra); }
-#define DETAILLOGV(text,...)      if(MUSTLOG(HLL_LOGGING) && m_log) { DetailLogV(__FUNCTION__,LogType::LOG_INFO,text,__VA_ARGS__); }
-#define WARNINGLOG(text,...)      if(MUSTLOG(HLL_LOGGING) && m_log) { DetailLogV(__FUNCTION__,LogType::LOG_WARN,text,__VA_ARGS__); }
-#define ERRORLOG(code,text)       ErrorLog (__FUNCTION__,code,text)
-#define HTTPERROR(code,text)      HTTPError(__FUNCTION__,code,text)
+#define DETAILLOG1(text)          if(MUSTLOG(HLL_LOGGING) && m_log) { DetailLog (_T(__FUNCTION__),LogType::LOG_INFO,text); }
+#define DETAILLOGS(text,extra)    if(MUSTLOG(HLL_LOGGING) && m_log) { DetailLogS(_T(__FUNCTION__),LogType::LOG_INFO,text,extra); }
+#define DETAILLOGV(text,...)      if(MUSTLOG(HLL_LOGGING) && m_log) { DetailLogV(_T(__FUNCTION__),LogType::LOG_INFO,text,__VA_ARGS__); }
+#define WARNINGLOG(text,...)      if(MUSTLOG(HLL_LOGGING) && m_log) { DetailLogV(_T(__FUNCTION__),LogType::LOG_WARN,text,__VA_ARGS__); }
+#define ERRORLOG(code,text)       ErrorLog (_T(__FUNCTION__),code,text)
+#define HTTPERROR(code,text)      HTTPError(_T(__FUNCTION__),code,text)
+
+// Marlin extensions to HTTP_SERVER_PROPERTY enumeration
+#define HttpServerIOCPPort 32
+#define HttpServerIOCPKey  33
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The Server
+//
+//////////////////////////////////////////////////////////////////////////
 
 HTTPServerMarlin::HTTPServerMarlin(XString p_name)
                  :HTTPServer(p_name)
@@ -62,13 +76,13 @@ HTTPServerMarlin::HTTPServerMarlin(XString p_name)
 HTTPServerMarlin::~HTTPServerMarlin()
 {
   // Cleanup the server objects
-  Cleanup();
+  HTTPServerMarlin::Cleanup();
 }
 
 XString
 HTTPServerMarlin::GetVersion()
 {
-  return XString(MARLIN_SERVER_VERSION " on Microsoft HTTP-Server API/2.0");
+  return XString(_T(MARLIN_SERVER_VERSION) _T(" on Microsoft HTTP-Server API/2.0"));
 }
 
 // Initialise a HTTP server and server-session
@@ -100,19 +114,19 @@ HTTPServerMarlin::Initialise()
   ULONG retCode = HttpInitialize(HTTPAPI_VERSION_2,HTTP_INITIALIZE_SERVER,NULL);
   if(retCode != NO_ERROR)
   {
-    ERRORLOG(retCode,"HTTP Initialize");
+    ERRORLOG(retCode,_T("HTTP Initialize"));
     return false;
   }
-  DETAILLOG1("HTTPInitialize OK");
+  DETAILLOG1(_T("HTTPInitialize OK"));
 
   // STEP 4: CREATE SERVER SESSION
   retCode = HttpCreateServerSession(HTTPAPI_VERSION_2,&m_session,0);
   if(retCode != NO_ERROR)
   {
-    ERRORLOG(retCode,"CreateServerSession");
+    ERRORLOG(retCode,_T("CreateServerSession"));
     return false;
   }
-  DETAILLOGV("Serversession created: %I64X",m_session);
+  DETAILLOGV(_T("Serversession created: %I64X"),m_session);
 
   // STEP 5: Create a request queue with NO name
   // Although we CAN create a name, it would mean a global object (and need to be unique)
@@ -120,24 +134,31 @@ HTTPServerMarlin::Initialise()
   retCode = HttpCreateRequestQueue(HTTPAPI_VERSION_2,NULL,NULL,0,&m_requestQueue);
   if(retCode != NO_ERROR)
   {
-    ERRORLOG(retCode,"CreateRequestQueue");
+    ERRORLOG(retCode,_T("CreateRequestQueue"));
     return false;
   }
-  DETAILLOGV("Request queue created: %p",m_requestQueue);
+  DETAILLOGV(_T("Request queue created: %I64X"),m_requestQueue);
 
   // STEP 6: SET UP FOR ASYNC I/O
-  // Register the request queue for async I/O
-  retCode = m_pool.AssociateIOHandle(m_requestQueue,(ULONG_PTR)HandleAsynchroneousIO);
+  // Register the request queue for asynchronous I/O
+  ULONG_PTR key = (ULONG_PTR)HandleAsynchroneousIO;
+  retCode = m_pool.AssociateIOHandle(m_requestQueue,key);
   if(retCode != NO_ERROR)
   {
-    ERRORLOG(retCode,"Associate request queue with the I/O completion port of the threadpool.");
+    ERRORLOG(retCode,_T("Associate request queue with the I/O completion port of the threadpool."));
     return false;
   }
-  DETAILLOGV("Request queue registrated by the threadpool");
+  DETAILLOGV(_T("Request queue registrated by the threadpool"));
 
-  // STEP 7: SET THE LENGTH OF THE BACKLOG QUEUE FOR INCOMING TRAFFIC
+  // STEP 7: Tell the I/O completion port and key to the HTTP Driver
+  // This is a Marlin extension and will be ignored by the standard drivers
+  HANDLE iocp = m_pool.GetIOCompletionPort();
+  HttpSetRequestQueueProperty(m_requestQueue,(HTTP_SERVER_PROPERTY) HttpServerIOCPPort,&iocp,sizeof(HANDLE),   0,NULL);
+  HttpSetRequestQueueProperty(m_requestQueue,(HTTP_SERVER_PROPERTY) HttpServerIOCPKey, &key, sizeof(ULONG_PTR),0,NULL);
+
+  // STEP 8: SET THE LENGTH OF THE BACKLOG QUEUE FOR INCOMING TRAFFIC
   // Overrides for the HTTP Site. Test min/max via SetQueueLength
-  int queueLength = m_marlinConfig->GetParameterInteger("Server","QueueLength",m_queueLength);
+  int queueLength = m_marlinConfig->GetParameterInteger(_T("Server"),_T("QueueLength"),m_queueLength);
   SetQueueLength(queueLength);
   // Set backlog queue: using HttpSetRequestQueueProperty
   retCode = HttpSetRequestQueueProperty(m_requestQueue
@@ -148,14 +169,14 @@ HTTPServerMarlin::Initialise()
                                        ,NULL);
   if(retCode != NO_ERROR)
   {
-    ERRORLOG(retCode,"HTTP backlog queue length NOT set!");
+    ERRORLOG(retCode,_T("HTTP backlog queue length NOT set!"));
   }
   else
   {
-    DETAILLOGV("HTTP backlog queue set to length: %lu",m_queueLength);
+    DETAILLOGV(_T("HTTP backlog queue set to length: %lu"),m_queueLength);
   }
 
-  // STEP 8: SET VERBOSITY OF THE 503 SERVER ERROR
+  // STEP 9: SET VERBOSITY OF THE 503 SERVER ERROR
   // Set the 503-Verbosity: using HttpSetRequestQueueProperty
   DWORD verbosity = Http503ResponseVerbosityFull;
   retCode = HttpSetRequestQueueProperty(m_requestQueue
@@ -166,24 +187,27 @@ HTTPServerMarlin::Initialise()
                                         ,NULL);
   if(retCode != NO_ERROR)
   {
-    ERRORLOG(retCode,"Setting 503 verbosity property");
+    ERRORLOG(retCode,_T("Setting 503 verbosity property"));
   }
   else
   {
-    DETAILLOGV("HTTP 503-Error verbosity set to: %d",verbosity);
+    DETAILLOGV(_T("HTTP 503-Error verbosity set to: %d"),verbosity);
   }
 
-  // STEP 9: Set the hard limits
+  // STEP 10: Set the hard limits
   InitHardLimits();
 
-  // STEP 10: Set the event stream parameters
+  // STEP 11: Set the event stream parameters
   InitEventstreamKeepalive();
 
-  // STEP 11: Init the response headers to send
+  // STEP 12: Init the response headers to send
   InitHeaders();
 
-  // STEP 12: Init the ThreadPool
+  // STEP 13: Init the ThreadPool
   InitThreadPool();
+
+  // STEP 14: Init the HTTPSYS logging
+  InitHTTPLogging();
 
   // We are airborne!
   return (m_initialized = true);
@@ -194,19 +218,18 @@ void
 HTTPServerMarlin::Cleanup()
 {
   ULONG retCode;
-  USES_CONVERSION;
   AutoCritSec lock1(&m_sitesLock);
   AutoCritSec lock2(&m_eventLock);
 
   // Remove all remaining sockets
-  for(auto& it : m_sockets)
+  for(const auto& it : m_sockets)
   {
     delete it.second;
   }
   m_sockets.clear();
 
   // Remove all event streams within the scope of the eventLock
-  for(auto& it : m_eventStreams)
+  for(const auto& it : m_eventStreams)
   {
     delete it.second;
   }
@@ -219,6 +242,17 @@ HTTPServerMarlin::Cleanup()
     it->second->Stop();
   }
 
+  // Try to stop and remove all groups
+  while(!m_urlGroups.empty())
+  {
+    URLGroupMap::iterator it = m_urlGroups.begin();
+    HTTPURLGroup* group = *it;
+    // Gracefully stop
+    group->StopGroup();
+    // And delete memory
+    delete group;
+  }
+
   // Remove all URL's in the sites map
   while(!m_allsites.empty())
   {
@@ -226,32 +260,21 @@ HTTPServerMarlin::Cleanup()
     it->second->StopSite(true);
   }
 
-  // Try to stop and remove all groups
-  for(auto& group : m_urlGroups)
-  {
-    // Gracefully stop
-    group->StopGroup();
-    // And delete memory
-    delete group;
-  }
-  m_urlGroups.clear();
-
   // Close the Request Queue handle.
   // Do this before removing the group
   if(m_requestQueue)
   {
     // using: HttpCloseRequestQueue
     retCode = HttpCloseRequestQueue(m_requestQueue);
-    m_requestQueue = NULL;
-
     if(retCode == NO_ERROR)
     {
-      DETAILLOG1("Closed the request queue");
+      DETAILLOGV(_T("Closed the request queue: %I64X"),m_requestQueue);
     }
     else
     {
-      ERRORLOG(retCode,"Cannot close the request queue");
+      ERRORLOG(retCode,_T("Cannot close the request queue"));
     }
+    m_requestQueue = nullptr;
   }
 
   // Now close the session
@@ -259,32 +282,29 @@ HTTPServerMarlin::Cleanup()
   {
     // Using: HttpCloseServerSession
     retCode = HttpCloseServerSession(m_session);
-    m_session = NULL;
-
     if(retCode == NO_ERROR)
     {
-      DETAILLOG1("Closed the HTTP server session");
+      DETAILLOGV(_T("Closed the HTTP server session: %I64X"),m_session);
     }
     else
     {
-      ERRORLOG(retCode,"Cannot close the HTTP server session");
+      ERRORLOG(retCode,_T("Cannot close the HTTP server session"));
     }
+    m_session = 0L;
   }
-  // Reset error state
-  SetError(NO_ERROR);
 
   if(m_initialized)
   {
     // Call HttpTerminate.
-    retCode = HttpTerminate(HTTP_INITIALIZE_SERVER,NULL);
+    retCode = HttpTerminate(HTTP_INITIALIZE_SERVER,nullptr);
 
     if(retCode == NO_ERROR)
     {
-      DETAILLOG1("HTTP Server terminated OK");
+      DETAILLOG1(_T("HTTP Server terminated OK"));
     }
     else
     {
-      ERRORLOG(retCode,"HTTP Server terminated with error");
+      ERRORLOG(retCode,_T("HTTP Server terminated with error"));
     }
     m_initialized = false;
   }
@@ -292,8 +312,14 @@ HTTPServerMarlin::Cleanup()
   // Closing the logging file
   if(m_log && m_logOwner)
   {
-    delete m_log;
-    m_log = NULL;
+    HANDLE writer = m_log->GetBackgroundWriterThread();
+    LogAnalysis::DeleteLogfile(m_log);
+    m_log = nullptr;
+
+    if(writer)
+    {
+      WaitForSingleObject(writer,10 * CLOCKS_PER_SEC);
+    }
   }
 }
 
@@ -301,24 +327,65 @@ HTTPServerMarlin::Cleanup()
 void
 HTTPServerMarlin::InitHeaders()
 {
-  XString name = m_marlinConfig->GetParameterString("Server","ServerName","");
-  XString type = m_marlinConfig->GetParameterString("Server","TypeServerName","Hide");
+  XString name = m_marlinConfig->GetParameterString(_T("Server"),_T("ServerName"),    _T(""));
+  XString type = m_marlinConfig->GetParameterString(_T("Server"),_T("TypeServerName"),_T("Hide"));
 
   // Server name combo
-  if(type.CompareNoCase("Microsoft")   == 0) m_sendHeader = SendHeader::HTTP_SH_MICROSOFT;
-  if(type.CompareNoCase("Marlin")      == 0) m_sendHeader = SendHeader::HTTP_SH_MARLIN;
-  if(type.CompareNoCase("Application") == 0) m_sendHeader = SendHeader::HTTP_SH_APPLICATION;
-  if(type.CompareNoCase("Configured")  == 0) m_sendHeader = SendHeader::HTTP_SH_WEBCONFIG;
-  if(type.CompareNoCase("Hide")        == 0) m_sendHeader = SendHeader::HTTP_SH_HIDESERVER;
+  if(type.CompareNoCase(_T("Microsoft"))   == 0) m_sendHeader = SendHeader::HTTP_SH_MICROSOFT;
+  if(type.CompareNoCase(_T("Marlin"))      == 0) m_sendHeader = SendHeader::HTTP_SH_MARLIN;
+  if(type.CompareNoCase(_T("Application")) == 0) m_sendHeader = SendHeader::HTTP_SH_APPLICATION;
+  if(type.CompareNoCase(_T("Configured"))  == 0) m_sendHeader = SendHeader::HTTP_SH_WEBCONFIG;
+  if(type.CompareNoCase(_T("Hide"))        == 0) m_sendHeader = SendHeader::HTTP_SH_HIDESERVER;
 
   if(m_sendHeader == SendHeader::HTTP_SH_WEBCONFIG)
   {
     m_configServerName = name;
-    DETAILLOGS("Server sends 'server' response header of type: ",name);
+    DETAILLOGS(_T("Server sends 'server' response header of type: "),name);
   }
   else
   {
-    DETAILLOGS("Server sends 'server' response header: ",type);
+    DETAILLOGS(_T("Server sends 'server' response header: "),type);
+  }
+}
+
+void
+HTTPServerMarlin::InitHTTPLogging()
+{
+  // See if we have logging
+  if(m_logLevel <= HLL_NOLOG)
+  {
+    return;
+  }
+  HTTP_LOGGING_INFO info;
+  memset(&info,0,sizeof(HTTP_LOGGING_INFO));
+  info.Flags.Present = 1;
+  // Log level
+  info.LoggingFlags = (m_logLevel == HLL_ERRORS) ? HTTP_LOGGING_FLAG_LOG_ERRORS_ONLY : HTTP_LOGGING_FLAG_LOG_SUCCESS_ONLY;
+  // Name
+  CStringW name(m_name);
+  info.SoftwareName = name.GetString();
+  info.SoftwareNameLength = (USHORT) (name.GetLength() * 2);
+  // Directory
+  CString file(m_log->GetLogFileName());
+  int pos = file.ReverseFind(_T('\\'));
+  if(pos)
+  {
+    file = file.Left(pos);
+  }
+  CStringW dir(file);
+  info.DirectoryName = dir.GetString();
+  info.DirectoryNameLength = (USHORT) (dir.GetLength() * 2);
+  // Logging type
+  // Currently the only supported format
+  info.Format = HttpLoggingTypeW3C;
+  // Rotating the logfile
+  info.RolloverType = HttpLoggingRolloverDaily;
+
+  // Tel it to the HTTPSYS driver
+  ULONG ret = HttpSetServerSessionProperty(GetServerSessionID(),HTTP_SERVER_PROPERTY::HttpServerLoggingProperty,&info,sizeof(HTTP_LOGGING_INFO));
+  if(ret)
+  {
+    ERRORLOG(ret,_T("Cannot setup the logging for the HTTPSYS driver!"));
   }
 }
 
@@ -342,25 +409,25 @@ HTTPServerMarlin::CreateSite(PrefixType    p_type
   // Changing the input to a name
   switch(p_type)
   {
-    case PrefixType::URLPRE_Strong: chanType = "strong";   break;
-    case PrefixType::URLPRE_Named:  chanType = "named";    break;
-    case PrefixType::URLPRE_FQN:    chanType = "full";     break;
-    case PrefixType::URLPRE_Address:chanType = "address";  break;
-    case PrefixType::URLPRE_Weak:   chanType = "weak";     break;
+    case PrefixType::URLPRE_Strong: chanType = _T("strong");   break;
+    case PrefixType::URLPRE_Named:  chanType = _T("named");    break;
+    case PrefixType::URLPRE_FQN:    chanType = _T("full");     break;
+    case PrefixType::URLPRE_Address:chanType = _T("address");  break;
+    case PrefixType::URLPRE_Weak:   chanType = _T("weak");     break;
   }
 
   // Getting the settings from the Marlin.config, use parameters as defaults
-  chanType      = m_marlinConfig->GetParameterString ("Server","ChannelType",chanType);
-  chanSecure    = m_marlinConfig->GetParameterBoolean("Server","Secure",     p_secure);
-  chanPort      = m_marlinConfig->GetParameterInteger("Server","Port",       p_port);
-  chanBase      = m_marlinConfig->GetParameterString ("Server","BaseURL",    p_baseURL);
+  chanType      = m_marlinConfig->GetParameterString (_T("Server"),_T("ChannelType"),chanType);
+  chanSecure    = m_marlinConfig->GetParameterBoolean(_T("Server"),_T("Secure"),     p_secure);
+  chanPort      = m_marlinConfig->GetParameterInteger(_T("Server"),_T("Port"),       p_port);
+  chanBase      = m_marlinConfig->GetParameterString (_T("Server"),_T("BaseURL"),    p_baseURL);
 
   // Recalculate the type
-       if(chanType.CompareNoCase("strong")  == 0) p_type = PrefixType::URLPRE_Strong;
-  else if(chanType.CompareNoCase("named")   == 0) p_type = PrefixType::URLPRE_Named;
-  else if(chanType.CompareNoCase("full")    == 0) p_type = PrefixType::URLPRE_FQN;
-  else if(chanType.CompareNoCase("address") == 0) p_type = PrefixType::URLPRE_Address;
-  else if(chanType.CompareNoCase("weak")    == 0) p_type = PrefixType::URLPRE_Weak;
+       if(chanType.CompareNoCase(_T("strong"))  == 0) p_type = PrefixType::URLPRE_Strong;
+  else if(chanType.CompareNoCase(_T("named"))   == 0) p_type = PrefixType::URLPRE_Named;
+  else if(chanType.CompareNoCase(_T("full"))    == 0) p_type = PrefixType::URLPRE_FQN;
+  else if(chanType.CompareNoCase(_T("address")) == 0) p_type = PrefixType::URLPRE_Address;
+  else if(chanType.CompareNoCase(_T("weak"))    == 0) p_type = PrefixType::URLPRE_Weak;
 
   // Only ports out of IANA/IETF range permitted!
   if(chanPort >= 1024 || 
@@ -390,10 +457,11 @@ HTTPServerMarlin::CreateSite(PrefixType    p_type
       {
         // No luck: No main site to register against
         XString message;
-        message.Format("Tried to register a sub-site, without a main-site: %s",p_baseURL.GetString());
+        message.Format(_T("Tried to register a sub-site, without a main-site: %s"),p_baseURL.GetString());
         ERRORLOG(ERROR_NOT_FOUND,message);
         return nullptr;
       }
+      mainSite->SetHasSubSites(true);
     }
     // Create and register a URL
     // Remember URL Prefix strings, and create the site
@@ -428,17 +496,15 @@ HTTPServerMarlin::DeleteSite(int p_port,XString p_baseURL,bool p_force /*=false*
     HTTPSite* site = it->second;
 
     // See if other sites are dependent on this one
-    if(p_force == false && site->GetIsSubsite() == false)
+    if(site->GetHasSubSites())
     {
-      // Walk all sites, to see if subsites still dependent on this main site
+      // Walk all sites, to see if sub-sites still dependent on this main site
       for(SiteMap::iterator fit = m_allsites.begin(); fit != m_allsites.end(); ++fit)
       {
         if(fit->second->GetMainSite() == site)
         {
-          // Cannot delete this site, other sites are dependent on this one
-          ERRORLOG(ERROR_ACCESS_DENIED,"Cannot remove site. Sub-sites still dependent on: " + p_baseURL);
-          m_counter.Stop();
-          return false;
+          fit->second->StopSite(true);
+          fit = m_allsites.begin();
         }
       }
     }
@@ -476,7 +542,7 @@ HTTPServerMarlin::FindUrlGroup(XString p_authName
        group->GetAuthenticationRealm()     == p_realm      &&
        group->GetAuthenticationDomain()    == p_domain)
     {
-      DETAILLOGS("URL Group recycled for authentication scheme: ",p_authName);
+      DETAILLOGS(_T("URL Group recycled for authentication scheme: "),p_authName);
       return group;
     }
   }
@@ -488,12 +554,11 @@ HTTPServerMarlin::FindUrlGroup(XString p_authName
   if(group->StartGroup())
   {
     m_urlGroups.push_back(group);
-    int number = (int)m_urlGroups.size();
-    DETAILLOGV("Created URL group [%d] for authentication: %s",number,p_authName.GetString());
+    DETAILLOGV(_T("Created URL group [%I64X] for authentication: %s"),group->GetUrlGroupID(),p_authName.GetString());
   }
   else
   {
-    ERRORLOG(ERROR_CANNOT_MAKE,"URL Group ***NOT*** created for authentication: " + p_authName);
+    ERRORLOG(ERROR_CANNOT_MAKE,_T("URL Group ***NOT*** created for authentication: ") + p_authName);
     delete group;
     group = nullptr;
   }
@@ -502,12 +567,21 @@ HTTPServerMarlin::FindUrlGroup(XString p_authName
 
 // Remove an URLGroup. Called by HTTPURLGroup itself
 void
-HTTPServerMarlin::RemoveURLGroup(HTTPURLGroup* p_group)
+HTTPServerMarlin::RemoveURLGroup(const HTTPURLGroup* p_group)
 {
   for(URLGroupMap::iterator it = m_urlGroups.begin(); it != m_urlGroups.end(); ++it)
   {
     if(p_group == *it)
     {
+      ULONG error = HttpCloseUrlGroup(p_group->GetUrlGroupID());
+      if(error == NO_ERROR)
+      {
+        DETAILLOGV(_T("Closed the URL-Group: %I64X"),p_group->GetUrlGroupID());
+      }
+      else
+      {
+        ERRORLOG(error,_T("Cannot remove URL group from HTTPSYS driver!"));
+      }
       m_urlGroups.erase(it);
       return;
     }
@@ -534,51 +608,67 @@ StartHTTPRequest(void* p_argument)
 /*static*/ bool
 CancelHTTPRequest(void* p_argument,bool p_stayInThePool,bool p_forcedAbort)
 {
-  // Check if we have an OVERLAPPED argument
-  if(p_argument == INVALID_HANDLE_VALUE)
+  // Check that we have an argument
+  if(p_argument == NULL)
   {
     return p_stayInThePool;
   }
-
+  // Getting the outstanding I/O registration
   OutstandingIO* outstanding = reinterpret_cast<OutstandingIO*>(p_argument);
-  if(outstanding)
+
+  // Check if we have an OVERLAPPED argument (could be already canceled)
+  if(outstanding == INVALID_HANDLE_VALUE)
   {
-    try
+    return p_stayInThePool;
+  }
+  try
+  {
+    DWORD status = (DWORD)(outstanding->Internal & 0x0FFFF);
+    if (status == 0 && outstanding->Offset == 0 && outstanding->OffsetHigh == 0)
     {
-      DWORD status = (DWORD)(outstanding->Internal & 0x0FFFF);
-      if (status == 0 && outstanding->Offset == 0 && outstanding->OffsetHigh == 0)
+      HTTPRequest* request = reinterpret_cast<HTTPRequest*>(outstanding->m_request);
+      if (request && request->m_ident == HTTPREQUEST_IDENT)
       {
-        HTTPRequest* request = reinterpret_cast<HTTPRequest*>(outstanding->m_request);
-        if (request)
+        // If request is used for event/websocket, make a new one for this thread
+        if(request->GetLongTerm())
         {
-          if ((!request->GetIsActive() && !p_stayInThePool) || p_forcedAbort)
+          // Start new request and keep thread
+          HTTPServer* server = request->GetHTTPServer();
+          if(server)
           {
-            HTTPServer* server = request->GetHTTPServer();
-            if (server)
-            {
-              server->UnRegisterHTTPRequest(request);
-            }
-            delete request;
-            return false;
+            StartHTTPRequest(server);
           }
-          else if (p_stayInThePool && !request->GetIsActive())
+          return true;
+        }
+        if ((!request->GetIsActive() && !p_stayInThePool) || p_forcedAbort)
+        {
+          HTTPServer* server = request->GetHTTPServer();
+          if (server)
           {
-            // Start a new request, in case we completed the previous one
-            request->StartRequest();
-            return true;
+            server->UnRegisterHTTPRequest(request);
           }
-          else if (request->GetIsActive())
-          {
-            // Still processing, we must stay in the pool
-            return true;
-          }
+          // Remove request and thread to stay balanced
+          delete request;
+          return false;
+        }
+        else if (p_stayInThePool && !request->GetIsActive())
+        {
+          // Start a new request, in case we completed the previous one
+          // We stay in the pool, so requests and threads are balanced
+          request->StartRequest();
+          return true;
+        }
+        else if(request->GetIsActive())
+        {
+          // Still processing, we must stay in the pool
+          return true;
         }
       }
     }
-    catch(StdException& ex)
-    {
-      SvcReportErrorEvent(0,true,__FUNCTION__,"Handle already invalid: %s",ex.GetErrorMessage().GetString());
-    }
+  }
+  catch(StdException& ex)
+  {
+    SvcReportErrorEvent(0,true,_T(__FUNCTION__),_T("Handle already invalid: %s"),ex.GetErrorMessage().GetString());
   }
   return p_stayInThePool;
 }
@@ -591,12 +681,12 @@ HTTPServerMarlin::Run()
   Initialise();
 
   // See if we are in a state to receive requests
-  if(GetLastError() || !m_initialized)
+  if(!m_initialized)
   {
-    ERRORLOG(ERROR_INVALID_PARAMETER,"RunHTTPServer called too early");
+    ERRORLOG(ERROR_INVALID_PARAMETER,_T("RunHTTPServer called too early"));
     return;
   }
-  DETAILLOG1("HTTPServer initialised and ready to go!");
+  DETAILLOG1(_T("HTTPServer initialised and ready to go!"));
 
   // Check if all sites were properly started
   // Catches programmers who forget to call HTTPSite::StartSite()
@@ -604,17 +694,17 @@ HTTPServerMarlin::Run()
 
   // Registering the init for the threadpool
   // This get new threads started on a HTTPRequest
-  if(m_pool.SetThreadInitFunction(StartHTTPRequest,CancelHTTPRequest,(void*)this))
+  if(m_pool.SetThreadInitFunction(StartHTTPRequest,CancelHTTPRequest,reinterpret_cast<void*>(this)))
   {
-    DETAILLOG1("HTTPServer registered for the threadpool init loop");
+    DETAILLOG1(_T("HTTPServer registered for the threadpool init loop"));
   }
   else
   {
-    ERRORLOG(ERROR_INVALID_PARAMETER,"Threadpool cannot service our request queue!");
+    ERRORLOG(ERROR_INVALID_PARAMETER,_T("Threadpool cannot service our request queue!"));
   }
 
   // STARTED OUR MAIN LOOP
-  DETAILLOG1("HTTPServer entering main loop");
+  DETAILLOG1(_T("HTTPServer entering main loop"));
   m_running = true;
 
   // Starting the pool will trigger the starting of the reading threads
@@ -632,7 +722,7 @@ void
 HTTPServerMarlin::StopServer()
 {
   AutoCritSec lock(&m_eventLock);
-  DETAILLOG1("Received a StopServer request");
+  DETAILLOG1(_T("Received a StopServer request"));
 
   // See if we are running at all
   if(m_running == false)
@@ -651,13 +741,13 @@ HTTPServerMarlin::StopServer()
   for(auto& it : m_eventStreams)
   {
     // SEND OnClose event
-    ServerEvent* event = new ServerEvent("close");
+    ServerEvent* event = new ServerEvent(_T("close"));
     SendEvent(it.second->m_port,it.second->m_baseURL,event);
   }
   // Try to remove all event streams
   while(!m_eventStreams.empty())
   {
-    EventStream* stream = m_eventStreams.begin()->second;
+    const EventStream* stream = m_eventStreams.begin()->second;
     CloseEventStream(stream);
   }
 
@@ -666,7 +756,7 @@ HTTPServerMarlin::StopServer()
   {
     // Explicitly pulse the event heartbeat monitor
     // this abandons the monitor in one go!
-    DETAILLOG1("Abandon the server-push-events heartbeat monitor");
+    DETAILLOG1(_T("Abandon the server-push-events heartbeat monitor"));
     SetEvent(m_eventEvent);
   }
 
@@ -678,22 +768,22 @@ HTTPServerMarlin::StopServer()
   if(result == NO_ERROR || result == ERROR_INVALID_FUNCTION)
   {
     // canceled, or no I/O to be canceled
-    DETAILLOG1("HTTP Request queue cancelled all outstanding async I/O");
+    DETAILLOG1(_T("HTTP Request queue cancelled all outstanding async I/O"));
   }
   else
   {
-    ERRORLOG(result,"Cannot cancel outstanding async I/O for the request queue");
+    ERRORLOG(result,_T("Cannot cancel outstanding async I/O for the request queue"));
   }
 
   // Shutdown the request queue canceling everything, and freeing the threads
   result = HttpShutdownRequestQueue(m_requestQueue);
   if(result == NO_ERROR)
   {
-    DETAILLOG1("HTTP Request queue shutdown issued");
+    DETAILLOG1(_T("HTTP Request queue shutdown issued"));
   }
   else
   {
-    ERRORLOG(result,"Cannot shutdown the HTTP request queue");
+    ERRORLOG(result,_T("Cannot shutdown the HTTP request queue"));
   }
   m_requestQueue = NULL;
 
@@ -710,7 +800,10 @@ HTTPServerMarlin::CancelRequestStream(HTTP_OPAQUE_ID p_response,bool /*p_reset*/
   // Cancel the outstanding request from the request queue
   if(request)
   {
-    request->CancelRequest();
+    request->CancelRequestStream();
+
+    // Long running request may now be deleted
+    UnRegisterHTTPRequest(request);
   }
 }
 
@@ -718,7 +811,13 @@ HTTPServerMarlin::CancelRequestStream(HTTP_OPAQUE_ID p_response,bool /*p_reset*/
 WebSocket*
 HTTPServerMarlin::CreateWebSocket(XString p_uri)
 {
-  return new WebSocketServer(p_uri);
+  WebSocketServer* socket = new WebSocketServer(p_uri);
+
+  // Connect the server logfile, and logging level
+  socket->SetLogfile(m_log);
+  socket->SetLogLevel(m_logLevel);
+
+  return socket;
 }
 
 // Receive the WebSocket stream and pass on the the WebSocket
@@ -732,19 +831,74 @@ HTTPServerMarlin::ReceiveWebSocket(WebSocket* /*p_socket*/,HTTP_OPAQUE_ID /*p_re
 }
 
 bool       
-HTTPServerMarlin::ReceiveIncomingRequest(HTTPMessage* /*p_message*/)
+HTTPServerMarlin::ReceiveIncomingRequest(HTTPMessage* /*p_message*/,Encoding /*p_encoding*/)
 {
-  ASSERT(false);
-  ERRORLOG(ERROR_INVALID_PARAMETER,"ReceiveIncomingRequest in HTTPServerMarlin: Should never come to here!!");
+  assert(false);
+  ERRORLOG(ERROR_INVALID_PARAMETER,_T("ReceiveIncomingRequest in HTTPServerMarlin: Should never come to here!!"));
   return false;
 }
 
 // Sending a response as a chunk
 void
-HTTPServerMarlin::SendAsChunk(HTTPMessage* p_message, bool /*p_final*/ /*= false*/)
+HTTPServerMarlin::SendAsChunk(HTTPMessage* p_message, bool p_final /*= false*/)
 {
-  ERRORLOG(ERROR_IMPLEMENTATION_LIMIT,"To be implemented");
-  SendResponse(p_message);
+  // Check if multi-part buffer or file
+  FileBuffer* buffer = p_message->GetFileBuffer();
+  if(!buffer->GetFileName().IsEmpty())
+  {
+    ERRORLOG(ERROR_INVALID_PARAMETER, _T("Send as chunk cannot send a file!"));
+    return;
+  }
+  // Chunk encode the file buffer
+  if(!buffer->ChunkedEncoding(p_final))
+  {
+    ERRORLOG(ERROR_NOT_ENOUGH_MEMORY, _T("Cannot chunk-encode the message for transfer-encoding!"));
+    return;
+  }
+
+  // If we want to send a (g)zipped buffer, that should have been done already by now
+  p_message->SetAcceptEncoding(_T(""));
+  // Add chunked indicator
+  p_message->AddHeader(HttpHeaderTransferEncoding,_T("chunked"));
+
+  // Get the chunk number (first->next)
+  unsigned chunk = p_message->GetChunkNumber();
+  p_message->SetChunkNumber(++chunk);
+  DETAILLOGV(_T("Transfer-encoding [Chunked] Sending chunk [%d]"), chunk);
+
+  HTTPRequest* request = reinterpret_cast<HTTPRequest*>(p_message->GetRequestHandle());
+  if(!request)
+  {
+    ERRORLOG(ERROR_INVALID_PARAMETER,_T("Cannot chunk-encode the message for transfer-encoding! Message already handled!"));
+    return;
+  }
+
+  if(chunk == 1)
+  {
+    // Send the first chunk, and wait for it to be sent. (Blocking I/O)
+    HANDLE chunkEvent = ::CreateEvent(NULL,TRUE,FALSE,nullptr);
+    request->SetChunkEvent(chunkEvent);
+
+    // Send the response headers and first body part
+    SendResponse(p_message);
+
+    // Wait for response and first body to be sent
+    WaitForSingleObject(chunkEvent,INFINITE);
+    CloseHandle(chunkEvent);
+  }
+  else
+  {
+    // Send next chunks in blocking I/O mode directly
+    BYTE*  bytes  = nullptr;
+    size_t length = 0;
+    buffer->GetBuffer(bytes,length);
+    request->SendResponseStream(bytes,length,!p_final);
+    if(p_final)
+    {
+      // Do **NOT** send an another chunk
+      p_message->SetHasBeenAnswered();
+    }
+  }
 }
 
 // Sending response for an incoming message
@@ -756,8 +910,10 @@ HTTPServerMarlin::SendResponse(HTTPMessage* p_message)
   {
     // Reset the request handle here. The response will continue async from here
     // so the next handlers cannot find a request handle to answer to
-    p_message->SetHasBeenAnswered();
-
+    if(p_message->GetChunkNumber() == 0)
+    {
+      p_message->SetHasBeenAnswered();
+    }
     // Go send the response ASYNC
     request->StartResponse(p_message);
   }
@@ -785,19 +941,18 @@ HTTPServerMarlin::InitEventStream(EventStream& p_stream)
 
 // Sending a chunk to an event stream
 bool
-HTTPServerMarlin::SendResponseEventBuffer(HTTP_OPAQUE_ID p_requestID
+HTTPServerMarlin::SendResponseEventBuffer(HTTP_OPAQUE_ID    p_requestID
                                          ,CRITICAL_SECTION* p_lock
-                                         ,const char*    p_buffer
-                                         ,size_t         p_length
-                                         ,bool           p_continue /*=true*/)
+                                         ,BYTE**            p_buffer
+                                         ,size_t            p_length
+                                         ,bool              p_continue /*=true*/)
 {
   AutoCritSec lockme(p_lock);
 
   HTTPRequest* request = reinterpret_cast<HTTPRequest*>(p_requestID);
   if(request)
   {
-    request->SendResponseStream(p_buffer,p_length,p_continue);
-    return true;
+    return request->SendResponseStream(*p_buffer,p_length,p_continue);
   }
   return false;
 }
@@ -806,13 +961,12 @@ HTTPServerMarlin::SendResponseEventBuffer(HTTP_OPAQUE_ID p_requestID
 bool
 HTTPServerMarlin::FlushSocket(HTTP_OPAQUE_ID p_request,XString p_prefix)
 {
-  USES_CONVERSION;
-  wstring prefix = A2W(p_prefix);
+  wstring prefix = StringToWString(p_prefix);
   DWORD result = HttpFlushResponseCache(GetRequestQueue(),prefix.c_str(),HTTP_FLUSH_RESPONSE_FLAG_RECURSIVE,nullptr);
 
   if(result != NO_ERROR)
   {
-    ERRORLOG(GetLastError(),"Flushing HTTP request for WebSocket failed!");
+    ERRORLOG(result,_T("Flushing HTTP request for WebSocket failed!"));
     CancelRequestStream(p_request);
     return false;
   }

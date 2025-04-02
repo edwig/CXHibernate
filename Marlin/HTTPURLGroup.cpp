@@ -4,7 +4,7 @@
 //
 // Marlin Server: Internet server/client
 // 
-// Copyright (c) 2014-2022 ir. W.E. Huisman
+// Copyright (c) 2014-2024 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -30,18 +30,20 @@
 #include "HTTPSite.h"
 #include "LogAnalysis.h"
 
+#ifdef _AFX
 #ifdef _DEBUG
 #define new DEBUG_NEW
 #undef THIS_FILE
 static char THIS_FILE[] = __FILE__;
 #endif
+#endif
 
 // Logging via the server
-#define DETAILLOG(text,...)       if(m_server->GetLogfile()) m_server->GetLogfile()->AnalysisLog(__FUNCTION__,LogType::LOG_INFO,true,text,__VA_ARGS__)
+#define DETAILLOG(text,...)       if(m_server->GetLogfile()) m_server->GetLogfile()->AnalysisLog(_T(__FUNCTION__),LogType::LOG_INFO,true,text,__VA_ARGS__)
 #define ERRORLOG(code,text)       if(m_server->GetLogfile())\
                                   {\
-                                    m_server->GetLogfile()->AnalysisLog(__FUNCTION__,LogType::LOG_ERROR,false,text);\
-                                    m_server->GetLogfile()->AnalysisLog(__FUNCTION__,LogType::LOG_ERROR,true, "Error code: %d",code);\
+                                    m_server->GetLogfile()->AnalysisLog(_T(__FUNCTION__),LogType::LOG_ERROR,false,text);\
+                                    m_server->GetLogfile()->AnalysisLog(_T(__FUNCTION__),LogType::LOG_ERROR,true, _T("Error code: %d"),code);\
                                   }
 
 HTTPURLGroup::HTTPURLGroup(HTTPServerMarlin* p_server
@@ -78,10 +80,10 @@ HTTPURLGroup::StartGroup()
   ULONG retCode = HttpCreateUrlGroup(m_server->GetServerSessionID(),&m_group,0);
   if(retCode != NO_ERROR)
   {
-    ERRORLOG(retCode,"CreateUrlGroup");
+    ERRORLOG(retCode,_T("CreateUrlGroup"));
     return false;
   }
-  DETAILLOG("URL-Group ID created: %I64X",m_group);
+  DETAILLOG(_T("URL-Group ID created: %I64X"),m_group);
 
 
   // Bind URLGROUP to request queue
@@ -96,15 +98,14 @@ HTTPURLGroup::StartGroup()
                                    ,sizeof(HTTP_BINDING_INFO));
   if(retCode != NO_ERROR)
   {
-    ERRORLOG(retCode,"Bind UrlGroup to request queue");
+    ERRORLOG(retCode,_T("Bind UrlGroup to request queue"));
     return false;
   }
-  DETAILLOG("Bound request queue to URL-Group");
+  DETAILLOG(_T("Bound request queue to URL-Group"));
 
   // Get realm and domain
-  USES_CONVERSION;
-  wstring wrealm  = A2W(m_realm);
-  wstring wdomain = A2W(m_domain);
+  wstring wrealm  = StringToWString(m_realm);
+  wstring wdomain = StringToWString(m_domain);
 
   HTTP_SERVER_AUTHENTICATION_INFO authInfo;
   memset(&authInfo,0,sizeof(authInfo));
@@ -116,15 +117,15 @@ HTTPURLGroup::StartGroup()
   authInfo.DisableNTLMCredentialCaching = !m_ntlmCache;
   if(m_authScheme & HTTP_AUTH_ENABLE_DIGEST)
   {
-    authInfo.DigestParams.DomainName       = (PWSTR)wdomain .c_str();
-    authInfo.DigestParams.DomainNameLength = (USHORT)wdomain.size() * 2;
-    authInfo.DigestParams.Realm            = (PWSTR)wrealm  .c_str();
-    authInfo.DigestParams.RealmLength      = (USHORT)wrealm .size() * 2;
+    authInfo.DigestParams.DomainName       = reinterpret_cast<PWSTR>(const_cast<wchar_t*>(wdomain.c_str()));
+    authInfo.DigestParams.DomainNameLength = static_cast<USHORT>(wdomain.size() * 2);
+    authInfo.DigestParams.Realm            = reinterpret_cast<PWSTR>(const_cast<wchar_t*>(wrealm .c_str()));
+    authInfo.DigestParams.RealmLength      = static_cast<USHORT>(wrealm .size() * 2);
   }
   if(m_authScheme & HTTP_AUTH_ENABLE_BASIC)
   {
-    authInfo.BasicParams.Realm       = (PWSTR)wrealm.c_str();
-    authInfo.BasicParams.RealmLength = (USHORT)wrealm.size() * 2;
+    authInfo.BasicParams.Realm       = reinterpret_cast<PWSTR>(const_cast<wchar_t*>(wrealm.c_str()));
+    authInfo.BasicParams.RealmLength = static_cast<USHORT>(wrealm.size() * 2);
   }
 
   // See which we must use
@@ -138,21 +139,21 @@ HTTPURLGroup::StartGroup()
   retCode = HttpSetUrlGroupProperty(m_group,authenticate,&authInfo,sizeof(authInfo));
   if(retCode != NO_ERROR)
   {
-    ERRORLOG(retCode,"Cannot set the authentication properties");
+    ERRORLOG(retCode,_T("Cannot set the authentication properties"));
     return false;
   }
-  DETAILLOG("Authentication scheme set to: %s",m_authName.GetString());
+  DETAILLOG(_T("Authentication scheme set to: %s"),m_authName.GetString());
   if(m_authScheme & HTTP_AUTH_ENABLE_NTLM)
   {
-    DETAILLOG("Authentication NTLM cache is: %s",m_ntlmCache ? "on" : "off");
+    DETAILLOG(_T("Authentication NTLM cache is: %s"),m_ntlmCache ? _T("on") : _T("off"));
   }
   if(m_authScheme && (HTTP_AUTH_ENABLE_DIGEST | HTTP_AUTH_ENABLE_BASIC))
   {
-    DETAILLOG("Authentication realm is     : %s",m_realm.GetString());
+    DETAILLOG(_T("Authentication realm is     : %s"),m_realm.GetString());
   }
   if(m_authScheme && HTTP_AUTH_ENABLE_DIGEST)
   {
-    DETAILLOG("Authentication domain is    : %s",m_domain.GetString());
+    DETAILLOG(_T("Authentication domain is    : %s"),m_domain.GetString());
   }
 
   // Reached the end.
@@ -165,25 +166,19 @@ HTTPURLGroup::StopGroup()
   // Close URL group
   if(m_group)
   {
-    // If not all sites stopped. Do not stop the group
-    if(!m_sites.empty())
+    // If not all sites stopped, stop them now
+    // as the group can no longer service the URL's
+    while(!m_sites.empty())
     {
-      ERRORLOG(ERROR_NOT_EMPTY,"URL GROUP not empty. Still running sites");
-      return;
+      UrlSiteMap::iterator it = m_sites.begin();
+      HTTPSite* site = it->second;
+      site->StopSite(true);
     }
+    // Remove from server registration and driver
+    m_server->RemoveURLGroup(this);
 
-    // Closing the URL group
-    ULONG retCode = HttpCloseUrlGroup(m_group);
-    if(retCode == NO_ERROR)
-    {
-      DETAILLOG("Closed the URL-Group: %I64X",m_group);
-    }
-    else
-    {
-      ERRORLOG(retCode,"Cannot close the URL-group");
-    }
     // Reset the group
-    m_group = NULL;
+    m_group     = NULL;
     m_isStarted = false;
   }
 }
@@ -196,7 +191,7 @@ HTTPURLGroup::RegisterSite(HTTPSite* p_site)
   if(it != m_sites.end())
   {
     // Already registered
-    ERRORLOG(ERROR_ALREADY_ASSIGNED,"Cannot register site in URL-Group: " + p_site->GetSite());
+    ERRORLOG(ERROR_ALREADY_ASSIGNED,_T("Cannot register site in URL-Group: ") + p_site->GetSite());
     return;
   }
   // Register this site
@@ -214,10 +209,11 @@ HTTPURLGroup::UnRegisterSite(HTTPSite* p_site)
   }
 
   // After all sites are removed, clean up the whole group
-  if(m_sites.empty())
-  {
-    m_server->RemoveURLGroup(this);
-    // Deleting the group will call StopGroup()
-    delete this;
-  }
+//   if(m_sites.empty() && m_group)
+//   {
+//     // Remove from server registration and driver
+//     m_server->RemoveURLGroup(this);
+//     // Deleting the group will call StopGroup()
+//     delete this;
+//   }
 }

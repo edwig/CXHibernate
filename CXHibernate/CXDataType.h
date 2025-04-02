@@ -38,8 +38,8 @@ using ubigint = unsigned __int64;
 // Definition array of all CX data types
 typedef struct _cxtypes
 {
-  const char* m_name;
-  const int   m_type;
+  LPCTSTR   m_name;
+  const int m_type;
 }
 CXType;
 

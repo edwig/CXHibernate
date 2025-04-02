@@ -2,7 +2,7 @@
 //
 // SourceFile: XMLMessage.h
 //
-// Copyright (c) 2014-2022 ir. W.E. Huisman
+// Copyright (c) 2014-2025 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -93,8 +93,8 @@ class XMLElement
 {
 public:
   XMLElement();
-  XMLElement(XMLElement* p_parent);
-  XMLElement(const XMLElement& p_source);
+  explicit XMLElement(XMLElement* p_parent);
+  explicit XMLElement(const XMLElement& p_source);
 
  ~XMLElement();
   void            Reset();
@@ -150,7 +150,7 @@ public:
   // General XTOR
   XMLMessage();
   // XTOR from another message
-  XMLMessage(XMLMessage* p_orig);
+  explicit XMLMessage(XMLMessage* p_orig);
   // DTOR
   virtual ~XMLMessage();
 
@@ -174,46 +174,45 @@ public:
   // Print the XML as a JSON object
   virtual XString PrintJson(bool p_attributes);
   // Print the elements stack as a JSON string
-  virtual XString PrintElementsJson(XMLElement*     p_element
-                                   ,bool            p_attributes
-                                   ,StringEncoding  p_encoding = StringEncoding::ENC_UTF8
-                                   ,int             p_level    = 0);
+  virtual XString PrintElementsJson(XMLElement*  p_element
+                                   ,bool         p_attributes
+                                   ,int          p_level = 0);
 
   // FILE OPERATIONS
 
   // Load from file
   virtual bool    LoadFile(const XString& p_fileName);
-  virtual bool    LoadFile(const XString& p_fileName, StringEncoding p_encoding);
+  virtual bool    LoadFile(const XString& p_fileName,Encoding p_encoding);
   // Save to file
-  virtual bool    SaveFile(const XString& p_fileName,bool p_withBom = false);
-  virtual bool    SaveFile(const XString& p_fileName,StringEncoding p_encoding,bool p_withBom = false);
+  virtual bool    SaveFile(const XString& p_fileName);
+  virtual bool    SaveFile(const XString& p_fileName,Encoding p_encoding);
 
   // SETTERS
   // Set the output encoding of the message
-  void            SetEncoding(StringEncoding p_encoding);
+  Encoding        SetEncoding(Encoding p_encoding);
+  void            SetSendBOM(bool p_bom);
   // Set the name of the root-node
   void            SetRootNodeName(XString p_name);
   // Set condensed format (no spaces or newlines)
   void            SetCondensed(bool p_condens);
   void            SetPrintRestrictions(bool p_restrict);
-  // Set sending in Unicode
-  void            SetSendUnicode(bool p_unicode);
-  void            SetSendBOM(bool p_bom);
   // Stylesheet info
   void            SetStylesheetType(XString p_type);
   void            SetStylesheet(XString p_sheet);
+  // Standalone XML
+  void            SetStandalone(bool p_alone);
   // Setting an element
-  XMLElement*     SetElement(XString p_name, XString&    p_value);
-  XMLElement*     SetElement(XString p_name, const char* p_value);
-  XMLElement*     SetElement(XString p_name, int         p_value);
-  XMLElement*     SetElement(XString p_name, bool        p_value);
-  XMLElement*     SetElement(XString p_name, double      p_value);
+  XMLElement*     SetElement(XString p_name, const XString& p_value);
+  XMLElement*     SetElement(XString p_name, LPCTSTR        p_value);
+  XMLElement*     SetElement(XString p_name, int            p_value);
+  XMLElement*     SetElement(XString p_name, bool           p_value);
+  XMLElement*     SetElement(XString p_name, double         p_value);
 
-  XMLElement*     SetElement(XMLElement* p_base, XString p_name, XString&    p_value);
-  XMLElement*     SetElement(XMLElement* p_base, XString p_name, const char* p_value);
-  XMLElement*     SetElement(XMLElement* p_base, XString p_name, int         p_value);
-  XMLElement*     SetElement(XMLElement* p_base, XString p_name, bool        p_value);
-  XMLElement*     SetElement(XMLElement* p_base, XString p_name, double      p_value);
+  XMLElement*     SetElement(XMLElement* p_base, XString p_name, const XString& p_value);
+  XMLElement*     SetElement(XMLElement* p_base, XString p_name, LPCTSTR        p_value);
+  XMLElement*     SetElement(XMLElement* p_base, XString p_name, int            p_value);
+  XMLElement*     SetElement(XMLElement* p_base, XString p_name, bool           p_value);
+  XMLElement*     SetElement(XMLElement* p_base, XString p_name, double         p_value);
 
   // Special setters for elements
   void            SetElementValue(XMLElement* p_elem, XmlDataType p_type, XString p_value);
@@ -223,23 +222,22 @@ public:
   // General base setting of an element
   XMLElement*     SetElement(XMLElement* p_base, XString p_name, XmlDataType p_type, XString p_value, bool p_front = false);
   // General add an element (always adds, so multiple parameters of same name can be added)
-  XMLElement*     AddElement(XMLElement* p_base, XString p_name, XmlDataType p_type, XString p_value, bool p_front = false);
+  XMLElement*     AddElement(XMLElement* p_base, XString p_name, XmlDataType p_type = XDT_String, XString p_value = _T(""), bool p_front = false);
   // Set attribute of an element
-  XMLAttribute*   SetAttribute(XMLElement* p_elem, XString p_name, XString&    p_value);
-  XMLAttribute*   SetAttribute(XMLElement* p_elem, XString p_name, const char* p_value);
-  XMLAttribute*   SetAttribute(XMLElement* p_elem, XString p_name, int         p_value);
-  XMLAttribute*   SetAttribute(XMLElement* p_elem, XString p_name, bool        p_value);
-  XMLAttribute*   SetAttribute(XMLElement* p_elem, XString p_name, double      p_value);
+  XMLAttribute*   SetAttribute(XMLElement* p_elem, XString p_name, const XString& p_value);
+  XMLAttribute*   SetAttribute(XMLElement* p_elem, XString p_name, LPCTSTR        p_value);
+  XMLAttribute*   SetAttribute(XMLElement* p_elem, XString p_name, int            p_value);
+  XMLAttribute*   SetAttribute(XMLElement* p_elem, XString p_name, bool           p_value);
+  XMLAttribute*   SetAttribute(XMLElement* p_elem, XString p_name, double         p_value);
 
   // GETTERS
   XString         GetRootNodeName();
   XmlError        GetInternalError();
   XString         GetInternalErrorString();
-  StringEncoding  GetEncoding();
+  Encoding        GetEncoding() const;
   bool            GetCondensed();
   bool            GetPrintRestrictions();
-  bool            GetSendUnicode();
-  bool            GetSendBOM();
+  bool            GetSendBOM() const;
   XMLElement*     GetRoot();
   void            SetRoot(XMLElement* p_root);
   XString         GetElement(XString p_name);
@@ -265,8 +263,8 @@ public:
   XMLElement*     FindElementWithAttribute(XMLElement* p_base
                                           ,XString     p_elementName
                                           ,XString     p_attribName
-                                          ,XString     p_attribValue = ""
-                                          ,bool        p_recurse = true);
+                                          ,XString     p_attribValue = _T("")
+                                          ,bool        p_recurse     = true);
   XMLAttribute*   FindAttribute(XMLElement* p_elem, XString p_attribName);
 
   // EXTRA OPERATIONS on element nodes
@@ -299,12 +297,11 @@ protected:
   friend          XMLParserImport;
   // The one and only rootnode
   XMLElement*     m_root            { nullptr };              // All elements, from the root up
-  StringEncoding  m_encoding        { StringEncoding::ENC_UTF8 };// Encoding scheme
-  XString         m_version         { "1.0" };                // XML Version, most likely 1.0
+  Encoding        m_encoding        { Encoding::UTF8 };       // Encoding scheme
+  XString         m_version         { _T("1.0") };            // XML Version, most likely 1.0
   XString         m_standalone;                               // Stand alone from DTD or XSD's
-  bool            m_condensed       { false } ;               // Condensed output format (no spaces/newlines)
+  bool            m_condensed       { false };                // Condensed output format (no spaces/newlines)
   bool            m_whitespace      { false };                // Collapse whitespace
-  bool            m_sendUnicode     { false };                // Construct UTF-16 on sending out
   bool            m_sendBOM         { false };                // Prepend Byte-Order-Mark before message (UTF-8 / UTF-16)
   bool            m_printRestiction { false };                // Print restrictions as comment before node
   // Stylesheet info
@@ -355,8 +352,8 @@ XMLMessage::GetRootNodeName()
   return m_root->GetName();
 }
 
-inline StringEncoding
-XMLMessage::GetEncoding()
+inline Encoding
+XMLMessage::GetEncoding() const
 {
   return m_encoding;
 }
@@ -368,13 +365,7 @@ XMLMessage::GetCondensed()
 }
 
 inline bool
-XMLMessage::GetSendUnicode()
-{
-  return m_sendUnicode;
-}
-
-inline bool
-XMLMessage::GetSendBOM()
+XMLMessage::GetSendBOM() const
 {
   return m_sendBOM;
 }

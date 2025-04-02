@@ -28,7 +28,7 @@
 
 typedef struct _modelWord
 {
-  const char* m_name;
+  const TCHAR* m_name;
   const int   m_code;
 }
 CXModelWord;

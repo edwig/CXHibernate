@@ -4,7 +4,7 @@
 //
 // Marlin Server: Internet server/client
 // 
-// Copyright (c) 2014-2022 ir. W.E. Huisman
+// Copyright (c) 2014-2024 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -27,12 +27,14 @@
 //
 #include "stdafx.h"
 #include "SiteHandlerWebSocket.h"
-#include "WebSocket.h"
+#include "WebSocketMain.h"
 
+#ifdef _AFX
 #ifdef _DEBUG
 #define new DEBUG_NEW
 #undef THIS_FILE
 static char THIS_FILE[] = __FILE__;
+#endif
 #endif
 
 // A WebSocket handler is in essence a 'GET' handler
@@ -87,6 +89,7 @@ SiteHandlerWebSocket::Handle(HTTPMessage* p_message)
         // but keep the channel OPEN
         m_site->SendResponse(p_message);
         // Flush socket, so object will be created in IIS and client receives confirmation
+        // For the async-server: the HTTP response cache of the queue will be flushed!
         server->FlushSocket(request,m_site->GetPrefixURL());
 
         // Find the internal structures for the server
@@ -98,28 +101,28 @@ SiteHandlerWebSocket::Handle(HTTPMessage* p_message)
             opened = true;
             // Register the socket at the server, so we can find it
             server->RegisterSocket(socket);
-            SITE_DETAILLOGV("Opened a WebSocket [%s] on [%s]",socket->GetIdentityKey().GetString(),uri.GetString());
+            SITE_DETAILLOGV(_T("Opened a WebSocket [%s] on [%s]"),socket->GetIdentityKey().GetString(),uri.GetString());
           }
           else
           {
-            SITE_ERRORLOG(ERROR_FILE_NOT_FOUND,"Socket listener not started");
+            SITE_ERRORLOG(ERROR_FILE_NOT_FOUND,_T("Socket listener not started"));
           }
         }
         p_message->SetHasBeenAnswered();
       }
       else
       {
-        SITE_ERRORLOG(ERROR_INVALID_FUNCTION,"ServerApp should NOT handle the response message!");
+        SITE_ERRORLOG(ERROR_INVALID_FUNCTION,_T("ServerApp should NOT handle the response message!"));
       }
     }
     else
     {
-      SITE_ERRORLOG(ERROR_INVALID_FUNCTION,"ServerApp could not register the WebSocket!");
+      SITE_ERRORLOG(ERROR_INVALID_FUNCTION,_T("ServerApp could not register the WebSocket!"));
     }
   }
   else
   {
-    SITE_ERRORLOG(ERROR_PROTOCOL_UNREACHABLE,"Site could not accept the WebSocket handshake of the client!");
+    SITE_ERRORLOG(ERROR_PROTOCOL_UNREACHABLE,_T("Site could not accept the WebSocket handshake of the client!"));
   }
 
   // If we did not open our WebSocket, remove it from memory
@@ -139,7 +142,7 @@ SiteHandlerWebSocket::Handle(HTTPMessage* p_message)
 bool
 SiteHandlerWebSocket::Handle(HTTPMessage* p_message,WebSocket* /*p_socket*/)
 {
-  SITE_ERRORLOG(ERROR_INVALID_PARAMETER,"INTERNAL: Unhandled request caught by base HTTPSite::SiteHandlerWebSocket::Handle");
+  SITE_ERRORLOG(ERROR_INVALID_PARAMETER,_T("INTERNAL: Unhandled request caught by base HTTPSite::SiteHandlerWebSocket::Handle"));
   p_message->Reset();
   p_message->SetStatus(HTTP_STATUS_SERVER_ERROR);
   return false;

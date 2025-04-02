@@ -2,7 +2,7 @@
 //
 // File: SQLStatement.cpp
 //
-// Copyright (c) 1998-2022 ir. W.E. Huisman
+// Copyright (c) 1998-2025 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy of 
@@ -64,19 +64,19 @@ SQLStatement::CheckRecords(int p_records)
   XString fout;
   if(m_minNumber > 0 && p_records < m_minNumber)
   {
-    fout.Format("SQL %d has only %d record(s) (too few) minimum = %d",m_number,p_records,m_minNumber);
+    fout.Format(_T("SQL %d has only %d record(s) (too few) minimum = %d"),m_number,p_records,m_minNumber);
 		return true;
   }
   if(m_maxNumber > 0 && p_records > m_maxNumber)
   {
-    fout.Format("SQL %d has %d records(s) (too much) maximum = %i",m_number,p_records,m_maxNumber);
+    fout.Format(_T("SQL %d has %d records(s) (too much) maximum = %i"),m_number,p_records,m_maxNumber);
     return true;
   }
   return false;
 }
 
 void
-SQLStatement::AddToStatement(XString& p_statement)
+SQLStatement::AddToStatement(const XString& p_statement)
 {
   m_statement += p_statement;
 }

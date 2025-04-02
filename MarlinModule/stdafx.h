@@ -22,12 +22,8 @@
 #ifdef _DEBUG
 #define DEBUG_NEW new( _NORMAL_BLOCK, __FILE__, __LINE__)
 #endif
-//use XString in ATL
-#include <atlstr.h>
 #endif
 
 // Auto link with BaseLibrary
 #include <BaseLibrary.h>
-// Auto link with Marlin
-#include <Marlin.h>
 

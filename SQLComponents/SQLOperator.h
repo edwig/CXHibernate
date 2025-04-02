@@ -2,7 +2,7 @@
 //
 // File: SQLOperator.h
 //
-// Copyright (c) 1998-2022 ir. W.E. Huisman
+// Copyright (c) 1998-2025 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy of 
@@ -54,8 +54,8 @@ SQLOperator;
 // Word translation of operators for filters, needed for XMLMessages
 typedef struct _operatorName
 {
-  const char* m_name;
-  int         m_operator;
+  LPCTSTR m_name;
+  int     m_operator;
 }
 OperatorName;
 

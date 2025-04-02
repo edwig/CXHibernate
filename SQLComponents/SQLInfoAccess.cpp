@@ -2,7 +2,7 @@
 //
 // File: SQLInfoAccess.cpp
 //
-// Copyright (c) 1998-2022 ir. W.E. Huisman
+// Copyright (c) 1998-2025 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy of 
@@ -48,6 +48,13 @@ SQLInfoAccess::~SQLInfoAccess()
 {
 }
 
+// RDBMS Uses INDENTITY or SEQUENCE interface
+void
+SQLInfoAccess::SetUseSequences(bool /*p_sequences*/)
+{
+  // Does nothing
+}
+
 //////////////////////////////////////////////////////////////////////////
 //
 // GENERALS (Strings & Booleans) 
@@ -66,7 +73,7 @@ XString
 SQLInfoAccess::GetRDBMSVendorName() const
 {
   // The name of the database vendor
-  return "Microsoft";
+  return _T("Microsoft");
 }
 
 // Get the physical database name
@@ -119,6 +126,13 @@ SQLInfoAccess::GetRDBMSSupportsODBCCallEscapes() const
   return true;
 }
 
+// Supports the ODBC call procedure with named parameters
+bool
+SQLInfoAccess::GetRDBMSSupportsODBCCallNamedParameters() const
+{
+  return false;
+}
+
 // If the database does not support the datatype TIME, it can be implemented as a DECIMAL
 bool
 SQLInfoAccess::GetRDBMSSupportsDatatypeTime() const
@@ -164,83 +178,90 @@ SQLInfoAccess::GetRDBMSNumericPrecisionScale(SQLULEN& /*p_precision*/, SQLSMALLI
   // NO-OP
 }
 
+// Maximum for a VARCHAR to be handled without AT-EXEC data. Assume NVARCHAR is half that size!
+int
+SQLInfoAccess::GetRDBMSMaxVarchar() const
+{
+  return 8000;
+}
+
 // KEYWORDS
 
 // Keyword for the current date and time
 XString 
 SQLInfoAccess::GetKEYWORDCurrentTimestamp() const
 {
-  return "GETDATE()";
+  return _T("GETDATE()");
 }
 
 // String for the current date
 XString 
 SQLInfoAccess::GetKEYWORDCurrentDate() const
 {
-  return "GETDATE()";
+  return _T("GETDATE()");
 }
 
 // Get the concatenation operator
 XString 
 SQLInfoAccess::GetKEYWORDConcatanationOperator() const
 {
-  return "+";
+  return _T("+");
 }
 
 // Get quote character for strings
 XString 
 SQLInfoAccess::GetKEYWORDQuoteCharacter() const
 {
-  return "\'";
+  return _T("\'");
 }
 
 // Get quote character around reserved words as an identifier
 XString 
 SQLInfoAccess::GetKEYWORDReservedWordQuote() const
 {
-  return "\"";
+  return _T("\"");
 }
 
 // Get default NULL for parameter list input
 XString 
 SQLInfoAccess::GetKEYWORDParameterDefaultNULL() const
 {
-  return "= NULL";
+  return _T("= NULL");
 }
 
 // Parameter is for INPUT and OUTPUT in parameter list
 XString 
 SQLInfoAccess::GetKEYWORDParameterINOUT() const
 {
-  return "OUTPUT";
+  return _T("OUTPUT");
 }
 
 // Parameter is for OUTPUT only in parameter list
 XString 
 SQLInfoAccess::GetKEYWORDParameterOUT() const
 {
-  return "OUTPUT";
+  return _T("OUTPUT");
 }
 
 // Get datatype of the IDENTITY primary key in a Network database
 XString 
 SQLInfoAccess::GetKEYWORDNetworkPrimaryKeyType() const
 {
-  return "INTEGER IDENTITY(1,1)";
+  return _T("INTEGER IDENTITY(1,1)");
 }
 
 // Get datatype for timestamp (year to second)
 XString 
 SQLInfoAccess::GetKEYWORDTypeTimestamp() const
 {
-  return "DATETIME";
+  return _T("DATETIME");
 }
 
 // Prefix for a parameter in a stored procedure
 XString 
 SQLInfoAccess::GetKEYWORDParameterPrefix() const
 {
-  return "@";
+  return _T("@");
 }
 
 // Get select part to add new record identity to a table
@@ -248,14 +269,14 @@ SQLInfoAccess::GetKEYWORDParameterPrefix() const
 XString 
 SQLInfoAccess::GetKEYWORDIdentityString(XString& p_tablename,XString /*p_postfix*/ /*= "_seq"*/) const
 {
-  return "IDENT_CURRENT('" + p_tablename + "') + " + "IDENT_INCR('" + p_tablename + "')";
+  return _T("IDENT_CURRENT('") + p_tablename + _T("') + ") + _T("IDENT_INCR('") + p_tablename + _T("')");
 }
 
 // Gets the UPPER function
 XString 
 SQLInfoAccess::GetKEYWORDUpper(XString& p_expression) const
 {
-  return "{fn UCASE(" + p_expression + ")}";
+  return _T("{fn UCASE(") + p_expression + _T(")}");
 }
 
 // Gets the construction for 1 minute ago
@@ -263,14 +284,14 @@ XString
 SQLInfoAccess::GetKEYWORDInterval1MinuteAgo() const
 {
   // Not supported by MS-Access
-  return "ERROR";
+  return _T("ERROR");
 }
 
 // Gets the Not-NULL-Value statement of the database
 XString 
 SQLInfoAccess::GetKEYWORDStatementNVL(XString& p_test,XString& p_isnull) const
 {
-  return XString("IIF(ISNULL(") + p_test + ")," + p_isnull + "," + p_test + ")";
+  return XString(_T("IIF(ISNULL(")) + p_test + _T("),") + p_isnull + _T(",") + p_test + _T(")");
 }
 
 // Gets the RDBMS definition of the datatype
@@ -284,14 +305,14 @@ SQLInfoAccess::GetKEYWORDDataType(MetaColumn* p_column)
 XString 
 SQLInfoAccess::GetKEYWORDCurrentUser() const
 {
-  return "CurrentUser()";
+  return _T("CurrentUser()");
 }
 
 // Connects to a default schema in the database/instance
 XString 
-SQLInfoAccess::GetSQLDefaultSchema(XString /*p_schema*/) const
+SQLInfoAccess::GetSQLDefaultSchema(XString /*p_user*/,XString /*p_schema*/) const
 {
-  return "";
+  return _T("");
 }
 
 // Gets the construction for inline generating a key within an INSERT statement
@@ -299,7 +320,7 @@ XString
 SQLInfoAccess::GetSQLNewSerial(XString /*p_table*/, XString /*p_sequence*/) const
 {
   // Insert a zero in an IDENTITY column
-  return "0";
+  return _T("0");
 }
 
 // Gets the construction / select for generating a new serial identity
@@ -307,14 +328,21 @@ XString
 SQLInfoAccess::GetSQLGenerateSerial(XString p_table) const
 {
   // Is generated by the IDENTITY system
-  return "";
+  return _T("");
+}
+
+XString 
+SQLInfoAccess::GetSQLGenerateSequence(XString p_sequence) const
+{
+  // Not supported by MS-Access
+  return _T("");
 }
 
 // Gets the construction / select for the resulting effective generated serial
 XString
 SQLInfoAccess::GetSQLEffectiveSerial(XString p_identity) const
 {
-  return "SELECT @@IDENTITY";
+  return _T("SELECT @@IDENTITY");
 }
 
 // Gets the sub-transaction commands
@@ -322,36 +350,36 @@ XString
 SQLInfoAccess::GetSQLStartSubTransaction(XString p_savepointName) const
 {
   // Does not know how to do sub-transactions
-  return "";
+  return _T("");
 }
 
 XString
 SQLInfoAccess::GetSQLCommitSubTransaction(XString p_savepointName) const
 {
   // Does not know how to do sub-transactions
-  return "";
+  return _T("");
 }
 
 XString
 SQLInfoAccess::GetSQLRollbackSubTransaction(XString p_savepointName) const
 {
   // Does not know how to do sub-transactions
-  return "";
+  return _T("");
 }
 
 // FROM-Part for a query to select only 1 (one) record / or empty!
 XString 
 SQLInfoAccess::GetSQLFromDualClause() const
 {
-  return "";
+  return _T("");
 }
 
 // Get SQL to lock  a table 
 XString 
-SQLInfoAccess::GetSQLLockTable(XString /*p_schema*/, XString p_tablename, bool p_exclusive) const
+SQLInfoAccess::GetSQLLockTable(XString /*p_schema*/, XString p_tablename, bool p_exclusive,int /*p_waittime*/) const
 {
-  XString query = "SELECT * FROM " + p_tablename + " WITH ";
-  query += p_exclusive ? "(TABLOCKX)" : "(TABLOCK)";
+  XString query = _T("SELECT * FROM ") + p_tablename + _T(" WITH ");
+  query += p_exclusive ? _T("(TABLOCKX)") : _T("(TABLOCK)");
   return query;
 }
 
@@ -359,7 +387,7 @@ SQLInfoAccess::GetSQLLockTable(XString /*p_schema*/, XString p_tablename, bool p
 XString 
 SQLInfoAccess::GetSQLOptimizeTable(XString p_schema, XString p_tablename) const
 {
-  return "";
+  return _T("");
 }
 
 // Transform query to select top <n> rows
@@ -368,6 +396,27 @@ SQLInfoAccess::GetSQLTopNRows(XString p_sql,int /*p_top*/,int /*p_skip = 0*/) co
 {
   // Does nothing for now
   return p_sql;
+}
+
+// Expand a SELECT with an 'FOR UPDATE' lock clause
+XString
+SQLInfoAccess::GetSelectForUpdateTableClause(unsigned /*p_lockWaitTime*/) const
+{
+  return "";
+}
+
+XString
+SQLInfoAccess::GetSelectForUpdateTrailer(XString p_select,unsigned /*p_lockWaitTime*/) const
+{
+  return p_select + "\nFOR UPDATE";
+}
+
+// Query to perform a keep alive ping
+XString
+SQLInfoAccess::GetPing() const
+{
+  // Not implemented yet
+  return _T("");
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -381,7 +430,7 @@ XString
 SQLInfoAccess::GetSQLString(const XString& p_string) const
 {
   XString s = p_string;
-  s.Replace("'","''");
+  s.Replace(_T("'"),_T("''"));
   XString kwoot = GetKEYWORDQuoteCharacter();
   return  kwoot + s + kwoot;
 }
@@ -391,7 +440,7 @@ XString
 SQLInfoAccess::GetSQLDateString(int p_year,int p_month,int p_day) const
 {
   XString retval;
-  retval.Format("{ d '%04d-%02d-%02d' }",p_year,p_month,p_day);
+  retval.Format(_T("{ d '%04d-%02d-%02d' }"),p_year,p_month,p_day);
   return retval;
 }
 
@@ -400,7 +449,7 @@ XString
 SQLInfoAccess::GetSQLTimeString(int p_hour,int p_minute,int p_second) const
 {
   XString retval;
-  retval.Format("{ t '%02d:%02d:%02d' }",p_hour,p_minute,p_second);
+  retval.Format(_T("{ t '%02d:%02d:%02d' }"),p_hour,p_minute,p_second);
   return retval;
 }
 
@@ -409,7 +458,7 @@ XString
 SQLInfoAccess::GetSQLDateTimeString(int p_year,int p_month,int p_day,int p_hour,int p_minute,int p_second) const
 {
   XString retval;
-  retval.Format("{ ts '%04d-%02d-%02d %02d:%02d:%02d' }",p_year,p_month,p_day,p_hour,p_minute,p_second);
+  retval.Format(_T("{ ts '%04d-%02d-%02d %02d:%02d:%02d' }"),p_year,p_month,p_day,p_hour,p_minute,p_second);
   return retval;
 }
 
@@ -417,7 +466,7 @@ SQLInfoAccess::GetSQLDateTimeString(int p_year,int p_month,int p_day,int p_hour,
 XString
 SQLInfoAccess::GetSQLDateTimeBoundString() const
 {
-  return "{ts ?}";
+  return _T("{ts ?}");
 }
 
 // Stripped data for the parameter binding
@@ -425,8 +474,28 @@ XString
 SQLInfoAccess::GetSQLDateTimeStrippedString(int p_year,int p_month,int p_day,int p_hour,int p_minute,int p_second) const
 {
   XString retval;
-  retval.Format("%04d-%02d-%02d %02d:%02d:%02d",p_year,p_month,p_day,p_hour,p_minute,p_second);
+  retval.Format(_T("%04d-%02d-%02d %02d:%02d:%02d"),p_year,p_month,p_day,p_hour,p_minute,p_second);
   return retval;
+}
+
+// Makes an catalog identifier string (possibly quoted on both sides)
+XString 
+SQLInfoAccess::GetSQLDDLIdentifier(XString p_identifier) const
+{
+  return p_identifier;
+}
+
+// Get the name of a temp table (local temporary or global temporary)
+XString
+SQLInfoAccess::GetTempTablename(XString /*p_schema*/,XString p_tablename,bool /*p_local*/) const
+{
+  return p_tablename;
+}
+
+// Changes to parameters before binding to an ODBC HSTMT handle
+void 
+SQLInfoAccess::DoBindParameterFixup(SQLSMALLINT& /*p_dataType*/,SQLSMALLINT& /*p_sqlDatatype*/,SQLULEN& /*p_columnSize*/,SQLSMALLINT& /*p_scale*/,SQLLEN& /*p_bufferSize*/,SQLLEN* /*p_indicator*/) const
+{
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -434,6 +503,7 @@ SQLInfoAccess::GetSQLDateTimeStrippedString(int p_year,int p_month,int p_day,int
 // CATALOG
 // o GetCATALOG<Object[s]><Function>
 //   Objects
+//   - Catalog
 //   - Table
 //   - Column
 //   - Index
@@ -460,7 +530,25 @@ XString
 SQLInfoAccess::GetCATALOGMetaTypes(int p_type) const
 {
   UNREFERENCED_PARAMETER(p_type);
-  return "";
+  return _T("");
+}
+
+XString 
+SQLInfoAccess::GetCATALOGDefaultCharset() const
+{
+  return _T("utf-16");
+}
+
+XString
+SQLInfoAccess::GetCATALOGDefaultCharsetNCV() const
+{
+  return _T("utf-16");
+}
+
+XString 
+SQLInfoAccess::GetCATALOGDefaultCollation() const
+{
+  return _T("-");
 }
 
 // Get SQL to check if a table already exists in the database
@@ -502,7 +590,7 @@ SQLInfoAccess::GetCATALOGTableCatalog(XString& /*p_schema*/,XString& /*p_tablena
 XString 
 SQLInfoAccess::GetCATALOGTableCreate(MetaTable& p_table,MetaColumn& /*p_column*/) const
 {
-  XString sql = "CREATE TABLE ";
+  XString sql = _T("CREATE TABLE ");
   sql += p_table.m_table;
   return sql;
 }
@@ -518,14 +606,14 @@ XString
 SQLInfoAccess::GetCATALOGTableRename(XString /*p_schema*/,XString p_tablename,XString p_newname) const
 {
   // Beware: No 'TABLE' in the statement
-  XString sql("RENAME " + p_tablename + " to " + p_newname);
+  XString sql(_T("RENAME ") + p_tablename + _T(" TO ") + p_newname);
   return sql;
 }
 
 XString 
 SQLInfoAccess::GetCATALOGTableDrop(XString /*p_schema*/,XString p_tablename,bool /*p_ifExist = false*/,bool /*p_restrict = false*/,bool /*p_cascade = false*/) const
 {
-  return XString("DROP TABLE ") + p_tablename;
+  return XString(_T("DROP TABLE ")) + p_tablename;
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -534,20 +622,20 @@ SQLInfoAccess::GetCATALOGTableDrop(XString /*p_schema*/,XString p_tablename,bool
 XString 
 SQLInfoAccess::GetCATALOGTemptableCreate(XString /*p_schema*/,XString p_tablename,XString p_select) const
 {
-  return "CREATE TABLE #" + p_tablename + "\nAS " + p_select;
+  return _T("CREATE TABLE #") + p_tablename + _T("\nAS ") + p_select;
 }
 
 XString 
 SQLInfoAccess::GetCATALOGTemptableIntoTemp(XString /*p_schema*/,XString p_tablename,XString p_select) const
 {
-  return "INSERT INTO #" + p_tablename + "\n" + p_select;
+  return _T("INSERT INTO #") + p_tablename + "\n" + p_select;
 }
 XString 
 SQLInfoAccess::GetCATALOGTemptableDrop(XString /*p_schema*/,XString p_tablename) const
 {
-  return "DELETE FROM #"    + p_tablename + "\n"
-         "<@>\n"
-         "DROP TABLE #"     + p_tablename;
+  return _T("DELETE FROM #") + p_tablename + _T("\n")
+         _T("<@>\n")
+         _T("DROP TABLE #")  + p_tablename;
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -557,40 +645,40 @@ XString
 SQLInfoAccess::GetCATALOGColumnExists(XString /*p_schema*/,XString /*p_tablename*/,XString /*p_columnname*/) const
 {
   // MS-Access cannot do this
-  return "";
+  return XString();
 }
 
 XString 
 SQLInfoAccess::GetCATALOGColumnList(XString& /*p_schema*/,XString& /*p_tablename*/) const
 {
   // MS-Access cannot do this
-  return "";
+  return XString();
 }
 
 XString 
 SQLInfoAccess::GetCATALOGColumnAttributes(XString& /*p_schema*/,XString& /*p_tablename*/,XString& /*p_columnname*/) const
 {
   // MS-Access cannot do this
-  return "";
+  return XString();
 }
 
 XString 
 SQLInfoAccess::GetCATALOGColumnCreate(MetaColumn& p_column) const
 {
-  XString sql = "ALTER TABLE "  + p_column.m_table  + "\n"
-                "  ADD COLUMN " + p_column.m_column + " " + p_column.m_typename;
+  XString sql = _T("ALTER TABLE ")  + p_column.m_table  + _T("\n")
+                _T("  ADD COLUMN ") + p_column.m_column + _T(" ") + p_column.m_typename;
   if(p_column.m_columnSize)
   {
-    sql.AppendFormat("(%d",p_column.m_columnSize);
+    sql.AppendFormat(_T("(%d"),p_column.m_columnSize);
     if(p_column.m_decimalDigits)
     {
-      sql.AppendFormat(",%d",p_column.m_decimalDigits);
+      sql.AppendFormat(_T(",%d"),p_column.m_decimalDigits);
     }
-    sql += ")";
+    sql += _T(")");
   }
   if(!p_column.m_nullable)
   {
-    sql += " NOT NULL";
+    sql += _T(" NOT NULL");
   }
   return sql;
 }
@@ -598,8 +686,8 @@ SQLInfoAccess::GetCATALOGColumnCreate(MetaColumn& p_column) const
 XString 
 SQLInfoAccess::GetCATALOGColumnAlter(MetaColumn& p_column) const
 {
-  XString sql = "ALTER TABLE  " + p_column.m_table + "\n"
-                "ALTER COLUMN " + p_column.m_column + " " + p_column.m_typename;
+  XString sql = _T("ALTER TABLE  ") + p_column.m_table  + _T("\n")
+                _T("ALTER COLUMN ") + p_column.m_column + _T(" ") + p_column.m_typename;
   p_column.GetPrecisionAndScale(sql);
   p_column.GetNullable(sql);
   // m_position not used
@@ -612,20 +700,20 @@ XString
 SQLInfoAccess::GetCATALOGColumnRename(XString p_schema,XString p_tablename,XString p_columnname,XString p_newname,XString p_datatype) const
 {
   XString sqlCode;
-  sqlCode  = "ALTER TABLE " + p_tablename + "\n"
-             "  ADD " + p_newname + " " + p_datatype + ";\n";
-  sqlCode += "UPDATE " + p_tablename + "\n"
-             "   SET " + p_newname   + " = " + p_columnname + ";\n";
-  sqlCode += "ALTER TABLE " + p_tablename + "\n"
-             " DROP COLUMN " + p_columnname + ";";
+  sqlCode  = _T("ALTER TABLE ") + p_tablename + _T("\n")
+             _T("  ADD ")  + p_newname   + _T(" ") + p_datatype + _T(";\n");
+  sqlCode += _T("UPDATE ") + p_tablename + _T("\n")
+             _T("   SET ") + p_newname   + _T(" = ") + p_columnname + _T(";\n");
+  sqlCode += _T("ALTER TABLE ")  + p_tablename  + _T("\n")
+             _T(" DROP COLUMN ") + p_columnname + _T(";");
   return sqlCode;
 }
 
 XString 
 SQLInfoAccess::GetCATALOGColumnDrop(XString p_schema,XString p_tablename,XString p_columnname) const
 {
-  XString sql("ALTER TABLE " + p_tablename + "\n"
-              " DROP COLUMN " + p_columnname);
+  XString sql(_T("ALTER TABLE ")  + p_tablename + _T("\n")
+              _T(" DROP COLUMN ") + p_columnname);
   return sql;
 }
 
@@ -637,25 +725,25 @@ XString
 SQLInfoAccess::GetCATALOGIndexExists(XString p_schema,XString p_tablename,XString p_indexname) const
 {
   // Cannot query MS-Access for the index configuration
-  return "";
+  return XString();
 }
 
 XString 
 SQLInfoAccess::GetCATALOGIndexList(XString& /*p_schema*/,XString& /*p_tablename*/)   const
 {
   // Cannot query MS-Access for the index configuration
-  return "";
+  return XString();
 }
 
 XString 
 SQLInfoAccess::GetCATALOGIndexAttributes(XString& /*p_schema*/,XString& /*p_tablename*/,XString& /*p_indexname*/)  const
 {
   // Cannot query MS-Access for the index configuration
-  return "";
+  return XString();
 }
 
 XString
-SQLInfoAccess::GetCATALOGIndexCreate(MIndicesMap& p_indices) const
+SQLInfoAccess::GetCATALOGIndexCreate(MIndicesMap& p_indices,bool /*p_duplicateNulls /*= false*/) const
 {
   // Get SQL to create an index for a table
   // CREATE [UNIQUE] [ASC|DESC] INDEX [<schema>.]indexname ON [<schema>.]tablename(column [,...]);
@@ -665,43 +753,43 @@ SQLInfoAccess::GetCATALOGIndexCreate(MIndicesMap& p_indices) const
     if(index.m_position == 1)
     {
       // New index
-      query = "CREATE ";
+      query = _T("CREATE ");
       if(index.m_nonunique == false)
       {
-        query += "UNIQUE ";
+        query += _T("UNIQUE ");
       }
       if(index.m_ascending != "A")
       {
-        query += "DESC ";
+        query += _T("DESC ");
       }
-      query += "INDEX ";
+      query += _T("INDEX ");
       if(!index.m_schemaName.IsEmpty())
       {
-        query += index.m_schemaName + ".";
+        query += index.m_schemaName + _T(".");
       }
       query += index.m_indexName;
-      query += " ON ";
+      query += _T(" ON ");
       if(!index.m_schemaName.IsEmpty())
       {
-        query += index.m_schemaName + ".";
+        query += index.m_schemaName + _T(".");
       }
       query += index.m_tableName;
-      query += "(";
+      query += _T("(");
     }
     else
     {
-      query += ",";
+      query += _T(",");
     }
     query += index.m_columnName;
   }
-  query += ")";
+  query += _T(")");
   return query;
 }
 
 XString 
 SQLInfoAccess::GetCATALOGIndexDrop(XString /*p_schema*/,XString /*p_tablename*/,XString p_indexname) const
 {
-  XString sql = "DROP INDEX " + p_indexname;
+  XString sql = _T("DROP INDEX ") + p_indexname;
   return sql;
 }
 
@@ -709,7 +797,7 @@ SQLInfoAccess::GetCATALOGIndexDrop(XString /*p_schema*/,XString /*p_tablename*/,
 XString
 SQLInfoAccess::GetCATALOGIndexFilter(MetaIndex& /*p_index*/) const
 {
-  return "";
+  return XString();
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -719,20 +807,20 @@ XString
 SQLInfoAccess::GetCATALOGPrimaryExists(XString p_schema,XString p_tablename) const
 {
   // MS Access cannot get this info
-  return "";
+  return XString();
 }
 
 XString 
 SQLInfoAccess::GetCATALOGPrimaryAttributes(XString& /*p_schema*/,XString& /*p_tablename*/) const
 {
   // MS Access cannot get this info
-  return "";
+  return XString();
 }
 
 XString 
 SQLInfoAccess::GetCATALOGPrimaryCreate(MPrimaryMap& p_primaries) const
 {
-  XString query("ALTER TABLE ");
+  XString query(_T("ALTER TABLE "));
 
   for(auto& prim : p_primaries)
   {
@@ -740,28 +828,28 @@ SQLInfoAccess::GetCATALOGPrimaryCreate(MPrimaryMap& p_primaries) const
     {
       if(!prim.m_schema.IsEmpty())
       {
-        query += prim.m_schema + ".";
+        query += prim.m_schema + _T(".");
       }
-      query += prim.m_table + "\n";
-      query += "  ADD CONSTRAINT " + prim.m_constraintName + "\n";
-      query += "      PRIMARY KEY (";
+      query += prim.m_table + _T("\n");
+      query += _T("  ADD CONSTRAINT ") + prim.m_constraintName + _T("\n");
+      query += _T("      PRIMARY KEY (");
 
     }
     else
     {
-      query += ",";
+      query += _T(",");
     }
     query += prim.m_columnName;
   }
-  query += ")";
+  query += _T(")");
   return query;
 }
 
 XString 
 SQLInfoAccess::GetCATALOGPrimaryDrop(XString /*p_schema*/,XString p_tablename,XString p_constraintname) const
 {
-  XString sql("ALTER TABLE " + p_tablename + "\n"
-              " DROP CONSTRAINT " + p_constraintname);
+  XString sql(_T("ALTER TABLE ")      + p_tablename + _T("\n")
+              _T(" DROP CONSTRAINT ") + p_constraintname);
   return sql;
 }
 
@@ -772,21 +860,21 @@ XString
 SQLInfoAccess::GetCATALOGForeignExists(XString /*p_schema*/,XString /*p_tablename*/,XString /*p_constraintname*/) const
 {
   // MS-Access cannot get this information, Use ODBC functions
-  return "";
+  return XString();
 }
 
 XString 
 SQLInfoAccess::GetCATALOGForeignList(XString& /*p_schema*/,XString& /*p_tablename*/,int /*p_maxColumns*/ /*=SQLINFO_MAX_COLUMNS*/) const
 { 
   // MS-Access cannot get this information, Use ODBC functions
-  return "";
+  return XString();
 }
 
 XString 
 SQLInfoAccess::GetCATALOGForeignAttributes(XString& /*p_schema*/,XString& /*p_tablename*/,XString& /*p_constraintname*/,bool/* p_referenced = false*/,int /*p_maxColumns*/ /*=SQLINFO_MAX_COLUMNS*/) const
 {
   // MS-Access cannot get this information, Use ODBC functions
-  return "";
+  return XString();
 }
 
 XString 
@@ -795,56 +883,56 @@ SQLInfoAccess::GetCATALOGForeignCreate(MForeignMap& p_foreigns) const
  // Get first record
   MetaForeign& foreign = p_foreigns.front();
 
-  // Construct the correct tablename
+  // Construct the correct table name
   XString table(foreign.m_fkTableName);
   XString primary(foreign.m_pkTableName);
   if(!foreign.m_fkSchemaName.IsEmpty())
   {
-    table = foreign.m_fkSchemaName + "." + table;
+    table = foreign.m_fkSchemaName + _T(".") + table;
   }
   if(!foreign.m_pkSchemaName.IsEmpty())
   {
-    primary = foreign.m_pkSchemaName + "." + primary;
+    primary = foreign.m_pkSchemaName + _T(".") + primary;
   }
 
   // The base foreign key command
-  XString query = "ALTER TABLE " + table + "\n"
-    "  ADD CONSTRAINT " + foreign.m_foreignConstraint + "\n"
-    "      FOREIGN KEY (";
+  XString query = _T("ALTER TABLE ") + table + _T("\n")
+    _T("  ADD CONSTRAINT ") + foreign.m_foreignConstraint + _T("\n")
+    _T("      FOREIGN KEY (");
 
   // Add the foreign key columns
   bool extra = false;
-  for(auto& key : p_foreigns)
+  for(const auto& key : p_foreigns)
   {
-    if(extra) query += ",";
+    if(extra) query += _T(",");
     query += key.m_fkColumnName;
     extra  = true;
   }
 
   // Add references primary table
-  query += ")\n      REFERENCES " + primary + "(";
+  query += _T(")\n      REFERENCES ") + primary + _T("(");
 
   // Add the primary key columns
   extra = false;
-  for(auto& key : p_foreigns)
+  for(const auto& key : p_foreigns)
   {
-    if(extra) query += ",";
+    if(extra) query += _T(",");
     query += key.m_pkColumnName;
     extra  = true;
   }
-  query += ")";
+  query += _T(")");
 
   switch(foreign.m_updateRule)
   {
-    case SQL_CASCADE :    query += "\n      ON UPDATE CASCADE";     break;
-    case SQL_SET_NULL:    query += "\n      ON UPDATE SET NULL";    break;
+    case SQL_CASCADE :    query += _T("\n      ON UPDATE CASCADE");     break;
+    case SQL_SET_NULL:    query += _T("\n      ON UPDATE SET NULL");    break;
     default:              // In essence: ON UPDATE RESTRICT, but that's already the default
                           break;
   }
   switch(foreign.m_deleteRule)
   {
-    case SQL_CASCADE:     query += "\n      ON DELETE CASCADE";     break;
-    case SQL_SET_NULL:    query += "\n      ON DELETE SET NULL";    break;
+    case SQL_CASCADE:     query += _T("\n      ON DELETE CASCADE");     break;
+    case SQL_SET_NULL:    query += _T("\n      ON DELETE SET NULL");    break;
     default:              // In essence: ON DELETE RESTRICT, but that's already the default
                           break;
   }
@@ -857,15 +945,80 @@ SQLInfoAccess::GetCATALOGForeignAlter(MForeignMap& /*p_original*/, MForeignMap& 
 	// MS-Access cannot alter a foreign-key constraint.
 	// You must drop and then re-create your foreign key constraint
 	// So return an empty string to signal this!
-	return "";
+	return XString();
 }
 
 XString 
 SQLInfoAccess::GetCATALOGForeignDrop(XString /*p_schema*/,XString p_tablename,XString p_constraintname) const
 {
-  XString sql("ALTER TABLE " + p_tablename + "\n"
-              " DROP CONSTRAINT " + p_constraintname);
+  XString sql(_T("ALTER TABLE ") + p_tablename + _T("\n")
+              _T(" DROP CONSTRAINT ") + p_constraintname);
   return sql;
+}
+
+//////////////////////////
+// All default constraints
+XString 
+SQLInfoAccess::GetCATALOGDefaultExists(XString& /*p_schema*/,XString& /*p_tablename*/,XString& /*p_column*/) const
+{
+  return XString();
+}
+
+XString 
+SQLInfoAccess::GetCATALOGDefaultList(XString& /*p_schema*/,XString& /*p_tablename*/) const
+{
+  return XString();
+}
+
+XString 
+SQLInfoAccess::GetCATALOGDefaultAttributes(XString& /*p_schema*/,XString& /*p_tablename*/,XString& /*p_column*/) const
+{
+  return XString();
+}
+
+XString 
+SQLInfoAccess::GetCATALOGDefaultCreate(XString /*p_schema*/,XString /*p_tablename*/,XString /*p_constraint*/,XString /*p_column*/,XString /*p_code*/) const
+{
+  return XString();
+}
+
+XString 
+SQLInfoAccess::GetCATALOGDefaultDrop(XString /*p_schema*/,XString /*p_tablename*/,XString /*p_constraint*/) const
+{
+  return XString();
+}
+
+/////////////////////////
+// All check constraints
+
+XString
+SQLInfoAccess::GetCATALOGCheckExists(XString  /*p_schema*/,XString  /*p_tablename*/,XString  /*p_constraint*/) const
+{
+  return XString();
+}
+
+XString 
+SQLInfoAccess::GetCATALOGCheckList(XString  /*p_schema*/,XString  /*p_tablename*/) const
+{
+  return XString();
+}
+
+XString 
+SQLInfoAccess::GetCATALOGCheckAttributes(XString  /*p_schema*/,XString  /*p_tablename*/,XString  /*p_constraint*/) const
+{
+  return XString();
+}
+
+XString
+SQLInfoAccess::GetCATALOGCheckCreate(XString  /*p_schema*/,XString  /*p_tablename*/,XString  /*p_constraint*/,XString /*p_condition*/) const
+{
+  return XString();
+}
+
+XString
+SQLInfoAccess::GetCATALOGCheckDrop(XString  /*p_schema*/,XString  /*p_tablename*/,XString  /*p_constraint*/) const
+{
+  return XString();
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -875,35 +1028,35 @@ XString
 SQLInfoAccess::GetCATALOGTriggerExists(XString p_schema, XString p_tablename, XString p_triggername) const
 {
   // No triggers in MS-Access
-  return "";
+  return XString();
 }
 
 XString 
 SQLInfoAccess::GetCATALOGTriggerList(XString& /*p_schema*/,XString& /*p_tablename*/) const
 {
   // No triggers in MS-Access
-  return "";
+  return XString();
 }
 
 XString 
 SQLInfoAccess::GetCATALOGTriggerAttributes(XString& /*p_schema*/,XString& /*p_tablename*/,XString& /*p_triggername*/) const
 {
   // No triggers in MS-Access
-  return "";
+  return XString();
 }
 
 XString 
 SQLInfoAccess::GetCATALOGTriggerCreate(MetaTrigger& /*p_trigger*/) const
 {
   // Cannot create a trigger. Does not exist in MS-Access
-  return "";
+  return XString();
 }
 
 XString 
 SQLInfoAccess::GetCATALOGTriggerDrop(XString p_schema, XString p_tablename, XString p_triggername) const
 {
   // Cannot drop a trigger. Does not exist in MS-Access
-  return "";
+  return XString();
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -913,35 +1066,35 @@ XString
 SQLInfoAccess::GetCATALOGSequenceExists(XString /*p_schema*/,XString /*p_sequence*/) const
 {
   // MS-Access does not have sequences
-  return "";
+  return XString();
 }
 
 XString 
 SQLInfoAccess::GetCATALOGSequenceList(XString& /*p_schema*/,XString& /*p_pattern*/) const
 {
   // MS-Access does not have sequences
-  return "";
+  return XString();
 }
 
 XString 
 SQLInfoAccess::GetCATALOGSequenceAttributes(XString& /*p_schema*/,XString& /*p_sequence*/) const
 {
   // MS-Access does not have sequences
-  return "";
+  return XString();
 }
 
 XString 
 SQLInfoAccess::GetCATALOGSequenceCreate(MetaSequence& /*p_sequence*/) const
 {
   // MS-Access does not have sequences
-  return "";
+  return XString();
 }
 
 XString 
 SQLInfoAccess::GetCATALOGSequenceDrop(XString /*p_schema*/, XString /*p_sequence*/) const
 {
   // MS-Access does not have sequences
-  return "";
+  return XString();
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -951,80 +1104,115 @@ XString
 SQLInfoAccess::GetCATALOGViewExists(XString& /*p_schema*/,XString& /*p_viewname*/) const
 {
   // Cannot query this, Use ODBC functions
-  return "";
+  return XString();
 }
 
 XString 
 SQLInfoAccess::GetCATALOGViewList(XString& /*p_schema*/,XString& /*p_pattern*/) const
 {
   // Cannot query this, Use ODBC functions
-  return "";
+  return XString();
 }
 
 XString 
 SQLInfoAccess::GetCATALOGViewAttributes(XString& /*p_schema*/,XString& /*p_viewname*/) const
 {
   // Cannot query this, Use ODBC functions
-  return "";
+  return XString();
 }
 
 XString 
 SQLInfoAccess::GetCATALOGViewText(XString& /*p_schema*/,XString& /*p_viewname*/) const
 {
   // Cannot query this, Use ODBC functions
-  return "";
+  return XString();
 }
 
 XString
-SQLInfoAccess::GetCATALOGViewCreate(XString /*p_schema*/,XString p_viewname,XString p_contents) const
+SQLInfoAccess::GetCATALOGViewCreate(XString /*p_schema*/,XString p_viewname,XString p_contents,bool /*p_ifexists = true*/) const
 {
-  return "CREATE VIEW " + p_viewname + "\n" + p_contents;
+  return _T("CREATE VIEW ") + p_viewname + _T("\n") + p_contents;
 }
 
 XString 
 SQLInfoAccess::GetCATALOGViewRename(XString p_schema,XString p_viewname,XString p_newname)    const
 {
-  return "";
+  return XString();
 }
 
 XString 
 SQLInfoAccess::GetCATALOGViewDrop(XString /*p_schema*/,XString p_viewname,XString& p_precursor) const
 {
   p_precursor.Empty();
-  return "DROP VIEW " + p_viewname;
+  return _T("DROP VIEW ") + p_viewname;
 }
 
 // All Privilege functions
 XString 
 SQLInfoAccess::GetCATALOGTablePrivileges(XString& /*p_schema*/, XString& /*p_tablename*/) const
 {
-  return "";
+  return XString();
 }
 
 XString 
 SQLInfoAccess::GetCATALOGColumnPrivileges(XString& /*p_schema*/,XString& /*p_tablename*/,XString& /*p_columnname*/) const
 {
-  return "";
+  return XString();
 }
 
 XString 
-SQLInfoAccess::GetCatalogGrantPrivilege(XString /*p_schema*/,XString p_objectname,XString p_privilege,XString p_grantee,bool p_grantable)
+SQLInfoAccess::GetCATALOGSequencePrivilege(XString& /*p_schema*/,XString& /*p_sequence*/) const
+{
+  return XString();
+}
+
+XString 
+SQLInfoAccess::GetCATALOGGrantPrivilege(XString /*p_schema*/,XString p_objectname,XString p_privilege,XString p_grantee,bool p_grantable)
 {
   XString sql;
-  sql.Format("GRANT %s ON %s TO %s",p_privilege.GetString(),p_objectname.GetString(),p_grantee.GetString());
+  sql.Format(_T("GRANT %s ON %s TO %s"),p_privilege.GetString(),p_objectname.GetString(),p_grantee.GetString());
   if(p_grantable)
   {
-    sql += " WITH GRANT OPTION";
+    sql += _T(" WITH GRANT OPTION");
   }
   return sql;
 }
 
 XString 
-SQLInfoAccess::GetCatalogRevokePrivilege(XString p_schema,XString p_objectname,XString p_privilege,XString p_grantee)
+SQLInfoAccess::GetCATALOGRevokePrivilege(XString p_schema,XString p_objectname,XString p_privilege,XString p_grantee)
 {
   XString sql;
-  sql.Format("REVOKE %s ON %s FROM %s",p_privilege.GetString(),p_objectname.GetString(),p_grantee.GetString());
+  sql.Format(_T("REVOKE %s ON %s FROM %s"),p_privilege.GetString(),p_objectname.GetString(),p_grantee.GetString());
   return sql;
+}
+
+// All Synonym functions
+XString 
+SQLInfoAccess::GetCATALOGSynonymList(XString& /*p_schema*/,XString& /*p_pattern*/) const
+{
+  // Not implemented yet
+  return XString();
+}
+
+XString 
+SQLInfoAccess::GetCATALOGSynonymAttributes(XString& /*p_schema*/,XString& /*p_synonym*/) const
+{
+  // Not implemented yet
+  return XString();
+}
+
+XString 
+SQLInfoAccess::GetCATALOGSynonymCreate(XString& /*p_schema*/,XString& /*p_synonym*/,XString /*p_forObject*/,bool /*p_private = true*/) const
+{
+  // Not implemented yet
+  return XString();
+}
+
+XString 
+SQLInfoAccess::GetCATALOGSynonymDrop(XString& /*p_schema*/,XString& /*p_synonym*/,bool /*p_private = true*/) const
+{
+  // Not implemented yet
+  return XString();
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -1060,49 +1248,55 @@ XString
 SQLInfoAccess::GetPSMProcedureExists(XString p_schema,XString p_procedure) const
 {
   // MS-Access does not support PSM
-  return "";
+  return XString();
 }
   
 XString 
 SQLInfoAccess::GetPSMProcedureList(XString& /*p_schema*/) const
 {
   // MS-Access does not support PSM
-  return "";
+  return XString();
 }
   
 XString 
 SQLInfoAccess::GetPSMProcedureAttributes(XString& /*p_schema*/,XString& /*p_procedure*/) const
 {
   // MS-Access does not support PSM
-  return "";
+  return XString();
 }
   
 XString 
 SQLInfoAccess::GetPSMProcedureSourcecode(XString p_schema, XString p_procedure) const
 {
   // MS-Access does not support PSM
-  return "";
+  return XString();
 }
   
 XString 
 SQLInfoAccess::GetPSMProcedureCreate(MetaProcedure& /*p_procedure*/) const
 {
   // MS-Access does not support PSM
-  return "";
+  return XString();
 }
   
 XString 
-SQLInfoAccess::GetPSMProcedureDrop(XString p_schema,XString p_procedure) const
+SQLInfoAccess::GetPSMProcedureDrop(XString p_schema,XString p_procedure,bool /*p_function /*=false*/) const
 {
   // MS-Access does not support PSM
-  return "";
+  return XString();
 }
 
 XString 
 SQLInfoAccess::GetPSMProcedureErrors(XString p_schema,XString p_procedure) const
 {
   // MS-Access does not support PSM
-  return "";
+  return XString();
+}
+
+XString 
+SQLInfoAccess::GetPSMProcedurePrivilege(XString& /*p_schema*/,XString& /*p_procedure*/) const
+{
+  return XString();
 }
 
 // And it's parameters
@@ -1110,7 +1304,7 @@ XString
 SQLInfoAccess::GetPSMProcedureParameters(XString& /*p_schema*/,XString& /*p_procedure*/) const
 {
   // MS-Access does not support PSM
-  return "";
+  return XString();
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -1130,83 +1324,83 @@ SQLInfoAccess::GetPSMDeclaration(bool    /*p_first*/
                                 ,XString /*p_asColumn  = ""*/) const
 {
   // MS-Access does not use PSM, but Visual Basic
-  return "";
+  return XString();
 }
 XString 
 SQLInfoAccess::GetPSMAssignment(XString /*p_variable*/,XString /*p_statement = ""*/) const
 {
   // MS-Access does not use PSM, but Visual Basic
-  return "";
+  return XString();
 }
 
 XString 
 SQLInfoAccess::GetPSMIF(XString /*p_condition*/) const
 {
   // MS-Access does not use PSM, but Visual Basic
-  return "";
+  return XString();
 }
 
 XString 
 SQLInfoAccess::GetPSMIFElse() const
 {
   // MS-Access does not use PSM, but Visual Basic
-  return "";
+  return XString();
 }
 
 XString 
 SQLInfoAccess::GetPSMIFEnd() const
 {
   // MS-Access does not use PSM, but Visual Basic
-  return "";
+  return XString();
 }
 
 XString 
 SQLInfoAccess::GetPSMWhile(XString /*p_condition*/) const
 {
   // MS-Access does not use PSM, but Visual Basic
-  return "";
+  return XString();
 }
 
 XString 
 SQLInfoAccess::GetPSMWhileEnd() const
 {
   // MS-Access does not use PSM, but Visual Basic
-  return "";
+  return XString();
 }
 
 XString 
 SQLInfoAccess::GetPSMLOOP() const
 {
   // MS-Access does not use PSM, but Visual Basic
-  return "";
+  return XString();
 }
 
 XString 
 SQLInfoAccess::GetPSMLOOPEnd() const
 {
   // MS-Access does not use PSM, but Visual Basic
-  return "";
+  return XString();
 }
 
 XString 
 SQLInfoAccess::GetPSMBREAK() const
 {
   // MS-Access does not use PSM, but Visual Basic
-  return "";
+  return XString();
 }
 
 XString 
 SQLInfoAccess::GetPSMRETURN(XString /*p_statement*/ /*= ""*/) const
 {
   // MS-Access does not use PSM, but Visual Basic
-  return "";
+  return XString();
 }
 
 XString 
 SQLInfoAccess::GetPSMExecute(XString /*p_procedure*/,MParameterMap& /*p_parameters*/) const
 {
   // MS-Access does not use PSM, but Visual Basic
-  return "";
+  return XString();
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -1216,14 +1410,14 @@ XString
 SQLInfoAccess::GetPSMCursorDeclaration(XString p_cursorname,XString p_select) const
 {
   // MS-Access does not use PSM, but Visual Basic
-  return "";
+  return XString();
 }
 
 XString 
 SQLInfoAccess::GetPSMCursorFetch(XString /*p_cursorname*/,std::vector<XString>& /*p_columnnames*/,std::vector<XString>& /*p_variablenames*/) const
 {
   // MS-Access does not use PSM, but Visual Basic
-  return "";
+  return XString();
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -1233,21 +1427,21 @@ XString
 SQLInfoAccess::GetPSMExceptionCatchNoData() const
 {
   // MS-Access does not use PSM, but Visual Basic
-  return "";
+  return XString();
 }
 
 XString 
 SQLInfoAccess::GetPSMExceptionCatch(XString p_sqlState) const
 {
   // MS-Access does not use PSM, but Visual Basic
-  return "";
+  return XString();
 }
 
 XString 
 SQLInfoAccess::GetPSMExceptionRaise(XString p_sqlState) const
 {
   // MS-Access does not use PSM, but Visual Basic
-  return "";
+  return XString();
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -1268,28 +1462,28 @@ XString
 SQLInfoAccess::GetSESSIONMyself() const
 {
   // MS-Access has no info about processes
-  return "";
+  return XString();
 }
 
 XString 
 SQLInfoAccess::GetSESSIONExists(XString p_sessionID) const
 {
   // MS-Access has no info about processes
-  return "";
+  return XString();
 }
 
 XString 
 SQLInfoAccess::GetSESSIONList() const
 {
   // MS-Access has no info about processes
-  return "";
+  return XString();
 }
 
 XString 
 SQLInfoAccess::GetSESSIONAttributes(XString p_sessionID) const
 {
   // MS-Access has no info about processes
-  return "";
+  return XString();
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -1299,14 +1493,14 @@ XString
 SQLInfoAccess::GetSESSIONConstraintsDeferred() const
 {
   // MS-Access cannot defer constraints
-  return "";
+  return XString();
 }
 
 XString 
 SQLInfoAccess::GetSESSIONConstraintsImmediate() const
 {
   // MS-Access constraints are always active
-  return "";
+  return XString();
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -1325,7 +1519,7 @@ SQLInfoAccess::DoSQLCall(SQLQuery* /*p_query*/,XString& /*p_schema*/,XString& /*
 
 // Calling a stored function with named parameters, returning a value
 SQLVariant*
-SQLInfoAccess::DoSQLCallNamedParameters(SQLQuery* /*p_query*/,XString& /*p_schema*/,XString& /*p_procedure*/)
+SQLInfoAccess::DoSQLCallNamedParameters(SQLQuery* /*p_query*/,XString& /*p_schema*/,XString& /*p_procedure*/,bool /*p_function = true*/)
 {
   return nullptr;
 }

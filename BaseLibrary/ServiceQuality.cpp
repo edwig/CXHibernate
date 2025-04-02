@@ -4,7 +4,7 @@
 //
 // Marlin Server: Internet server/client
 // 
-// Copyright (c) 2014-2022 ir. W.E. Huisman
+// Copyright (c) 2014-2025 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -25,13 +25,15 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 //
-#include "stdafx.h"
+#include "pch.h"
 #include "ServiceQuality.h"
 
+#ifdef _AFX
 #ifdef _DEBUG
 #define new DEBUG_NEW
 #undef THIS_FILE
 static char THIS_FILE[] = __FILE__;
+#endif
 #endif
 
 ServiceQuality::ServiceQuality(XString p_header)
@@ -68,7 +70,7 @@ ServiceQuality::GetStringByPreference(int p_preference)
   {
     return option->m_field;
   }
-  return "";
+  return _T("");
 }
 
 // Find if a option is acceptable
@@ -150,16 +152,16 @@ ServiceQuality::ParseOption(XString p_option)
       param = parameters.Trim();
       parameters.Empty();
     }
-    pos = param.Find("=");
+    pos = param.Find(_T("="));
     if(pos >= 0)
     {
       value = param.Mid(pos + 1);
       param = param.Left(pos);
     }
     // Check if param = "q"
-    if(param.CompareNoCase("q") == 0)
+    if(param.CompareNoCase(_T("q")) == 0)
     {
-      percent = (int)(100 * atof(value));
+      percent = (int)(100 * _ttof(value));
       option.m_percent = percent;
     }
     else

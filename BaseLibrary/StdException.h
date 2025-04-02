@@ -4,7 +4,7 @@
 //
 // BaseLibrary: Indispensable general objects and functions
 // 
-// Copyright (c) 2014-2022 ir. W.E. Huisman
+// Copyright (c) 2014-2025 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -46,31 +46,31 @@ class StdException
 {
 public:
   // Application type constructors
-  StdException(int p_errorCode);
-  StdException(const char* p_fault);
-  StdException(const XString& p_fault);
-  StdException(int p_errorCode,const char* p_fault);
+  explicit StdException(int p_errorCode);
+  explicit StdException(const PTCHAR p_fault);
+  explicit StdException(const XString& p_fault);
+  explicit StdException(int p_errorCode,LPCTSTR p_fault);
   // Construct from a SafeExceptionHandler (SEH)
 	StdException(unsigned p_safe,_EXCEPTION_POINTERS* p_exceptionPointers);
 	StdException(const StdException& p_other);
 
-  unsigned             GetSafeExceptionCode();
-	_EXCEPTION_POINTERS* GetExceptionPointers();
-	void*                GetExceptionAddress();
-  int                  GetApplicationCode();
-  XString              GetApplicationFault();
-  XString              GetErrorMessage();
-  bool                 GetErrorMessage(char* p_error,unsigned p_maxSize,unsigned* p_helpContext = NULL);
+  unsigned             GetSafeExceptionCode() const;
+  _EXCEPTION_POINTERS* GetExceptionPointers() const;
+  void*                GetExceptionAddress() const;
+  int                  GetApplicationCode() const;
+  XString              GetApplicationFault() const;
+  XString              GetErrorMessage() const;
+  bool                 GetErrorMessage(PTCHAR p_error,unsigned p_maxSize,unsigned* p_helpContext = NULL) const;
 
-private:
+protected:
   unsigned             m_safeExceptionCode { 0 };
-	_EXCEPTION_POINTERS* m_exceptionPointers { nullptr };
+  _EXCEPTION_POINTERS* m_exceptionPointers { nullptr };
   unsigned             m_applicationCode   { 0 };
   XString              m_applicationFault;
 };
 
 void SeTranslator(unsigned p_safe,_EXCEPTION_POINTERS* p_exceptionPointers);
-#ifdef _ATL
+#ifdef _AFX 
 // Translate CException to XString
 XString MessageFromException(CException& p_exception);
 #endif

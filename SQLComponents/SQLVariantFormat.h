@@ -2,7 +2,7 @@
 //
 // File: SQLVariantFormat.h
 //
-// Copyright (c) 1998-2022 ir. W.E. Huisman
+// Copyright (c) 1998-2025 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy of 
@@ -26,20 +26,20 @@
 #pragma once
 #include "SQLVariant.h"
 #include "SQLDatabase.h"
-#include "bcd.h"
+#include <bcd.h>
 
 namespace SQLComponents
 {
 
 // User status
-#define USER_DISPLAY		   1
+#define USER_DISPLAY         1
 #define NUMBER_BUFFER_SIZE 100
 
 class SQLVariantFormat
 {
 public:
-  SQLVariantFormat(SQLVariant* p_variant);
-  SQLVariantFormat(SQLVariant& p_variant);
+  explicit SQLVariantFormat(SQLVariant* p_variant);
+  explicit SQLVariantFormat(SQLVariant& p_variant);
   ~SQLVariantFormat();
   void        Reset();
   void        ResetValue();
@@ -49,24 +49,24 @@ public:
   // First letter of first word starts with a capital
   void        StringStartCapital();
   // Set current date and time
-  void        SetCurrentDate();
+  void        SetCurrentDateAndTime();
   // Format the date
   int         FormatDate(XString p_pattern);
   // Is a constant or a numeric / IsConstanteOfNummer
   bool        IsConstantOrNumber(char p_seperator = '.');
-  // Converting european values to system values
-  int         StrValutaNLOmzetten(XString& p_string,bool p_enkelValuta);
-  // Converting american $ values to dutch values
-  int         StrValutaAMOmzetten(XString& p_string,bool p_enkelValuta);
+  // Converting European values to system values
+  int         RemoveValutaEuro(XString& p_string,bool p_enkelValuta);
+  // Converting American $ values to dutch values
+  int         RemoveValutaDollar(XString& p_string,bool p_enkelValuta);
   // Value of a string as a double
-  double      StringDoubleValue();
+  bcd         StringDecimalValue(XString& p_error);
   // Format according to user interface
   int         FormatNumber(XString p_format,bool p_currency);
   // Do math on dates
   int         DateCalculate(char p_operator,XString p_argument);
 
   XString     FormatVariantForSQL(SQLDatabase* p_database);
-  void        SetVariant(SQLVariant* p_variant);
+  void        SetVariant(const SQLVariant* p_variant);
   void        SetFormat(XString p_format);
   void        SetUserStatus(int p_status);
   SQLVariant* GetVariant();
@@ -74,13 +74,15 @@ public:
   XString&    GetFormat();
 private:
   // Internal formatting of a number by a template
-  int         FormatNumberTemplate(char *Getal,const char *strNumFormat,int p_buflen);
-  // Scan naar '23-09-2012' of naar '2012-09-23' // let op "09/23/2012"  wordt niet ondersteund
-  bool        GetDateFromStringVariant(SQLVariant* p_variant,XString p_format,DATE_STRUCT* p_date);
-  bool        GetTimeFromStringVariant(SQLVariant* p_variant,XString p_format,TIME_STRUCT* p_date);
+  int         FormatNumberTemplate(LPTSTR Getal,LPCTSTR strNumFormat,int p_buflen);
+  // Internal formatting of an interval
+  XString     FormatVariantAsInterval(SQLDatabase* p_database);
+  // Scan for '23-09-2012' or for '2012-09-23' // Beware "09/23/2012" is not supported!
+  bool        GetDateFromStringVariant(const SQLVariant* p_variant,XString p_format,DATE_STRUCT* p_date);
+  bool        GetTimeFromStringVariant(const SQLVariant* p_variant,XString p_format,TIME_STRUCT* p_date);
 
   // Is string a (formatted) windows number?
-  bool        IsWinNumber(const XString p_string,char* p_decSeperator,char* p_thouSeperator,char* p_valuta,XString* p_newNumber = NULL);
+  bool        IsWinNumber(const XString p_string,PTCHAR p_decSeperator,PTCHAR p_thouSeperator,PTCHAR p_valuta,XString* p_newNumber = NULL);
 
 
   SQLVariant* m_variant;
@@ -90,7 +92,7 @@ private:
 };
 
 inline void
-SQLVariantFormat::SetVariant(SQLVariant* p_variant)
+SQLVariantFormat::SetVariant(const SQLVariant* p_variant)
 {
   if(m_owner && m_variant)
   {

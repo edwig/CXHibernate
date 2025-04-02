@@ -2,7 +2,7 @@
 //
 // File: SQLInfo.h
 //
-// Copyright (c) 1998-2022 ir. W.E. Huisman
+// Copyright (c) 1998-2025 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy of 
@@ -44,25 +44,25 @@ namespace SQLComponents
 
 typedef struct _TypeInfo
 {
-  XString     m_type_name;          // Datasource dependent type name. Use for CREATE TABLE
-  SQLSMALLINT m_data_type;          // Data type by ODBC as in SQL_<Datatypename>
-  SQLINTEGER  m_precision;          // For numbers: precision, otherwise the column size for char/binaries
-  XString     m_literal_prefix;     // Prefix in literal string, like {ts' for timestamp
-  XString     m_literal_suffix;     // Suffix in literal string, like '}   for timestamp
-  XString     m_create_params;      // How to create parameters, like (precision,scale) for decimals
-  SQLSMALLINT m_nullable;           // Nullable: SQL_NO_NULLS (0), SQL_NULLABLE (1), SQL_NULLABLE_UNKNOWN (2)
-  SQLSMALLINT m_case_sensitive;     // Case sensitive (TRUE,FALSE)
-  SQLSMALLINT m_searchable;         // Searchable in where clause. SQL_PRED_NONE (SQL_UNSEARCHABLE), SQL_PRED_CHAR (1), SQL_PRED_BASIC (2), SQL_SEARCHABLE (3)
-  SQLSMALLINT m_unsigned;           // Unsigned (TRUE,FALSE)
-  SQLSMALLINT m_money;              // Money (FIXED_PRECISION_SCALE) (TRUE,FALSE)
-  SQLSMALLINT m_autoincrement;      // Auto incrementable (TRUE,FALSE,NULL for non-numeric)
-  XString     m_local_type_name;    // Local type name for display on UI's (not in DDL!)
-  SQLSMALLINT m_minimum_scale;      // Minimum scale of datatype. E.g. in seconds of the TIMESTAMP
-  SQLSMALLINT m_maximum_scale;      // Maximum scale of datatype, otherwise use column_size
-  SQLSMALLINT m_sqlDatatype;        // Driver independent SQL datatype
-  SQLSMALLINT m_sqlSubType;         // SQL subtype for TYPE_TIMESTAMP and INTERVAL types
-  SQLINTEGER  m_radix;              // Decimal radix (2,10 or NULL)
-  SQLSMALLINT m_interval_precision; // Number of decimals in interval precision of leading type
+  XString     m_type_name;                  // Datasource dependent type name. Use for CREATE TABLE
+  SQLSMALLINT m_data_type           { 0 };  // Data type by ODBC as in SQL_<Datatypename>
+  SQLINTEGER  m_precision           { 0 };  // For numbers: precision, otherwise the column size for char/binaries
+  XString     m_literal_prefix;             // Prefix in literal string, like {ts' for timestamp
+  XString     m_literal_suffix;             // Suffix in literal string, like '}   for timestamp
+  XString     m_create_params;              // How to create parameters, like (precision,scale) for decimals
+  SQLSMALLINT m_nullable            { 0 };  // Nullable: SQL_NO_NULLS (0), SQL_NULLABLE (1), SQL_NULLABLE_UNKNOWN (2)
+  SQLSMALLINT m_case_sensitive      { 0 };  // Case sensitive (TRUE,FALSE)
+  SQLSMALLINT m_searchable          { 0 };  // Searchable in where clause. SQL_PRED_NONE (SQL_UNSEARCHABLE), SQL_PRED_CHAR (1), SQL_PRED_BASIC (2), SQL_SEARCHABLE (3)
+  SQLSMALLINT m_unsigned            { 0 };  // Unsigned (TRUE,FALSE)
+  SQLSMALLINT m_money               { 0 };  // Money (FIXED_PRECISION_SCALE) (TRUE,FALSE)
+  SQLSMALLINT m_autoincrement       { 0 };  // Auto incrementable (TRUE,FALSE,NULL for non-numeric)
+  XString     m_local_type_name;            // Local type name for display on UI's (not in DDL!)
+  SQLSMALLINT m_minimum_scale       { 0 };  // Minimum scale of datatype. E.g. in seconds of the TIMESTAMP
+  SQLSMALLINT m_maximum_scale       { 0 };  // Maximum scale of datatype, otherwise use column_size
+  SQLSMALLINT m_sqlDatatype         { 0 };  // Driver independent SQL datatype
+  SQLSMALLINT m_sqlSubType          { 0 };  // SQL subtype for TYPE_TIMESTAMP and INTERVAL types
+  SQLINTEGER  m_radix               { 0 };  // Decimal radix (2,10 or NULL)
+  SQLSMALLINT m_interval_precision  { 0 };  // Number of decimals in interval precision of leading type
 }
 TypeInfo;
 
@@ -72,7 +72,7 @@ typedef std::list<XString>          WordList;
 class SQLInfo 
 {
 public:
-   SQLInfo(SQLDatabase* p_database);
+   explicit SQLInfo(SQLDatabase* p_database);
   ~SQLInfo();
 
   // Initialize all internal data structures to defaults
@@ -122,24 +122,24 @@ public:
   // GETTING ALL META TYPES
 protected:
   virtual bool MakeInfoTableTable      (MTableMap&     p_tables,    XString& p_errors,XString p_schema,XString p_tablename,XString p_type);
-  virtual bool MakeInfoTableColumns    (MColumnMap&    p_columns,   XString& p_errors,XString p_schema,XString p_tablename,XString p_columnname = "");
+  virtual bool MakeInfoTableColumns    (MColumnMap&    p_columns,   XString& p_errors,XString p_schema,XString p_tablename,XString p_columnname = _T(""));
   virtual bool MakeInfoTablePrimary    (MPrimaryMap&   p_primaries, XString& p_errors,XString p_schema,XString p_tablename);
   virtual bool MakeInfoPSMProcedures   (MProcedureMap& p_procedures,XString& p_errors,XString p_schema,XString p_procedure);
   virtual bool MakeInfoPSMParameters   (MParameterMap& p_parameters,XString& p_errors,XString p_schema,XString p_procedure);
   virtual bool MakeInfoTableForeign    (MForeignMap&   p_foreigns,  XString& p_errors,XString p_schema,XString p_tablename,bool p_referenced = false);
   virtual bool MakeInfoTableStatistics (MIndicesMap&   p_statistics,XString& p_errors,XString p_schema,XString p_tablename,MPrimaryMap* p_keymap,bool p_all = true);
   virtual bool MakeInfoTablePrivileges (MPrivilegeMap& p_privileges,XString& p_errors,XString p_schema,XString p_tablename);
-  virtual bool MakeInfoColumnPrivileges(MPrivilegeMap& p_privileges,XString& p_errors,XString p_schema,XString p_tablename,XString p_columnname = "");
+  virtual bool MakeInfoColumnPrivileges(MPrivilegeMap& p_privileges,XString& p_errors,XString p_schema,XString p_tablename,XString p_columnname = _T(""));
 
 public:
   virtual bool MakeInfoTableSpecials  (MSpecialsMap&  p_specials,  XString& p_errors,XString p_schema,XString p_tablename);
   virtual bool MakeInfoMetaTypes      (MMetaMap&      p_objects,   XString& p_errors,int p_type);
 
   // Meta pointer to SQLGet<META> functions
-  unsigned char* GetMetaPointer(unsigned char* p_buffer,bool p_meta);
+  SQLTCHAR* GetMetaPointer(SQLTCHAR* p_buffer,bool p_meta);
 
   // Getting datatype info
-  TypeInfo* GetTypeInfo(int p_sqlDatatype,XString p_typename = "") const;
+  TypeInfo* GetTypeInfo(int p_sqlDatatype,XString p_typename = _T("")) const;
 
   // CONNECTION ATTRIBUTES
 
@@ -342,14 +342,14 @@ private:
   // Setting an INTEGER attribute
   bool    SetAttributeInteger(XString description,SQLINTEGER  attrib,SQLUINTEGER value);
   // Setting a STRING attribute
-  bool    SetAttributeString(XString description,SQLINTEGER attrib,SQLCHAR* value);
+  bool    SetAttributeString(XString description,SQLINTEGER attrib,SQLTCHAR* value);
 
 protected:
   // Reprint the catalog.schema.table combination
-  XString MakeObjectName(SQLCHAR* search_catalog
-                        ,SQLCHAR* search_schema
-                        ,SQLCHAR* search_table
-                        ,SQLCHAR* search_type);
+  XString MakeObjectName(SQLTCHAR* search_catalog
+                        ,SQLTCHAR* search_schema
+                        ,SQLTCHAR* search_table
+                        ,SQLTCHAR* search_type);
   void    ReadingDataTypes();
   void    InfoMessageBox(XString p_message,UINT p_type = MB_OK);
 

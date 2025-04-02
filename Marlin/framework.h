@@ -8,14 +8,7 @@
 
 #define WIN32_LEAN_AND_MEAN                     // Exclude rarely-used stuff from Windows headers
 
-// remove support for MFC controls in dialogs
-#define _AFX_NO_MFC_CONTROLS_IN_DIALOGS         
-// turns off MFC's hiding of some common and often safely ignored warning messages
-#define _AFX_ALL_WARNINGS
-
 #include "..\framework.h"
-
-
 #include <stdio.h>
 
 #ifndef _ATL
@@ -26,9 +19,10 @@
 #ifdef _DEBUG
 #define DEBUG_NEW new( _NORMAL_BLOCK, __FILE__, __LINE__)
 #endif
-//use XString in ATL
-#include <atlstr.h>
 #endif // _ATL
+
+//use XString in ATL
+// #include <atlstr.h>
 
 //////////////////////////////////////////////////////////////////////////
 //
@@ -37,4 +31,4 @@
 //////////////////////////////////////////////////////////////////////////
 
 // Extras needed for MFC in this program
-#include <afxext.h>         // MFC extensions
+// #include <afxext.h>         // MFC extensions

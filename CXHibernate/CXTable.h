@@ -90,8 +90,8 @@ public:
                                    ,bool p_getPrivileges = false);
 
   // Serialize the info of the table
-  bool      SaveMetaInfo(CXSession* p_session,CString p_filename = "");
-  bool      LoadMetaInfo(CXSession* p_session,CString p_filename = "");
+  bool      SaveMetaInfo(CXSession* p_session,CString p_filename = _T(""));
+  bool      LoadMetaInfo(CXSession* p_session,CString p_filename = _T(""));
 
 private:
   // Getting table info from the ODBC database

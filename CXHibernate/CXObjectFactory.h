@@ -134,56 +134,56 @@ inline SQLVariant GetElementSQLVariant(SOAPMessage& p_message,XMLElement* p_enti
 
 inline int GetElementint(SOAPMessage& p_message,XMLElement* p_entity,CString p_column)
 {
-  return atoi(p_message.GetElement(p_entity,p_column));
+  return _ttoi(p_message.GetElement(p_entity,p_column));
 }
 
 inline long GetElementlong(SOAPMessage& p_message, XMLElement* p_entity,CString p_column)
 {
-  return atoi(p_message.GetElement(p_entity, p_column));
+  return _ttoi(p_message.GetElement(p_entity, p_column));
 }
 
 inline short GetElementshort(SOAPMessage& p_message,XMLElement* p_entity,CString p_column)
 {
-  return atoi(p_message.GetElement(p_entity,p_column));
+  return _ttoi(p_message.GetElement(p_entity,p_column));
 }
 
 inline ushort GetElementushort(SOAPMessage& p_message,XMLElement* p_entity,CString p_column)
 {
-  return atoi(p_message.GetElement(p_entity,p_column));
+  return _ttoi(p_message.GetElement(p_entity,p_column));
 }
 
 inline ulong GetElementulong(SOAPMessage& p_message,XMLElement* p_entity,CString p_column)
 {
-  return static_cast<unsigned long>(atoll(p_message.GetElement(p_entity,p_column)));
+  return static_cast<unsigned long>(_ttoll(p_message.GetElement(p_entity,p_column)));
 }
 
 inline bigint GetElementbigint(SOAPMessage& p_message,XMLElement* p_entity,CString p_column)
 {
-  return _atoi64(p_message.GetElement(p_entity,p_column));
+  return _ttoi64(p_message.GetElement(p_entity,p_column));
 }
 
 inline ubigint GetElementubigint(SOAPMessage& p_message,XMLElement* p_entity,CString p_column)
 {
-  return _atoi64(p_message.GetElement(p_entity,p_column));
+  return _ttoi64(p_message.GetElement(p_entity,p_column));
 }
 
 inline float GetElementfloat(SOAPMessage& p_message,XMLElement* p_entity,CString p_column)
 {
-  return static_cast<float>(atof(p_message.GetElement(p_entity,p_column)));
+  return static_cast<float>(_ttof(p_message.GetElement(p_entity,p_column)));
 }
 
 inline double GetElementdouble(SOAPMessage& p_message,XMLElement* p_entity,CString p_column)
 {
-  return atof(p_message.GetElement(p_entity,p_column));
+  return _ttof(p_message.GetElement(p_entity,p_column));
 }
 
 inline bool GetElementbool(SOAPMessage& p_message,XMLElement* p_entity,CString p_column)
 {
   CString value(p_message.GetElement(p_entity,p_column));
-  if(value.CompareNoCase("true")  == 0) return true;
-  if(value.CompareNoCase("false") == 0) return false;
+  if(value.CompareNoCase(_T("true"))  == 0) return true;
+  if(value.CompareNoCase(_T("false")) == 0) return false;
   // In case of '0' or '1'
-  return atoi(value);
+  return _ttoi(value);
 }
 
 inline CString GetElementCString(SOAPMessage& p_message, XMLElement* p_entity,CString p_column)
@@ -191,7 +191,7 @@ inline CString GetElementCString(SOAPMessage& p_message, XMLElement* p_entity,CS
   return p_message.GetElement(p_entity, p_column);
 }
 
-inline char GetElementchar(SOAPMessage& p_message,XMLElement* p_entity,CString p_column)
+inline TCHAR GetElementchar(SOAPMessage& p_message,XMLElement* p_entity,CString p_column)
 {
   CString value(p_message.GetElement(p_entity,p_column));
   if(value.GetLength())
@@ -201,7 +201,7 @@ inline char GetElementchar(SOAPMessage& p_message,XMLElement* p_entity,CString p
   return 0;
 }
 
-inline uchar GetElementuchar(SOAPMessage& p_message,XMLElement* p_entity,CString p_column)
+inline _TUCHAR GetElementuchar(SOAPMessage& p_message,XMLElement* p_entity,CString p_column)
 {
   CString value(p_message.GetElement(p_entity,p_column));
   if(value.GetLength())
@@ -268,50 +268,50 @@ inline XMLElement* AddElement(SOAPMessage& p_message,XMLElement* p_base,CString 
 inline XMLElement* AddElement(SOAPMessage& p_message,XMLElement* p_base,CString p_name,XmlDataType p_type,int p_value)
 {
   CString value;
-  value.Format("%d",p_value);
+  value.Format(_T("%d"),p_value);
   return p_message.AddElement(p_base,p_name,p_type,value);
 }
 
 inline XMLElement* AddElement(SOAPMessage& p_message,XMLElement* p_base,CString p_name,XmlDataType p_type,short p_value)
 {
   CString value;
-  value.Format("%d",p_value);
+  value.Format(_T("%d"),p_value);
   return p_message.AddElement(p_base,p_name,p_type,value);
 }
 
 inline XMLElement* AddElement(SOAPMessage& p_message,XMLElement* p_base,CString p_name,XmlDataType p_type,unsigned short p_value)
 {
   CString value;
-  value.Format("%d",p_value);
+  value.Format(_T("%d"),p_value);
   return p_message.AddElement(p_base,p_name,p_type,value);
 }
 
 inline XMLElement* AddElement(SOAPMessage& p_message,XMLElement* p_base,CString p_name,XmlDataType p_type,unsigned long p_value)
 {
   CString value;
-  value.Format("%ld",p_value);
+  value.Format(_T("%ld"),p_value);
   return p_message.AddElement(p_base,p_name,p_type,value);
 }
 
 inline XMLElement* AddElement(SOAPMessage& p_message,XMLElement* p_base,CString p_name,XmlDataType p_type,bigint p_value)
 {
   CString value;
-  value.Format("%ld",p_value);
+  value.Format(_T("%ld"),p_value);
   return p_message.AddElement(p_base,p_name,p_type,value);
 }
 
 inline XMLElement* AddElement(SOAPMessage& p_message,XMLElement* p_base,CString p_name,XmlDataType p_type,ubigint p_value)
 {
   CString value;
-  value.Format("%ld",p_value);
+  value.Format(_T("%ld"),p_value);
   return p_message.AddElement(p_base,p_name,p_type,value);
 }
 
 inline XMLElement* AddElement(SOAPMessage& p_message,XMLElement* p_base,CString p_name,XmlDataType p_type,float p_value)
 {
   CString value;
-  value.Format("%.8f",p_value);
-  value = value.TrimRight('0');
+  value.Format(_T("%.8f"),p_value);
+  value = value.TrimRight(_T('0'));
   return p_message.AddElement(p_base,p_name,p_type,value);
 }
 
@@ -325,16 +325,9 @@ inline XMLElement* AddElement(SOAPMessage& p_message,XMLElement* p_base,CString 
   return p_message.AddElement(p_base,p_name,p_type,p_value);
 }
 
-inline XMLElement* AddElement(SOAPMessage& p_message,XMLElement* p_base,CString p_name,XmlDataType p_type,char p_value)
+inline XMLElement* AddElement(SOAPMessage& p_message,XMLElement* p_base,CString p_name,XmlDataType p_type,TCHAR p_value)
 {
   CString value(p_value);
-  return p_message.AddElement(p_base,p_name,p_type,value);
-}
-
-inline XMLElement* AddElement(SOAPMessage& p_message,XMLElement* p_base,CString p_name,XmlDataType p_type,unsigned char p_value)
-{
-  CString value;
-  value.SetAt(0,((unsigned short)p_value));
   return p_message.AddElement(p_base,p_name,p_type,value);
 }
 

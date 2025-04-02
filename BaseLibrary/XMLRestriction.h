@@ -2,7 +2,7 @@
 //
 // SourceFile: XMLRestriction.h
 //
-// Copyright (c) 2014-2022 ir. W.E. Huisman
+// Copyright (c) 2014-2025 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -32,42 +32,46 @@ using XmlEnums = std::map<XString,XString>;
 class XMLRestriction
 {
 public:
-  XMLRestriction(XString p_name);
+  explicit XMLRestriction(XString p_name);
   XString PrintRestriction(XString p_name);
   XString CheckRestriction(XmlDataType p_type,XString p_value);
   XString CheckDatatype   (XmlDataType p_type,XString p_value);
   XString HandleWhitespace(XmlDataType p_type,XString p_value);
 
   // Set restrictions
-  void    AddEnumeration(XString p_enum,XString p_displayValue = "");
-  void    AddBaseType(XString p_type)     { m_baseType       = p_type;   };
-  void    AddLength(int p_length)         { m_length         = p_length; };
-  void    AddMinLength(int p_length)      { m_minLength      = p_length; };
-  void    AddMaxLength(int p_length)      { m_maxLength      = p_length; };
-  void    AddTotalDigits(int p_digits)    { m_totalDigits    = p_digits; };
-  void    AddFractionDigits(int p_digits) { m_fractionDigits = p_digits; };
-  void    AddPattern(XString p_pattern)   { m_pattern        = p_pattern;};
-  void    AddWhitespace(int p_white)      { m_whiteSpace     = p_white;  };
+  void    AddEnumeration(XString p_enum,XString p_displayValue = _T(""));
+  void    AddBaseType(XString p_type)     { m_baseType       = p_type;   }
+  void    AddLength(int p_length)         { m_length         = p_length; }
+  void    AddMinLength(int p_length)      { m_minLength      = p_length; }
+  void    AddMaxLength(int p_length)      { m_maxLength      = p_length; }
+  void    AddTotalDigits(int p_digits)    { m_totalDigits    = p_digits; }
+  void    AddFractionDigits(int p_digits) { m_fractionDigits = p_digits; }
+  void    AddPattern(XString p_pattern)   { m_pattern        = p_pattern;}
+  void    AddWhitespace(int p_white)      { m_whiteSpace     = p_white;  }
   void    AddMaxExclusive(XString p_max);
   void    AddMaxInclusive(XString p_max);
   void    AddMinExclusive(XString p_max);
   void    AddMinInclusive(XString p_max);
+  void    AddMinOccurs(XString p_min);
+  void    AddMaxOccurs(XString p_max);
 
   // Get restrictions
   bool    HasEnumeration  (XString p_enum);
   XString GiveDisplayValue(XString p_enum);
-  XString HasBaseType()                   { return m_baseType;       };
-  int     HasLength()                     { return m_length;         };
-  int     HasMaxLength()                  { return m_maxLength;      };
-  int     HasMinLength()                  { return m_minLength;      };
-  int     HasTotalDigits()                { return m_totalDigits;    };
-  int     HasFractionDigits()             { return m_fractionDigits; };
-  XString HasMaxExclusive()               { return m_maxExclusive;   };
-  XString HasMaxInclusive()               { return m_maxInclusive;   };
-  XString HasMinExclusive()               { return m_minExclusive;   };
-  XString HasMinInclusive()               { return m_minInclusive;   };
-  XString HasPattern()                    { return m_pattern;        };
-  int     HasWhitespace()                 { return m_whiteSpace;     };
+  XString HasBaseType()                   { return m_baseType;       }
+  int     HasLength()                     { return m_length;         }
+  int     HasMaxLength()                  { return m_maxLength;      }
+  int     HasMinLength()                  { return m_minLength;      }
+  int     HasTotalDigits()                { return m_totalDigits;    }
+  int     HasFractionDigits()             { return m_fractionDigits; }
+  XString HasMaxExclusive()               { return m_maxExclusive;   }
+  XString HasMaxInclusive()               { return m_maxInclusive;   }
+  XString HasMinExclusive()               { return m_minExclusive;   }
+  XString HasMinInclusive()               { return m_minInclusive;   }
+  XString HasPattern()                    { return m_pattern;        }
+  int     HasWhitespace()                 { return m_whiteSpace;     }
+ unsigned HasMinOccurs()                  { return m_minOccurs;      }
+ unsigned HasMaxOccurs()                  { return m_maxOccurs;      }
 
   // GETTERS
   XString   GetName()                     { return m_name;           };
@@ -119,7 +123,7 @@ private:
   XString   CheckNMTOKENS (XString p_value);
   XString   CheckNames    (XString p_value);
   XString   CheckDuration (XString p_value,int& p_type);
-  bool      ScanDurationValue  (XString& p_duration,int& p_value,int& p_fraction,char& p_marker,bool& p_didTime);
+  bool      ScanDurationValue  (XString& p_duration,int& p_value,int& p_fraction,TCHAR& p_marker,bool& p_didTime);
   // Check max decimal/fraction digits
   XString   CheckTotalDigits   (XString p_value);
   XString   CheckFractionDigits(XString p_value);
@@ -142,12 +146,14 @@ private:
   int       m_totalDigits    { 0   };   // Exact number of digits allowed
   int       m_fractionDigits { 0   };   // Number of decimal places
   int       m_whiteSpace     { 0   };   // 1=preserve, 2=replace, 3=collapse
+  unsigned  m_minOccurs      { 1   };   // Minimum number of child elements
+  unsigned  m_maxOccurs      { 1   };   // Maximum number of child elements
   XString   m_pattern;                  // Pattern for pattern matching
   XString   m_maxExclusive;             // Max value up-to     this value
   XString   m_maxInclusive;             // Max value including this value
   XString   m_minExclusive;             // Min value down-to   this value
   XString   m_minInclusive;             // Min value including this value
-  // Redundant optimalisation
+  // Redundant optimalization
   bcd       m_maxExclusiveDouble;
   bcd       m_maxInclusiveDouble;
   bcd       m_minExclusiveDouble;
@@ -165,7 +171,7 @@ class XMLRestrictions
 public:
   XMLRestriction* FindRestriction (XString p_name);
   XMLRestriction* AddRestriction  (XString p_name);
-  void            AddEnumeration  (XString p_name,XString p_enum,XString p_displayValue = "");
+  void            AddEnumeration  (XString p_name,XString p_enum,XString p_displayValue = _T(""));
   bool            HasEnumeration  (XString p_name,XString p_enum);
   XString         GiveDisplayValue(XString p_name,XString p_enum);
 

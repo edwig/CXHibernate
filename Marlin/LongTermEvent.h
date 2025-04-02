@@ -4,7 +4,7 @@
 //
 // Marlin Server: Internet server/client
 // 
-// Copyright (c) 2014-2022 ir. W.E. Huisman
+// Copyright (c) 2014-2024 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -47,13 +47,13 @@ enum class EvtType
 enum class EVChannelPolicy
 {
   DP_NoPolicy       = 0       // No policy (yet)
- ,DP_Binary         = 1       // Binary messages needed (websocket only)
+ ,DP_Binary         = 1       // Binary messages needed (WebSocket only)
  ,DP_HighSecurity   = 2       // Only to the client (SSE only)
  ,DP_Disconnected   = 3       // Disconnected messages only (polling)
- ,DP_Immediate_S2C  = 4       // Immediate delivery server 2 client (websocket + SSE)
- ,DP_TwoWayMessages = 5       // Also client 2 server (websocket + polling)
+ ,DP_Immediate_S2C  = 4       // Immediate delivery server 2 client (WebSocket + SSE)
+ ,DP_TwoWayMessages = 5       // Also client 2 server (WebSocket + polling)
  ,DP_NoSockets      = 6       // Running outside of IIS (SSE + polling)
- ,DP_SureDelivery   = 7       // All S2C channels (websocket + SSE + polling)
+ ,DP_SureDelivery   = 7       // All S2C channels (WebSocket + SSE + polling)
 };
 
 #define SENDER_RANDOM_NUMBER 0xADF74FF6
@@ -63,6 +63,7 @@ class LTEvent
 public:
   LTEvent();
   LTEvent(EvtType p_type);
+ ~LTEvent() = default;
 
   static EvtType StringToEventType(XString p_type);
   static XString EventTypeToString(EvtType p_type);
@@ -71,10 +72,11 @@ public:
   static XString ChannelPolicyToString(EVChannelPolicy p_policy);
 
   // DATA
-  int     m_number { 0  };
-  UINT64  m_sent   { 0L };
-  EvtType m_type;
-  XString m_payload;
+  int      m_number { 0  };
+  UINT64   m_sent   { 0L };
+  EvtType  m_type;
+  XString  m_typeName;
+  XString  m_payload;
 };
 
 // Application callback to handle our dissipated events

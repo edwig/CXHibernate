@@ -2,7 +2,7 @@
 //
 // File: SQLDatabasePool.cpp
 //
-// Copyright (c) 1998-2022 ir. W.E. Huisman
+// Copyright (c) 1998-2025 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy of 
@@ -54,6 +54,7 @@ public:
   SQLDatabase*    GetDatabase(const XString& p_connectionName);
   // Get the connection by name
   SQLConnection*  GetConnection(const XString& p_connectionName);
+  SQLConnection*  GetConnection(const int p_index);
   // Return current number of connections
   unsigned        GetConnections();
   // Return current number of maximum databases
@@ -72,7 +73,7 @@ public:
   // Set current max databases allowed
   void            SetMaxDatabases(unsigned p_maximum);
   // Read all database definitions from 'database.xml'
-  bool            ReadConnections(XString p_filename = "",bool p_reset = false);
+  bool            ReadConnections(XString p_filename = _T(""),bool p_reset = false);
 
   // Add a column rebind for this database session: No bounds checking!
   void            AddColumnRebind(int p_sqlType, int p_cppType);
@@ -82,7 +83,7 @@ public:
 
   // Support of logging functions (for all databases in the pool)
   void            RegisterLogContext(int p_level, LOGLEVEL p_loglevel, LOGPRINT p_logprinter, void* p_logContext);
-  void            LogPrint(const char* p_text);
+  void            LogPrint(LPCTSTR p_text);
   int             LogLevel();
   bool            WilLog();
   void            SetLoggingActivation(int p_loglevel);

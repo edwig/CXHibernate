@@ -4,7 +4,7 @@
 //
 // Marlin Server: Internet server/client
 // 
-// Copyright (c) 2014-2022 ir. W.E. Huisman
+// Copyright (c) 2014-2024 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -29,25 +29,28 @@
 #include "ServerApp.h"
 #include "WebConfigIIS.h"
 #include "HTTPSite.h"
-#include "EnsureFile.h"
 #include "Version.h"
 #include "ServiceReporting.h"
+#include <WinFile.h>
+#include <assert.h>
 #include <string>
 #include <set>
 
+#ifdef _AFX
 #ifdef _DEBUG
 #define new DEBUG_NEW
 #undef THIS_FILE
 static char THIS_FILE[] = __FILE__;
 #endif
+#endif
 
-#define DETAILLOGV(text,...)    m_httpServer->DetailLogV(__FUNCTION__,LogType::LOG_INFO,text,__VA_ARGS__)
-#define WARNINGLOG(text,...)    m_httpServer->DetailLogV(__FUNCTION__,LogType::LOG_WARN,text,__VA_ARGS__)
-#define ERRORLOG(code,text)     m_httpServer->ErrorLog  (__FUNCTION__,code,text)
+#define DETAILLOGV(text,...)    m_httpServer->DetailLogV(_T(__FUNCTION__),LogType::LOG_INFO,text,__VA_ARGS__)
+#define WARNINGLOG(text,...)    m_httpServer->DetailLogV(_T(__FUNCTION__),LogType::LOG_WARN,text,__VA_ARGS__)
+#define ERRORLOG(code,text)     m_httpServer->ErrorLog  (_T(__FUNCTION__),code,text)
 
-IHttpServer*  g_iisServer   = nullptr;
 LogAnalysis*  g_analysisLog = nullptr;
 ErrorReport*  g_report      = nullptr;
+IHttpServer*  g_iisServer   = nullptr;
 
 // IIS calls as a C program (no function decoration in object and linker)
 extern "C"
@@ -63,34 +66,105 @@ extern "C"
 //
 __declspec(dllexport)
 ServerApp* _stdcall CreateServerApp(IHttpServer* p_server
-                                   ,const char*  p_webroot
-                                   ,const char*  p_appName)
+                                   ,PCWSTR       p_webroot
+                                   ,PCWSTR       p_appName)
 {
   return appFactory->CreateServerApp(p_server,p_webroot,p_appName);
+}
+
+__declspec(dllexport)
+bool _stdcall InitServerApp(ServerApp* p_application,IHttpApplication* p_httpapp,PCWSTR p_physical)
+{
+  if(p_application)
+  {
+    _set_se_translator(SeTranslator);
+    try
+    {
+      // Call the initialization
+      p_application->InitInstance();
+
+      // Try loading the sites from IIS in the application
+      p_application->LoadSites(p_httpapp,p_physical);
+
+      // Ready, so stop the timer
+      p_application->StopCounter();
+
+      // Check if everything went well
+      return p_application->CorrectlyStarted();
+    }
+    catch(StdException& ex)
+    {
+      SvcReportErrorEvent(0,false,_T(__FUNCTION__),_T("ERROR while initializing the server application: ") + ex.GetErrorMessage());
+    }
+  }
+  return false;
+}
+
+__declspec(dllexport)
+void _stdcall ExitServerApp(ServerApp* p_application)
+{
+  if(p_application)
+  {
+    _set_se_translator(SeTranslator);
+    try
+    {
+      // STOP!!
+      p_application->UnloadSites();
+
+      // Let the application stop itself 
+      p_application->ExitInstance();
+
+      // Free the application
+      delete p_application;
+    }
+    catch(StdException& ex)
+    {
+      SvcReportErrorEvent(0,false,_T(__FUNCTION__),_T("ERROR while stopping the server application: ") + ex.GetErrorMessage());
+    }
+  }
 }
 
 __declspec(dllexport)
 HTTPSite* _stdcall FindHTTPSite(ServerApp* p_application,int p_port, PCWSTR p_url)
 {
   HTTPSite* site = nullptr;
-  if (p_application)
+  if(p_application)
   {
-    p_application->StartCounter();
-    site = p_application->GetHTTPServer()->FindHTTPSite(p_port,p_url);
-    p_application->StopCounter();
+    _set_se_translator(SeTranslator);
+    try
+    {
+      p_application->StartCounter();
+      site = p_application->GetHTTPServer()->FindHTTPSite(p_port,p_url);
+      p_application->StopCounter();
+    }
+    catch(StdException& ex)
+    {
+      SvcReportErrorEvent(0,false,_T(__FUNCTION__),_T("ERROR while finding HTTP Site: ") + ex.GetErrorMessage());
+      site = nullptr;
+    }
   }
   return site;
 }
 
 __declspec(dllexport)
-bool _stdcall GetStreamFromRequest(ServerApp* p_application, IHttpContext* p_context, HTTPSite* p_site, PHTTP_REQUEST p_request)
+int _stdcall GetStreamFromRequest(ServerApp* p_application,IHttpContext* p_context,HTTPSite* p_site,PHTTP_REQUEST p_request)
 {
-  bool gotstream = false;
-  if (p_application)
+  int gotstream{0};
+
+  if(p_application)
   {
-    p_application->StartCounter();
-    gotstream = (p_application->GetHTTPServer()->GetHTTPStreamFromRequest(p_context,p_site,p_request) != nullptr);
-    p_application->StopCounter();
+    _set_se_translator(SeTranslator);
+    try
+    {
+      p_application->StartCounter();
+      gotstream = p_application->GetHTTPServer()->GetHTTPStreamFromRequest(p_context,p_site,p_request);
+      p_application->StopCounter();
+    }
+    catch(StdException& ex)
+    {
+      SvcReportErrorEvent(0,false,_T(__FUNCTION__),_T("ERROR while getting new event stream: ") + ex.GetErrorMessage());
+      gotstream = 0;
+    }
   }
   return gotstream;
 }
@@ -104,13 +178,22 @@ HTTPMessage* _stdcall GetHTTPMessageFromRequest(ServerApp*    p_application
   HTTPMessage* msg = nullptr;
   if(p_application)
   {
-    p_application->StartCounter();
-    HTTPServerIIS* server = p_application->GetHTTPServer();
-    if(server)
+    _set_se_translator(SeTranslator);
+    try
     {
-      msg = server->GetHTTPMessageFromRequest(p_context,p_site,p_request);
+      p_application->StartCounter();
+      HTTPServerIIS* server = p_application->GetHTTPServer();
+      if(server)
+      {
+        msg = server->GetHTTPMessageFromRequest(p_context,p_site,p_request);
+      }
+      p_application->StopCounter();
     }
-    p_application->StopCounter();
+    catch(StdException& ex)
+    {
+      SvcReportErrorEvent(0,false,_T(__FUNCTION__),_T("ERROR while getting a new HTTPMessage: ") + ex.GetErrorMessage());
+      msg = nullptr;
+    }
   }
   return msg;
 }
@@ -125,19 +208,27 @@ bool _stdcall HandleHTTPMessage(ServerApp* p_application,HTTPSite* p_site,HTTPMe
     // Install SEH to regular exception translator
     AutoSeTranslator trans(SeTranslator);
 
-    p_application->StartCounter();
-
-    // GO! Let the site handle the message
-    p_message->AddReference();
-    p_site->HandleHTTPMessage(p_message);
-
-    // If handled (Marlin has reset the request handle)
-    if (p_message->GetHasBeenAnswered())
+    try
     {
-      handled = true;
+      p_application->StartCounter();
+
+      // GO! Let the site handle the message
+      p_message->AddReference();
+      p_site->HandleHTTPMessage(p_message);
+
+      // If handled (Marlin has reset the request handle)
+      if (p_message->GetHasBeenAnswered())
+      {
+        handled = true;
+      }
+      p_message->DropReference();
+      p_application->StopCounter();
     }
-    p_message->DropReference();
-    p_application->StopCounter();
+    catch(StdException& ex)
+    {
+      SvcReportErrorEvent(0,false,_T(__FUNCTION__),_T("ERROR while handeling a HTTPMessage: ") + ex.GetErrorMessage());
+      handled = false;
+    }
   }
   return handled;
 }
@@ -164,16 +255,23 @@ bool __stdcall MinMarlinVersion(ServerApp* p_application,int p_version)
 
 // XTOR
 ServerApp::ServerApp(IHttpServer* p_iis
-                    ,const char*  p_webroot
-                    ,const char*  p_appName)
+                    ,PCWSTR       p_webroot
+                    ,PCWSTR       p_appName)
           :m_iis(p_iis)
+          ,m_webroot(p_webroot)
+          ,m_applicationName(p_appName)
 {
-  // Keep global pointer to the server
-  g_iisServer = p_iis;
-
-  // Construct local MFC CStrings from char pointers
+#ifdef _UNICODE
   m_webroot         = p_webroot;
   m_applicationName = p_appName;
+#else
+  CStringA webroot(p_webroot);
+  CStringA appname(p_appName);
+  m_webroot         = webroot;
+  m_applicationName = appname;
+#endif
+  // Keep global pointer to the server
+  g_iisServer = p_iis;
 }
 
 // DTOR
@@ -184,9 +282,6 @@ ServerApp::~ServerApp()
   {
     delete site;
   }
-
-  // Just to be sure
-  ExitInstance();
 }
 
 // Init our server app.
@@ -241,10 +336,25 @@ ServerApp::ExitInstance()
   // Stopping our logfile
   if(m_logfile)
   {
-    m_logfile->AnalysisLog(__FUNCTION__, LogType::LOG_INFO, true, "%s closed",m_applicationName.GetString());
+    bool writer = m_logfile->GetBackgroundWriter();
+    m_logfile->AnalysisLog(_T(__FUNCTION__),LogType::LOG_INFO,true,_T("%s closed"),m_applicationName.GetString());
+    m_logfile->Reset();
 
-    delete m_logfile;
-    m_logfile     = nullptr;
+    // The server is about to stop. So we wait for the background writer to stop also
+    // otherwise the last thread might be prematurely stopped.
+    if(writer)
+    {
+      for(int ind = 0;ind < 100; ++ind)
+      {
+        if(m_logfile->GetBackgroundWriter() == false)
+        {
+          break;
+        }
+        Sleep(100);
+      }
+    }
+    LogAnalysis::DeleteLogfile(m_logfile);
+    m_logfile = nullptr;
   }
 
   // Destroy the general error report
@@ -294,13 +404,20 @@ ServerApp::StartLogging()
 {
   if(m_logfile == nullptr)
   {
+    // Getting the base of the logfile path
+    XString logpath = m_config.GetLogfilePath();
+    if(logpath.IsEmpty())
+    {
+      logpath = m_webroot;
+    }
+
     // Create the directory for the logfile
-    XString logfile = m_config.GetLogfilePath() + "\\" + m_applicationName + "\\Logfile.txt";
-    EnsureFile ensure(logfile);
-    ensure.CheckCreateDirectory();
+    XString logfile = logpath + _T("\\") + m_applicationName + _T("\\Logfile.txt");
+    WinFile ensure(logfile);
+    ensure.CreateDirectory();
 
     // Create the logfile
-    m_logfile = new LogAnalysis(m_applicationName);
+    m_logfile = LogAnalysis::CreateLogfile(m_applicationName);
     m_logfile->SetLogFilename(logfile);
     m_logfile->SetLogRotation(true);
     m_logfile->SetLogLevel(m_config.GetDoLogging() ? HLL_LOGGING : HLL_NOLOG);
@@ -311,8 +428,8 @@ ServerApp::StartLogging()
   }
 
   // Tell that we started the logfile
-  m_logfile->AnalysisLog(__FUNCTION__,LogType::LOG_INFO,true
-                        ,"Started the application: %s",m_applicationName.GetString());
+  m_logfile->AnalysisLog(_T(__FUNCTION__),LogType::LOG_INFO,true
+                        ,_T("Started the application: %s"),m_applicationName.GetString());
 }
 
 // Server app was correctly started by MarlinIISModule
@@ -320,7 +437,7 @@ bool
 ServerApp::CorrectlyStarted()
 {
   // MINIMUM REQUIREMENT:
-  // If a derived class has been statically declared
+  // If a derived class has been statically declared and version-checked
   // and a IHttpServer and a HTTPServerIIS has been found
   // and a ThreadPool is initialized, we are good to go
   if(m_iis && m_httpServer && m_threadPool && m_logfile && m_versionCheck)
@@ -332,20 +449,24 @@ ServerApp::CorrectlyStarted()
   // See to it that we did our version check
   if(!m_iis)
   {
-    ERRORLOG(ERROR_NOT_FOUND,"No connected IIS server found!");
+    ERRORLOG(ERROR_NOT_FOUND,_T("No connected IIS server found!"));
   }
-  if(!m_httpServer)
+  else if(!m_threadPool)
   {
-    ERRORLOG(ERROR_NOT_FOUND,"No connected MarlinIIS server found!");
+    ERRORLOG(ERROR_NOT_FOUND,_T("No connected threadpool found!"));
   }
-  if(!m_threadPool)
+  else if(!m_logfile)
   {
-    ERRORLOG(ERROR_NOT_FOUND,"No connected threadpool found!");
+    ERRORLOG(ERROR_NOT_FOUND,_T("No connected logfile found!"));
   }
-  if(!m_versionCheck)
+  else if(!m_versionCheck)
   {
-    ERRORLOG(ERROR_VALIDATE_CONTINUE,"MarlinModule version check not done! Did you use a MarlinModule prior to version 7.0.0 ?");
+    ERRORLOG(ERROR_VALIDATE_CONTINUE,_T("MarlinModule version check not done! Did you use a MarlinModule prior to version 7.0.0 ?"));
     return false;
+  }
+  else
+  {
+    ERRORLOG(ERROR_NOT_FOUND,_T("No connected MarlinIIS server found!"));
   }
   return false;
 }
@@ -366,15 +487,16 @@ ServerApp::MinMarlinVersion(int p_version)
 
   if(p_version < minVersion || maxVersion <= p_version)
   {
-    SvcReportErrorEvent(0,true,__FUNCTION__
-                       ,"MarlinModule version is out of range: %d.%d.%d\n"
-                       ,"This application was compiled for: %d.%d.%d"
+    SvcReportErrorEvent(0,true,_T(__FUNCTION__)
+                       ,_T("MarlinModule version is out of range: %d.%d.%d\n")
+                       ,_T("This application was compiled for: %d.%d.%d")
                        ,p_version / 10000,(p_version % 10000)/100,p_version % 100
                        ,MARLIN_VERSION_MAJOR,MARLIN_VERSION_MINOR,MARLIN_VERSION_SP);
-    return 0;
+    return false;
   }
   // We have done our version check
-  return m_versionCheck = true;
+  m_versionCheck = true;
+  return true;
 }
 
 // Default implementation. Use the Marlin error report
@@ -429,19 +551,14 @@ ServerApp::GetSiteConfig(int ind)
 
 // Start our sites from the IIS configuration
 void 
-ServerApp::LoadSites(IHttpApplication* p_app,XString p_physicalPath)
+ServerApp::LoadSites(IHttpApplication* p_app,PCWSTR p_physicalPath)
 {
-  USES_CONVERSION;
-
   XString config(p_app->GetAppConfigPath());
   int pos = config.ReverseFind('/');
   XString configSite = config.Mid(pos + 1);
 
   CComBSTR siteCollection = L"system.applicationHost/sites";
-  CComBSTR configPath = A2CW(config);
-
-  // Reading all global modules of the IIS installation
-  ReadModules(configPath);
+  CComBSTR configPath = StringToWString(config).c_str();
 
   IAppHostElement*      element = nullptr;
   IAppHostAdminManager* manager = g_iisServer->GetAdminManager();
@@ -451,13 +568,20 @@ ServerApp::LoadSites(IHttpApplication* p_app,XString p_physicalPath)
     element->get_Collection(&sites);
     if(sites)
     {
+#ifdef _UNICODE
+      XString physicalPath(p_physicalPath);
+#else
+      CStringA physical(p_physicalPath);
+      XString physicalPath(physical);
+#endif
+
       DWORD count = 0;
       sites->get_Count(&count);
       for(int i = 0; i < (int)count; ++i)
       {
         IISSiteConfig* iisConfig = new IISSiteConfig();
         iisConfig->m_id       = 0;
-        iisConfig->m_physical = p_physicalPath;
+        iisConfig->m_physical = physicalPath;
         
         // Now read in the rest of the configuration
         if(ReadSite(sites,configSite,i,*iisConfig))
@@ -467,7 +591,7 @@ ServerApp::LoadSites(IHttpApplication* p_app,XString p_physicalPath)
 
           if(LoadSite(*iisConfig))
           {
-            DETAILLOGV("Loaded IIS Site: %s",config.GetString());
+            DETAILLOGV(_T("Loaded IIS Site: %s"),config.GetString());
             // Save the site config
             m_sites.push_back(iisConfig);
             return;
@@ -477,7 +601,7 @@ ServerApp::LoadSites(IHttpApplication* p_app,XString p_physicalPath)
       }
     }
   }
-  XString text("ERROR Loading IIS Site: ");
+  XString text(_T("ERROR Loading IIS Site: "));
   text += config;
   ERRORLOG(ERROR_NO_SITENAME,text);
 }
@@ -492,57 +616,9 @@ ServerApp::UnloadSites()
   }
 }
 
-void
-ServerApp::ReadModules(CComBSTR& /*p_configPath*/)
-{
-//   USES_CONVERSION;
-//   IAppHostAdminManager* manager = g_iisServer->GetAdminManager();
-// 
-//   // Reading all names of the modules of our DLL
-//   IAppHostElement* modulesElement = nullptr;
-//   if (manager->GetAdminSection(CComBSTR(L"system.webServer/globalModules"),p_configPath,&modulesElement) == S_OK)
-//   {
-//     IAppHostElementCollection* modulesCollection = nullptr;
-//     modulesElement->get_Collection(&modulesCollection);
-//     if (modulesCollection)
-//     {
-//       DWORD dwElementCount = 0;
-//       modulesCollection->get_Count(&dwElementCount);
-// 
-//       for (USHORT dwElement = 0; dwElement < dwElementCount; ++dwElement)
-//       {
-//         VARIANT vtItemIndex;
-//         vtItemIndex.vt = VT_I2;
-//         vtItemIndex.iVal = dwElement;
-// 
-//         IAppHostElement* childElement = nullptr;
-//         if (modulesCollection->get_Item(vtItemIndex, &childElement) == S_OK)
-//         {
-//           IAppHostProperty* prop = nullptr;
-//           VARIANT vvar;
-//           vvar.bstrVal = 0;
-// 
-//           if (childElement->GetPropertyByName(CComBSTR(L"image"), &prop) == S_OK && prop->get_Value(&vvar) == S_OK && vvar.vt == VT_BSTR)
-//           {
-//             XString image = W2A(vvar.bstrVal);
-//             if (image.CompareNoCase(GetDLLName()) == 0)
-//             {
-//               if (childElement->GetPropertyByName(CComBSTR(L"name"), &prop) == S_OK && prop->get_Value(&vvar) == S_OK && vvar.vt == VT_BSTR)
-//               {
-//                 m_modules.insert(XString(W2A(vvar.bstrVal)).MakeLower());
-//               }
-//             }
-//           }
-//         }
-//       }
-//     }
-//   }
-}
-
 void  
 ServerApp::ReadHandlers(CComBSTR& p_configPath,IISSiteConfig& p_config)
 {
-  USES_CONVERSION;
   IAppHostAdminManager* manager = g_iisServer->GetAdminManager();
 
   // Finding all HTTP Handlers in the configuration
@@ -574,7 +650,7 @@ ServerApp::ReadHandlers(CComBSTR& p_configPath,IISSiteConfig& p_config)
 
           if (childElement->GetPropertyByName(CComBSTR(L"modules"), &prop) == S_OK && prop->get_Value(&vvar) == S_OK && vvar.vt == VT_BSTR)
           {
-            modules = W2A(vvar.bstrVal);
+            modules = WStringToString(vvar.bstrVal);
           }
           if (m_modules.find(modules.MakeLower()) == m_modules.end())
           {
@@ -582,23 +658,23 @@ ServerApp::ReadHandlers(CComBSTR& p_configPath,IISSiteConfig& p_config)
           }
           if (childElement->GetPropertyByName(CComBSTR(L"name"), &prop) == S_OK && prop->get_Value(&vvar) == S_OK && vvar.vt == VT_BSTR)
           {
-            name = W2A(vvar.bstrVal);
+            name = WStringToString(vvar.bstrVal);
           }
           if (childElement->GetPropertyByName(CComBSTR(L"path"), &prop) == S_OK && prop->get_Value(&vvar) == S_OK && vvar.vt == VT_BSTR)
           {
-            handler.m_path = W2A(vvar.bstrVal);
+            handler.m_path = WStringToString(vvar.bstrVal);
           }
           if (childElement->GetPropertyByName(CComBSTR(L"verb"), &prop) == S_OK && prop->get_Value(&vvar) == S_OK && vvar.vt == VT_BSTR)
           {
-            handler.m_verb = W2A(vvar.bstrVal);
+            handler.m_verb = WStringToString(vvar.bstrVal);
           }
           if (childElement->GetPropertyByName(CComBSTR(L"resourceType"), &prop) == S_OK && prop->get_Value(&vvar) == S_OK && vvar.vt == VT_I4)
           {
-            handler.m_resourceType.Format("%d",vvar.intVal);
+            handler.m_resourceType.Format(_T("%d"),vvar.intVal);
           }
           if (childElement->GetPropertyByName(CComBSTR(L"preCondition"), &prop) == S_OK && prop->get_Value(&vvar) == S_OK && vvar.vt == VT_BSTR)
           {
-            handler.m_precondition = W2A(vvar.bstrVal);
+            handler.m_precondition = WStringToString(vvar.bstrVal);
           }
           // Add handler mapping to site
           p_config.m_handlers.insert(std::make_pair(name,handler));
@@ -622,7 +698,7 @@ ServerApp::ReadSite(IAppHostElementCollection* p_sites,XString p_siteName,int p_
   }
 
   // Find our site
-  XString name = GetProperty(site,"name");
+  XString name = GetProperty(site,_T("name"));
   if(p_siteName.CompareNoCase(name) != 0)
   {
     return false;
@@ -631,14 +707,14 @@ ServerApp::ReadSite(IAppHostElementCollection* p_sites,XString p_siteName,int p_
   // Remember our site name
   p_config.m_name = name;
   // Record IIS ID of the site
-  p_config.m_id = atoi(GetProperty(site,"id"));
+  p_config.m_id = _ttoi(GetProperty(site,_T("id")));
 
   // Load Application
   IAppHostElement* application = nullptr;
   CComBSTR applic = L"application";
   if(site->GetElementByName(applic,&application) == S_OK)
   {
-    p_config.m_pool = GetProperty(application,"applicationPool");
+    p_config.m_pool = GetProperty(application,_T("applicationPool"));
   }
 
   // Load Directories
@@ -646,8 +722,8 @@ ServerApp::ReadSite(IAppHostElementCollection* p_sites,XString p_siteName,int p_
   CComBSTR virtDir = L"virtualDirectory";
   if(site->GetElementByName(virtDir,&virtualDir) == S_OK)
   {
-    p_config.m_base_url = GetProperty(virtualDir,"path");
-    p_config.m_physical = GetProperty(virtualDir,"physicalPath");
+    p_config.m_base_url = GetProperty(virtualDir,_T("path"));
+    p_config.m_physical = GetProperty(virtualDir,_T("physicalPath"));
   }
 
   // Load Bindings
@@ -673,7 +749,7 @@ ServerApp::ReadSite(IAppHostElementCollection* p_sites,XString p_siteName,int p_
   }
   if(p_config.m_bindings.empty())
   {
-    ERRORLOG(ERROR_NOT_FOUND,"Site bindings not found for: " + p_siteName);
+    ERRORLOG(ERROR_NOT_FOUND,_T("Site bindings not found for: ") + p_siteName);
     return false;
   }
   return true;
@@ -692,15 +768,15 @@ ServerApp::ReadBinding(IAppHostElementCollection* p_bindings,int p_item,IISBindi
     return false;
   }
   // Finding the protocol
-  XString protocol = GetProperty(binding,"protocol");
-  p_binding.m_secure = protocol.CompareNoCase("https") == 0 ? true : false;
+  XString protocol = GetProperty(binding,_T("protocol"));
+  p_binding.m_secure = protocol.CompareNoCase(_T("https")) == 0 ? true : false;
 
   // Binding information
-  XString info = GetProperty(binding,"bindingInformation");
+  XString info = GetProperty(binding,_T("bindingInformation"));
   switch(info.GetAt(0))
   {
-    case '*': p_binding.m_prefix = PrefixType::URLPRE_Weak;    break;
-    case '+': p_binding.m_prefix = PrefixType::URLPRE_Strong;  break;
+    case _T('*'): p_binding.m_prefix = PrefixType::URLPRE_Weak;    break;
+    case _T('+'): p_binding.m_prefix = PrefixType::URLPRE_Strong;  break;
     default:  p_binding.m_prefix = PrefixType::URLPRE_Address; break;
   }
 
@@ -709,11 +785,11 @@ ServerApp::ReadBinding(IAppHostElementCollection* p_bindings,int p_item,IISBindi
   int pos = info.Find(':');
   if(pos >= 0)
   { 
-    p_binding.m_port = atoi(info.Mid(pos + 1));
+    p_binding.m_port = _ttoi(info.Mid(pos + 1));
   }
 
   // Client certificate flags
-  p_binding.m_flags = atoi(GetProperty(binding,"sslFlags"));
+  p_binding.m_flags = _ttoi(GetProperty(binding,_T("sslFlags")));
 
   return true;
 }
@@ -721,17 +797,16 @@ ServerApp::ReadBinding(IAppHostElementCollection* p_bindings,int p_item,IISBindi
 XString
 ServerApp::GetProperty(IAppHostElement* p_elem,XString p_property)
 {
-  USES_CONVERSION;
-
   IAppHostProperty* prop = nullptr;
-  if(p_elem->GetPropertyByName(A2W(p_property),&prop) == S_OK)
+  CComBSTR proper = StringToWString(p_property).c_str();
+  if(p_elem->GetPropertyByName(proper,&prop) == S_OK)
   {
     BSTR strValue;
     prop->get_StringValue(&strValue);
 
     return XString(strValue);
   }
-  return "";
+  return _T("");
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -745,8 +820,8 @@ ServerAppFactory::ServerAppFactory()
 {
   if(appFactory)
   {
-    TRACE("You can only have ONE singleton ServerAppFactory in your program logic");
-    ASSERT(FALSE);
+    OutputDebugString(_T("You can only have ONE singleton ServerAppFactory in your program logic"));
+    assert(FALSE);
   }
   else
   {
@@ -756,8 +831,8 @@ ServerAppFactory::ServerAppFactory()
 
 ServerApp* 
 ServerAppFactory::CreateServerApp(IHttpServer*  p_iis
-                                 ,const char*   p_webroot
-                                 ,const char*   p_appName)
+                                 ,const PCWSTR  p_webroot
+                                 ,const PCWSTR  p_appName)
 {
   return new ServerApp(p_iis,p_webroot,p_appName);
 }

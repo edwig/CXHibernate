@@ -4,7 +4,7 @@
 //
 // Marlin Server: Internet server/client
 // 
-// Copyright (c) 2014-2022 ir. W.E. Huisman
+// Copyright (c) 2014-2024 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -34,18 +34,20 @@
 #include "LogAnalysis.h"
 #include "Base64.h"
 
+#ifdef _AFX
 #ifdef _DEBUG
 #define new DEBUG_NEW
 #undef THIS_FILE
 static char THIS_FILE[] = __FILE__;
 #endif
+#endif
 
 // Logging via the client
-#define DETAILLOG1(text)        if(m_logfile) m_logfile->AnalysisLog(__FUNCTION__,LogType::LOG_INFO,false,text)
-#define DETAILLOGS(text,extra)  if(m_logfile) m_logfile->AnalysisLog(__FUNCTION__,LogType::LOG_INFO,true,text,extra)
-#define DETAILLOGV(text,...)    if(m_logfile) m_logfile->AnalysisLog(__FUNCTION__,LogType::LOG_INFO,true,text,__VA_ARGS__)
-#define WARNINGLOG(text,...)    if(m_logfile) m_logfile->AnalysisLog(__FUNCTION__,LogType::LOG_WARN,true,text,__VA_ARGS__)
-#define ERRORLOG(code,text)     if(m_logfile) m_logfile->AnalysisLog(__FUNCTION__,LogType::LOG_ERROR,true,text,code)
+#define DETAILLOG1(text)        if(m_logfile) m_logfile->AnalysisLog(_T(__FUNCTION__),LogType::LOG_INFO,false,text)
+#define DETAILLOGS(text,extra)  if(m_logfile) m_logfile->AnalysisLog(_T(__FUNCTION__),LogType::LOG_INFO,true,text,extra)
+#define DETAILLOGV(text,...)    if(m_logfile) m_logfile->AnalysisLog(_T(__FUNCTION__),LogType::LOG_INFO,true,text,__VA_ARGS__)
+#define WARNINGLOG(text,...)    if(m_logfile) m_logfile->AnalysisLog(_T(__FUNCTION__),LogType::LOG_WARN,true,text,__VA_ARGS__)
+#define ERRORLOG(code,text)     if(m_logfile) m_logfile->AnalysisLog(_T(__FUNCTION__),LogType::LOG_ERROR,true,text,code)
 
 ClientEventDriver::ClientEventDriver()
 {
@@ -68,7 +70,7 @@ ClientEventDriver::SetApplicationCallback(LPFN_EVENTCALLBACK p_callback, void* p
   m_callback = p_callback;
   m_object   = p_object;
   
-  DETAILLOG1("Application callback is set.");
+  DETAILLOG1(_T("Application callback is set."));
 }
 
 // Starting the driver in one go!
@@ -83,7 +85,7 @@ ClientEventDriver::StartEventDriver(XString p_url,EVChannelPolicy p_policy,XStri
 
   if(m_callback && m_object)
   {
-    DETAILLOGV("EventDriver started for [%s:%s] for session [%s:%s=%s]"
+    DETAILLOGV(_T("EventDriver started for [%s:%s] for session [%s:%s=%s]")
               ,m_serverURL.GetString()
               ,LTEvent::ChannelPolicyToString(m_policy).GetString()
               ,m_session.GetString()
@@ -99,7 +101,7 @@ void
 ClientEventDriver::SetChannelPolicy(EVChannelPolicy p_policy)
 {
   m_policy = p_policy;
-  DETAILLOGV("Set channel policy to: %s", LTEvent::ChannelPolicyToString(p_policy).GetString());
+  DETAILLOGV(_T("Set channel policy to: %s"), LTEvent::ChannelPolicyToString(p_policy).GetString());
 }
 
 // Set server URL to change on next re-connect
@@ -107,7 +109,7 @@ void
 ClientEventDriver::SetServerURL(XString p_url)
 {
   m_serverURL = p_url;
-  DETAILLOGV("Set event URL to: %s",m_serverURL.GetString());
+  DETAILLOGV(_T("Set event URL to: %s"),m_serverURL.GetString());
 }
 
 // Start with session (Call SetChannelPolicy and SetServerURL first)
@@ -119,7 +121,7 @@ ClientEventDriver::StartEventsForSession(XString p_session,XString p_cookie,XStr
      m_callback != nullptr &&
      m_object   != nullptr )
   {
-    DETAILLOGV("Start event channel for [%s:%s=%s]",m_session.GetString(),m_cookie.GetString(),m_secret.GetString());
+    DETAILLOGV(_T("Start event channel for [%s:%s=%s]"),m_session.GetString(),m_cookie.GetString(),m_secret.GetString());
 
     AutoCritSec lock(&m_lockChannel);
 
@@ -136,14 +138,14 @@ ClientEventDriver::StartEventsForSession(XString p_session,XString p_cookie,XStr
 bool
 ClientEventDriver::StopEventsForSession()
 {
-  DETAILLOGV("Stop event channel for [%s:%s=%s]", m_session.GetString(), m_cookie.GetString(), m_secret.GetString());
+  DETAILLOGV(_T("Stop event channel for [%s:%s=%s]"), m_session.GetString(), m_cookie.GetString(), m_secret.GetString());
   
   if(!m_closeSeen)
   {
     LTEvent* event = new LTEvent(EvtType::EV_Close);
     try
     {
-    (*m_callback)(m_object,event);
+      (*m_callback)(m_object,event);
     }
     catch(StdException& ex)
     {
@@ -163,7 +165,7 @@ void
 ClientEventDriver::SetThreadPool(ThreadPool* p_pool)
 {
   m_pool = p_pool;
-  DETAILLOG1("Thread pool set");
+  DETAILLOG1(_T("Thread pool set"));
 }
 
 // OPTIONALLY: Set your logfile
@@ -183,7 +185,7 @@ ClientEventDriver::PostEventToServer(LTEvent* p_event)
 
   // Kick the event thread, sending to the server
   ::SetEvent(m_event);
-  DETAILLOGV("Post event [%d] to server",m_outNumber);
+  DETAILLOGV(_T("Post event [%d] to server"),m_outNumber);
 }
 
 // Event is incoming from socket/SSE/polling
@@ -196,11 +198,11 @@ ClientEventDriver::RegisterIncomingEvent(LTEvent* p_event,bool p_doLog /*=false*
   {
     p_event->m_number = ++m_inNumber;
   }
-  DETAILLOGV("Client register incoming event: %d",p_event->m_number);
+  DETAILLOGV(_T("Client register incoming event: %d"),p_event->m_number);
   if(p_doLog)
   {
     // Logging for long-polling
-    DETAILLOGV("Register [%s] event [%d:%s]",LTEvent::EventTypeToString(p_event->m_type).GetString(),m_inNumber,p_event->m_payload.GetString());
+    DETAILLOGV(_T("Register [%s] event [%d:%s]"),LTEvent::EventTypeToString(p_event->m_type).GetString(),m_inNumber,p_event->m_payload.GetString());
   }
 
   if(m_thread && m_event) 
@@ -213,7 +215,7 @@ ClientEventDriver::RegisterIncomingEvent(LTEvent* p_event,bool p_doLog /*=false*
   }
   // LOG!! Incoming event without a running event driver.
   //       Mostly the 'OnClose' message
-  DETAILLOGV("Lost incoming event [%d:%s] [%s]"
+  DETAILLOGV(_T("Lost incoming event [%d:%s] [%s]")
              ,p_event->m_number
              ,LTEvent::EventTypeToString(p_event->m_type).GetString()
              ,p_event->m_payload.GetString());
@@ -249,7 +251,7 @@ ClientEventDriver::GetIsRunning()
 bool
 ClientEventDriver::CloseDown()
 {
-  DETAILLOG1("Stopping the event driver monitor");
+  DETAILLOG1(_T("Stopping the event driver monitor"));
 
   // Ready
   m_running = false;
@@ -268,13 +270,16 @@ ClientEventDriver::CloseDown()
   }
   if(m_thread)
   {
+    // Since waiting on the thread did not work, we must preemptively terminate it.
+#pragma warning(disable:6258)
     TerminateThread(m_thread, 3);
+    WaitForSingleObject(m_thread,MONITOR_END_INTERVAL);
     m_thread = NULL;
   }
 
-  DETAILLOG1("Stopping the event channels");
+  DETAILLOG1(_T("Stopping the event channels"));
 
-  // Close websocket
+  // Close WebSocket
   if(m_websocket)
   {
     StopSocketChannel();
@@ -285,14 +290,14 @@ ClientEventDriver::CloseDown()
   // Stop the SSE channel
   if(m_source)
   {
-    m_client.StopClient();
+    StopEventsChannel();
     m_source = nullptr;
   }
 
   // Stop the Long Polling
   if(m_polling)
   {
-    m_polling->StopLongPolling();
+    StopPollingChannel();
     delete m_polling;
     m_polling = nullptr;
   }
@@ -316,7 +321,7 @@ ClientEventDriver::StartDispatcher()
     StartEventThread();
   }
 
-  DETAILLOGV("Starting event monitor in [%s] policy",LTEvent::ChannelPolicyToString(m_policy).GetString());
+  DETAILLOGV(_T("Starting event monitor in [%s] policy"),LTEvent::ChannelPolicyToString(m_policy).GetString());
 
   m_closeSeen = false;
   switch(m_policy)
@@ -361,8 +366,6 @@ ClientEventDriver::StartDispatcher()
 bool
 ClientEventDriver::TestDispatcher()
 {
-  AutoCritSec lock(&m_lockChannel);
-
   bool restart = false;
 
   if(m_websocket)
@@ -388,7 +391,7 @@ ClientEventDriver::TestDispatcher()
 
   if(restart)
   {
-    DETAILLOG1("Re-Starting the client-event-driver");
+    DETAILLOG1(_T("Re-Starting the client-event-driver"));
     CloseDown();
     return StartDispatcher();
   }
@@ -401,7 +404,7 @@ ClientEventDriver::TestDispatcher()
 //
 //////////////////////////////////////////////////////////////////////////
 
-static void OnWebsocketOpen(WebSocket* p_socket, WSFrame* p_event)
+static void OnWebsocketOpen(WebSocket* p_socket,const WSFrame* p_event)
 {
   ClientEventDriver* driver = reinterpret_cast<ClientEventDriver*>(p_socket->GetApplication());
 
@@ -414,7 +417,7 @@ static void OnWebsocketOpen(WebSocket* p_socket, WSFrame* p_event)
   driver->RegisterIncomingEvent(event);
 }
 
-static void OnWebsocketMessage(WebSocket* p_socket, WSFrame* p_event)
+static void OnWebsocketMessage(WebSocket* p_socket,const WSFrame* p_event)
 {
   ClientEventDriver* driver = reinterpret_cast<ClientEventDriver*>(p_socket->GetApplication());
 
@@ -427,7 +430,7 @@ static void OnWebsocketMessage(WebSocket* p_socket, WSFrame* p_event)
   driver->RegisterIncomingEvent(event);
 }
 
-static void OnWebsocketBinary(WebSocket* p_socket, WSFrame* p_event)
+static void OnWebsocketBinary(WebSocket* p_socket,const WSFrame* p_event)
 {
   ClientEventDriver* driver = reinterpret_cast<ClientEventDriver*>(p_socket->GetApplication());
 
@@ -436,14 +439,14 @@ static void OnWebsocketBinary(WebSocket* p_socket, WSFrame* p_event)
   event->m_sent    = 0;
   event->m_number  = 0;
   // Put the binary buffer forcibly in a XString!
-  char* buf = event->m_payload.GetBufferSetLength(p_event->m_length);
-  memcpy_s(buf,p_event->m_length,(const char*)p_event->m_data,p_event->m_length);
+  LPTSTR buf = event->m_payload.GetBufferSetLength(p_event->m_length);
+  memcpy_s(buf,p_event->m_length,reinterpret_cast<const char*>(p_event->m_data),p_event->m_length);
   event->m_payload.ReleaseBufferSetLength(p_event->m_length);
 
   driver->RegisterIncomingEvent(event);
 }
 
-static void OnWebsocketError(WebSocket* p_socket, WSFrame* p_event)
+static void OnWebsocketError(WebSocket* p_socket,const WSFrame* p_event)
 {
   ClientEventDriver* driver = reinterpret_cast<ClientEventDriver*>(p_socket->GetApplication());
 
@@ -456,7 +459,7 @@ static void OnWebsocketError(WebSocket* p_socket, WSFrame* p_event)
   driver->RegisterIncomingEvent(event);
 }
 
-static void OnWebsocketClose(WebSocket* p_socket, WSFrame* p_event)
+static void OnWebsocketClose(WebSocket* p_socket,const WSFrame* p_event)
 {
   ClientEventDriver* driver = reinterpret_cast<ClientEventDriver*>(p_socket->GetApplication());
 
@@ -472,7 +475,7 @@ static void OnWebsocketClose(WebSocket* p_socket, WSFrame* p_event)
 bool
 ClientEventDriver::StartSocketChannel()
 {
-  XString url = m_serverURL + "Sockets/" + m_session;
+  XString url = m_serverURL + _T("Sockets/") + m_session;
 //   url.Replace("http://", "ws://");
 //   url.Replace("https://","wss://");
 
@@ -495,10 +498,10 @@ ClientEventDriver::StartSocketChannel()
   m_websocket->SetOnClose  (OnWebsocketClose);
 
   // Add authorization
-  XString value = m_cookie + "=" + m_secret;
-  m_websocket->AddHeader("Cookie",value);
+  XString value = m_cookie + _T("=") + m_secret;
+  m_websocket->AddHeader(_T("Cookie"),value);
 
-  DETAILLOGV("Staring WebSocket channel on [%s]",url.GetString());
+  DETAILLOGV(_T("Staring WebSocket channel on [%s]"),url.GetString());
 
   // Start the socket by opening
   // Receiving thread is now running on the HTTPClient
@@ -548,11 +551,12 @@ static void OnEventBinary(ServerEvent* p_event, void* p_data)
   ClientEventDriver* driver = reinterpret_cast<ClientEventDriver*>(p_data);
   if (driver)
   {
+    Base64 base;
     LTEvent* event   = new LTEvent();
     event->m_type    = EvtType::EV_Binary;
     event->m_sent    = 0;
     event->m_number  = p_event->m_id;
-    event->m_payload = Base64::Decrypt(p_event->m_data);
+    event->m_payload = base.Decrypt(p_event->m_data);
 
     driver->RegisterIncomingEvent(event);
   }
@@ -594,7 +598,8 @@ static void OnEventClose(ServerEvent* p_event,void* p_data)
 bool
 ClientEventDriver::StartEventsChannel()
 {
-  XString url = m_serverURL + "Events/" + m_session;
+  XString url = m_serverURL + _T("Events/") + m_session;
+  m_client.SetTerminalServices(true);
   m_source = m_client.CreateEventSource(url);
 
   // Until server tells us otherwise, wait 2 seconds before each reconnect
@@ -608,7 +613,7 @@ ClientEventDriver::StartEventsChannel()
   m_source->m_onerror   = OnEventError;
   m_source->m_onclose   = OnEventClose;
   // Not a standard listener: Implement binary ourselves
-  m_source->AddEventListener("binary",OnEventBinary);
+  m_source->AddEventListener(_T("binary"),OnEventBinary);
 
   // Set our thread pool if any 
   // Otherwise the event source will create a new one
@@ -624,7 +629,7 @@ ClientEventDriver::StartEventsChannel()
   // Add cookie to the channel
   m_source->SetSecurity(m_cookie,m_secret);
 
-  DETAILLOGV("Staring SSE channel on [%s]",url.GetString());
+  DETAILLOGV(_T("Staring SSE channel on [%s]"),url.GetString());
 
   // Start SSE and wait till it opens (max 10 seconds)
   if(m_source->EventSourceInit(true))
@@ -662,14 +667,14 @@ void OnPollingEvent(void* p_application,LTEvent* p_event)
 bool
 ClientEventDriver::StartPollingChannel()
 {
-  XString url = m_serverURL + "Polling/" + m_session;
+  XString url = m_serverURL + _T("Polling/") + m_session;
 
   m_polling = new LongPolling();
   m_polling->SetURL(url);
   m_polling->SetApplication(OnPollingEvent,this);
   m_polling->SetLogfile(m_logfile);
 
-  DETAILLOGV("Starting long-polling channel on [%s]",url.GetString());
+  DETAILLOGV(_T("Starting long-polling channel on [%s]"),url.GetString());
 
   return m_polling->StartLongPolling(m_session,m_cookie,m_secret);
 }
@@ -690,7 +695,7 @@ ClientEventDriver::SendToServer(LTEvent* p_event)
     {
       case EvtType::EV_Message: m_websocket->WriteString(p_event->m_payload);
                                 break;
-      case EvtType::EV_Binary:  m_websocket->WriteObject((BYTE*)p_event->m_payload.GetString(),p_event->m_payload.GetLength());
+      case EvtType::EV_Binary:  m_websocket->WriteObject(reinterpret_cast<BYTE*>(const_cast<LPTSTR>(p_event->m_payload.GetString())),p_event->m_payload.GetLength());
                                 break;
       case EvtType::EV_Close:   m_websocket->SendCloseSocket(WS_CLOSE_NORMAL,p_event->m_payload);
                                 // Restart channel!!
@@ -740,15 +745,15 @@ ClientEventDriver::StartEventThread()
   {
     // Thread for the client queue
     unsigned int threadID = 0;
-    if((m_thread = (HANDLE)_beginthreadex(NULL,0,StartingTheDriverThread,(void*)(this),0,&threadID)) == INVALID_HANDLE_VALUE)
+    if((m_thread = reinterpret_cast<HANDLE>(_beginthreadex(NULL,0,StartingTheDriverThread,reinterpret_cast<void*>(this),0,&threadID))) == INVALID_HANDLE_VALUE)
     {
       m_thread = NULL;
       threadID = 0;
-      ERRORLOG(ERROR_SERVICE_NOT_ACTIVE,"Code [%d] Cannot start a thread for an ClientEventDriver.");
+      ERRORLOG(ERROR_SERVICE_NOT_ACTIVE,_T("Code [%d] Cannot start a thread for an ClientEventDriver."));
     }
     else
     {
-      DETAILLOGV("Thread started with threadID [%d] for ClientEventDriver.",threadID);
+      DETAILLOGV(_T("Thread started with threadID [%d] for ClientEventDriver."),threadID);
       return true;
     }
   }
@@ -766,10 +771,9 @@ ClientEventDriver::EventThreadRunning()
   m_running  = true;
   m_interval = MONITOR_INTERVAL_MIN;
 
-  DETAILLOG1("ServerEventDriver monitor started.");
+  DETAILLOG1(_T("ServerEventDriver monitor started."));
   do
   {
-    int sent = 0;
     // Wake every now and then and send events to the application
     DWORD waited = WaitForSingleObjectEx(m_event,m_interval,true);
     switch(waited)
@@ -778,8 +782,8 @@ ClientEventDriver::EventThreadRunning()
       case WAIT_OBJECT_0:       // Explicit wake up by posting an event
                                 if(m_running)
                                 {
-                                  sent += SendChannelsToApplication();
-                                  sent += SendChannelsToServer();
+                                  int sent = SendChannelsToApplication();
+                                  sent    += SendChannelsToServer();
                                   RecalculateInterval(sent);
                                 }
                                 break;
@@ -821,7 +825,7 @@ ClientEventDriver::RecalculateInterval(int p_sent)
       m_interval = MONITOR_INTERVAL_MAX;
     }
   }
-  DETAILLOGV("Monitor going to sleep for [%d] milliseconds",m_interval);
+  DETAILLOGV(_T("Monitor going to sleep for [%d] milliseconds"),m_interval);
 }
 
 // Sending to the server
@@ -865,7 +869,7 @@ ClientEventDriver::SendChannelsToServer()
       break;
     }
   }
-  DETAILLOGV("Sent [%d] events to the server",sent);
+  DETAILLOGV(_T("Sent [%d] events to the server"),sent);
   return sent;
 }
 
@@ -915,7 +919,7 @@ ClientEventDriver::SendChannelsToApplication()
       break;
     }
   }
-  DETAILLOGV("Sent [%d] events to the application", sent);
+  DETAILLOGV(_T("Sent [%d] events to the application"), sent);
   return sent;
 }
 
@@ -928,12 +932,13 @@ ClientEventDriver::SendChannelsToApplication()
 void
 ClientEventDriver::StopSocketChannel()
 {
-  m_websocket->SendCloseSocket(WS_CLOSE_NORMAL,"ClientEventDriver closes socket");
+  m_websocket->SendCloseSocket(WS_CLOSE_NORMAL,_T("ClientEventDriver closes socket"));
 }
 
 void
 ClientEventDriver::StopEventsChannel()
 {
+  m_client.StopClient();
   m_client.Reset();
 }
 

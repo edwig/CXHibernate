@@ -32,43 +32,43 @@
 CXModelWord cxmodelWords[] =
 {
    // COLUMNS/ATTRIBUTES nullability
-   { "not_null",            SQL_NO_NULLS            }
-  ,{ "nullable",            SQL_NULLABLE            }
-  ,{ "nulls_unknown",       SQL_NULLABLE_UNKNOWN    }
+   { _T("not_null"),            SQL_NO_NULLS            }
+  ,{ _T("nullable"),            SQL_NULLABLE            }
+  ,{ _T("nulls_unknown"),       SQL_NULLABLE_UNKNOWN    }
    // CONSTRAINT STATUS
-  ,{ "initially_deferred",  SQL_INITIALLY_DEFERRED  }
-  ,{ "initially_immediate", SQL_INITIALLY_IMMEDIATE }
-  ,{ "not_deferrable",      SQL_NOT_DEFERRABLE      }
-  ,{ "immediate",           0                       }
-  ,{ "deferred",            1                       }
+  ,{ _T("initially_deferred"),  SQL_INITIALLY_DEFERRED  }
+  ,{ _T("initially_immediate"), SQL_INITIALLY_IMMEDIATE }
+  ,{ _T("not_deferrable"),      SQL_NOT_DEFERRABLE      }
+  ,{ _T("immediate"),           0                       }
+  ,{ _T("deferred"),            1                       }
    // ASSOCIATIONS 
-  ,{ "cascade",             SQL_CASCADE             }
-  ,{ "no_action",           SQL_NO_ACTION           }
-  ,{ "set_null",            SQL_SET_NULL            }
-  ,{ "set_default",         SQL_SET_DEFAULT         }
-  ,{ "restrict",            SQL_RESTRICT            }
+  ,{ _T("cascade"),             SQL_CASCADE             }
+  ,{ _T("no_action"),           SQL_NO_ACTION           }
+  ,{ _T("set_null"),            SQL_SET_NULL            }
+  ,{ _T("set_default"),         SQL_SET_DEFAULT         }
+  ,{ _T("restrict"),            SQL_RESTRICT            }
    // Association matching
-  ,{ "match_full",          SQL_MATCH_FULL          }
-  ,{ "match_partial",       SQL_MATCH_PARTIAL       }
-  ,{ "match_simple",        SQL_MATCH_SIMPLE        }
+  ,{ _T("match_full"),          SQL_MATCH_FULL          }
+  ,{ _T("match_partial"),       SQL_MATCH_PARTIAL       }
+  ,{ _T("match_simple"),        SQL_MATCH_SIMPLE        }
    // INDEX TYPE
-  ,{ "table_statistics",    SQL_TABLE_STAT          }
-  ,{ "index_clustered",     SQL_INDEX_CLUSTERED     }
-  ,{ "index_hashed",        SQL_INDEX_HASHED        }
-  ,{ "index_other",         SQL_INDEX_OTHER         }
+  ,{ _T("table_statistics"),    SQL_TABLE_STAT          }
+  ,{ _T("index_clustered"),     SQL_INDEX_CLUSTERED     }
+  ,{ _T("index_hashed"),        SQL_INDEX_HASHED        }
+  ,{ _T("index_other"),         SQL_INDEX_OTHER         }
    // Special attributes
-  ,{ "scope_currow",        SQL_SCOPE_CURROW        }
-  ,{ "scope_transaction",   SQL_SCOPE_TRANSACTION   }
-  ,{ "scope_session",       SQL_SCOPE_SESSION       }
-  ,{ "pseudo_transaction",  SQL_PC_PSEUDO           }
-  ,{ "nonpseudo_transaction",SQL_PC_NOT_PSEUDO      }
+  ,{ _T("scope_currow"),        SQL_SCOPE_CURROW        }
+  ,{ _T("scope_transaction"),   SQL_SCOPE_TRANSACTION   }
+  ,{ _T("scope_session"),       SQL_SCOPE_SESSION       }
+  ,{ _T("pseudo_transaction"),  SQL_PC_PSEUDO           }
+  ,{ _T("nonpseudo_transaction"),SQL_PC_NOT_PSEUDO      }
    // PERSISTENT STORED MODULES (PSM)
-  ,{ "procedure",           SQL_PT_PROCEDURE        }
-  ,{ "function",            SQL_PT_FUNCTION         }
+  ,{ _T("procedure"),           SQL_PT_PROCEDURE        }
+  ,{ _T("function"),            SQL_PT_FUNCTION         }
    // RESULT TYPES
-  ,{ "param_input",         SQL_PARAM_INPUT         }
-  ,{ "param_input_output",  SQL_PARAM_INPUT_OUTPUT  }
-  ,{ "param_output",        SQL_PARAM_OUTPUT        }
-  ,{ "return_value",        SQL_RETURN_VALUE        }
-  ,{ "result_column",       SQL_RESULT_COL          }
+  ,{ _T("param_input"),         SQL_PARAM_INPUT         }
+  ,{ _T("param_input_output"),  SQL_PARAM_INPUT_OUTPUT  }
+  ,{ _T("param_output"),        SQL_PARAM_OUTPUT        }
+  ,{ _T("return_value"),        SQL_RETURN_VALUE        }
+  ,{ _T("result_column"),       SQL_RESULT_COL          }
 };

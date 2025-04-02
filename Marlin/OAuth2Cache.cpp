@@ -4,7 +4,7 @@
 //
 // Marlin Server: Internet server/client
 // 
-// Copyright (c) 2014-2022 ir. W.E. Huisman
+// Copyright (c) 2014-2024 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -55,10 +55,12 @@
 // And of course, as always, check for errors, session == 0 etc :-)
 //
 
+#ifdef _AFX
 #ifdef _DEBUG
 #define new DEBUG_NEW
 #undef THIS_FILE
 static char THIS_FILE[] = __FILE__;
+#endif
 #endif
 
 OAuth2Cache::OAuth2Cache()
@@ -70,6 +72,8 @@ OAuth2Cache::~OAuth2Cache()
 {
   if(m_client)
   {
+    // Disconnet any logging
+    m_client->SetLogging(nullptr);
     delete m_client;
     m_client = nullptr;
   }
@@ -170,7 +174,7 @@ OAuth2Cache::GetIsExpired(int p_session)
   AutoCritSec lock(&m_lock);
 
   bool expired = true;
-  OAuthSession* session = FindSession(p_session);
+  const OAuthSession* session = FindSession(p_session);
   if(session)
   {
     __timeb64 now;
@@ -242,7 +246,7 @@ OAuth2Cache::GetHasSession(XString p_appID,XString p_appKey)
 {
   AutoCritSec lock(&m_lock);
 
-  for(auto& ses : m_cache)
+  for(const auto& ses : m_cache)
   {
     if(ses.second.m_appID == p_appID && ses.second.m_appKey == p_appKey)
     {
@@ -280,6 +284,7 @@ OAuth2Cache::GetClient()
     if(m_logfile)
     {
       m_client->SetLogging(m_logfile);
+      m_client->SetLogLevel(m_logfile->GetLogLevel());
     }
     if(m_development)
     {
@@ -310,8 +315,8 @@ OAuth2Cache::StartCredentialsGrant(OAuthSession* p_session)
 
   // Getting a token from this URL with a POST from this message
   HTTPMessage getToken(HTTPCommand::http_post,p_session->m_url);
-  getToken.SetContentType("application/x-www-form-urlencoded");
-  getToken.AddHeader("Accept","application/json");
+  getToken.SetContentType(_T("application/x-www-form-urlencoded"));
+  getToken.AddHeader(_T("Accept"),_T("application/json"));
   getToken.SetUser    (p_session->m_appID);
   getToken.SetPassword(p_session->m_appKey);
   XString payload = CreateTokenRequest(p_session);
@@ -329,16 +334,16 @@ OAuth2Cache::StartCredentialsGrant(OAuthSession* p_session)
       JSONobject& object = json.GetValue().GetObject();
       for(auto& pair : object)
       {
-        if(pair.m_name.CompareNoCase("token_type") == 0)
+        if(pair.m_name.CompareNoCase(_T("token_type")) == 0)
         {
           typeFound = pair.m_value.GetString();
         }
-        if(pair.m_name.CompareNoCase("access_token") == 0)
+        if(pair.m_name.CompareNoCase(_T("access_token")) == 0)
         {
           // Remember our token
           p_session->m_bearerToken = pair.m_value.GetString();
         }
-        if(pair.m_name.CompareNoCase("expires_in") == 0)
+        if(pair.m_name.CompareNoCase(_T("expires_in")) == 0)
         {
           // Expires after a percentage of the given time, so we get a new token in time!
           p_session->m_expires = now.time + (pair.m_value.GetNumberInt() * token_validity_time / 100);
@@ -346,7 +351,7 @@ OAuth2Cache::StartCredentialsGrant(OAuthSession* p_session)
       }
 
       // Check if we have everything
-      if(typeFound.CompareNoCase("bearer") == 0 && p_session->m_bearerToken.GetLength() > 0 )
+      if(typeFound.CompareNoCase(_T("bearer")) == 0 && p_session->m_bearerToken.GetLength() > 0 )
       {
         valid = true;
 
@@ -358,7 +363,7 @@ OAuth2Cache::StartCredentialsGrant(OAuthSession* p_session)
 
         if(m_logfile)
         {
-          m_logfile->AnalysisLog(__FUNCTION__,LogType::LOG_INFO,true,"Received OAuth2 Bearer token from: %s",p_session->m_url.GetString());
+          m_logfile->AnalysisLog(_T(__FUNCTION__),LogType::LOG_INFO,true,_T("Received OAuth2 Bearer token from: %s"),p_session->m_url.GetString());
         }
       }
     }
@@ -376,8 +381,8 @@ OAuth2Cache::StartCredentialsGrant(OAuthSession* p_session)
       unsigned length = 0;
       m_client->GetResponse(response,length);
 
-      m_logfile->AnalysisLog(__FUNCTION__,LogType::LOG_ERROR,true,"Invalid response from token server. HTTP [%d]",m_client->GetStatus());
-      m_logfile->AnalysisLog(__FUNCTION__,LogType::LOG_ERROR,false,(char*)response);
+      m_logfile->AnalysisLog(_T(__FUNCTION__),LogType::LOG_ERROR,true,_T("Invalid response from token server. HTTP [%d]"),m_client->GetStatus());
+      m_logfile->AnalysisLog(_T(__FUNCTION__),LogType::LOG_ERROR,false,reinterpret_cast<TCHAR*>(response));
     }
   }
 }
@@ -386,17 +391,17 @@ XString
 OAuth2Cache::CreateTokenRequest(OAuthSession* p_session)
 {
   XString request;
-  request.Format("client_id=%s",           p_session->m_appID.GetString());
-  request.AppendFormat("&scope=%s",        p_session->m_scope.GetString());
-  request.AppendFormat("&client_secret=%s",p_session->m_appKey.GetString());
-  request += "&grant_type=";
+  request.Format(_T("client_id=%s"),           p_session->m_appID.GetString());
+  request.AppendFormat(_T("&scope=%s"),        p_session->m_scope.GetString());
+  request.AppendFormat(_T("&client_secret=%s"),p_session->m_appKey.GetString());
+  request += _T("&grant_type=");
   switch (p_session->m_flow)
   {
-    case OAuthFlow::OA_CLIENT:  request += "client_credentials"; 
+    case OAuthFlow::OA_CLIENT:  request += _T("client_credentials"); 
                                 break;
-    case OAuthFlow::OA_ROWNER:  request += "password";           
-                                request.AppendFormat("&username=%s",p_session->m_username.GetString());
-                                request.AppendFormat("&password=%s",p_session->m_password.GetString());
+    case OAuthFlow::OA_ROWNER:  request += _T("password");
+                                request.AppendFormat(_T("&username=%s"),p_session->m_username.GetString());
+                                request.AppendFormat(_T("&password=%s"),p_session->m_password.GetString());
                                 break;
     default:                    // Not implemented flows
                                 request.Empty();

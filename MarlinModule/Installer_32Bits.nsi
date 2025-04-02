@@ -3,14 +3,14 @@
 ; File:     MarlinModule\Installer_32BIts.nsi
 ; Author:   W.E. Huisman
 ;
-; Copyright (c) 2019 Edwig Huisman
+; Copyright (c) 2019-2024 Edwig Huisman
 ;
-; Date of last change: 10-01-2022
-; Version:             7.3
+; Date of last change: 14-03-2025
+; Version:             8.4.1
 ;-------------------------------------------------------
  !define PRODUCT_NAME                         "Marlin IIS Module 32Bits"
- !define PRODUCT_VERSION                      "7.3.0"
- !define PRODUCT_EXT                          "730"
+ !define PRODUCT_VERSION                      "8.4.1"
+ !define PRODUCT_EXT                          "841"
  !define PRODUCT_PUBLISHER                    "Edwig Huisman"
  !define PRODUCT_WEB_SITE                     "https://github.com/Edwig/Marlin"
  !define PRODUCT_DIR_REGKEY                   "Software\Microsoft\Windows\CurrentVersion\App Paths\${PRODUCT_NAME}"

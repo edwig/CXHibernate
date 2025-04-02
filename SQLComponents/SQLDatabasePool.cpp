@@ -2,7 +2,7 @@
 //
 // File: SQLDatabasePool.cpp
 //
-// Copyright (c) 1998-2022 ir. W.E. Huisman
+// Copyright (c) 1998-2025 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy of 
@@ -40,7 +40,7 @@ namespace SQLComponents
 class AutoCritSec
 {
 public:
-  AutoCritSec(CRITICAL_SECTION* section) : m_section(section)
+  explicit AutoCritSec(CRITICAL_SECTION* section) : m_section(section)
   {
     EnterCriticalSection(m_section);
   }
@@ -91,7 +91,7 @@ SQLDatabasePool::GetDatabase(const XString& p_connectionName)
   // Check whether we are already open
   if(m_isopen == false)
   {
-    throw StdException("INTERNAL ERROR: Database pool called after closure of the pool.");
+    throw StdException(_T("INTERNAL ERROR: Database pool called after closure of the pool."));
   }
   return GetDatabaseInternally(m_freeDatabases,name);
 }
@@ -111,7 +111,7 @@ SQLDatabasePool::GiveUp(SQLDatabase* p_database)
   // CHeck whether we are already/still open
   if(m_isopen == false)
   {
-    throw StdException("INTERNAL ERROR: Database pool called after closure of the pool.");
+    throw StdException(_T("INTERNAL ERROR: Database pool called after closure of the pool."));
   }
 
   // Grab our connection name
@@ -183,8 +183,8 @@ SQLDatabasePool::Cleanup(bool p_aggressive /*=false*/)
   if(p_aggressive)
   {
     XString text;
-    text.Format("Maximum number of databases reached and aggressive cleanup requested.\n"
-                "Max databases is currently: %d", m_maxDatabases);
+    text.Format(_T("Maximum number of databases reached and aggressive cleanup requested.\n")
+                _T("Max databases is currently: %d"), m_maxDatabases);
     LogPrint(text);
   }
   CleanupInternally(p_aggressive);
@@ -204,6 +204,12 @@ SQLConnection*
 SQLDatabasePool::GetConnection(const XString& p_connectionName)
 {
   return m_connections.GetConnection(p_connectionName);
+}
+
+SQLConnection* 
+SQLDatabasePool::GetConnection(const int p_index)
+{
+  return m_connections.GetConnection(p_index);
 }
 
 // Return current number of maximum databases
@@ -248,13 +254,13 @@ SQLDatabasePool::GetListOfConnections(XString& p_list)
   // All databases with an active connection
   for(auto& it : m_allDatabases)
   {
-    text.Format("Database pool - connection to    : %s\n",it.first.GetString());
+    text.Format(_T("Database pool - connection to    : %s\n"),it.first.GetString());
     p_list += text;
   }
   // If so, reflect the empty status
   if(p_list.IsEmpty())
   {
-    p_list = "Database pool - ODBC connections : No connections\n";
+    p_list = _T("Database pool - ODBC connections : No connections\n");
   }
 }
 
@@ -323,7 +329,7 @@ SQLDatabasePool::GetDatabaseInternally(DbsPool& p_pool,XString& p_connectionName
       if(--retry == 0)
       {
         XString error;
-        error.Format("The maximum number of open databases has been reached [%d]",m_maxDatabases);
+        error.Format(_T("The maximum number of open databases has been reached [%d]"),m_maxDatabases);
         LogPrint(error);
         throw StdException(error);
       }
@@ -363,7 +369,7 @@ SQLDatabasePool::GetDatabaseInternally(DbsPool& p_pool,XString& p_connectionName
   // AutoDBS must have a real database object
   if(dbs == nullptr)
   {
-    XString error("INTERN: No database found in the list with free databases");
+    XString error(_T("INTERN: No database found in the list with free databases"));
     LogPrint(error);
     throw StdException(error);
   }
@@ -423,7 +429,7 @@ SQLDatabasePool::CleanupInternally(bool p_aggressive)
         // Close the database en remove it from the list of free databases
         db->Close();
         XString text;
-        text.Format("Closed database connection for [%s/%s]",name.GetString(),db->GetUserName().GetString());
+        text.Format(_T("Closed database connection for [%s/%s]"),name.GetString(),db->GetUserName().GetString());
         LogPrint(text);
         list->pop_front();
 
@@ -551,7 +557,7 @@ SQLDatabasePool::OpenDatabase(SQLDatabase* p_dbs,XString& p_connectionName)
     
     // Tell it the logfile
     XString text;
-    text.Format("Database created and opened: [%s:%s]"
+    text.Format(_T("Database created and opened: [%s:%s]")
                ,conn->m_datasource.GetString()
                ,conn->m_username.GetString());
     LogPrint(text);
@@ -562,7 +568,7 @@ SQLDatabasePool::OpenDatabase(SQLDatabase* p_dbs,XString& p_connectionName)
   else
   {
     XString error;
-    error.Format("Database [%s] selected, but no connection found in 'database.xml'",p_connectionName.GetString());
+    error.Format(_T("Database [%s] selected, but no connection found in 'database.xml'"),p_connectionName.GetString());
     LogPrint(error);
     throw StdException(error);
   }
@@ -582,7 +588,7 @@ SQLDatabasePool::CloseAllInternally()
     {
       // Report the closing
       XString text;
-      text.Format("Database [%s] connection closed. User: %s"
+      text.Format(_T("Database [%s] connection closed. User: %s")
                  ,database->GetConnectionName().GetString()
                  ,database->GetUserName().GetString());
       LogPrint(text);
@@ -611,7 +617,7 @@ SQLDatabasePool::CleanupAllInternally()
 {
   // Cleanup all lists of free databases.
   // They do **NOT** own the database objects
-  for(auto& it : m_freeDatabases)
+  for(const auto& it : m_freeDatabases)
   {
     DbsList* list = it.second;
     delete list;
@@ -627,7 +633,7 @@ SQLDatabasePool::CleanupAllInternally()
 
 // Support printing to generic logfile
 void
-SQLDatabasePool::LogPrint(const char* p_text)
+SQLDatabasePool::LogPrint(LPCTSTR p_text)
 {
   // If the loglevel is above the activation level
   if(m_loggingLevel >= m_logActive)
@@ -661,7 +667,7 @@ SQLDatabasePool::WilLog()
   {
     // Refresh the loglevel
     m_loggingLevel = (*m_logLevel)(m_logContext);
-    // True if at logactive threshold or above
+    // True if at log active threshold or above
     if(m_loggingLevel >= m_logActive)
     {
       return true;
@@ -675,12 +681,12 @@ void
 SQLDatabasePool::AddRebindsToDatabase(SQLDatabase* p_database)
 {
   // Add all our rebound columns
-  for(auto& rebind : m_rebindColumns)
+  for(const auto& rebind : m_rebindColumns)
   {
     p_database->AddColumnRebind(rebind.first,rebind.second);
   }
   // Add all our rebound parameters
-  for(auto& rebind : m_rebindParameters)
+  for(const auto& rebind : m_rebindParameters)
   {
     p_database->AddParameterRebind(rebind.first,rebind.second);
   }

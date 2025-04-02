@@ -89,7 +89,7 @@ CXIndex;
 
 using CXIndices = std::vector<CXIndex*>;
 
-typedef struct _access
+typedef struct _taccess
 {
   CString m_grantee;
   CString m_privilege;
@@ -113,8 +113,8 @@ public:
              ,bool    p_primary    = false
              ,bool    p_foreign    = false
              ,bool    p_notnull    = false
-             ,CString p_dbs_column = ""
-             ,CString p_default    = "");
+             ,CString p_dbs_column = _T("")
+             ,CString p_default    = _T(""));
   ~CXAttribute();
 
   // GETTERS

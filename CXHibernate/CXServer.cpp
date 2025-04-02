@@ -87,13 +87,13 @@ CXServer::OnCXSelect(int p_code,SOAPMessage* p_message)
   UNREFERENCED_PARAMETER(p_code);
 
   CString errors;
-  CString actor("Client");
+  CString actor(_T("Client"));
   SQLFilterSet filters;
   XMLAttribute* nameAttribute = nullptr;
-  XMLElement* entity = p_message->FindElement("Entity");
+  XMLElement* entity = p_message->FindElement(_T("Entity"));
   if(entity)
   {
-    nameAttribute = p_message->FindAttribute(entity, "name");
+    nameAttribute = p_message->FindAttribute(entity, _T("name"));
   }
   if(nameAttribute)
   {
@@ -113,23 +113,23 @@ CXServer::OnCXSelect(int p_code,SOAPMessage* p_message)
           {
             AddObjectToMessage(p_message,object);
           }
-          p_message->SetParameter("CXResult","OK");
+          p_message->SetParameter(_T("CXResult"),_T("OK"));
           return;
         }
         catch(StdException& er)
         {
-          actor  = "Server";
-          errors = "CXSelect search for the object(s) failed: " + er.GetErrorMessage();
+          actor  = _T("Server");
+          errors = _T("CXSelect search for the object(s) failed: ") + er.GetErrorMessage();
         }
       }
-      else errors = "CXSelect must provide a minimum of 1 filter at least!";
+      else errors = _T("CXSelect must provide a minimum of 1 filter at least!");
     }
-    else errors = "CXSelect entity class name is unknown to the server: " + classname;
+    else errors = _T("CXSelect entity class name is unknown to the server: ") + classname;
   }
-  else errors = "CXSelect action is missing an 'Entity'";
+  else errors = _T("CXSelect action is missing an 'Entity'");
 
   p_message->Reset();
-  p_message->SetFault("Failed",actor,"CXSelect action",errors);
+  p_message->SetFault(_T("Failed"),actor,_T("CXSelect action"),errors);
 }
 
 void
@@ -139,11 +139,11 @@ CXServer::OnCXInsert(int p_code,SOAPMessage* p_message)
   UNREFERENCED_PARAMETER(p_code);
 
   CString errors;
-  CString actor("Client");
-  XMLElement* entity = p_message->FindElement("Entity");
+  CString actor(_T("Client"));
+  XMLElement* entity = p_message->FindElement(_T("Entity"));
   if(entity)
   {
-    XMLAttribute* nm = p_message->FindAttribute(entity,"name");
+    XMLAttribute* nm = p_message->FindAttribute(entity,_T("name"));
     if(nm)
     {
       CString classname = nm->m_value;
@@ -162,33 +162,33 @@ CXServer::OnCXInsert(int p_code,SOAPMessage* p_message)
             p_message->Reset();
 
             // Place resulting object in the message
-            entity = p_message->SetParameter("Entity","");
-            p_message->SetAttribute(entity,"name",classname);
+            entity = p_message->SetParameter(_T("Entity"),_T(""));
+            p_message->SetAttribute(entity,_T("name"),classname);
             object->Serialize(*p_message,entity);
 
             // Add the "OK" sign
-            p_message->SetParameter("CXResult","OK");
+            p_message->SetParameter(_T("CXResult"),_T("OK"));
             return;
           }
           else
           {
-            actor  = "Server";
-            errors = "CXInsert object storage failed";
+            actor  = _T("Server");
+            errors = _T("CXInsert object storage failed");
           }
         }
         catch(StdException& er)
         {
-          errors = "CXInsert de-serialization of the object failed: " + er.GetErrorMessage();
+          errors = _T("CXInsert de-serialization of the object failed: ") + er.GetErrorMessage();
         }
       }
-      else errors = "CXInsert entity class name is unknown to the server: " + classname;
+      else errors = _T("CXInsert entity class name is unknown to the server: ") + classname;
     }
-    else errors = "CXInsert action: Entity is missing a 'name'";
+    else errors = _T("CXInsert action: Entity is missing a 'name'");
   }
-  else errors = "CXInsert action is missing an 'Entity'";
+  else errors = _T("CXInsert action is missing an 'Entity'");
 
   p_message->Reset();
-  p_message->SetFault("Failed",actor,"CXInsert action",errors);
+  p_message->SetFault(_T("Failed"),actor,_T("CXInsert action"),errors);
 }
 
 void
@@ -198,11 +198,11 @@ CXServer::OnCXUpdate(int p_code,SOAPMessage* p_message)
   UNREFERENCED_PARAMETER(p_code);
 
   CString errors;
-  CString actor("Client");
-  XMLElement* entity = p_message->FindElement("Entity");
+  CString actor(_T("Client"));
+  XMLElement* entity = p_message->FindElement(_T("Entity"));
   if(entity)
   {
-    XMLAttribute* nm = p_message->FindAttribute(entity,"name");
+    XMLAttribute* nm = p_message->FindAttribute(entity,_T("name"));
     if(nm)
     {
       CString classname = nm->m_value;
@@ -229,30 +229,30 @@ CXServer::OnCXUpdate(int p_code,SOAPMessage* p_message)
             if(m_session->Update(realObject))
             {
               p_message->Reset();
-              p_message->SetParameter("CXResult","OK");
+              p_message->SetParameter(_T("CXResult"),_T("OK"));
               return;
             }
             else
             {
-              actor  = "Server";
-              errors = "CXUpdate object storage failed";
+              actor  = _T("Server");
+              errors = _T("CXUpdate object storage failed");
             }
           }
-          else errors = "CXUpdate object to be updated not found!";
+          else errors = _T("CXUpdate object to be updated not found!");
         }
         catch(StdException& er)
         {
-          errors = "CXUpdate de-serialization of the object failed: " + er.GetErrorMessage();
+          errors = _T("CXUpdate de-serialization of the object failed: ") + er.GetErrorMessage();
         }
       }
-      else errors = "CXUpdate entity class name is unknown to the server: " + classname;
+      else errors = _T("CXUpdate entity class name is unknown to the server: ") + classname;
     }
-    else errors = "CXUpdate action: Entity is missing a 'name'";
+    else errors = _T("CXUpdate action: Entity is missing a 'name'");
   }
-  else errors = "CXUpdate action is missing an 'Entity'";
+  else errors = _T("CXUpdate action is missing an 'Entity'");
 
   p_message->Reset();
-  p_message->SetFault("Failed",actor,"CXUpdate action",errors);
+  p_message->SetFault(_T("Failed"),actor,_T("CXUpdate action"),errors);
 }
 
 void
@@ -262,11 +262,11 @@ CXServer::OnCXDelete(int p_code,SOAPMessage* p_message)
   UNREFERENCED_PARAMETER(p_code);
 
   CString errors;
-  CString actor("Client");
-  XMLElement* entity = p_message->FindElement("Entity");
+  CString actor(_T("Client"));
+  XMLElement* entity = p_message->FindElement(_T("Entity"));
   if(entity)
   {
-    XMLAttribute* nm = p_message->FindAttribute(entity,"name");
+    XMLAttribute* nm = p_message->FindAttribute(entity,_T("name"));
     if(nm)
     {
       CString classname = nm->m_value;
@@ -290,30 +290,30 @@ CXServer::OnCXDelete(int p_code,SOAPMessage* p_message)
             if(m_session->Delete(realObject))
             {
               p_message->Reset();
-              p_message->SetParameter("CXResult","OK");
+              p_message->SetParameter(_T("CXResult"),_T("OK"));
               return;
             }
             else
             {
-              actor  = "Server";
-              errors = "CXDelete object storage failed";
+              actor  = _T("Server");
+              errors = _T("CXDelete object storage failed");
             }
           }
-          else errors = "CXDelete object to be deleted not found!";
+          else errors = _T("CXDelete object to be deleted not found!");
         }
         catch(StdException& er)
         {
-          errors = "CXDelete de-serialization of the object failed: " + er.GetErrorMessage();
+          errors = _T("CXDelete de-serialization of the object failed: ") + er.GetErrorMessage();
         }
       }
-      else errors = "CXDelete entity class name is unknown to the server: " + classname;
+      else errors = _T("CXDelete entity class name is unknown to the server: ") + classname;
     }
-    else errors = "CXDelete action: Entity is missing a 'name'";
+    else errors = _T("CXDelete action: Entity is missing a 'name'");
   }
-  else errors = "CXDelete action is missing an 'Entity'";
+  else errors = _T("CXDelete action is missing an 'Entity'");
 
   p_message->Reset();
-  p_message->SetFault("Failed",actor,"CXDelete action",errors);
+  p_message->SetFault(_T("Failed"),actor,_T("CXDelete action"),errors);
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -326,13 +326,13 @@ CXServer::OnCXDelete(int p_code,SOAPMessage* p_message)
 void
 CXServer::FindFilterSet(SOAPMessage* p_message,SQLFilterSet& p_filters)
 {
-  XMLElement* fselem = p_message->FindElement("Filters");
+  XMLElement* fselem = p_message->FindElement(_T("Filters"));
   if(fselem == nullptr)
   {
     return;
   }
 
-  XMLElement* filter = p_message->FindElement(fselem,"Filter");
+  XMLElement* filter = p_message->FindElement(fselem,_T("Filter"));
   if(filter == nullptr)
   {
     return;
@@ -341,8 +341,8 @@ CXServer::FindFilterSet(SOAPMessage* p_message,SQLFilterSet& p_filters)
   // Iterate through all the filters
   while(filter)
   {
-    XMLElement* column = p_message->FindElement(filter,"Column",  false);
-    XMLElement* operat = p_message->FindElement(filter,"Operator",false);
+    XMLElement* column = p_message->FindElement(filter,_T("Column"),  false);
+    XMLElement* operat = p_message->FindElement(filter,_T("Operator"),false);
 
     if(column && operat)
     {
@@ -355,7 +355,7 @@ CXServer::FindFilterSet(SOAPMessage* p_message,SQLFilterSet& p_filters)
       // Create extra filter
       SQLFilter filt(column->GetValue(),oper);
 
-      XMLElement* value = p_message->FindElement(filter,"Value",false);
+      XMLElement* value = p_message->FindElement(filter,_T("Value"),false);
       while(value)
       {
         SQLVariant var(value->GetValue());
@@ -377,8 +377,8 @@ CXServer::AddObjectToMessage(SOAPMessage* p_message,CXObject* object)
 {
   // Add a new entity node
   XMLElement* param  = p_message->GetParameterObjectNode();
-  XMLElement* entity = p_message->AddElement(param,"Entity",XDT_String,"");
-  p_message->SetAttribute(entity,"name",object->GetClass()->GetTable()->GetTableName());
+  XMLElement* entity = p_message->AddElement(param,_T("Entity"),XDT_String,_T(""));
+  p_message->SetAttribute(entity,_T("name"),object->GetClass()->GetTable()->GetTableName());
 
   // Serialize our object to this message on this node
   object->Serialize(*p_message,entity);
@@ -393,23 +393,23 @@ CXServer::AddObjectToMessage(SOAPMessage* p_message,CXObject* object)
 void
 CXServer::RegisterSelectOperation()
 {
-  CString request("CXH_Select");
-  CString response = request + "Response";
+  CString request(_T("CXH_Select"));
+  CString response = request + _T("Response");
 
   SOAPMessage input (m_targetNamespace,request);
   SOAPMessage output(m_targetNamespace,response);
 
   // Entity with a filter
-  XMLElement* entity  = input.AddElement(NULL,   "Entity", WSDL_Mandatory|XDT_String,"");
-  XMLElement* filters = input.AddElement(entity, "Filters",WSDL_Mandatory|WSDL_OneMany|XDT_String,"");
-  XMLElement* filter  = input.AddElement(filters,"Filter", WSDL_Mandatory|XDT_String,"");
+  XMLElement* entity  = input.AddElement(NULL,   _T("Entity"), WSDL_Mandatory|XDT_String,_T(""));
+  XMLElement* filters = input.AddElement(entity, _T("Filters"),WSDL_Mandatory|WSDL_OneMany|XDT_String,_T(""));
+  XMLElement* filter  = input.AddElement(filters,_T("Filter"), WSDL_Mandatory|XDT_String,_T(""));
   // Filter must contain these
-  input.AddElement(filter,"Column",  WSDL_Mandatory|XDT_String,"string");
-  input.AddElement(filter,"Operator",WSDL_Mandatory|XDT_String,"string");
-  input.AddElement(filter,"Value",   WSDL_Optional |XDT_String,"string");
+  input.AddElement(filter,_T("Column"),  WSDL_Mandatory|XDT_String,_T("string"));
+  input.AddElement(filter,_T("Operator"),WSDL_Mandatory|XDT_String,_T("string"));
+  input.AddElement(filter,_T("Value"),   WSDL_Optional |XDT_String,_T("string"));
 
   // Returns an entity (Unspecified)
-  output.AddElement(NULL,"Entity",   WSDL_Optional |XDT_String,"string");
+  output.AddElement(NULL,_T("Entity"),   WSDL_Optional |XDT_String,_T("string"));
 
   AddOperation(CXSELECT,request,&input,&output);
 }
@@ -417,16 +417,16 @@ CXServer::RegisterSelectOperation()
 void
 CXServer::RegisterInsertOperation()
 {
-  CString request("CXH_Insert");
-  CString response = request + "Response";
+  CString request(_T("CXH_Insert"));
+  CString response = request + _T("Response");
 
   SOAPMessage input (m_targetNamespace,request);
   SOAPMessage output(m_targetNamespace,response);
 
   // Entity (Unspecified
-  input .AddElement(NULL,"Entity",WSDL_Mandatory|XDT_String,"");
+  input .AddElement(NULL,_T("Entity"),WSDL_Mandatory|XDT_String,_T(""));
   // Returns an entity (Unspecified)
-  output.AddElement(NULL,"Entity",WSDL_Optional |XDT_String,"string");
+  output.AddElement(NULL,_T("Entity"),WSDL_Optional |XDT_String,_T("string"));
 
   AddOperation(CXINSERT,request,&input,&output);
 }
@@ -434,16 +434,16 @@ CXServer::RegisterInsertOperation()
 void
 CXServer::RegisterUpdateOperation()
 {
-  CString request("CXH_Update");
-  CString response = request + "Response";
+  CString request(_T("CXH_Update"));
+  CString response = request + _T("Response");
 
   SOAPMessage input (m_targetNamespace,request);
   SOAPMessage output(m_targetNamespace,response);
 
   // Entity (Unspecified
-  input .AddElement(NULL,"Entity",WSDL_Mandatory|XDT_String,"");
+  input .AddElement(NULL,_T("Entity"),WSDL_Mandatory|XDT_String,_T(""));
   // Returns an entity (Unspecified)
-  output.AddElement(NULL,"Entity",WSDL_Optional |XDT_String,"string");
+  output.AddElement(NULL,_T("Entity"),WSDL_Optional |XDT_String,_T("string"));
 
   AddOperation(CXUPDATE,request,&input,&output);
 }
@@ -451,16 +451,16 @@ CXServer::RegisterUpdateOperation()
 void
 CXServer::RegisterDeleteOperation()
 {
-  CString request("CXH_Delete");
-  CString response = request + "Response";
+  CString request(_T("CXH_Delete"));
+  CString response = request + _T("Response");
 
   SOAPMessage input (m_targetNamespace,request);
   SOAPMessage output(m_targetNamespace,response);
 
   // Entity (Unspecified
-  input .AddElement(NULL,"Entity",WSDL_Mandatory|XDT_String,"");
+  input .AddElement(NULL,_T("Entity"),WSDL_Mandatory|XDT_String,_T(""));
   // Returns an entity (Unspecified)
-  output.AddElement(NULL,"Entity",WSDL_Optional |XDT_String,"string");
+  output.AddElement(NULL,_T("Entity"),WSDL_Optional |XDT_String,_T("string"));
 
   AddOperation(CXDELETE,request,&input,&output);
 }

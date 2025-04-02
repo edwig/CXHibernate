@@ -4,7 +4,7 @@
 //
 // Marlin Server: Internet server/client
 // 
-// Copyright (c) 2014-2022 ir. W.E. Huisman
+// Copyright (c) 2014-2024 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -74,9 +74,9 @@ class ServerEventChannel;
 class SiteHandlerEventSocket : public SiteHandlerWebSocket
 {
 public:
-  SiteHandlerEventSocket(ServerEventDriver* p_driver) : m_driver(p_driver) {}
+  explicit SiteHandlerEventSocket(ServerEventDriver* p_driver) : m_driver(p_driver) {}
 
-  virtual bool Handle(HTTPMessage* p_message,WebSocket* p_socket);
+  virtual bool Handle(HTTPMessage* p_message,WebSocket* p_socket) override;
 protected:
   ServerEventDriver* m_driver;
 };
@@ -85,9 +85,9 @@ protected:
 class SiteHandlerEventStream : public SiteHandler
 {
 public:
-  SiteHandlerEventStream(ServerEventDriver* p_driver) : m_driver(p_driver) {}
+  explicit SiteHandlerEventStream(ServerEventDriver* p_driver) : m_driver(p_driver) {}
 
-  void HandleStream(HTTPMessage* p_message,EventStream* p_stream) override;
+  bool HandleStream(HTTPMessage* p_message,EventStream* p_stream) override;
 private:
   ServerEventDriver* m_driver;
 };
@@ -96,7 +96,7 @@ private:
 class SiteHandlerPolling : public SiteHandlerSoap
 {
 public:
-  SiteHandlerPolling(ServerEventDriver* p_driver) : m_driver(p_driver) {}
+  explicit SiteHandlerPolling(ServerEventDriver* p_driver) : m_driver(p_driver) {}
 
   bool Handle(SOAPMessage* p_message) override;
 private:
@@ -109,9 +109,9 @@ private:
 //
 //////////////////////////////////////////////////////////////////////////
 
-using ChannelMap  = std::map<int,    ServerEventChannel*>;
-using ChanNameMap = std::map<XString,ServerEventChannel*>;
-using SenderMap   = std::map<XString,long>;
+using ChannelMap  = std::map<int,     ServerEventChannel*>;
+using ChanNameMap = std::map<XString, ServerEventChannel*>;
+using SenderMap   = std::map<unsigned,clock_t>;
 
 class ServerEventDriver
 {
@@ -123,7 +123,7 @@ public:
   // Register our main site in the server
   bool  RegisterSites(HTTPServer* p_server,HTTPSite* p_site);
   // Create the three sites for the event driver for a user session
-  int   RegisterChannel(XString p_sessionName,XString p_cookie,XString p_token);
+  int   RegisterChannel(XString p_sessionName,XString p_cookie,XString p_token,XString p_metadata = _T(""));
   // Force the authentication of the cookie
   void  SetForceAuthentication(bool p_force);
   // Setting the brute force attack interval
@@ -134,6 +134,10 @@ public:
   bool  StartEventDriver();
   // Stopping the event driver
   bool  StopEventDriver();
+  // Check the event channel for proper working
+  bool  CheckChannelPolicy(int m_channel);
+  // Cookie timout in minutes
+  void  SetCookieTimeout(int p_minutes);
 
   // Flush messages as much as possible for a channel
   bool  FlushChannel(XString p_cookie,XString p_token);
@@ -143,7 +147,7 @@ public:
   bool  UnRegisterChannel(int p_channel,bool p_flush = true);
   // Incoming new Socket/SSE Stream
   bool  IncomingNewSocket(HTTPMessage* p_message,WebSocket*   p_socket);
-  void  IncomingNewStream(HTTPMessage* p_message,EventStream* p_stream);
+  bool  IncomingNewStream(HTTPMessage* p_message,EventStream* p_stream);
   bool  IncomingLongPoll (SOAPMessage* p_message);
 
   // GETTERS
@@ -160,22 +164,22 @@ public:
 
   // OUR WORKHORSE: Post an event to the client
   // If 'returnToSender' is filled, only this client will receive the message
-  int   PostEvent(int p_session,XString p_payload,XString p_returnToSender = "",EvtType p_type = EvtType::EV_Message);
+  int   PostEvent(int p_session,XString p_payload,XString p_returnToSender = _T(""),EvtType p_type = EvtType::EV_Message,XString p_typeName = _T(""));
 
   // Main loop of the event runner. DO NOT CALL!
   void  EventThreadRunning();
   // Brute force attack detection. Called by the ServerEventChannel
-  bool  CheckBruteForceAttack(XString p_sender);
+  bool  CheckBruteForceAttack(unsigned p_sender);
   // Incoming event. Called by the ServerEventChannel
   void  IncomingEvent();
 
 private:
   // Reset the driver
   void  Reset();
-  // Start a thread for the streaming websocket/server-push event interface
+  // Start a thread for the streaming WebSocket/server-push event interface
   bool  StartEventThread();
   // Find a channel from the routing information
-  XString FindChannel(Routing& p_routing,XString p_base);
+  XString FindChannel(const Routing& p_routing,XString p_base);
 
   // Find an event session
   ServerEventChannel* FindSession(XString p_cookie,XString p_token);
@@ -194,21 +198,25 @@ private:
   void RecalculateInterval(int p_sent);
 
   // DATA
-  HTTPServer*     m_server { nullptr };
-  HTTPSite*       m_site   { nullptr };
+  HTTPServer*     m_server { nullptr };     // Our HTTP server
+  HTTPSite*       m_site   { nullptr };     // Our Events site
   // Sessions
-  bool            m_active { false };
-  bool            m_force  { false };
-  int             m_nextSession { 0 };
-  ChannelMap      m_channels;   // All channels (by channel number)
-  ChanNameMap     m_names;      // Extra redundant lookup in the channels for speed by session-name
-  ChanNameMap     m_cookies;    // Extra redundant lookup in the channels for speed by cookie:value
+  bool            m_active { false   };     // Central queue is active
+  bool            m_force  { false   };     // Force the authenticaiton
+  int             m_nextSession  { 0 };     // Next session number
+  ChannelMap      m_channels;               // All channels (by channel number)
+  ChanNameMap     m_names;                  // Extra redundant lookup in the channels for speed by session-name
+  ChanNameMap     m_cookies;                // Extra redundant lookup in the channels for speed by cookie:value
+  int             m_cookieTimeout { 0 };    // Timeout for cookies in minutes
   // Brute force attack on the event channels
-  SenderMap       m_senders;
+  SenderMap       m_senders;                // Last time of sender attach
   int             m_interval { 10 * CLOCKS_PER_SEC };
   // The worker bee
   HANDLE          m_thread { NULL };
   HANDLE          m_event  { NULL };
+  // Metadata for secure cookie encryption
+  // Requires that the metadata for all cookies are the same
+  XString         m_metadata;
   // LOCKING
   CRITICAL_SECTION m_lock;
 };

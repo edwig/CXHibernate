@@ -4,7 +4,7 @@
 //
 // BaseLibrary: Indispensable general objects and functions
 // 
-// Copyright (c) 2014-2022 ir. W.E. Huisman
+// Copyright (c) 2014-2025 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -40,11 +40,8 @@
 // in the *.MC file of your server application
 
 // Products service name is in this global variable
-extern char  g_svcname[];
+extern TCHAR g_svcname[];
 
-void  SvcStartEventBuffer();
-void  SvcAllocEventBuffer();
-void  SvcFreeEventBuffer();
 void  SvcReportSuccessEvent(LPCTSTR p_message);
 void  SvcReportInfoEvent (bool p_doFormat,LPCTSTR p_message,...);
 void  SvcReportErrorEvent(int p_module,bool p_doFormat,LPCTSTR p_function,LPCTSTR p_message, ...);

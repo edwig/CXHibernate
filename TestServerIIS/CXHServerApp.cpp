@@ -28,7 +28,6 @@
 #include "stdafx.h"
 #include "CXHServerApp.h"
 #include "CXSession.h"
-#include "MarlinModule.h"
 #include "SQLComponents.h"
 
 #ifdef _DEBUG
@@ -42,13 +41,13 @@ int g_errors = 0;
 
 using namespace SQLComponents;
 
-const char* APPLICATION_NAME     = "HibernateTestServerIIS";
-const char* PRODUCT_NAME         = "CXHibernate";
-const char* PRODUCT_DISPLAY_NAME = "CXHibernate Test Server";
-const char* PRODUCT_COPYRIGHT    = "CXHibernate (c) 2019";
-const char* PRODUCT_VERSION      = "1.1.0";
-const char* PRODUCT_MESSAGES_DLL = "CXHibernateMessages.dll";
-const char* PRODUCT_SITE         = "/CXHibernate/";
+const TCHAR* APPLICATION_NAME     = _T("HibernateTestServerIIS");
+const TCHAR* PRODUCT_NAME         = _T("CXHibernate");
+const TCHAR* PRODUCT_DISPLAY_NAME = _T("CXHibernate Test Server");
+const TCHAR* PRODUCT_COPYRIGHT    = _T("CXHibernate (c) 2019");
+const TCHAR* PRODUCT_VERSION      = _T("1.1.0");
+const TCHAR* PRODUCT_MESSAGES_DLL = _T("CXHibernateMessages.dll");
+const TCHAR* PRODUCT_SITE         = _T("/CXHibernate/");
 
 // The app Factory
 CXHServerAppFactory CXHAppFactory;
@@ -61,7 +60,7 @@ CXHServerAppFactory CXHAppFactory;
 //
 //////////////////////////////////////////////////////////////////////////
 
-CXHServerApp::CXHServerApp(IHttpServer* p_iis,CString p_webroot,CString p_appName)
+CXHServerApp::CXHServerApp(IHttpServer* p_iis,PCWSTR p_webroot,PCWSTR p_appName)
              :ServerApp(p_iis,p_webroot,p_appName)
 {
 }
@@ -77,9 +76,9 @@ CXHServerApp::InitInstance()
   // Must init for the HTTPServer and other objects
   ServerApp::InitInstance();
 
-  CString name     = "CXHibernate";
-  CString contract = "http://www.cxhibernate.org/";
-  CString url("http://localhost:1960/CXServer/");
+  CString name     = _T("CXHibernate");
+  CString contract = _T("http://www.cxhibernate.org/");
+  CString url(_T("http://localhost:1960/CXServer/"));
 
   StartSession();
 
@@ -98,11 +97,11 @@ CXHServerApp::InitInstance()
   // Try running the service
   if (m_hibernateServer->RunService())
   {
-    qprintf("WebServiceServer [%s] is now running OK\n",m_applicationName);
-    qprintf("Running contract      : %s\n",             contract);
-    qprintf("For WSDL download use : %s%s.wsdl\n",      url, name);
-    qprintf("For interface page use: %s%s%s\n",         url, name,m_hibernateServer->GetServicePostfix());
-    qprintf("\n");
+    qprintf(_T("WebServiceServer [%s] is now running OK\n"),m_applicationName);
+    qprintf(_T("Running contract      : %s\n"),             contract);
+    qprintf(_T("For WSDL download use : %s%s.wsdl\n"),      url, name);
+    qprintf(_T("For interface page use: %s%s%s\n"),         url, name,m_hibernateServer->GetServicePostfix());
+    qprintf(_T("\n"));
 
     // Instance is now running
     m_running = true;
@@ -110,8 +109,8 @@ CXHServerApp::InitInstance()
   else
   {
     xerror();
-    qprintf("ERROR Starting WebServiceServer for: %s\n", contract.GetString());
-    qprintf("ERROR Reported by the server: %s\n",        m_hibernateServer->GetErrorMessage().GetString());
+    qprintf(_T("ERROR Starting WebServiceServer for: %s\n"), contract.GetString());
+    qprintf(_T("ERROR Reported by the server: %s\n"),        m_hibernateServer->GetErrorMessage().GetString());
   }
 }
 
@@ -152,22 +151,22 @@ CXHServerApp::StartSession()
     if (m_session)
     {
       // Where we have our filestore
-      m_session->SetFilestore("C:\\WWW\\Testing");
+      m_session->SetFilestore(_T("C:\\WWW\\Testing"));
 
       // We are a database session
-      m_session->SetDatabaseConnection("Testing", "sysdba", "altijd");
+      m_session->SetDatabaseConnection(_T("Testing"), _T("sysdba"), _T("altijd"));
     }
     else
     {
       xerror();
-      qprintf("ERROR: No Hibernate session started.\n");
+      qprintf(_T("ERROR: No Hibernate session started.\n"));
       exit(-3);
     }
   }
   catch (StdException& er)
   {
     xerror();
-    qprintf("Error while creating Hibernate session: %s\n", er.GetErrorMessage());
+    qprintf(_T("Error while creating Hibernate session: %s\n"), er.GetErrorMessage());
     exit(-3);
   }
 }
@@ -179,7 +178,7 @@ CXHServerApp::CorrectlyStarted()
 {
   if(ServerApp::CorrectlyStarted() == false)
   {
-    qprintf("ServerApp incorrectly started. Review your program logic");
+    qprintf(_T("ServerApp incorrectly started. Review your program logic"));
     return false;
   }
   return true;
@@ -190,7 +189,7 @@ CXHServerApp::ReportAfterTesting()
 {
   // SUMMARY OF ALL THE TEST
   // ---- "---------------------------------------------- - ------
-  qprintf("TOTAL number of errors after all tests are run : %d", g_errors);
+  qprintf(_T("TOTAL number of errors after all tests are run : %d"), g_errors);
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -209,7 +208,7 @@ void xerror()
 
 // Suppressed printing. Only print when doDetails = true
 // Any testing module can turn doDetails to 'on' or 'off'
-void xprintf(const char* p_format, ...)
+void xprintf(const TCHAR* p_format, ...)
 {
   if (doDetails)
   {
@@ -219,16 +218,16 @@ void xprintf(const char* p_format, ...)
     string.FormatV(p_format, varargs);
     va_end(varargs);
 
-    string.TrimRight("\n");
+    string.TrimRight(_T("\n"));
 
-    g_analysisLog->AnalysisLog("Testing details", LogType::LOG_INFO, false, string);
+    g_analysisLog->AnalysisLog(_T("Testing details"), LogType::LOG_INFO, false, string);
   }
 }
 
 // Printing to the logfile for test results
 // "String to the logfile"   -> Will be printed to logfile including terminating newline
 // "Another string <+>"      -> Will be printed WITHOUT terminating newline
-void qprintf(const char* p_format, ...)
+void qprintf(const TCHAR* p_format, ...)
 {
   static CString stringRegister;
 
@@ -240,8 +239,8 @@ void qprintf(const char* p_format, ...)
   va_end(varargs);
 
   // See if we must just register the string
-  string.TrimRight("\n");
-  if (string.Right(3) == "<+>")
+  string.TrimRight(_T("\n"));
+  if (string.Right(3) == _T("<+>"))
   {
     stringRegister += string.Left(string.GetLength() - 3);
     return;
@@ -249,7 +248,7 @@ void qprintf(const char* p_format, ...)
 
   // Print the result to the logfile as INFO
   string = stringRegister + string;
-  g_analysisLog->AnalysisLog("Testing", LogType::LOG_INFO, false, string);
+  g_analysisLog->AnalysisLog(_T("Testing"), LogType::LOG_INFO, false, string);
   stringRegister.Empty();
 }
 
@@ -264,7 +263,7 @@ CXHServerAppFactory::CXHServerAppFactory()
 {
   if(appFactory)
   {
-    TRACE("You can only have ONE singleton ServerAppFactory in your program logic");
+    TRACE(_T("You can only have ONE singleton ServerAppFactory in your program logic"));
     ASSERT(FALSE);
   }
   else
@@ -275,8 +274,8 @@ CXHServerAppFactory::CXHServerAppFactory()
 
 CXHServerApp*
 CXHServerAppFactory::CreateServerApp(IHttpServer* p_iis
-                                    ,const char*  p_webroot
-                                    ,const char*  p_appName)
+                                    ,PCWSTR       p_webroot
+                                    ,PCWSTR       p_appName)
 {
   return new CXHServerApp(p_iis, p_webroot, p_appName);
 }

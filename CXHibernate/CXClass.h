@@ -41,7 +41,7 @@ class CXClass
 {
 public:
   CXClass(CString   p_name
-         ,CString   p_discriminator = ""
+         ,CString   p_discriminator = _T("")
          ,CXClass*  p_super  = nullptr
          ,CreateCXO p_create = nullptr);
  ~CXClass();

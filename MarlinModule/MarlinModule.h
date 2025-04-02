@@ -4,7 +4,7 @@
 //
 // Marlin Server: Internet server/client
 // 
-// Copyright (c) 2014-2022 ir. W.E. Huisman
+// Copyright (c) 2014-2024 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -30,18 +30,18 @@
 #pragma warning (disable:4091)
 #include <httpserv.h>
 #pragma warning (error:4091)
-
-#include "ServerApp.h"
 #include "PoolApp.h"
 #include <map>
 
 #define SERVERNAME_BUFFERSIZE 256
 
+// Standard ports for HTTP connections
+#define INTERNET_DEFAULT_HTTP_PORT   80
+#define INTERNET_DEFAULT_HTTPS_PORT 443
+
 // Forward reference
-class ServerApp;
 class LogAnalysis;
 class HTTPServerIIS;
-class ErrorReport;
 
 // All applications in the application pool
 using AppPool = std::map<int,PoolApp*>;
@@ -109,6 +109,7 @@ public:
   virtual void Terminate() override;
 private:
   bool    ModuleInHandlers(const XString& p_configPath);
+  bool    ApplicationNameAndPort(const XString& p_configPath,XString& p_application,int& p_port);
   bool    StillUsed(const HMODULE& p_module);
   int     CountAppPoolApplications(ServerApp* p_application);
 

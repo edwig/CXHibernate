@@ -4,7 +4,7 @@
 //
 // Marlin Server: Internet server/client
 // 
-// Copyright (c) 2014-2022 ir. W.E. Huisman
+// Copyright (c) 2014-2024 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -28,10 +28,12 @@
 #include "stdafx.h"
 #include "HTTPCertificate.h"
 
+#ifdef _AFX
 #ifdef _DEBUG
 #define new DEBUG_NEW
 #undef THIS_FILE
 static char THIS_FILE[] = __FILE__;
+#endif
 #endif
 
 HTTPCertificate::HTTPCertificate()
@@ -97,10 +99,10 @@ HTTPCertificate::GetSubject()
         BYTE* ptr = m_context->pCertInfo->Subject.pbData;
 
         // Copy subject name from certificate blob
-        m_subject = (char*)ptr;
+        m_subject = reinterpret_cast<char*>(ptr);
 
-        char* str = m_subject.GetBufferSetLength(len + 1);
-        strncpy_s(str,len + 1,(char*)ptr,len);
+        LPTSTR str = m_subject.GetBufferSetLength((len + 1) * sizeof(TCHAR));
+        _tcsncpy_s(str,(size_t)len + 1,CA2CT(reinterpret_cast<LPSTR>(ptr)),len);
         str[len] = 0;
         m_subject.ReleaseBuffer(len);
         m_subject = CleanupCertificateString(m_subject);
@@ -130,8 +132,8 @@ HTTPCertificate::GetIssuer()
         BYTE* ptr = m_context->pCertInfo->Issuer.pbData;
 
         // Copy subject name from certificate blob
-        char* str = m_issuer.GetBufferSetLength(len + 1);
-        strncpy_s(str,len + 1,(char*)ptr,len);
+        LPTSTR str = m_issuer.GetBufferSetLength((len + 1) * sizeof(TCHAR));
+        _tcsncpy_s(str,(size_t)len + 1,CA2CT(reinterpret_cast<LPSTR>(ptr)),len);
         str[len] = 0;
         m_issuer.ReleaseBuffer(len);
         m_issuer = CleanupCertificateString(m_issuer);
@@ -147,9 +149,9 @@ HTTPCertificate::VerifyThumbprint(XString p_thumbprint)
 {
   bool result = false;
 
-  // Buffers on the stack for the thumbprints
-  BYTE buffer1[THUMBPRINT_RAW_SIZE];
-  BYTE buffer2[THUMBPRINT_RAW_SIZE];
+  // Buffers on the stack for the thumb prints
+  BYTE buffer1[THUMBPRINT_RAW_SIZE] = { 0 };
+  BYTE buffer2[THUMBPRINT_RAW_SIZE] = { 0 };
   CRYPT_HASH_BLOB blob1;
   CRYPT_HASH_BLOB blob2;
   blob1.cbData = 0;
@@ -195,17 +197,18 @@ HTTPCertificate::VerifyThumbprint(XString p_thumbprint)
 // Without spaces: "db344064f2fc1318dd90f507fe78e81b031600"
 // P_blob must point to a blob that is sufficiently large (20 bytes)
 bool 
-HTTPCertificate::EncodeThumbprint(XString& p_thumbprint,PCRYPT_HASH_BLOB p_blob,DWORD p_len)
+HTTPCertificate::EncodeThumbprint(const XString& p_thumbprint,PCRYPT_HASH_BLOB p_blob,DWORD p_len)
 {
   // Removing
-  p_thumbprint.Replace(" ","");
+  XString thumbprint(p_thumbprint);
+  thumbprint.Replace(_T(" "),_T(""));
 
   BYTE* bpointer = p_blob->pbData;
 
-  for(int ind = 0;ind < p_thumbprint.GetLength();)
+  for(int ind = 0;ind < thumbprint.GetLength();)
   {
-    int c1 = toupper(p_thumbprint.GetAt(ind++));
-    int c2 = toupper(p_thumbprint.GetAt(ind++));
+    int c1 = toupper(thumbprint.GetAt(ind++));
+    int c2 = toupper(thumbprint.GetAt(ind++));
 
     c1 = (c1 <= '9') ? c1 = c1 - '0' : c1 - 'A' + 10;
     c2 = (c2 <= '9') ? c2 = c2 - '0' : c2 - 'A' + 10;

@@ -4,7 +4,7 @@
 //
 // Marlin Server: Internet server/client
 // 
-// Copyright (c) 2014-2022 ir. W.E. Huisman
+// Copyright (c) 2014-2024 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -28,10 +28,12 @@
 #include "stdafx.h"
 #include "SiteFilter.h"
 
+#ifdef _AFX
 #ifdef _DEBUG
 #define new DEBUG_NEW
 #undef THIS_FILE
 static char THIS_FILE[] = __FILE__;
+#endif
 #endif
 
 SiteFilter::SiteFilter(unsigned p_priority,XString p_name)
@@ -68,7 +70,7 @@ SiteFilter::Handle(HTTPMessage* p_message)
 {
   UNREFERENCED_PARAMETER(p_message);
   // Nothing done
-  TRACE("BEWARE: Incorrect implemented HTTP SiteFilter. Handle method not overriden!\n");
+  OutputDebugString(_T("BEWARE: Incorrect implemented HTTP SiteFilter. Handle method not overriden!\n"));
 
   return true;
 }

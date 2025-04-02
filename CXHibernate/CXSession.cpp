@@ -33,7 +33,6 @@
 #include <AutoCritical.h>
 #include <SQLQuery.h>
 #include <SQLTransaction.h>
-#include <EnsureFile.h>
 #include <SOAPMessage.h>
 #include <HTTPClient.h>
 #include <io.h>
@@ -47,12 +46,12 @@ static char THIS_FILE[] = __FILE__;
 //////////////////////////////////////////////////////////////////////////
 // Static functions for logging of the SQLDatbase
 
-static void CXHLogPrint(void* p_context, const char* p_text)
+static void CALLBACK CXHLogPrint(void* p_context,LPCTSTR p_text)
 {
   hibernate.Log(hibernate.GetLogLevel(),false,p_text);
 }
 
-static int CXHLogLevel(void* p_context)
+static int CALLBACK CXHLogLevel(void* p_context)
 {
   return hibernate.GetLogLevel();
 }
@@ -136,7 +135,7 @@ CXSession::~CXSession()
 void
 CXSession::CloseSession()
 {
-  hibernate.Log(CXH_LOG_ACTIONS,true,"Close session: %s",m_sessionKey);
+  hibernate.Log(CXH_LOG_ACTIONS,true,_T("Close session: %s"),m_sessionKey);
 
   // If create/drop cycle testing, try to drop the database
   if(m_use == SESS_Create)
@@ -160,7 +159,7 @@ CXSession::CloseSession()
 void
 CXSession::ChangeRole(CXHRole p_role)
 {
-  hibernate.Log(CXH_LOG_ACTIONS,true,"Changing session [%s] role to: %s",m_sessionKey,CXRoleToString(p_role));
+  hibernate.Log(CXH_LOG_ACTIONS,true,_T("Changing session [%s] role to: %s"),m_sessionKey,CXRoleToString(p_role));
   m_role = p_role;
 }
 
@@ -222,7 +221,7 @@ CXSession::GetDatabase()
       return m_database;
     }
   }
-  throw StdException("Connect a database to your CX-Hibernate session!");
+  throw StdException(_T("Connect a database to your CX-Hibernate session!"));
 }
 
 // Specify a database connection
@@ -295,7 +294,7 @@ CXSession::AddClass(CXClass* p_class)
   ObjectCache* objcache = new ObjectCache();
   m_cache.insert(std::make_pair(name,objcache));
 
-  hibernate.Log(CXH_LOG_ACTIONS,true,"Adding class [%s] to session [%s] ",name,m_sessionKey);
+  hibernate.Log(CXH_LOG_ACTIONS,true,_T("Adding class [%s] to session [%s] "),name,m_sessionKey);
   return true;
 }
 
@@ -330,20 +329,20 @@ CXSession::LoadConfiguration(XMLMessage& p_config)
   AutoCritSec lock(&m_lock);
 
   // Load session parameters
-  CString role = p_config.GetElement("session_role");
+  CString role = p_config.GetElement(_T("session_role"));
   m_role = CXStringToRole(role);
 
-  CString use = p_config.GetElement("database_use");
+  CString use = p_config.GetElement(_T("database_use"));
   m_use = CXStringToSessionUse(use);
 
   // Load all classes
-  XMLElement* theclass = p_config.FindElement("class");
+  XMLElement* theclass = p_config.FindElement(_T("class"));
   while(theclass)
   {
     CXClass* superclass = nullptr;
-    CString    name = p_config.GetElement(theclass,"name");
-    CString   super = p_config.GetElement(theclass,"super");
-    CString discrim = p_config.GetElement(theclass,"discriminator");
+    CString    name = p_config.GetElement(theclass,_T("name"));
+    CString   super = p_config.GetElement(theclass,_T("super"));
+    CString discrim = p_config.GetElement(theclass,_T("discriminator"));
 
     // Find any superclass
     if(!super.IsEmpty())
@@ -362,17 +361,17 @@ CXSession::LoadConfiguration(XMLMessage& p_config)
     else
     {
       delete newclass;
-      throw StdException("Cannot load class: " + name);
+      throw StdException(_T("Cannot load class: ") + name);
     }
     // Find next class
     theclass = p_config.GetElementSibling(theclass);
   }
 
   // Perform late binding of associations
-  theclass = p_config.FindElement("class");
+  theclass = p_config.FindElement(_T("class"));
   while(theclass)
   {
-    CString  name = p_config.GetElement(theclass, "name");
+    CString  name = p_config.GetElement(theclass, _T("name"));
     name.MakeLower();
     ClassMap::iterator it = m_classes.find(name);
     if(it != m_classes.end())
@@ -398,8 +397,8 @@ void
 CXSession::SaveConfiguration(XMLMessage& p_config)
 {
   // Save session parameters
-  p_config.AddElement(nullptr,"session_role",XDT_String,CXRoleToString(m_role));
-  p_config.AddElement(nullptr,"database_use",XDT_String,CXSessionUseToString(m_use));
+  p_config.AddElement(nullptr,_T("session_role"),XDT_String,CXRoleToString(m_role));
+  p_config.AddElement(nullptr,_T("database_use"),XDT_String,CXSessionUseToString(m_use));
 
   // Save all class info
   for(auto& cl : m_classes)
@@ -430,14 +429,14 @@ CXSession::StartTransaction()
   }
 
   // Create transaction and give new ID
-  m_transaction = new SQLTransaction(GetDatabase(),"mutation");
+  m_transaction = new SQLTransaction(GetDatabase(),_T("mutation"));
 
   // Reset the sub-transaction
   m_subtrans = 0;
   // This is our mutation ID
   m_mutation = hibernate.GetNewMutation();
 
-  hibernate.Log(CXH_LOG_ACTIONS,true,"Started transaction [%d] for session [%s] ",m_mutation,m_sessionKey);
+  hibernate.Log(CXH_LOG_ACTIONS,true,_T("Started transaction [%d] for session [%s] "),m_mutation,m_sessionKey);
   return m_mutation;
 }
 
@@ -463,9 +462,9 @@ CXSession::CommitTransaction()
   }
   else
   {
-    throw StdException("Not in transaction at Commit()");
+    throw StdException(_T("Not in transaction at Commit()"));
   }
-  hibernate.Log(CXH_LOG_ACTIONS,true,"Commit of transaction [%d] for session [%s] ",m_mutation,m_sessionKey);
+  hibernate.Log(CXH_LOG_ACTIONS,true,_T("Commit of transaction [%d] for session [%s] "),m_mutation,m_sessionKey);
 }
 
 void
@@ -477,7 +476,7 @@ CXSession::RollbackTransaction()
   // See if we have a transaction
   if(m_transaction == nullptr)
   {
-    throw StdException("Not in transaction at Rollback()");
+    throw StdException(_T("Not in transaction at Rollback()"));
   }
 
   // Perform the rollback
@@ -488,7 +487,7 @@ CXSession::RollbackTransaction()
   // Sub-transactions also rolled back
   m_subtrans = 0;
 
-  hibernate.Log(CXH_LOG_ACTIONS,true,"Rollback transaction [%d] for session [%s] ",m_mutation,m_sessionKey);
+  hibernate.Log(CXH_LOG_ACTIONS,true,_T("Rollback transaction [%d] for session [%s] "),m_mutation,m_sessionKey);
 }
 
 bool
@@ -515,7 +514,7 @@ CXSession::CreateObject(CString p_className)
     object->SetClass(theClass);
     return object;
   }
-  hibernate.Log(CXH_LOG_ERRORS,true,"Session [%s] Cannot create object for class: %s",m_sessionKey,p_className);
+  hibernate.Log(CXH_LOG_ERRORS,true,_T("Session [%s] Cannot create object for class: %s"),m_sessionKey,p_className);
   return nullptr;
 }
 
@@ -591,7 +590,7 @@ CXSession::Load(CString p_className,VariantSet& p_primary)
 
       if(hibernate.GetLogLevel())
       {
-        hibernate.Log(CXH_LOG_ACTIONS,true,"Loading object [%s:%s]",p_className,object->Hashcode());
+        hibernate.Log(CXH_LOG_ACTIONS,true,_T("Loading object [%s:%s]"),p_className,object->Hashcode());
         if(hibernate.GetLogLevel() >= CXH_LOG_DEBUG)
         {
           object->LogObject();
@@ -601,7 +600,7 @@ CXSession::Load(CString p_className,VariantSet& p_primary)
     }
     delete object;
   }
-  hibernate.Log(CXH_LOG_ERRORS,true,"Session [%s] Cannot load object for class: %s",m_sessionKey,p_className);
+  hibernate.Log(CXH_LOG_ERRORS,true,_T("Session [%s] Cannot load object for class: %s"),m_sessionKey,p_className);
   return nullptr;
 }
 
@@ -651,7 +650,7 @@ CXSession::Load(CString p_className,SQLFilterSet& p_filters)
   {
     for(auto& object : set)
     {
-      hibernate.Log(CXH_LOG_ACTIONS,true,"Loading object [%s:%s]",p_className,object->Hashcode());
+      hibernate.Log(CXH_LOG_ACTIONS,true,_T("Loading object [%s:%s]"),p_className,object->Hashcode());
       if(hibernate.GetLogLevel() >= CXH_LOG_DEBUG)
       {
         object->LogObject();
@@ -703,8 +702,8 @@ CXSession::Update(CXObject* p_object)
   // Log the object as updated
   if(result && hibernate.GetLogLevel())
   {
-    CString action = canUpdate ? "Update object" : "CANNOT UPDATE";
-    hibernate.Log(CXH_LOG_ACTIONS, true, "%s [%s:%s]",action,p_object->ClassName(),p_object->Hashcode());
+    CString action = canUpdate ? _T("Update object") : _T("CANNOT UPDATE");
+    hibernate.Log(CXH_LOG_ACTIONS, true, _T("%s [%s:%s]"),action,p_object->ClassName(),p_object->Hashcode());
     if (hibernate.GetLogLevel() >= CXH_LOG_DEBUG)
     {
       p_object->LogObject();
@@ -747,8 +746,8 @@ CXSession::Insert(CXObject* p_object)
     // Log the object as inserted
     if(hibernate.GetLogLevel())
     {
-      CString action = canInsert ? "Inserted object" : "CANNOT INSERT object";
-      hibernate.Log(CXH_LOG_ACTIONS,true,"%s [%s:%s]",action,p_object->ClassName(),p_object->Hashcode());
+      CString action = canInsert ? _T("Inserted object") : _T("CANNOT INSERT object");
+      hibernate.Log(CXH_LOG_ACTIONS,true,_T("%s [%s:%s]"),action,p_object->ClassName(),p_object->Hashcode());
       if(hibernate.GetLogLevel() >= CXH_LOG_DEBUG)
       {
         p_object->LogObject();
@@ -769,8 +768,8 @@ CXSession::Delete(CXObject* p_object)
   // Log the object as deleted, before it's gone
   if(hibernate.GetLogLevel())
   {
-    CString action = canDelete ? "Object to delete" : "CANNOT DELETE object";
-    hibernate.Log(CXH_LOG_ACTIONS,true,"%s [%s:%s]",action,p_object->ClassName(),p_object->Hashcode());
+    CString action = canDelete ? _T("Object to delete") : _T("CANNOT DELETE object");
+    hibernate.Log(CXH_LOG_ACTIONS,true,_T("%s [%s:%s]"),action,p_object->ClassName(),p_object->Hashcode());
     if(hibernate.GetLogLevel() >= CXH_LOG_DEBUG)
     {
       p_object->LogObject();
@@ -792,7 +791,7 @@ CXSession::Delete(CXObject* p_object)
     {
       result = DeleteObjectInFilestore(p_object);
     }
-    hibernate.Log(CXH_LOG_ACTIONS,true,"Delete succeeded: %s",result ? "yes" : "no");
+    hibernate.Log(CXH_LOG_ACTIONS,true,_T("Delete succeeded: %s"),result ? _T("yes") : _T("no"));
   }
   return result;
 }
@@ -849,23 +848,23 @@ CString
 CXSession::CreateFilestoreName(CXTable* p_table)
 {
   CString tablename = p_table->GetFullQualifiedTableName();
-  tablename.Replace(".", "_");
+  tablename.Replace(_T("."), _T("_"));
 
   CString fileName = m_baseDirectory;
-  if (fileName.Right(1) != '\\')
+  if (fileName.Right(1) != _T('\\'))
   {
-    fileName += "\\";
+    fileName += _T("\\");
   }
 
-  EnsureFile ensure(fileName);
-  if (ensure.CheckCreateDirectory())
+  WinFile dir(fileName);
+  if(!dir.CreateDirectory())
   {
-    return "";
+    return _T("");
   }
 
   // Add our table name
   fileName += tablename;
-  fileName += ".xml";
+  fileName += _T(".xml");
 
   return fileName;
 }
@@ -875,28 +874,28 @@ CString
 CXSession::CreateFilestoreName(CXTable* p_table, VariantSet& p_primary)
 {
   CString tablename = p_table->GetFullQualifiedTableName();
-  tablename.Replace(".", "_");
+  tablename.Replace(_T("."), _T("_"));
 
   CString fileName = m_baseDirectory;
-  if (fileName.Right(1) != '\\')
+  if (fileName.Right(1) != _T('\\'))
   {
-    fileName += "\\";
+    fileName += _T("\\");
   }
   fileName += tablename;
-  fileName += "\\";
+  fileName += _T("\\");
 
-  EnsureFile ensure(fileName);
-  if (ensure.CheckCreateDirectory())
+  WinFile dir(fileName);
+  if(!dir.CreateDirectory())
   {
-    return "";
+    return _T("");
   }
 
   CString hash = CXPrimaryHash(p_primary);
-  hash.Replace("\002", "_");
+  hash.Replace(_T("\002"), _T("_"));
 
-  fileName += "Object_";
+  fileName += _T("Object_");
   fileName += hash;
-  fileName += ".xml";
+  fileName += _T(".xml");
 
   return fileName;
 }
@@ -907,7 +906,7 @@ CXSession::SaveSOAPMessage(SOAPMessage& p_message, CString p_fileName)
 {
   bool result = false;
   FILE* file = nullptr;
-  if (fopen_s(&file, p_fileName, "w") == 0 && file)
+  if (_tfopen_s(&file, p_fileName, _T("w")) == 0 && file)
   {
     CString contents = p_message.GetSoapMessage();
     if (fwrite(contents.GetString(), contents.GetLength(), 1, file) == 1)
@@ -953,7 +952,7 @@ CXSession::FollowAssociation(CXObject* p_object,CString p_toClass,VariantSet& p_
 
   if(assoc == nullptr)
   {
-    throw StdException("Association not found to class: " + p_toClass);
+    throw StdException(_T("Association not found to class: ") + p_toClass);
   }
   switch(assoc->m_assocType)
   {
@@ -965,10 +964,10 @@ CXSession::FollowAssociation(CXObject* p_object,CString p_toClass,VariantSet& p_
                             return set;
     case ASSOC_ONE_TO_MANY: fromClass->BuildFilter(assoc->m_attributes,p_value,filters);
                             return Load(p_toClass,filters);
-    case ASSOC_MANY_TO_MANY:throw StdException("Association type many-to-many not yet implemented!");
+    case ASSOC_MANY_TO_MANY:throw StdException(_T("Association type many-to-many not yet implemented!"));
     default:                break;
   }
-  throw StdException("Association type not found for association: " + assoc->m_constraintName);
+  throw StdException(_T("Association type not found for association: ") + assoc->m_constraintName);
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -982,7 +981,7 @@ CXSession::FollowAssociation(CXObject* p_object,CString p_toClass,VariantSet& p_
 void 
 CXSession::ClearCache(CString p_className /*= ""*/)
 {
-  hibernate.Log(CXH_LOG_ACTIONS,true,"Clear object cache of session: %s",m_sessionKey);
+  hibernate.Log(CXH_LOG_ACTIONS,true,_T("Clear object cache of session: %s"),m_sessionKey);
 
   if(m_cache.empty())
   {
@@ -1016,7 +1015,7 @@ CXSession::ClearCache(CString p_className /*= ""*/)
 void
 CXSession::ClearClasses(CString p_className /*= ""*/)
 {
-  hibernate.Log(CXH_LOG_ACTIONS,true,"Clear class definition cache of session: %s",m_sessionKey);
+  hibernate.Log(CXH_LOG_ACTIONS,true,_T("Clear class definition cache of session: %s"),m_sessionKey);
 
   // Lock the caches
   AutoCritSec lock(&m_lock);
@@ -1046,7 +1045,7 @@ CXSession::GetMetaSessionInfo()
     {
       CString sql = m_database->GetSQLInfoDB()->GetSESSIONMyself();
       SQLQuery query(m_database);
-      SQLTransaction trans(m_database,"session");
+      SQLTransaction trans(m_database,_T("session"));
 
       query.DoSQLStatement(sql);
 
@@ -1070,14 +1069,14 @@ CXSession::GetMetaSessionInfo()
   }
   if(hibernate.GetLogLevel())
   {
-    hibernate.Log(CXH_LOG_DEBUG,true,"Hibernate session : %s",m_sessionKey);
-    hibernate.Log(CXH_LOG_DEBUG,true,"Database session  : %s",m_metaInfo.m_session);
-    hibernate.Log(CXH_LOG_DEBUG,true,"Database user     : %s",m_metaInfo.m_user);
-    hibernate.Log(CXH_LOG_DEBUG,true,"Database terminal : %s",m_metaInfo.m_terminal);
-    hibernate.Log(CXH_LOG_DEBUG,true,"Database logon    : %s",m_metaInfo.m_logonMoment);
-    hibernate.Log(CXH_LOG_DEBUG,true,"Database address  : %s",m_metaInfo.m_remoteIP);
-    hibernate.Log(CXH_LOG_DEBUG,true,"Processname in dbs: %s",m_metaInfo.m_processName);
-    hibernate.Log(CXH_LOG_DEBUG,true,"Database ID       : %s",m_metaInfo.m_processID);
+    hibernate.Log(CXH_LOG_DEBUG,true,_T("Hibernate session : %s"),m_sessionKey);
+    hibernate.Log(CXH_LOG_DEBUG,true,_T("Database session  : %s"),m_metaInfo.m_session);
+    hibernate.Log(CXH_LOG_DEBUG,true,_T("Database user     : %s"),m_metaInfo.m_user);
+    hibernate.Log(CXH_LOG_DEBUG,true,_T("Database terminal : %s"),m_metaInfo.m_terminal);
+    hibernate.Log(CXH_LOG_DEBUG,true,_T("Database logon    : %s"),m_metaInfo.m_logonMoment);
+    hibernate.Log(CXH_LOG_DEBUG,true,_T("Database address  : %s"),m_metaInfo.m_remoteIP);
+    hibernate.Log(CXH_LOG_DEBUG,true,_T("Processname in dbs: %s"),m_metaInfo.m_processName);
+    hibernate.Log(CXH_LOG_DEBUG,true,_T("Database ID       : %s"),m_metaInfo.m_processID);
   }
 }
 
@@ -1121,7 +1120,7 @@ CXSession::AddObjectInCache(CXObject* p_object)
     // Object already in the cache. Do not cache again!
     return false;
   }
-  throw StdException("Cache not found for class: " + className);
+  throw StdException(_T("Cache not found for class: ") + className);
 }
 
 // And remove again from the cache
@@ -1221,14 +1220,14 @@ CXSession::FindObjectInFilestore(CString p_className,VariantSet& p_primary)
   }
 
   // Test if we can access this file
-  if(_access(filename, 0) == 0)
+  if(_taccess(filename, 0) == 0)
   {
     // Try to load the object
     SOAPMessage p_message;
     if(p_message.LoadFile(filename))
     {
       // Find our object (just one entity in the message)
-      XMLElement* entity = p_message.FindElement("Entity");
+      XMLElement* entity = p_message.FindElement(_T("Entity"));
       if(entity)
       {
         return LoadObjectFromXML(p_message,entity,theClass);
@@ -1246,10 +1245,10 @@ CXSession::FindObjectOnInternet(CString p_className,VariantSet& p_primary)
 
   // Create a SOAP message for select
   CString namesp(DEFAULT_NAMESPACE);
-  CString action("CXH_Select");
+  CString action(_T("CXH_Select"));
   SOAPMessage msg(namesp,action,SoapVersion::SOAP_12);
-  XMLElement* entity = msg.SetParameter("Entity", "");
-  msg.SetAttribute(entity,"name",p_className); 
+  XMLElement* entity = msg.SetParameter(_T("Entity"), _T(""));
+  msg.SetAttribute(entity,_T("name"),p_className); 
   
   // Load filters in message
   theClass->BuildPrimaryKeyFilter(msg,entity,p_primary);
@@ -1259,7 +1258,7 @@ CXSession::FindObjectOnInternet(CString p_className,VariantSet& p_primary)
   if(GetHTTPClient()->Send(&msg))
   {
     // Find our object (just one entity in the message)
-    XMLElement* entity = msg.FindElement("Entity");
+    XMLElement* entity = msg.FindElement(_T("Entity"));
     if(entity)
     {
       return LoadObjectFromXML(msg,entity,theClass);
@@ -1267,7 +1266,7 @@ CXSession::FindObjectOnInternet(CString p_className,VariantSet& p_primary)
   }
   CString httpError;
   CString error;
-  error.Format("Could not reach CXServer on: %s\n%s\n"
+  error.Format(_T("Could not reach CXServer on: %s\n%s\n")
                 ,m_url.GetString()
                 ,msg.GetFault().GetString());
   GetHTTPClient()->GetError(&httpError);
@@ -1383,7 +1382,7 @@ CXSession::SelectObjectsFromDatabase(CString p_className,SQLFilterSet& p_filters
 CXResultSet
 CXSession::SelectObjectsFromFilestore(CString p_className,SQLFilterSet& p_filters)
 {
-  throw StdException("Cannot select multiple objects from the filestore");
+  throw StdException(_T("Cannot select multiple objects from the filestore"));
 }
 
 CXResultSet
@@ -1394,10 +1393,10 @@ CXSession::SelectObjectsFromInternet(CString p_className,SQLFilterSet& p_filters
 
   // Create a SOAP message for select
   CString namesp(DEFAULT_NAMESPACE);
-  CString action("CXH_Select");
+  CString action(_T("CXH_Select"));
   SOAPMessage msg(namesp,action,SoapVersion::SOAP_12);
-  XMLElement* entity = msg.SetParameter("Entity", "");
-  msg.SetAttribute(entity,"name",p_className); 
+  XMLElement* entity = msg.SetParameter(_T("Entity"), _T(""));
+  msg.SetAttribute(entity,_T("name"),p_className); 
   
   // Load filters in message
   BuildFilter(msg,entity,p_filters);
@@ -1407,7 +1406,7 @@ CXSession::SelectObjectsFromInternet(CString p_className,SQLFilterSet& p_filters
   if(GetHTTPClient()->Send(&msg))
   {
     // Find our object (just one entity in the message)
-    XMLElement* entity = msg.FindElement("Entity");
+    XMLElement* entity = msg.FindElement(_T("Entity"));
     while(entity)
     {
       CXObject* object = LoadObjectFromXML(msg,entity,theClass);
@@ -1429,7 +1428,7 @@ CXSession::SelectObjectsFromInternet(CString p_className,SQLFilterSet& p_filters
       }
       // Getting next entity
       entity = msg.GetElementSibling(entity);
-      if(entity->GetName().CompareNoCase("Entity"))
+      if(entity->GetName().CompareNoCase(_T("Entity")))
       {
         break;
       }
@@ -1438,7 +1437,7 @@ CXSession::SelectObjectsFromInternet(CString p_className,SQLFilterSet& p_filters
   }
   CString httpError;
   CString error;
-  error.Format("Could not reach CXServer on: %s\n%s\n"
+  error.Format(_T("Could not reach CXServer on: %s\n%s\n")
                 ,m_url.GetString()
                 ,msg.GetFault().GetString());
   GetHTTPClient()->GetError(&httpError);
@@ -1452,7 +1451,7 @@ CXSession::UpdateObjectInDatabase(CXObject* p_object)
   CXClass* theClass = p_object->GetClass();
   if(theClass == nullptr)
   {
-    throw StdException("Missing class on UPDATE of an object. Did you tinkle with the PrimaryKey?");
+    throw StdException(_T("Missing class on UPDATE of an object. Did you tinkle with the PrimaryKey?"));
   }
 
   // New mutation ID for this update action
@@ -1472,10 +1471,10 @@ CXSession::UpdateObjectInInternet(CXObject* p_object)
 {
   // Create a SOAP message for select
   CString namesp(DEFAULT_NAMESPACE);
-  CString action("CXH_Update");
+  CString action(_T("CXH_Update"));
   SOAPMessage msg(namesp, action, SoapVersion::SOAP_12);
-  XMLElement* entity = msg.SetParameter("Entity", "");
-  msg.SetAttribute(entity,"name",p_object->ClassName());
+  XMLElement* entity = msg.SetParameter(_T("Entity"), _T(""));
+  msg.SetAttribute(entity,_T("name"),p_object->ClassName());
 
   // Now serialize our object into this message
   SerializeDiscriminator(p_object,msg,entity);
@@ -1485,15 +1484,15 @@ CXSession::UpdateObjectInInternet(CXObject* p_object)
   msg.SetURL(m_url);
   if(GetHTTPClient()->Send(&msg))
   {
-    CString result = msg.GetParameter("CXResult");
-    if(result == "OK")
+    CString result = msg.GetParameter(_T("CXResult"));
+    if(result == _T("OK"))
     {
       return true;
     }
   }
   CString httpError;
   CString error;
-  error.Format("Could not reach CXServer on: %s\n%s\n"
+  error.Format(_T("Could not reach CXServer on: %s\n%s\n")
                ,m_url.GetString()
                ,msg.GetFault().GetString());
   GetHTTPClient()->GetError(&httpError);
@@ -1509,7 +1508,7 @@ CXSession::InsertObjectInDatabase(CXObject* p_object)
   CXClass* theClass = p_object->GetClass();
   if(theClass == nullptr)
   {
-    throw StdException("Object without a connected class. Did you call CXSession::CreateObject(<classname>)??");
+    throw StdException(_T("Object without a connected class. Did you call CXSession::CreateObject(<classname>)??"));
   }
 
   // New mutation ID for this update action
@@ -1529,10 +1528,10 @@ CXSession::InsertObjectInInternet(CXObject* p_object)
 {
   // Create a SOAP message for select
   CString namesp(DEFAULT_NAMESPACE);
-  CString action("CXH_Insert");
+  CString action(_T("CXH_Insert"));
   SOAPMessage msg(namesp, action, SoapVersion::SOAP_12);
-  XMLElement* entity = msg.SetParameter("Entity", "");
-  msg.SetAttribute(entity,"name",p_object->ClassName());
+  XMLElement* entity = msg.SetParameter(_T("Entity"), _T(""));
+  msg.SetAttribute(entity,_T("name"),p_object->ClassName());
 
   // Now serialize our object into this message
   SerializeDiscriminator(p_object,msg,entity);
@@ -1542,19 +1541,19 @@ CXSession::InsertObjectInInternet(CXObject* p_object)
   msg.SetURL(m_url);
   if(GetHTTPClient()->Send(&msg))
   {
-    CString result = msg.GetParameter("CXResult");
-    if(result == "OK")
+    CString result = msg.GetParameter(_T("CXResult"));
+    if(result == _T("OK"))
     {
       // De-Serialize the result (gives us the new primary key)
       // And possibly changed attributes
-      XMLElement* entity = msg.FindElement("Entity");
+      XMLElement* entity = msg.FindElement(_T("Entity"));
       p_object->DeSerialize(msg,entity);
       return true;
     }
   }
   CString httpError;
   CString error;
-  error.Format("Could not reach CXServer on: %s\n%s\n"
+  error.Format(_T("Could not reach CXServer on: %s\n%s\n")
                ,m_url.GetString()
                ,msg.GetFault().GetString());
   GetHTTPClient()->GetError(&httpError);
@@ -1569,7 +1568,7 @@ CXSession::DeleteObjectInDatabase(CXObject* p_object)
   CXClass* theClass = p_object->GetClass();
   if(theClass == nullptr)
   {
-    throw StdException("No class definition while deleting an object");
+    throw StdException(_T("No class definition while deleting an object"));
   }
   // If object was **NOT** in the database, removal did work out OK!
   if(p_object->IsPersistent() == false)
@@ -1612,22 +1611,22 @@ CXSession::UpdateObjectInFilestore(CXObject* p_object)
   }
 
   // Create a SOAP message object
-  SOAPMessage msg(DEFAULT_NAMESPACE, "Object");
+  SOAPMessage msg(DEFAULT_NAMESPACE, _T("Object"));
 
   // Adding an entity with name attributes
-  XMLElement* entity = msg.SetParameter("Entity", "");
+  XMLElement* entity = msg.SetParameter(_T("Entity"), _T(""));
   if(!table->GetSchemaName().IsEmpty())
   {
-    msg.SetAttribute(entity,"schema",table->GetSchemaName());
+    msg.SetAttribute(entity,_T("schema"),table->GetSchemaName());
   }
-  msg.SetAttribute(entity,"name",table->GetTableName());
+  msg.SetAttribute(entity,_T("name"),table->GetTableName());
 
   // Serialize our object
   SerializeDiscriminator(p_object,msg,entity);
   p_object->Serialize(msg,entity);
 
   // Test if we can access this file
-  if(_access(filename, 0) == 0)
+  if(_taccess(filename, 0) == 0)
   {
     // Save to the file: overwriting the file
     return SaveSOAPMessage(msg,filename);
@@ -1651,10 +1650,10 @@ CXSession::InsertObjectInFilestore(CXObject* p_object)
 
   // Create a SOAP message object
   CString namesp(DEFAULT_NAMESPACE);
-  CString action("Object");
+  CString action(_T("Object"));
   SOAPMessage msg(namesp,action,SoapVersion::SOAP_12);
-  XMLElement* entity = msg.SetParameter("Entity","");
-  msg.SetAttribute(entity,"name",table->GetTableName());
+  XMLElement* entity = msg.SetParameter(_T("Entity"),_T(""));
+  msg.SetAttribute(entity,_T("name"),table->GetTableName());
 
   // Serialize our object
   SerializeDiscriminator(p_object,msg,entity);
@@ -1678,7 +1677,7 @@ CXSession::DeleteObjectInFilestore(CXObject* p_object)
   }
 
   // Test if we can access this file
-  if(_access(filename, 0) == 0)
+  if(_taccess(filename, 0) == 0)
   {
     // Try to delete it
     if(DeleteFile(filename))
@@ -1694,10 +1693,10 @@ CXSession::DeleteObjectInInternet(CXObject* p_object)
 {
   // Create a SOAP message for select
   CString namesp(DEFAULT_NAMESPACE);
-  CString action("CXH_Delete");
+  CString action(_T("CXH_Delete"));
   SOAPMessage msg(namesp,action,SoapVersion::SOAP_12);
-  XMLElement* entity = msg.SetParameter("Entity", "");
-  msg.SetAttribute(entity,"name",p_object->ClassName());
+  XMLElement* entity = msg.SetParameter(_T("Entity"), _T(""));
+  msg.SetAttribute(entity,_T("name"),p_object->ClassName());
 
   // Now serialize our object into this message
   p_object->Serialize(msg,entity);
@@ -1706,8 +1705,8 @@ CXSession::DeleteObjectInInternet(CXObject* p_object)
   msg.SetURL(m_url);
   if (GetHTTPClient()->Send(&msg))
   {
-    CString result = msg.GetParameter("CXResult");
-    if (result == "OK")
+    CString result = msg.GetParameter(_T("CXResult"));
+    if (result == _T("OK"))
     {
       // Object is deleted. Remove from the caches
       RemoveObject(p_object);
@@ -1716,7 +1715,7 @@ CXSession::DeleteObjectInInternet(CXObject* p_object)
   }
   CString httpError;
   CString error;
-  error.Format("Could not reach CXServer on: %s\n%s\n"
+  error.Format(_T("Could not reach CXServer on: %s\n%s\n")
               ,m_url.GetString()
               ,msg.GetFault().GetString());
   GetHTTPClient()->GetError(&httpError);
@@ -1730,7 +1729,7 @@ void
 CXSession::BuildFilter(SOAPMessage& p_message, XMLElement* p_entity, SQLFilterSet& p_filters)
 {
   // All filters under this node
-  XMLElement* filters = p_message.AddElement(p_entity,"Filters",XDT_String,"");
+  XMLElement* filters = p_message.AddElement(p_entity,_T("Filters"),XDT_String,_T(""));
 
   // Prepare for iteration
   for(auto& filter : p_filters.GetFilters())
@@ -1741,10 +1740,10 @@ CXSession::BuildFilter(SOAPMessage& p_message, XMLElement* p_entity, SQLFilterSe
     CString value;
     filter->GetValue()->GetAsString(value);
 
-    XMLElement* filter = p_message.AddElement(filters,"Filter",XDT_String,"");
-    p_message.AddElement(filter, "Column",   XDT_String, column);
-    p_message.AddElement(filter, "Operator", XDT_String, operat);
-    p_message.AddElement(filter, "Value",    xmltype,    value);
+    XMLElement* filter = p_message.AddElement(filters,_T("Filter"),XDT_String,_T(""));
+    p_message.AddElement(filter, _T("Column"),   XDT_String, column);
+    p_message.AddElement(filter, _T("Operator"), XDT_String, operat);
+    p_message.AddElement(filter, _T("Value"),    xmltype,    value);
   }
 }
 
@@ -1756,7 +1755,7 @@ CXSession::SerializeDiscriminator(CXObject* p_object,SQLRecord* p_record)
   if(hibernate.GetStrategy() != MapStrategy::Strategy_standalone)
   {
     SQLVariant disc(p_object->GetDiscriminator());
-    p_record->SetField("discriminator",&disc,m_mutation);
+    p_record->SetField(_T("discriminator"),&disc,m_mutation);
   }
 }
 
@@ -1765,7 +1764,7 @@ CXSession::SerializeDiscriminator(CXObject* p_object,SOAPMessage& p_message,XMLE
 {
   if(hibernate.GetStrategy() != MapStrategy::Strategy_standalone)
   {
-    p_message.AddElement(p_entity,"discriminator",XDT_String|XDT_Type,p_object->GetDiscriminator());
+    p_message.AddElement(p_entity,_T("discriminator"),XDT_String|XDT_Type,p_object->GetDiscriminator());
   }
 }
 
@@ -1784,7 +1783,7 @@ CXSession::CallOnLoad(CXObject* p_object)
   }
   catch(StdException& ex)
   {
-  	hibernate.Log(LOGLEVEL_ERROR,false,"Error while calling OnLoad trigger for object");
+  	hibernate.Log(LOGLEVEL_ERROR,false,_T("Error while calling OnLoad trigger for object"));
     throw ex;
   }
 }
@@ -1799,7 +1798,7 @@ CXSession::CallOnInsert(CXObject* p_object)
   }
   catch(StdException& ex)
   {
-    hibernate.Log(LOGLEVEL_ERROR,false,"Error while calling OnInsert trigger for object");
+    hibernate.Log(LOGLEVEL_ERROR,false,_T("Error while calling OnInsert trigger for object"));
     throw ex;
   }
   return result;
@@ -1815,7 +1814,7 @@ CXSession::CallOnUpdate(CXObject* p_object)
   }
   catch(StdException& ex)
   {
-    hibernate.Log(LOGLEVEL_ERROR,false,"Error while calling OnUpdate trigger for object");
+    hibernate.Log(LOGLEVEL_ERROR,false,_T("Error while calling OnUpdate trigger for object"));
     throw ex;
   }
   return result;
@@ -1831,7 +1830,7 @@ CXSession::CallOnDelete(CXObject* p_object)
   }
   catch(StdException& ex)
   {
-    hibernate.Log(LOGLEVEL_ERROR,false,"Error while calling OnDelete trigger for object");
+    hibernate.Log(LOGLEVEL_ERROR,false,_T("Error while calling OnDelete trigger for object"));
     throw ex;
   }
   return result;
@@ -1846,7 +1845,7 @@ CXSession::CallOnDelete(CXObject* p_object)
 void
 CXSession::TryCreateDatabase()
 {
-  hibernate.Log(CXH_LOG_ACTIONS,false,"Try to create database schema");
+  hibernate.Log(CXH_LOG_ACTIONS,false,_T("Try to create database schema"));
 
   for(auto& cl : m_classes)
   {
@@ -1857,7 +1856,7 @@ CXSession::TryCreateDatabase()
 void
 CXSession::TryDropDatabase()
 {
-  hibernate.Log(CXH_LOG_ACTIONS,false,"Try to drop database schema");
+  hibernate.Log(CXH_LOG_ACTIONS,false,_T("Try to drop database schema"));
 
   for (auto& cl : m_classes)
   {

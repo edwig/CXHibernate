@@ -4,7 +4,7 @@
 //
 // Marlin Server: Internet server/client
 // 
-// Copyright (c) 2014-2022 ir. W.E. Huisman
+// Copyright (c) 2014-2024 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -31,11 +31,11 @@
 class SiteFilterXSS: public SiteFilter
 {
 public:
-  SiteFilterXSS(unsigned p_priority,XString p_name);
+  explicit SiteFilterXSS(unsigned p_priority,XString p_name);
   virtual ~SiteFilterXSS();
 
   // Handle the filter
-  virtual bool Handle(HTTPMessage* p_message);
+  virtual bool Handle(HTTPMessage* p_message) override;
 
 private:
 

@@ -4,7 +4,7 @@
 //
 // Marlin Server: Internet server/client
 // 
-// Copyright (c) 2014-2022 ir. W.E. Huisman
+// Copyright (c) 2014-2024 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -29,6 +29,8 @@
 #include "XMLMessage.h"
 #include "FileBuffer.h"
 #include <map>
+
+#define APPHOST_CONFIG_RETRIES  10
 
 typedef enum _iisConfigError
 {
@@ -56,27 +58,27 @@ typedef struct _iisSite
   XString     m_appPool;
   XString     m_binding;
   XString     m_protocol;
-  int         m_port;
-  bool        m_secure;
+  int         m_port       { 0     };
+  bool        m_secure     { false };
   XString     m_path;
-  ULONG       m_authScheme;
+  ULONG       m_authScheme { 0     };
   XString     m_realm;
   XString     m_domain;
-  bool        m_ntlmCache;
-  bool        m_preload;
-  IISError    m_error;
+  bool        m_ntlmCache  { false };
+  bool        m_preload    { false };
+  IISError    m_error      { IISER_NoError };
   IISHandlers m_handlers;
 }
 IISSite;
 
-// Waht we want to remember about an IIS Application Pool
+// What we want to remember about an IIS Application Pool
 typedef struct _appPool
 {
   XString   m_name;
   XString   m_startMode;
   XString   m_periodicRestart;
   XString   m_idleTimeout;
-  bool      m_autoStart;
+  bool      m_autoStart  { false };
   XString   m_pipelineMode;
 }
 IISAppPool;
@@ -89,12 +91,12 @@ using AppSettings = std::map<XString,XString>;
 class WebConfigIIS
 {
 public:
-  WebConfigIIS(XString p_application = "");
+  explicit WebConfigIIS(XString p_application = _T(""));
  ~WebConfigIIS();
 
   // Read total config
   bool ReadConfig();
-  bool ReadConfig(XString p_application,XString p_extraWebConfig = "");
+  bool ReadConfig(XString p_application,XString p_extraWebConfig = _T(""));
   // Set a different application before re-reading the config
   void SetApplication(XString p_app);
 
@@ -122,9 +124,11 @@ public:
   bool        GetSiteNTLMCache(XString p_site,bool    p_default);
   bool        GetSitePreload  (XString p_site);
   IISError    GetSiteError    (XString p_site);
+  XString     GetWebConfig();
 
   IISHandlers* GetAllHandlers (XString p_site);
   IISHandler*  GetHandler     (XString p_site,XString p_handler);
+  IISHandlers* GetWebConfigHandlers();
 
   // Getting information of a application pool
   XString     GetPoolStartMode      (XString p_pool);
@@ -135,6 +139,7 @@ public:
 
   // Read one config file
   bool        ReadConfig(XString p_configFile,IISSite* p_site);
+  void        ReadWebConfigHandlers(XMLMessage& p_msg);
 
 private:
   // Replace environment variables in a string
@@ -159,6 +164,7 @@ private:
   // Files already read in
   WCFiles     m_files;
 
+  IISHandlers m_webConfigHandlers;
   AppSettings m_settings;
   IISPools    m_pools;
   IISSites    m_sites;

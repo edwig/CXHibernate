@@ -4,7 +4,7 @@
 //
 // Marlin Server: Internet server/client
 // 
-// Copyright (c) 2014-2022 ir. W.E. Huisman
+// Copyright (c) 2014-2024 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -30,24 +30,26 @@
 #include "HTTPSiteMarlin.h"
 #include "HTTPServerMarlin.h"
 #include "HTTPURLGroup.h"
-#include "EnsureFile.h"
+#include <WinFile.h>
 
+#ifdef _AFX
 #ifdef _DEBUG
 #define new DEBUG_NEW
 #undef THIS_FILE
 static char THIS_FILE[] = __FILE__;
 #endif
+#endif
 
 // Logging via the server
-#define DETAILLOG1(text)        m_server->DetailLog (__FUNCTION__,LogType::LOG_INFO,text)
-#define DETAILLOGS(text,extra)  m_server->DetailLogS(__FUNCTION__,LogType::LOG_INFO,text,extra)
-#define DETAILLOGV(text,...)    m_server->DetailLogV(__FUNCTION__,LogType::LOG_INFO,text,__VA_ARGS__)
-#define WARNINGLOG(text,...)    m_server->DetailLogV(__FUNCTION__,LogType::LOG_WARN,text,__VA_ARGS__)
-#define ERRORLOG(code,text)     m_server->ErrorLog  (__FUNCTION__,code,text)
+#define DETAILLOG1(text)        m_server->DetailLog (_T(__FUNCTION__),LogType::LOG_INFO,text)
+#define DETAILLOGS(text,extra)  m_server->DetailLogS(_T(__FUNCTION__),LogType::LOG_INFO,text,extra)
+#define DETAILLOGV(text,...)    m_server->DetailLogV(_T(__FUNCTION__),LogType::LOG_INFO,text,__VA_ARGS__)
+#define WARNINGLOG(text,...)    m_server->DetailLogV(_T(__FUNCTION__),LogType::LOG_WARN,text,__VA_ARGS__)
+#define ERRORLOG(code,text)     m_server->ErrorLog  (_T(__FUNCTION__),code,text)
 #define CRASHLOG(code,text)     if(m_server->GetLogfile())\
                                 {\
-                                  m_server->GetLogfile()->AnalysisLog(__FUNCTION__,LogType::LOG_ERROR,false,text); \
-                                  m_server->GetLogfile()->AnalysisLog(__FUNCTION__,LogType::LOG_ERROR,true,"Error code: %d",code); \
+                                  m_server->GetLogfile()->AnalysisLog(_T(__FUNCTION__),LogType::LOG_ERROR,false,text); \
+                                  m_server->GetLogfile()->AnalysisLog(_T(__FUNCTION__),LogType::LOG_ERROR,true,_T("Error code: %d"),code); \
                                 }
 
 HTTPSiteMarlin::HTTPSiteMarlin(HTTPServerMarlin* p_server
@@ -64,7 +66,7 @@ bool
 HTTPSiteMarlin::StartSite()
 {
   bool result = false;
-  DETAILLOGS("Starting website. URL: ",m_site);
+  DETAILLOGS(_T("Starting website. URL: "),m_site);
 
   // Getting the global settings
   InitSite(m_server->GetWebConfig());
@@ -90,7 +92,7 @@ HTTPSiteMarlin::StartSite()
   // Checking our webroot
   if(!SetWebroot(m_webroot))
   {
-    ERRORLOG(ERROR_INVALID_NAME,"Cannot start site: invalid webroot");
+    ERRORLOG(ERROR_INVALID_NAME,_T("Cannot start site: invalid webroot"));
     return false;
   }
 
@@ -127,32 +129,48 @@ HTTPSiteMarlin::StartSite()
     // The registration
     if(m_mainSite)
     {
-      DETAILLOGV("URL not registered to URL-Group. Site [%s] is subsite of [%s]",m_site.GetString(),m_mainSite->GetSite().GetString());
-      result = true;
+      if(m_mainSite->GetAuthentication() == (int) m_authScheme &&
+         m_mainSite->GetAuthenticationScheme() == m_scheme     &&
+         m_mainSite->GetAuthenticationRealm()  == m_realm      &&
+         m_mainSite->GetAuthenticationDomain() == m_domain)
+      {
+        DETAILLOGV(_T("URL registered to URL-Group of main-site. Site [%s] is subsite of [%s]"),m_site.GetString(),m_mainSite->GetSite().GetString());
+        result = true;
+      }
+      else
+      {
+        CString error;
+        error.Format(_T("URL not registered to correct URL-Group. Different authentication scheme. Site: %s"),m_site.GetString());
+        ERRORLOG(ERROR_WRONG_TARGET_NAME,error);
+      }
     }
     else
     {
-      USES_CONVERSION;
       // Add URL to our URL-Group: using HttpAddUrlToUrlGroup
-      wstring uniURL = A2CW(m_prefixURL);
+      wstring uniURL = StringToWString(m_prefixURL);
       HTTP_URL_GROUP_ID group = m_group->GetUrlGroupID();
       ULONG retCode = HttpAddUrlToUrlGroup(group,uniURL.c_str(),(HTTP_URL_CONTEXT)this,0);
-      if(retCode != NO_ERROR && retCode != ERROR_ALREADY_EXISTS)
+      if(retCode == ERROR_ACCESS_DENIED && m_site.Compare(_T("/")) == 0)
+      {
+        DETAILLOG1(_T("Root URL '/' referentie toegevoegd."));
+        result = true;
+      }
+      else if(retCode != NO_ERROR && retCode != ERROR_ALREADY_EXISTS)
       {
         XString error;
-        error.Format("Cannot add URL to the URL-Group: %s",m_prefixURL.GetString());
+        error.Format(_T("Cannot add URL to the URL-Group: %s"),m_prefixURL.GetString());
         ERRORLOG(retCode,error);
       }
       else
       {
-        DETAILLOGS("URL added to URL-Group: ",m_prefixURL);
+        DETAILLOGS(_T("URL added to URL-Group: "),m_prefixURL);
         result = true;
       }
     }
   }
   else
   {
-    ERRORLOG(ERROR_INVALID_PARAMETER,"No URL group created/found for authentication scheme: " + m_scheme);
+    ERRORLOG(ERROR_INVALID_PARAMETER,_T("No URL group created/found for authentication scheme: ") + m_scheme);
   }
   // Return the fact that we started successfully or not
   return (m_isStarted = result);
@@ -175,7 +193,7 @@ HTTPSiteMarlin::SetWebroot(XString p_webroot)
     // Check already done by setting virtual directory
     return true;
   }
-  else if(p_webroot.Left(10).CompareNoCase("virtual://") == 0)
+  else if(p_webroot.Left(10).CompareNoCase(_T("virtual://")) == 0)
   {
     // It's a HTTP virtual directory outside of the server's webroot
     siteWebroot = p_webroot.Mid(10);
@@ -189,8 +207,8 @@ HTTPSiteMarlin::SetWebroot(XString p_webroot)
     XString serverWebroot = m_server->GetWebroot();
     serverWebroot.MakeLower();
     siteWebroot  .MakeLower();
-    serverWebroot.Replace("/","\\");
-    siteWebroot  .Replace("/","\\");
+    serverWebroot.Replace(_T("/"),_T("\\"));
+    siteWebroot  .Replace(_T("/"),_T("\\"));
 
     if(siteWebroot.Find(serverWebroot) != 0)
     {
@@ -201,11 +219,10 @@ HTTPSiteMarlin::SetWebroot(XString p_webroot)
   }
 
   // Make sure the directory is there
-  EnsureFile ensure(siteWebroot);
-  int error = ensure.CheckCreateDirectory();
-  if(error)
+  WinFile ensure(siteWebroot);
+  if(!ensure.CreateDirectory())
   {
-    ERRORLOG(error,"Website's root directory does not exist and cannot create it");
+    ERRORLOG(ensure.GetLastError(),_T("Website's root directory does not exist and cannot create it"));
   }
 
   // Acceptable webroot of a site
@@ -221,25 +238,25 @@ HTTPSiteMarlin::InitSite(MarlinConfig& p_config)
 
   // AUTHENTICATION
   // Setup the authentication of the URL group
-  XString scheme    = p_config.GetParameterString ("Authentication","Scheme",   m_scheme);
-  bool    ntlmCache = p_config.GetParameterBoolean("Authentication","NTLMCache",m_ntlmCache);
-  XString realm     = p_config.GetParameterString ("Authentication","Realm",    m_realm);
-  XString domain    = p_config.GetParameterString ("Authentication","Domain",   m_domain);
+  XString scheme    = p_config.GetParameterString (_T("Authentication"),_T("Scheme"),   m_scheme);
+  bool    ntlmCache = p_config.GetParameterBoolean(_T("Authentication"),_T("NTLMCache"),m_ntlmCache);
+  XString realm     = p_config.GetParameterString (_T("Authentication"),_T("Realm"),    m_realm);
+  XString domain    = p_config.GetParameterString (_T("Authentication"),_T("Domain"),   m_domain);
 
   // CHECK AND FIND the Authentication scheme
   ULONG authScheme = 0;
   if(!scheme.IsEmpty())
   {
     // Detect authentication scheme
-         if(scheme == "Anonymous") authScheme = 0;
-    else if(scheme == "Basic")     authScheme = HTTP_AUTH_ENABLE_BASIC;
-    else if(scheme == "Digest")    authScheme = HTTP_AUTH_ENABLE_DIGEST;
-    else if(scheme == "NTLM")      authScheme = HTTP_AUTH_ENABLE_NTLM;
-    else if(scheme == "Negotiate") authScheme = HTTP_AUTH_ENABLE_NEGOTIATE;
-    else if(scheme == "Kerberos")  authScheme = HTTP_AUTH_ENABLE_KERBEROS | HTTP_AUTH_ENABLE_NEGOTIATE;
-    else if(scheme != "")
+         if(scheme == _T("Anonymous")) authScheme = 0;
+    else if(scheme == _T("Basic"))     authScheme = HTTP_AUTH_ENABLE_BASIC;
+    else if(scheme == _T("Digest"))    authScheme = HTTP_AUTH_ENABLE_DIGEST;
+    else if(scheme == _T("NTLM"))      authScheme = HTTP_AUTH_ENABLE_NTLM;
+    else if(scheme == _T("Negotiate")) authScheme = HTTP_AUTH_ENABLE_NEGOTIATE;
+    else if(scheme == _T("Kerberos"))  authScheme = HTTP_AUTH_ENABLE_KERBEROS | HTTP_AUTH_ENABLE_NEGOTIATE;
+    else if(scheme != _T(""))
     {
-      ERRORLOG(ERROR_INVALID_PARAMETER,"Invalid parameter for authentication scheme");
+      ERRORLOG(ERROR_INVALID_PARAMETER,_T("Invalid parameter for authentication scheme"));
     }
   }
 

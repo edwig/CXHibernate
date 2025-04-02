@@ -2,7 +2,7 @@
 //
 // SourceFile: Namespace.cpp
 //
-// Copyright (c) 2014-2022 ir. W.E. Huisman
+// Copyright (c) 2014-2025 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -26,6 +26,14 @@
 #include "pch.h"
 #include "Namespace.h"
 
+#ifdef _AFX
+#ifdef _DEBUG
+#define new DEBUG_NEW
+#undef THIS_FILE
+static char THIS_FILE[] = __FILE__;
+#endif
+#endif
+
 // Compares two namespaces. Returns standard compare value
 // "http://Name.Test.lower\something" equals "https://NAME.test.LOWER/SomeThing/"
 //
@@ -37,14 +45,14 @@ int CompareNamespaces(XString p_namespace1, XString p_namespace2)
   // Make all separators equal
   p_namespace1.Replace('\\','/');
   p_namespace2.Replace('\\','/');
-  // Remove last closing seperator
+  // Remove last closing separator
   p_namespace1.TrimRight('/');
   p_namespace2.TrimRight('/');
   // Removes different protocols
-  if(p_namespace1.Left(5).Compare("http:")  == 0) p_namespace1 = p_namespace1.Mid(5);
-  if(p_namespace2.Left(5).Compare("http:")  == 0) p_namespace2 = p_namespace2.Mid(5);
-  if(p_namespace1.Left(6).Compare("https:") == 0) p_namespace1 = p_namespace1.Mid(6);
-  if(p_namespace2.Left(6).Compare("https:") == 0) p_namespace2 = p_namespace2.Mid(6);
+  if(p_namespace1.Left(5).Compare(_T("http:"))  == 0) p_namespace1 = p_namespace1.Mid(5);
+  if(p_namespace2.Left(5).Compare(_T("http:"))  == 0) p_namespace2 = p_namespace2.Mid(5);
+  if(p_namespace1.Left(6).Compare(_T("https:")) == 0) p_namespace1 = p_namespace1.Mid(6);
+  if(p_namespace2.Left(6).Compare(_T("https:")) == 0) p_namespace2 = p_namespace2.Mid(6);
   
   // Return comparison
   return p_namespace1.Compare(p_namespace2);
@@ -57,7 +65,7 @@ int CompareNamespaces(XString p_namespace1, XString p_namespace2)
 // http://server/uri/some#command" -> "http://server/uri/some#" + "command"
 // command                         -> ""                        + "command"
 // 
-bool SplitNamespaceAndAction(XString p_soapAction, XString& p_namespace, XString& p_action)
+bool SplitNamespaceAndAction(XString p_soapAction,XString& p_namespace,XString& p_action,bool p_nmsp_ends_in_slash /*= false*/)
 {
   // Quick check whether it's filled
   if(p_soapAction.IsEmpty())
@@ -92,12 +100,12 @@ bool SplitNamespaceAndAction(XString p_soapAction, XString& p_namespace, XString
       pos = apos = ++hpos;
     }
     // Split namespace and action command name
-    p_namespace = p_soapAction.Left(apos);
+    p_namespace = p_soapAction.Left(apos - (p_nmsp_ends_in_slash ? 0 : 1));
     p_action    = p_soapAction.Mid(apos);
   }
   else
   {
-    // Clearly no namespaces
+    // Clearly no namespace
     // Very ancient: SOAPAction is just the action name
     p_action = p_soapAction;
     return false;
@@ -117,9 +125,9 @@ XString CreateSoapAction(XString p_namespace, XString p_action)
   // Sanitize namespace
   XString soapAction(p_namespace);
   soapAction.Replace('\\','/');
-  if(soapAction.Right(1) != "/")
+  if(soapAction.Right(1) != _T("/"))
   {
-    soapAction += "/";
+    soapAction += _T("/");
   }
   soapAction += p_action;
 

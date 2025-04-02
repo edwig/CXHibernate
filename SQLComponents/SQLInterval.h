@@ -2,7 +2,7 @@
 //
 // File: SQLInterval.h
 //
-// Copyright (c) 1998-2022 ir. W.E. Huisman
+// Copyright (c) 1998-2025 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy of 
@@ -49,8 +49,11 @@ public:
   // Interval constructed from another interval
   SQLInterval(const SQLInterval& p_interval);
 
+  // Interval constructed from a XML duration string
+  explicit SQLInterval(XString p_duration);
+
   // Interval constructed from an ODBC structure
-  SQLInterval(SQL_INTERVAL_STRUCT* p_interval);
+  explicit SQLInterval(const SQL_INTERVAL_STRUCT* p_interval);
 
   // Interval constructed from a string
   SQLInterval(SQLINTERVAL p_type,const XString p_string);
@@ -67,9 +70,6 @@ public:
   // Interval constructed from scalars (day-second)
   SQLInterval(SQLINTERVAL p_type,int p_days, int p_hours,int p_minutes,int p_seconds,int p_fraction = 0);
 
-  // Interval constructed from a XML duration string
-  SQLInterval(XString p_duration);
-
   // Destructor
  ~SQLInterval();
 
@@ -80,7 +80,7 @@ public:
   // Setting an interval from an internal value
   bool    SetInterval(SQLINTERVAL p_type,InterValue p_nanoseconds);
   // Setting an interval from an ODBC structure
-  bool    SetInterval(SQL_INTERVAL_STRUCT& p_interval);
+  bool    SetInterval(const SQL_INTERVAL_STRUCT& p_interval);
   // Setting from a (year,month) pair. If either negative -> interval is negative.
   void    SetInterval(SQLINTERVAL p_type,int p_years,int p_months);
   // Setting from a (day,hour,min,sec,frac) set. If either is negative -> interval is negative
@@ -105,7 +105,7 @@ public:
   int     GetFractionPart() const;
   XString GetTypeAsString() const;
 
-  double  AsDatabaseDouble() const;
+  bcd     AsDatabaseNumber() const;
   XString AsString(bool p_withFraction = false) const;
   XString AsXMLString(bool p_withFraction = false) const;
   XString AsXMLDuration() const;
@@ -171,7 +171,7 @@ private:
   // Parsing from a XML duration string
   bool ParseInterval(XString p_duration);
   // Parsing/scanning one value of a XML duration string
-  bool ScanDurationValue(XString& p_duraction,int& p_value,int& p_fraction,char& p_marker,bool& p_didTime);
+  bool ScanDurationValue(XString& p_duraction,int& p_value,int& p_fraction,TCHAR& p_marker,bool& p_didTime);
 
   // Recalculate the total interval value
   void RecalculateValue();

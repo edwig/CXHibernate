@@ -2,7 +2,7 @@
 //
 // File: SQLAssociation.h
 //
-// Copyright (c) 1998-2022 ir. W.E. Huisman
+// Copyright (c) 1998-2025 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy of 
@@ -36,7 +36,7 @@ typedef struct _primaryForeign
 {
   XString     m_primary;
   XString     m_foreign;
-  SQLVariant* m_value;
+  SQLVariant* m_value { nullptr };
 }
 PrimaryForeign;
 
@@ -50,8 +50,8 @@ public:
  ~SQLAssociation();
 
   // ACTIONS
-  SQLRecord* FollowToMaster();
-  RecordSet* FollowToDetails();
+  SQLRecord* FollowToMaster (bool p_all = true);
+  RecordSet* FollowToDetails(bool p_all = true);
 
   // SETTERS
   void SetMaster      (SQLDataSet* p_master)  { m_master = p_master; };

@@ -2,7 +2,7 @@
 //
 // SourceFile: XPath.h
 //
-// Copyright (c) 2014-2022 ir. W.E. Huisman
+// Copyright (c) 2014-2025 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -94,7 +94,7 @@ private:
   bool    ParseLevel(XString& p_parsing);
   XString GetToken  (XString& p_parsing);
   bool    GetNumber (XString& p_parsing,XString& p_token);
-  void    NeedToken (XString& p_parsing,char p_token);
+  void    NeedToken (XString& p_parsing,TCHAR p_token);
   bool    FindRecursivly(XMLElement* p_elem,XString token);
   bool    FindRecursivlyAttribute(XMLElement* p_elem,XString token,bool p_recursivly);
 

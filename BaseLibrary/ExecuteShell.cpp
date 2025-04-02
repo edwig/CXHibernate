@@ -4,7 +4,7 @@
 //
 // BaseLibrary: Indispensable general objects and functions
 // 
-// Copyright (c) 2014-2022 ir. W.E. Huisman
+// Copyright (c) 2014-2025 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -29,6 +29,14 @@
 #include "ExecuteShell.h"
 #include <shellapi.h>
 
+#ifdef _AFX
+#ifdef _DEBUG
+#define new DEBUG_NEW
+#undef THIS_FILE
+static char THIS_FILE[] = __FILE__;
+#endif
+#endif
+
 // General function to start a 'command' option in the MS-Windows shell
 // Adds error handling stuff if needed.
 // Normally used for actions like 'open' or 'print'
@@ -47,28 +55,28 @@ ExecuteShell(XString  p_command
   {
     if(p_error)
     {
-      CString reason;
+      XString reason;
       switch(res)
       {
-        case ERROR_FILE_NOT_FOUND:     reason = "File not found";                   break;
-        case ERROR_PATH_NOT_FOUND:     reason = "Directory path not found";         break;
-        case ERROR_BAD_FORMAT:         reason = "File format is bad/corrupt";       break;
-        case SE_ERR_ACCESSDENIED:      reason = "No rights to access program/file"; break;
-        case SE_ERR_ASSOCINCOMPLETE:   reason = "Incomplete file association";      break;
-        case SE_ERR_DLLNOTFOUND:       reason = "DLL file not found";               break;
-        case SE_ERR_OOM:               reason = "Out of Memory";                    break;
-        case SE_ERR_SHARE:             reason = "File sharing error";               break;
+        case ERROR_FILE_NOT_FOUND:     reason = _T("File not found");                   break;
+        case ERROR_PATH_NOT_FOUND:     reason = _T("Directory path not found");         break;
+        case ERROR_BAD_FORMAT:         reason = _T("File format is bad/corrupt");       break;
+        case SE_ERR_ACCESSDENIED:      reason = _T("No rights to access program/file"); break;
+        case SE_ERR_ASSOCINCOMPLETE:   reason = _T("Incomplete file association");      break;
+        case SE_ERR_DLLNOTFOUND:       reason = _T("DLL file not found");               break;
+        case SE_ERR_OOM:               reason = _T("Out of Memory");                    break;
+        case SE_ERR_SHARE:             reason = _T("File sharing error");               break;
       }
       // Gathering the error
-      *p_error  = "Error at Shell-Execute: ";
-      *p_error += reason + "\n";
+      *p_error  = _T("Error at Shell-Execute: ");
+      *p_error += reason + _T("\n");
       // If amorphous command, add it
       if(p_command.GetLength())
       {
-        *p_error += p_command + ": ";
+        *p_error += p_command + _T(": ");
       }
       // Add program and pathname
-      *p_error +=  p_program + " " + p_arguments;
+      *p_error +=  p_program + _T(" ") + p_arguments;
     }
     return false;
   }

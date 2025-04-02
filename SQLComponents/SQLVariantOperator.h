@@ -2,7 +2,7 @@
 //
 // File: SQLVariantFormatOperator.h
 //
-// Copyright (c) 1998-2022 ir. W.E. Huisman
+// Copyright (c) 1998-2025 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy of 
@@ -77,8 +77,8 @@ SQLConciseType;
 
 SQLConciseType SQLTypeToConciseType(int p_datatype);
 
-typedef SQLVariant (*OperatorCalculate)(SQLVariant& p_left,SQLVariant& p_right);
-typedef bool       (*OperatorCompare  )(SQLVariant& p_left,SQLVariant& p_right);
+typedef SQLVariant (*OperatorCalculate)(const SQLVariant& p_left,const SQLVariant& p_right);
+typedef bool       (*OperatorCompare  )(const SQLVariant& p_left,const SQLVariant& p_right);
 
 struct _CompareFunc
 {

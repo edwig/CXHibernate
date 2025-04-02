@@ -4,7 +4,7 @@
 //
 // Marlin Server: Internet server/client
 // 
-// Copyright (c) 2014-2022 ir. W.E. Huisman
+// Copyright (c) 2014-2024 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -31,15 +31,15 @@
 class SiteFilterClientCertificate : public SiteFilter
 {
 public:
-  SiteFilterClientCertificate(unsigned p_priority,XString p_name);
+  explicit SiteFilterClientCertificate(unsigned p_priority,XString p_name);
   virtual ~SiteFilterClientCertificate();
 
   // Handle the filter
-  virtual bool Handle(HTTPMessage* p_message);
-  virtual void SetSite(HTTPSite* p_site);
+  virtual bool Handle(HTTPMessage* p_message) override;
+  virtual void SetSite(HTTPSite* p_site) override;
 
   // MANDATORY: Set Client certificate name and/or thumbprint to expect
-  void    SetClientCertificate(const char* p_name,const char* p_thumbprint);
+  void    SetClientCertificate(LPCTSTR p_name,LPCTSTR p_thumbprint);
   // OPTIONAL: Set Request client certificate: used to deactivate temporarily
   void    SetRequestCertificate(bool p_request);
 

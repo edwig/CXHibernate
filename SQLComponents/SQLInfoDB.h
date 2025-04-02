@@ -2,7 +2,7 @@
 //
 // File: SQLInfoDB.h
 //
-// Copyright (c) 1998-2022 ir. W.E. Huisman
+// Copyright (c) 1998-2025 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy of 
@@ -67,6 +67,9 @@ public:
 
   // Meta info about meta types: META_CATALOGS/META_SCHEMAS/META_TABLES
   virtual bool    MakeInfoMetaTypes       (MMetaMap&      p_objects,   XString& p_errors,int p_type) override;
+  virtual bool    MakeInfoDefaultCharset  (XString&       p_default);
+  virtual bool    MakeInfoDefaultCharsetNC(XString&       p_default);
+  virtual bool    MakeInfoDefaultCollation(XString&       p_default);
   // Tables
   virtual bool    MakeInfoTableObject     (MTableMap&     p_tables,    XString& p_errors,XString p_schema,XString p_tablename);  // Not known which type!
   virtual bool    MakeInfoTableTable      (MTableMap&     p_tables,    XString& p_errors,XString p_schema,XString p_tablename);  // TABLE   only
@@ -74,14 +77,14 @@ public:
   virtual bool    MakeInfoTableSynonyms   (MTableMap&     p_tables,    XString& p_errors,XString p_schema,XString p_tablename);  // SYNONYM only
   virtual bool    MakeInfoTableCatalog    (MTableMap&     p_tables,    XString& p_errors,XString p_schema,XString p_tablename);  // CATALOG only
   // Attributes of a table
-  virtual bool    MakeInfoTableColumns    (MColumnMap&    p_columns,   XString& p_errors,XString p_schema,XString p_tablename,XString p_columnname = "") override;
+  virtual bool    MakeInfoTableColumns    (MColumnMap&    p_columns,   XString& p_errors,XString p_schema,XString p_tablename,XString p_columnname = _T("")) override;
   virtual bool    MakeInfoTablePrimary    (MPrimaryMap&   p_primary,   XString& p_errors,XString p_schema,XString p_tablename)                          override;
   virtual bool    MakeInfoTableForeign    (MForeignMap&   p_foreigns,  XString& p_errors,XString p_schema,XString p_tablename,bool p_referenced   = false) override;
   virtual bool    MakeInfoTableStatistics (MIndicesMap&   p_indices,   XString& p_errors,XString p_schema,XString p_tablename,MPrimaryMap* p_keymap,bool p_all = true) override;
-  virtual bool    MakeInfoTableTriggers   (MTriggerMap&   p_triggers,  XString& p_errors,XString p_schema,XString p_tablename,XString p_trigger   = "");
+  virtual bool    MakeInfoTableTriggers   (MTriggerMap&   p_triggers,  XString& p_errors,XString p_schema,XString p_tablename,XString p_trigger   = _T(""));
   virtual bool    MakeInfoTableSequences  (MSequenceMap&  p_sequences, XString& p_errors,XString p_schema,XString p_tablename);
-  virtual bool    MakeInfoTablePrivileges (MPrivilegeMap& p_privileges,XString& p_errors,XString p_schema,XString p_tablename);
-  virtual bool    MakeInfoColumnPrivileges(MPrivilegeMap& p_privileges,XString& p_errors,XString p_schema,XString p_tablename,XString p_columnname = "");
+  virtual bool    MakeInfoTablePrivileges (MPrivilegeMap& p_privileges,XString& p_errors,XString p_schema,XString p_tablename) override;
+  virtual bool    MakeInfoColumnPrivileges(MPrivilegeMap& p_privileges,XString& p_errors,XString p_schema,XString p_tablename,XString p_columnname = _T("")) override;
   virtual bool    MakeInfoViewDefinition  (XString&       p_defintion, XString& p_errors,XString p_schema,XString p_viewname);
 
   // Procedures
@@ -91,6 +94,9 @@ public:
   virtual XString MakeInfoPSMSourcecode(XString p_schema, XString p_procedure);
 
   // PURE VIRTUAL INTERFACE
+
+  // RDBMS Uses INDENTITY or SEQUENCE interface
+  virtual void    SetUseSequences(bool p_sequences) = 0;
 
   //////////////////////////////////////////////////////////////////////////
   //
@@ -129,6 +135,9 @@ public:
   // Supports the ODBC escape sequence {[?=] CALL procedure (?,?,?)}
   virtual bool GetRDBMSSupportsODBCCallEscapes() const = 0;
 
+  // Supports the ODBC call procedure with named parameters
+  virtual bool GetRDBMSSupportsODBCCallNamedParameters() const = 0;
+
   // If the database does not support the datatype TIME, it can be implemented as a DECIMAL
   // BEWARE BOOL INVERTED!!
   virtual bool GetRDBMSSupportsDatatypeTime() const = 0;
@@ -148,6 +157,9 @@ public:
 
   // Correct maximum precision,scale for a NUMERIC datatype
   virtual void GetRDBMSNumericPrecisionScale(SQLULEN& p_precision,SQLSMALLINT& p_scale) const = 0;
+
+  // Maximum for a VARCHAR to be handled without AT-EXEC data. Assume NVARCHAR is half that size!
+  virtual int GetRDBMSMaxVarchar() const = 0;
 
   //////////////////////////////////////////////////////////////////////////
   // KEYWORDS
@@ -187,7 +199,7 @@ public:
 
   // Get select part to add new record identity to a table
   // Can be special column like 'OID' or a sequence select
-  virtual XString GetKEYWORDIdentityString(XString& p_tablename,XString p_postfix = "_seq") const = 0;
+  virtual XString GetKEYWORDIdentityString(XString& p_tablename,XString p_postfix = _T("_seq")) const = 0;
 
   // Gets the UPPER function
   virtual XString GetKEYWORDUpper(XString& p_expression) const = 0;
@@ -208,13 +220,14 @@ public:
   // SQL FOR SUB-PROCESSING
 
   // Connects to a default schema in the database/instance
-  virtual XString GetSQLDefaultSchema(XString p_schema) const = 0;
+  virtual XString GetSQLDefaultSchema(XString p_user,XString p_schema) const = 0;
 
   // Gets the construction for inline generating a key within an INSERT statement
   virtual XString GetSQLNewSerial(XString p_table,XString p_sequence) const = 0;
 
   // Gets the construction / select for generating a new serial identity
-  virtual XString GetSQLGenerateSerial(XString p_table) const = 0;
+  virtual XString GetSQLGenerateSerial  (XString p_table)    const = 0;
+  virtual XString GetSQLGenerateSequence(XString p_sequence) const = 0;
 
   // Gets the construction / select for the resulting effective generated serial
   virtual XString GetSQLEffectiveSerial(XString p_identity) const = 0;
@@ -228,13 +241,20 @@ public:
   virtual XString GetSQLFromDualClause() const = 0;
 
   // Get SQL to lock  a table 
-  virtual XString GetSQLLockTable(XString p_schema,XString p_tablename, bool p_exclusive) const = 0;
+  virtual XString GetSQLLockTable(XString p_schema,XString p_tablename,bool p_exclusive,int p_waittime) const = 0;
 
   // Get query to optimize the table statistics
   virtual XString GetSQLOptimizeTable(XString p_schema, XString p_tablename) const = 0;
 
   // Transform query to select top <n> rows
   virtual XString GetSQLTopNRows(XString p_sql,int p_top,int p_skip = 0) const = 0;
+
+  // Expand a SELECT with an 'FOR UPDATE' lock clause
+  virtual XString GetSelectForUpdateTableClause(unsigned p_lockWaitTime) const = 0;
+  virtual XString GetSelectForUpdateTrailer(XString p_select,unsigned p_lockWaitTime) const = 0;
+
+  // Query to perform a keep alive ping
+  virtual XString GetPing() const = 0;
 
   //////////////////////////////////////////////////////////////////////////
   // SQL STRINGS
@@ -257,11 +277,26 @@ public:
   // Stripped data for the parameter binding
   virtual XString GetSQLDateTimeStrippedString(int p_year,int p_month,int p_day,int p_hour,int p_minute,int p_second) const = 0;
 
+  // Makes an catalog identifier string (possibly quoted on both sides)
+  virtual XString GetSQLDDLIdentifier(XString p_identifier) const = 0;
+
+  // Get the name of a temp table (local temporary or global temporary)
+  virtual XString GetTempTablename(XString p_schema,XString p_tablename,bool p_local) const = 0;
+
+  //////////////////////////////////////////////////////////////////////////
+  //
+  //  SQLQuery service functions for tinkering with bindings and buffers
+  //
+
+  // Changes to parameters before binding to an ODBC HSTMT handle
+  virtual void DoBindParameterFixup(SQLSMALLINT& p_dataType,SQLSMALLINT& p_sqlDatatype,SQLULEN& p_columnSize,SQLSMALLINT& p_scale,SQLLEN& p_bufferSize,SQLLEN* p_indicator) const = 0;
+
   //////////////////////////////////////////////////////////////////////////
   //
   // CATALOG
   // o GetCATALOG<Object[s]><Function>
   //   Objects
+  //   - Catalog
   //   - Table
   //   - Column
   //   - Index
@@ -285,6 +320,9 @@ public:
 
   // Meta info about meta types
   virtual XString GetCATALOGMetaTypes(int p_type) const = 0;
+  virtual XString GetCATALOGDefaultCharset() const = 0;
+  virtual XString GetCATALOGDefaultCharsetNCV() const = 0;
+  virtual XString GetCATALOGDefaultCollation() const = 0;
   // All table functions
   virtual XString GetCATALOGTableExists       (XString& p_schema,XString& p_tablename) const = 0;
   virtual XString GetCATALOGTablesList        (XString& p_schema,XString& p_pattern)   const = 0;
@@ -311,7 +349,7 @@ public:
   virtual XString GetCATALOGIndexExists       (XString  p_schema,XString  p_tablename,XString  p_indexname) const = 0;
   virtual XString GetCATALOGIndexList         (XString& p_schema,XString& p_tablename)                      const = 0;
   virtual XString GetCATALOGIndexAttributes   (XString& p_schema,XString& p_tablename,XString& p_indexname) const = 0;
-  virtual XString GetCATALOGIndexCreate       (MIndicesMap& p_index) const = 0;
+  virtual XString GetCATALOGIndexCreate       (MIndicesMap& p_index,bool p_duplicateNulls = false) const = 0;
   virtual XString GetCATALOGIndexDrop         (XString  p_schema,XString  p_tablename,XString  p_indexname) const = 0;
   virtual XString GetCATALOGIndexFilter       (MetaIndex& p_index) const = 0;
   // All primary key functions
@@ -326,6 +364,18 @@ public:
   virtual XString GetCATALOGForeignCreate     (MForeignMap& p_foreigns) const = 0;
   virtual XString GetCATALOGForeignAlter      (MForeignMap& p_original,MForeignMap& p_requested) const = 0;
   virtual XString GetCATALOGForeignDrop       (XString  p_schema,XString  p_tablename,XString  p_constraintname) const = 0;
+  // All default constraints
+  virtual XString GetCATALOGDefaultExists     (XString& p_schema,XString& p_tablename,XString& p_column) const = 0;
+  virtual XString GetCATALOGDefaultList       (XString& p_schema,XString& p_tablename) const = 0;
+  virtual XString GetCATALOGDefaultAttributes (XString& p_schema,XString& p_tablename,XString& p_column) const = 0;
+  virtual XString GetCATALOGDefaultCreate     (XString  p_schema,XString  p_tablename,XString  p_constraint,XString p_column,XString p_code) const = 0;
+  virtual XString GetCATALOGDefaultDrop       (XString  p_schema,XString  p_tablename,XString  p_constraint) const = 0;
+  // All check constraints
+  virtual XString GetCATALOGCheckExists       (XString  p_schema,XString  p_tablename,XString  p_constraint) const = 0;
+  virtual XString GetCATALOGCheckList         (XString  p_schema,XString  p_tablename) const = 0;
+  virtual XString GetCATALOGCheckAttributes   (XString  p_schema,XString  p_tablename,XString  p_constraint) const = 0;
+  virtual XString GetCATALOGCheckCreate       (XString  p_schema,XString  p_tablename,XString  p_constraint,XString p_condition) const = 0;
+  virtual XString GetCATALOGCheckDrop         (XString  p_schema,XString  p_tablename,XString  p_constraint) const = 0;
   // All trigger functions
   virtual XString GetCATALOGTriggerExists     (XString  p_schema,XString  p_tablename,XString  p_triggername) const = 0;
   virtual XString GetCATALOGTriggerList       (XString& p_schema,XString& p_tablename) const = 0;
@@ -343,14 +393,20 @@ public:
   virtual XString GetCATALOGViewList          (XString& p_schema,XString& p_pattern)  const = 0;
   virtual XString GetCATALOGViewAttributes    (XString& p_schema,XString& p_viewname) const = 0;
   virtual XString GetCATALOGViewText          (XString& p_schema,XString& p_viewname) const = 0;
-  virtual XString GetCATALOGViewCreate        (XString  p_schema,XString  p_viewname,XString p_contents)   const = 0;
+  virtual XString GetCATALOGViewCreate        (XString  p_schema,XString  p_viewname,XString p_contents,bool p_ifexists = true)   const = 0;
   virtual XString GetCATALOGViewRename        (XString  p_schema,XString  p_viewname,XString p_newname)    const = 0;
   virtual XString GetCATALOGViewDrop          (XString  p_schema,XString  p_viewname,XString& p_precursor) const = 0;
   // All Privilege functions
   virtual XString GetCATALOGTablePrivileges   (XString& p_schema,XString& p_tablename) const = 0;
   virtual XString GetCATALOGColumnPrivileges  (XString& p_schema,XString& p_tablename,XString& p_columnname) const = 0;
-  virtual XString GetCatalogGrantPrivilege    (XString  p_schema,XString  p_objectname,XString p_privilege,XString p_grantee,bool p_grantable) = 0;
-  virtual XString GetCatalogRevokePrivilege   (XString  p_schema,XString  p_objectname,XString p_privilege,XString p_grantee) = 0;
+  virtual XString GetCATALOGSequencePrivilege (XString& p_schema,XString& p_sequence) const = 0;
+  virtual XString GetCATALOGGrantPrivilege    (XString  p_schema,XString  p_objectname,XString p_privilege,XString p_grantee,bool p_grantable) = 0;
+  virtual XString GetCATALOGRevokePrivilege   (XString  p_schema,XString  p_objectname,XString p_privilege,XString p_grantee) = 0;
+  // All Synonym functions
+  virtual XString GetCATALOGSynonymList       (XString& p_schema,XString& p_pattern) const = 0;
+  virtual XString GetCATALOGSynonymAttributes (XString& p_schema,XString& p_synonym) const = 0;
+  virtual XString GetCATALOGSynonymCreate     (XString& p_schema,XString& p_synonym,XString p_forObject,bool p_private = true) const = 0;
+  virtual XString GetCATALOGSynonymDrop       (XString& p_schema,XString& p_synonym,bool p_private = true) const = 0;
 
   //////////////////////////////////////////////////////////////////////////
   //
@@ -387,15 +443,16 @@ public:
   virtual XString GetPSMProcedureAttributes(XString& p_schema,XString& p_procedure) const = 0;
   virtual XString GetPSMProcedureSourcecode(XString  p_schema,XString  p_procedure) const = 0;
   virtual XString GetPSMProcedureCreate    (MetaProcedure& p_procedure) const = 0;
-  virtual XString GetPSMProcedureDrop      (XString  p_schema,XString  p_procedure) const = 0;
+  virtual XString GetPSMProcedureDrop      (XString  p_schema,XString  p_procedure,bool p_function = false) const = 0;
   virtual XString GetPSMProcedureErrors    (XString  p_schema,XString  p_procedure) const = 0;
+  virtual XString GetPSMProcedurePrivilege (XString& p_schema,XString& p_procedure) const = 0;
   // And it's parameters
   virtual XString GetPSMProcedureParameters(XString& p_schema,XString& p_procedure) const = 0;
 
   // All Language elements
   virtual XString GetPSMDeclaration(bool p_first,XString p_variable,int p_datatype,int p_precision = 0,int p_scale = 0,
-                                    XString p_default = "",XString p_domain = "",XString p_asColumn = "") const = 0;
-  virtual XString GetPSMAssignment (XString p_variable,XString p_statement = "") const = 0;
+                                    XString p_default = _T(""),XString p_domain = _T(""),XString p_asColumn = _T("")) const = 0;
+  virtual XString GetPSMAssignment (XString p_variable,XString p_statement = _T("")) const = 0;
   virtual XString GetPSMIF         (XString p_condition) const = 0;
   virtual XString GetPSMIFElse     () const = 0;
   virtual XString GetPSMIFEnd      () const = 0;
@@ -404,7 +461,7 @@ public:
   virtual XString GetPSMLOOP       () const = 0;
   virtual XString GetPSMLOOPEnd    () const = 0;
   virtual XString GetPSMBREAK      () const = 0;
-  virtual XString GetPSMRETURN     (XString p_statement = "") const = 0;
+  virtual XString GetPSMRETURN     (XString p_statement = _T("")) const = 0;
   virtual XString GetPSMExecute    (XString p_procedure,MParameterMap& p_parameters) const = 0;
 
   // The CURSOR
@@ -448,7 +505,7 @@ public:
   // Calling a stored function or procedure if the RDBMS does not support ODBC call escapes
   virtual SQLVariant* DoSQLCall(SQLQuery* p_query,XString& p_schema,XString& p_procedure) = 0;
   // Calling a stored function with named parameters, returning a value
-  virtual SQLVariant* DoSQLCallNamedParameters(SQLQuery* p_query,XString& p_schema,XString& p_procedure) = 0;
+  virtual SQLVariant* DoSQLCallNamedParameters(SQLQuery* p_query,XString& p_schema,XString& p_procedure,bool p_function = true) = 0;
   
 private:
   // Read a tables cursor from the database
@@ -457,7 +514,11 @@ private:
 
   // All default granted users for GRANT statements
   XString m_grantedUsers;
-  // Prefer ODBC metaqueries above hand crafted ones
+  // Catalog default charset/collation
+  XString m_defaultCharset;
+  XString m_defaultCharsetNCV;
+  XString m_defaultCollation;
+  // Prefer ODBC meta-queries above hand crafted ones
   bool    m_preferODBC { true };
 };
 

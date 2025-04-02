@@ -2,7 +2,7 @@
 //
 // File: SQLInfoOracle.h
 //
-// Copyright (c) 1998-2022 ir. W.E. Huisman
+// Copyright (c) 1998-2025 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy of 
@@ -29,16 +29,19 @@
 namespace SQLComponents
 {
 
-#define NUMERIC_MAX_PRECISION      38
-#define NUMERIC_MIN_SCALE           0
-#define NUMERIC_DEFAULT_SCALE      18
-
 class SQLInfoOracle : public SQLInfoDB
 {
 public:
-  SQLInfoOracle(SQLDatabase* p_database);
+  explicit SQLInfoOracle(SQLDatabase* p_database);
  ~SQLInfoOracle();
  
+  const int         NUMERIC_MAX_PRECISION = 38;
+  const int         NUMERIC_MIN_SCALE     = 0;
+  const SQLSMALLINT NUMERIC_DEFAULT_SCALE = 16;
+
+  // RDBMS Uses INDENTITY or SEQUENCE interface
+  void    SetUseSequences(bool p_sequences) override;
+
   //////////////////////////////////////////////////////////////////////////
   //
   // GENERALS (Strings & Booleans) 
@@ -72,6 +75,9 @@ public:
   // Supports the ODBC escape sequence {[?=] CALL procedure (?,?,?)}
   bool    GetRDBMSSupportsODBCCallEscapes() const override;
 
+  // Supports the ODBC call procedure with named parameters
+  bool    GetRDBMSSupportsODBCCallNamedParameters() const;
+
   // If the database does not support the datatype TIME, it can be implemented as a DECIMAL
   bool    GetRDBMSSupportsDatatypeTime() const override;
 
@@ -89,6 +95,9 @@ public:
 
   // Correct maximum precision,scale for a NUMERIC datatype
   void GetRDBMSNumericPrecisionScale(SQLULEN& p_precision, SQLSMALLINT& p_scale) const override;
+
+  // Maximum for a VARCHAR to be handled without AT-EXEC data. Assume NVARCHAR is half that size!
+  int GetRDBMSMaxVarchar() const override;
 
   // KEYWORDS
 
@@ -127,7 +136,7 @@ public:
 
   // Get select part to add new record identity to a table
   // Can be special column like 'OID' or a sequence select
-  XString GetKEYWORDIdentityString(XString& p_tablename,XString p_postfix = "_seq") const override;
+  XString GetKEYWORDIdentityString(XString& p_tablename,XString p_postfix = _T("_seq")) const override;
 
   // Gets the UPPER function
   XString GetKEYWORDUpper(XString& p_expression) const override;
@@ -139,7 +148,7 @@ public:
   XString GetKEYWORDStatementNVL(XString& p_test,XString& p_isnull) const override;
 
   // Gets the RDBMS definition of the datatype
-  XString GetKEYWORDDataType(MetaColumn* p_column);
+  XString GetKEYWORDDataType(MetaColumn* p_column) override;
 
   // Gets the USER (current-user) keyword function
   XString GetKEYWORDCurrentUser() const override;
@@ -147,13 +156,14 @@ public:
   // SQL
 
   // Connects to a default schema in the database/instance
-  XString GetSQLDefaultSchema(XString p_schema) const override;
+  XString GetSQLDefaultSchema(XString p_user,XString p_schema) const override;
 
   // Gets the construction for inline generating a key within an INSERT statement
   XString GetSQLNewSerial(XString p_table, XString p_sequence) const override;
 
   // Gets the construction / select for generating a new serial identity
   XString GetSQLGenerateSerial(XString p_table) const override;
+  XString GetSQLGenerateSequence(XString p_sequence) const override;
 
   // Gets the construction / select for the resulting effective generated serial
   XString GetSQLEffectiveSerial(XString p_identity) const override;
@@ -167,13 +177,20 @@ public:
   XString GetSQLFromDualClause() const override;
 
   // Get SQL to lock  a table 
-  XString GetSQLLockTable(XString p_schema, XString p_tablename, bool p_exclusive) const override;
+  XString GetSQLLockTable(XString p_schema,XString p_tablename,bool p_exclusive,int p_waittime) const override;
 
   // Get query to optimize the table statistics
   XString GetSQLOptimizeTable(XString p_schema, XString p_tablename) const override;
 
   // Transform query to select top <n> rows
   XString GetSQLTopNRows(XString p_sql,int p_top,int p_skip = 0) const override;
+
+  // Expand a SELECT with an 'FOR UPDATE' lock clause
+  XString GetSelectForUpdateTableClause(unsigned p_lockWaitTime) const;
+  XString GetSelectForUpdateTrailer(XString p_select,unsigned p_lockWaitTime) const;
+
+  // Query to perform a keep alive ping
+  XString GetPing() const override;
 
   //////////////////////////////////////////////////////////////////////////
   // SQL STRINGS
@@ -196,11 +213,21 @@ public:
   // Stripped data for the parameter binding
   XString GetSQLDateTimeStrippedString(int p_year,int p_month,int p_day,int p_hour,int p_minute,int p_second) const override;
 
+  // Makes an catalog identifier string (possibly quoted on both sides)
+  virtual XString GetSQLDDLIdentifier(XString p_identifier) const override;
+
+  // Get the name of a temp table (local temporary or global temporary)
+  XString GetTempTablename(XString p_schema,XString p_tablename,bool p_local) const override;
+
+  // Changes to parameters before binding to an ODBC HSTMT handle
+  void DoBindParameterFixup(SQLSMALLINT& p_dataType,SQLSMALLINT& p_sqlDatatype,SQLULEN& p_columnSize,SQLSMALLINT& p_scale,SQLLEN& p_bufferSize,SQLLEN* p_indicator) const override;
+
   //////////////////////////////////////////////////////////////////////////
   //
   // CATALOG
   // o GetCATALOG<Object[s]><Function>
   //   Objects
+  //   - Catalog
   //   - Table
   //   - Column
   //   - Index
@@ -224,6 +251,9 @@ public:
 
   // Meta info about meta types
   XString GetCATALOGMetaTypes(int p_type) const override;
+  XString GetCATALOGDefaultCharset() const override;
+  XString GetCATALOGDefaultCharsetNCV() const override;
+  XString GetCATALOGDefaultCollation() const override;
   // All table functions
   XString GetCATALOGTableExists       (XString& p_schema,XString& p_tablename)  const override;
   XString GetCATALOGTablesList        (XString& p_schema,XString& p_pattern)    const override;
@@ -250,7 +280,7 @@ public:
   XString GetCATALOGIndexExists     (XString  p_schema,XString  p_tablename,XString  p_indexname) const override;
   XString GetCATALOGIndexList       (XString& p_schema,XString& p_tablename) const override;
   XString GetCATALOGIndexAttributes (XString& p_schema,XString& p_tablename,XString& p_indexname) const override;
-  XString GetCATALOGIndexCreate     (MIndicesMap& p_index) const override;
+  XString GetCATALOGIndexCreate     (MIndicesMap& p_index,bool p_duplicateNulls = false) const override;
   XString GetCATALOGIndexDrop       (XString  p_schema,XString  p_tablename,XString  p_indexname) const override;
   XString GetCATALOGIndexFilter     (MetaIndex& p_index) const override;
   // All primary key functions
@@ -265,6 +295,18 @@ public:
   XString GetCATALOGForeignCreate    (MForeignMap& p_foreigns) const override;
   XString GetCATALOGForeignAlter     (MForeignMap& p_original,MForeignMap& p_requested) const override;
   XString GetCATALOGForeignDrop      (XString  p_schema,XString  p_tablename,XString  p_constraintname) const override;
+  // All default constraints
+  XString GetCATALOGDefaultExists    (XString& p_schema,XString& p_tablename,XString& p_column) const override;
+  XString GetCATALOGDefaultList      (XString& p_schema,XString& p_tablename) const override;
+  XString GetCATALOGDefaultAttributes(XString& p_schema,XString& p_tablename,XString& p_column) const override;
+  XString GetCATALOGDefaultCreate    (XString  p_schema,XString  p_tablename,XString  p_constraint,XString p_column,XString p_code) const override;
+  XString GetCATALOGDefaultDrop      (XString  p_schema,XString  p_tablename,XString  p_constraint) const override;
+  // All check constraints
+  XString GetCATALOGCheckExists      (XString  p_schema,XString  p_tablename,XString  p_constraint) const override;
+  XString GetCATALOGCheckList        (XString  p_schema,XString  p_tablename) const override;
+  XString GetCATALOGCheckAttributes  (XString  p_schema,XString  p_tablename,XString  p_constraint) const override;
+  XString GetCATALOGCheckCreate      (XString  p_schema,XString  p_tablename,XString  p_constraint,XString p_condition) const override;
+  XString GetCATALOGCheckDrop        (XString  p_schema,XString  p_tablename,XString  p_constraint) const override;
   // All trigger functions
   XString GetCATALOGTriggerExists    (XString  p_schema,XString  p_tablename,XString  p_triggername) const override;
   XString GetCATALOGTriggerList      (XString& p_schema,XString& p_tablename) const override;
@@ -282,14 +324,20 @@ public:
   XString GetCATALOGViewList         (XString& p_schema,XString& p_pattern)  const override;
   XString GetCATALOGViewAttributes   (XString& p_schema,XString& p_viewname) const override;
   XString GetCATALOGViewText         (XString& p_schema,XString& p_viewname) const override;
-  XString GetCATALOGViewCreate       (XString  p_schema,XString  p_viewname,XString p_contents)   const override;
+  XString GetCATALOGViewCreate       (XString  p_schema,XString  p_viewname,XString p_contents,bool p_ifexists = true) const override;
   XString GetCATALOGViewRename       (XString  p_schema,XString  p_viewname,XString p_newname)    const override;
   XString GetCATALOGViewDrop         (XString  p_schema,XString  p_viewname,XString& p_precursor) const override;
   // All Privilege functions
   XString GetCATALOGTablePrivileges  (XString& p_schema,XString& p_tablename) const override;
   XString GetCATALOGColumnPrivileges (XString& p_schema,XString& p_tablename,XString& p_columnname) const override;
-  XString GetCatalogGrantPrivilege   (XString  p_schema,XString  p_objectname,XString p_privilege,XString p_grantee,bool p_grantable);
-  XString GetCatalogRevokePrivilege  (XString  p_schema,XString  p_objectname,XString p_privilege,XString p_grantee);
+  XString GetCATALOGSequencePrivilege(XString& p_schema,XString& p_sequence) const override;
+  XString GetCATALOGGrantPrivilege   (XString  p_schema,XString  p_objectname,XString p_privilege,XString p_grantee,bool p_grantable) override;
+  XString GetCATALOGRevokePrivilege  (XString  p_schema,XString  p_objectname,XString p_privilege,XString p_grantee) override;
+  // All Synonym functions
+  XString GetCATALOGSynonymList      (XString& p_schema,XString& p_pattern) const override;
+  XString GetCATALOGSynonymAttributes(XString& p_schema,XString& p_synonym) const override;
+  XString GetCATALOGSynonymCreate    (XString& p_schema,XString& p_synonym,XString p_forObject,bool p_private = true) const override;
+  XString GetCATALOGSynonymDrop      (XString& p_schema,XString& p_synonym,bool p_private = true) const override;
 
   //////////////////////////////////////////////////////////////////////////
   //
@@ -326,15 +374,16 @@ public:
   XString GetPSMProcedureAttributes(XString& p_schema,XString& p_procedure) const override;
   XString GetPSMProcedureSourcecode(XString  p_schema,XString  p_procedure) const override;
   XString GetPSMProcedureCreate    (MetaProcedure& p_procedure) const override;
-  XString GetPSMProcedureDrop      (XString  p_schema,XString  p_procedure) const override;
+  XString GetPSMProcedureDrop      (XString  p_schema,XString  p_procedure,bool p_function = false) const override;
   XString GetPSMProcedureErrors    (XString  p_schema,XString  p_procedure) const override;
+  XString GetPSMProcedurePrivilege (XString& p_schema,XString& p_procedure) const override;
   // And it's parameters
   XString GetPSMProcedureParameters(XString& p_schema,XString& p_procedure) const override;
 
   // All Language elements
   XString GetPSMDeclaration(bool p_first,XString p_variable,int p_datatype,int p_precision = 0,int p_scale = 0,
-                            XString p_default = "",XString p_domain = "",XString p_asColumn = "") const override;
-  XString GetPSMAssignment (XString p_variable,XString p_statement = "") const override;
+                            XString p_default = _T(""),XString p_domain = _T(""),XString p_asColumn = _T("")) const override;
+  XString GetPSMAssignment (XString p_variable,XString p_statement = _T("")) const override;
   XString GetPSMIF         (XString p_condition) const override;
   XString GetPSMIFElse     () const override;
   XString GetPSMIFEnd      () const override;
@@ -343,7 +392,7 @@ public:
   XString GetPSMLOOP       () const override;
   XString GetPSMLOOPEnd    () const override;
   XString GetPSMBREAK      () const override;
-  XString GetPSMRETURN     (XString p_statement = "") const override;
+  XString GetPSMRETURN     (XString p_statement = _T("")) const override;
   XString GetPSMExecute    (XString p_procedure,MParameterMap& p_parameters) const override;
 
   // The CURSOR
@@ -387,7 +436,7 @@ public:
   // Calling a stored function or procedure if the RDBMS does not support ODBC call escapes
   SQLVariant* DoSQLCall(SQLQuery* p_query,XString& p_schema,XString& p_procedure) override;
   // Calling a stored function with named parameters, returning a value
-  SQLVariant* DoSQLCallNamedParameters(SQLQuery* p_query,XString& p_schema,XString& p_procedure) override;
+  SQLVariant* DoSQLCallNamedParameters(SQLQuery* p_query,XString& p_schema,XString& p_procedure,bool p_function = true) override;
 };
 
 // End of namespace

@@ -57,7 +57,7 @@ namespace HibernateTest
 
     TEST_METHOD(T01_SelectKitten)
     {
-      Logger::WriteMessage("Getting an object from the KITTEN class");
+      Logger::WriteMessage(_T("Getting an object from the KITTEN class"));
 
       try
       {
@@ -80,7 +80,7 @@ namespace HibernateTest
 
     TEST_METHOD(T02_SelectCat)
     {
-      Logger::WriteMessage("Getting an object from the CAT class");
+      Logger::WriteMessage(_T("Getting an object from the CAT class"));
 
       try
       {
@@ -103,7 +103,7 @@ namespace HibernateTest
 
     TEST_METHOD(T03_SelectDog)
     {
-      Logger::WriteMessage("Getting an object from the DOG class");
+      Logger::WriteMessage(_T("Getting an object from the DOG class"));
 
       try
       {
@@ -126,24 +126,24 @@ namespace HibernateTest
 
     TEST_METHOD(T04_SelectCats)
     {
-      Logger::WriteMessage("Getting objects from the CAT/KITTEN class");
+      Logger::WriteMessage(_T("Getting objects from the CAT/KITTEN class"));
 
       try
       {
         OpenSession();
 
-        SQLFilter filt("ani.id",OP_Smaller,4);
+        SQLFilter filt(_T("ani.id"),OP_Smaller,4);
         CXResultSet set = m_session->Load(Cat::ClassName(),&filt);
         Assert::IsTrue(!set.empty());
 
         // Print all gotten animals, checking the class
         for(auto& object : set)
         {
-          if(object->GetDiscriminator() == "cat")
+          if(object->GetDiscriminator() == _T("cat"))
           {
             PrintCat((Cat*)object);
           }
-          else if(object->GetDiscriminator() == "kit")
+          else if(object->GetDiscriminator() == _T("kit"))
           {
             PrintKitten((Kitten*)object);
           }
@@ -165,7 +165,7 @@ namespace HibernateTest
 
     TEST_METHOD(T05_InsertCat)
     {
-      Logger::WriteMessage("Inserting an object of the CAT class");
+      Logger::WriteMessage(_T("Inserting an object of the CAT class"));
 
       try
       {
@@ -174,12 +174,12 @@ namespace HibernateTest
         Cat* pussy = (Cat*) m_session->CreateObject(Cat::ClassName());
 
         // Fill in our object with reasonable values
-        pussy->SetAnimalName("Silvester");
+        pussy->SetAnimalName(_T("Silvester"));
         pussy->SetHas_claws(true);
         pussy->SetHas_hair(true);
         pussy->SetHas_wings(false);
         pussy->SetNumberOfLegs(4);
-        pussy->SetColor("black");
+        pussy->SetColor(_T("black"));
         pussy->SetCatdoor(true);
         pussy->SetLikesWhiskas(true);
 
@@ -206,7 +206,7 @@ namespace HibernateTest
 
     TEST_METHOD(T06_InsertDeleteKitten)
     {
-      Logger::WriteMessage("Inserting an object of the KITTEN class and deleting it right away");
+      Logger::WriteMessage(_T("Inserting an object of the KITTEN class and deleting it right away"));
 
       try
       {
@@ -215,17 +215,17 @@ namespace HibernateTest
         Kitten* little = (Kitten*)m_session->CreateObject(Kitten::ClassName());
 
         // Fill in our object with reasonable values
-        little->SetAnimalName("Silvester's son");
+        little->SetAnimalName(_T("Silvester's son"));
         little->SetHas_claws(false);
         little->SetHas_hair(true);
         little->SetHas_wings(false);
         little->SetNumberOfLegs(4);
-        little->SetColor("White");
+        little->SetColor(_T("White"));
         little->SetCatdoor(false);
         little->SetLikesWhiskas(false);
         little->SetImmuun(true);
         little->SetInLitter(true);
-        little->SetKit_color("gray");
+        little->SetKit_color(_T("gray"));
 
         // Go save it in the database in two tables
         bool result = m_session->Save(little);
@@ -252,7 +252,7 @@ namespace HibernateTest
 
     TEST_METHOD(T07_UpdateDog)
     {
-      Logger::WriteMessage("Updating an object from the DOG class");
+      Logger::WriteMessage(_T("Updating an object from the DOG class"));
 
       try
       {
@@ -283,12 +283,12 @@ namespace HibernateTest
     void PrintAnimal(Animal* p_animal)
     {
       CString text;
-      text.Format("Animal ID             : %d",p_animal->GetId());                        Logger::WriteMessage(text);
-      text.Format("Animal name           : %s",p_animal->GetAnimalName());                Logger::WriteMessage(text);
-      text.Format("Has claws             : %s",p_animal->GetHas_claws() ? "yes" : "no");  Logger::WriteMessage(text);
-      text.Format("Has hair              : %s",p_animal->GetHas_hair()  ? "yes" : "no");  Logger::WriteMessage(text);
-      text.Format("Has wings             : %s",p_animal->GetHas_wings() ? "yes" : "no");  Logger::WriteMessage(text);
-      text.Format("Number of legs        : %d",p_animal->GetNumberOfLegs());              Logger::WriteMessage(text);
+      text.Format(_T("Animal ID             : %d"),p_animal->GetId());                        Logger::WriteMessage(text);
+      text.Format(_T("Animal name           : %s"),p_animal->GetAnimalName());                Logger::WriteMessage(text);
+      text.Format(_T("Has claws             : %s"),p_animal->GetHas_claws() ? _T("yes") : _T("no"));  Logger::WriteMessage(text);
+      text.Format(_T("Has hair              : %s"),p_animal->GetHas_hair()  ? _T("yes") : _T("no"));  Logger::WriteMessage(text);
+      text.Format(_T("Has wings             : %s"),p_animal->GetHas_wings() ? _T("yes") : _T("no"));  Logger::WriteMessage(text);
+      text.Format(_T("Number of legs        : %d"),p_animal->GetNumberOfLegs());              Logger::WriteMessage(text);
     }
 
     void PrintCat(Cat* p_cat)
@@ -296,9 +296,9 @@ namespace HibernateTest
       PrintAnimal(p_cat);
 
       CString text;
-      text.Format("Color of cat          : %s",p_cat->GetColor());                        Logger::WriteMessage(text);
-      text.Format("Used to a catdoor     : %s",p_cat->GetCatdoor()      ? "yes" : "no");  Logger::WriteMessage(text);
-      text.Format("Cat likes Whiskas     : %s",p_cat->GetLikesWhiskas() ? "yes" : "no");  Logger::WriteMessage(text);
+      text.Format(_T("Color of cat          : %s"),p_cat->GetColor());                        Logger::WriteMessage(text);
+      text.Format(_T("Used to a catdoor     : %s"),p_cat->GetCatdoor()      ? _T("yes") : _T("no"));  Logger::WriteMessage(text);
+      text.Format(_T("Cat likes Whiskas     : %s"),p_cat->GetLikesWhiskas() ? _T("yes") : _T("no"));  Logger::WriteMessage(text);
     }
 
     void PrintDog(Dog* p_dog)
@@ -306,10 +306,10 @@ namespace HibernateTest
       PrintAnimal(p_dog);
 
       CString text;
-      text.Format("Subrace of dog        : %s",p_dog->GetSubrace());
-      text.Format("Need walks per day    : %d",p_dog->GetWalksPerDay());                  Logger::WriteMessage(text);
-      text.Format("Can be used hunting   : %s",p_dog->GetHunting()  ? "yes" : "no");      Logger::WriteMessage(text);
-      text.Format("Is a waterdog         : %s",p_dog->GetWaterdog() ? "yes" : "no");      Logger::WriteMessage(text);
+      text.Format(_T("Subrace of dog        : %s"),p_dog->GetSubrace());
+      text.Format(_T("Need walks per day    : %d"),p_dog->GetWalksPerDay());                  Logger::WriteMessage(text);
+      text.Format(_T("Can be used hunting   : %s"),p_dog->GetHunting()  ? _T("yes") : _T("no"));      Logger::WriteMessage(text);
+      text.Format(_T("Is a waterdog         : %s"),p_dog->GetWaterdog() ? _T("yes") : _T("no"));      Logger::WriteMessage(text);
     }
 
 
@@ -318,9 +318,9 @@ namespace HibernateTest
       PrintCat(p_kitten);
 
       CString text;
-      text.Format("Color of kitten       : %s",p_kitten->GetKit_color());               Logger::WriteMessage(text);
-      text.Format("Kitten is immuun      : %s",p_kitten->GetImmuun()   ? "yes" : "no"); Logger::WriteMessage(text);
-      text.Format("Kitten still in litter: %s",p_kitten->GetInLitter() ? "yes" : "no"); Logger::WriteMessage(text);
+      text.Format(_T("Color of kitten       : %s"),p_kitten->GetKit_color());               Logger::WriteMessage(text);
+      text.Format(_T("Kitten is immuun      : %s"),p_kitten->GetImmuun()   ? _T("yes") : _T("no")); Logger::WriteMessage(text);
+      text.Format(_T("Kitten still in litter: %s"),p_kitten->GetInLitter() ? _T("yes") : _T("no")); Logger::WriteMessage(text);
     }
 
     // Open a CXHibernate session by config file
@@ -335,13 +335,13 @@ namespace HibernateTest
 
       try
       {
-        m_session = hibernate.CreateSession("s1","subtable.cfg.xml");
+        m_session = hibernate.CreateSession(_T("s1"),_T("subtable.cfg.xml"));
         if(m_session)
         {
           // We are a database session
-          m_session->SetDatabaseConnection("hibtest","sysdba","altijd");
+          m_session->SetDatabaseConnection(_T("hibtest"),_T("sysdba"),_T("altijd"));
 
-          Logger::WriteMessage("Opened session for sub_table configuration");
+          Logger::WriteMessage(_T("Opened session for sub_table configuration"));
 
           return;
         }
@@ -361,7 +361,7 @@ namespace HibernateTest
       {
         m_session->CloseSession();
         m_session = nullptr;
-        Logger::WriteMessage("Closed session");
+        Logger::WriteMessage(_T("Closed session"));
       }
     }
     

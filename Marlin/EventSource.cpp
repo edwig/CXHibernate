@@ -4,7 +4,7 @@
 //
 // Marlin Server: Internet server/client
 // 
-// Copyright (c) 2014-2022 ir. W.E. Huisman
+// Copyright (c) 2014-2024 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -30,17 +30,21 @@
 #include "ServerEvent.h"
 #include "ThreadPool.h"
 #include "HTTPClient.h"
-#include "LogAnalysis.h"
+#include <ConvertWideString.h>
+#include <LogAnalysis.h>
+#include <AutoCritical.h>
 
+#ifdef _AFX
 #ifdef _DEBUG
 #define new DEBUG_NEW
 #undef THIS_FILE
 static char THIS_FILE[] = __FILE__;
 #endif
+#endif
 
 // Macro for logging
-#define DETAILLOG(text) if(m_client->GetLogging()) m_client->GetLogging()->AnalysisLog(__FUNCTION__,LogType::LOG_INFO, false,(text))
-#define ERRORLOG(text)  if(m_client->GetLogging()) m_client->GetLogging()->AnalysisLog(__FUNCTION__,LogType::LOG_ERROR,false,(text))
+#define DETAILLOG(text) if(m_client->GetLogging()) m_client->GetLogging()->AnalysisLog(_T(__FUNCTION__),LogType::LOG_INFO, false,(text))
+#define ERRORLOG(text)  if(m_client->GetLogging()) m_client->GetLogging()->AnalysisLog(_T(__FUNCTION__),LogType::LOG_ERROR,false,(text))
 
 EventSource::EventSource(HTTPClient* p_client,XString p_url)
             :m_url(p_url)
@@ -49,6 +53,8 @@ EventSource::EventSource(HTTPClient* p_client,XString p_url)
             ,m_ownPool(false)
 {
   Reset();
+
+  InitializeCriticalSection(&m_parseLock);
 }
 
 EventSource::~EventSource()
@@ -60,6 +66,7 @@ EventSource::~EventSource()
     m_pool = nullptr;
     m_ownPool = false;
   }
+  DeleteCriticalSection(&m_parseLock);
 }
 
 // Set an external threadpool
@@ -86,7 +93,7 @@ EventSource::EventSourceInit(bool p_withCredentials)
     m_pool = new ThreadPool(NUM_THREADS_MINIMUM,NUM_THREADS_MAXIMUM);
     m_ownPool = true;
   }
-  // Now starting the eventstream
+  // Now starting the event stream
   return m_client->StartEventStream(m_url);
 }
 
@@ -122,7 +129,7 @@ EventSource::SetConnecting()
   }
 }
 
-// Set readystate and wait for HTTP roundtrip
+// Set ready state and wait for HTTP round trip
 // To close the HTTP push-event stream
 void
 EventSource::Close()
@@ -130,7 +137,7 @@ EventSource::Close()
   m_readyState = CLOSED;
 }
 
-// Add event listner to the source
+// Add event listener to the source
 bool 
 EventSource::AddEventListener(XString p_event,LPFN_EVENTHANDLER p_handler,bool p_useCapture /*=false*/)
 {
@@ -144,32 +151,32 @@ EventSource::AddEventListener(XString p_event,LPFN_EVENTHANDLER p_handler,bool p
   }
 
   // Handle special cases from the W3C Standard
-  if(p_event.CompareNoCase("onopen") == 0) 
+  if(p_event.CompareNoCase(_T("onopen")) == 0) 
   {
     m_onopen = p_handler; 
     return true; 
   }
-  if(p_event.CompareNoCase("onerror") == 0) 
+  if(p_event.CompareNoCase(_T("onerror")) == 0) 
   {
     m_onerror = p_handler;
     return true;
   }
-  if(p_event.CompareNoCase("onmessage") == 0)
+  if(p_event.CompareNoCase(_T("onmessage")) == 0)
   {
     m_onmessage = p_handler;
     return true;
   }
-  if(p_event.CompareNoCase("onclose") == 0)
+  if(p_event.CompareNoCase(_T("onclose")) == 0)
   {
     m_onclose = p_handler;
     return true;
   }
-  if(p_event.CompareNoCase("oncomment") == 0)
+  if(p_event.CompareNoCase(_T("oncomment")) == 0)
   {
     m_oncomment = p_handler;
     return true;
   }
-  if(p_event.CompareNoCase("onretry") == 0)
+  if(p_event.CompareNoCase(_T("onretry")) == 0)
   {
     m_onretry = p_handler;
     return true;
@@ -188,7 +195,7 @@ EventSource::AddEventListener(XString p_event,LPFN_EVENTHANDLER p_handler,bool p
 
 // Handle the last-event-id of a generic listener
 void
-EventSource::HandleLastID(ServerEvent* p_event)
+EventSource::HandleLastID(const ServerEvent* p_event)
 {
   if(p_event->m_id)
   {
@@ -235,7 +242,7 @@ EventSource::OnOpen(ServerEvent* p_event)
     (*m_onopen)(p_event,m_appData);
     return;
   }
-  DETAILLOG("EventSource: Unhandeled OnOpen event");
+  DETAILLOG(_T("EventSource: Unhandeled OnOpen event"));
   DETAILLOG(p_event->m_data);
   delete p_event;
 }
@@ -252,7 +259,7 @@ EventSource::OnError(ServerEvent* p_event)
     (*m_onerror)(p_event,m_appData);
     return;
   }
-  DETAILLOG("EventSource: Unhandeled OnError event");
+  DETAILLOG(_T("EventSource: Unhandeled OnError event"));
   DETAILLOG(p_event->m_data);
   delete p_event;
 }
@@ -272,10 +279,10 @@ EventSource::OnMessage(ServerEvent* p_event)
   else if(m_onmessage)
   {
     // Submit to threadpool
-    m_pool->SubmitWork((LPFN_CALLBACK)m_onmessage,(void*)p_event);
+    m_pool->SubmitWork(reinterpret_cast<LPFN_CALLBACK>(m_onmessage),reinterpret_cast<void*>(p_event));
     return;
   }
-  DETAILLOG("EventSource: Unhandeled OnMessage event");
+  DETAILLOG(_T("EventSource: Unhandeled OnMessage event"));
   DETAILLOG(p_event->m_data);
   delete p_event;
 }
@@ -295,7 +302,7 @@ EventSource::OnClose(ServerEvent* p_event)
   else
   {
     m_readyState = CLOSED_BY_SERVER;
-    DETAILLOG("EventSource: Unhandeled OnClose event");
+    DETAILLOG(_T("EventSource: Unhandeled OnClose event"));
     DETAILLOG(p_event->m_data);
     delete p_event;
   }
@@ -319,7 +326,7 @@ EventSource::OnComment(ServerEvent* p_event)
     return;
   }
   // Do the default comment handler
-  XString comment("Eventsource. Comment data received: ");
+  XString comment(_T("Eventsource. Comment data received: "));
   comment += p_event->m_data;
   DETAILLOG(comment);
   delete p_event;
@@ -338,7 +345,7 @@ EventSource::OnRetry(ServerEvent* p_event)
     return;
   }
   // Default = Log the retry
-  XString retry("Eventsource: Retry received: ");
+  XString retry(_T("Eventsource: Retry received: "));
   retry += p_event->m_data;
   DETAILLOG(retry);
   delete p_event;
@@ -353,20 +360,29 @@ EventSource::OnRetry(ServerEvent* p_event)
 void
 EventSource::Parse(BYTE* p_buffer,unsigned& p_length)
 {
+  AutoCritSec lock(&m_parseLock);
+
   // Only parse events if we have the 'open' state
   if(m_readyState != OPEN)
   {
     return;
   }
   // Getting the raw buffer
-  XString buffer(p_buffer);
+#ifdef _UNICODE
+  XString buffer;
+  bool bom(false);
+  TryConvertNarrowString(p_buffer,p_length,_T(""),buffer,bom);
+#else
+  XString input(p_buffer);
+  XString buffer = DecodeStringFromTheWire(input);
+#endif
 
   // normalize lines
   if(buffer.Find('\r') >= 0)
   {
-    buffer.Replace("\r\n","\n");
-    buffer.Replace("\n\r","\n");
-    buffer.Replace("\r","\n");
+    buffer.Replace(_T("\r\n"),_T("\n"));
+    buffer.Replace(_T("\n\r"),_T("\n"));
+    buffer.Replace(_T("\r"),_T("\n"));
   }
   // Parse the buffer, probably shrinking it
   if(buffer.GetLength())
@@ -382,9 +398,18 @@ EventSource::Parse(BYTE* p_buffer,unsigned& p_length)
   }
   else if((ULONG)buffer.GetLength() < p_length)
   {
-    // Place tail end of buffer back. Wait for more on HTTP connection
-    memcpy_s(p_buffer,p_length,buffer.GetString(),buffer.GetLength());
-    p_length = buffer.GetLength();
+    // Place tail end of buffer back in original UTF-8 encoding
+    // Wait for more on HTTP connection
+#ifdef _UNICODE
+    BYTE* back = nullptr;
+    TryCreateNarrowString(buffer,_T(""),false,&back,(int&)p_length);
+    memcpy_s(p_buffer,p_length,back,p_length);
+    delete [] back;
+#else
+    XString back = EncodeStringForTheWire(buffer);
+    memcpy_s(p_buffer,p_length,back.GetString(),back.GetLength());
+    p_length = back.GetLength();
+#endif;
   }
 }
 
@@ -401,7 +426,7 @@ EventSource::Parse(XString& p_buffer)
   // set the default event name
   if(m_eventName.IsEmpty())
   {
-    m_eventName = "message";
+    m_eventName = _T("message");
   }
 
   // Try to do multiple events
@@ -412,7 +437,7 @@ EventSource::Parse(XString& p_buffer)
     int pos = line.Find(':');
     if(pos == 0)
     {
-      XString event("comment");
+      XString event(_T("comment"));
       // Comment line found
       DispatchEvent(&event,0,&line);
       // Get next and continue
@@ -435,11 +460,11 @@ EventSource::Parse(XString& p_buffer)
     }
 
     // Test for retry field
-    if(field.CompareNoCase("retry") == 0)
+    if(field.CompareNoCase(_T("retry")) == 0)
     {
       // Retry time is in seconds, so calculate the clock ticks
       // we need to wait before reconnection.
-      m_reconnectionTime = atoi(value) * CLOCKS_PER_SEC;
+      m_reconnectionTime = _ttoi(value) * CLOCKS_PER_SEC;
       if(m_reconnectionTime < HTTP_RECONNECTION_TIME_MINIMUM)
       {
         m_reconnectionTime = HTTP_RECONNECTION_TIME_MINIMUM;
@@ -450,14 +475,14 @@ EventSource::Parse(XString& p_buffer)
       }
       DispatchEvent(&field,0,&value);
     }
-    else if(field.CompareNoCase("event") == 0)
+    else if(field.CompareNoCase(_T("event")) == 0)
     {
       // Our event name
       m_eventName = value;
     }
-    else if(field.CompareNoCase("id") == 0)
+    else if(field.CompareNoCase(_T("id")) == 0)
     {
-      id = atoi(value);
+      id = _ttoi(value);
       if(id == 0)
       {
         // Reset the event id
@@ -469,12 +494,12 @@ EventSource::Parse(XString& p_buffer)
         m_lastEventID = id;
       }
     }
-    else if(field.CompareNoCase("data") == 0)
+    else if(field.CompareNoCase(_T("data")) == 0)
     {
       // Beginning of the data
       if(lineNo++)
       {
-        m_eventData += "\n";
+        m_eventData += _T("\n");
       }
       m_eventData += value;
     }
@@ -504,7 +529,7 @@ bool
 EventSource::GetLine(XString& p_buffer,XString& p_line)
 {
   // Test for a BOM at the beginning of the stream
-  unsigned char* buf = reinterpret_cast<unsigned char*>(p_buffer.GetBuffer());
+  _TUCHAR* buf = reinterpret_cast<_TUCHAR*>(p_buffer.GetBuffer());
   if(*buf == 0xFE && *++buf == 0xFF)
   {
     p_buffer = p_buffer.Mid(2);
@@ -516,7 +541,7 @@ EventSource::GetLine(XString& p_buffer,XString& p_line)
   if(pos == 0 && p_buffer.GetLength() > 1)
   {
     p_line.Empty();
-    p_buffer.TrimLeft("\n");
+    p_buffer.TrimLeft(_T("\n"));
     return false;
   }
   if(pos > 0)
@@ -529,7 +554,7 @@ EventSource::GetLine(XString& p_buffer,XString& p_line)
   p_line.Empty();
 
   // Last new line means dispatch it
-  if(p_buffer == "\n")
+  if(p_buffer == _T("\n"))
   {
     p_buffer.Empty();
     return false;
@@ -549,7 +574,7 @@ EventSource::DispatchEvent(XString* p_event,ULONG p_id,XString* p_data)
   {
     // Cannot handle events
     XString error;
-    error.Format("Internal error: Ready state = closed, but event received: %s:%s",(*p_event).GetString(),(*p_data).GetString());
+    error.Format(_T("Internal error: Ready state = closed, but event received: %s:%s"),(*p_event).GetString(),(*p_data).GetString());
     ERRORLOG(error);
     return;
   }
@@ -563,7 +588,7 @@ EventSource::DispatchEvent(XString* p_event,ULONG p_id,XString* p_data)
   theEvent->m_data  = *p_data;
 
   // Handle special case 'open'
-  if(p_event->CompareNoCase("open") == 0)
+  if(p_event->CompareNoCase(_T("open")) == 0)
   {
     OnOpen(theEvent);
     return;
@@ -573,7 +598,7 @@ EventSource::DispatchEvent(XString* p_event,ULONG p_id,XString* p_data)
   if(m_readyState != OPEN)
   {
     XString error;
-    error.Format("Internal error: Ready state is not open, but event received: %s:%s",
+    error.Format(_T("Internal error: Ready state is not open, but event received: %s:%s"),
                  (*p_event).GetString(),(*p_data).GetString());
     ERRORLOG(error);
     delete theEvent;
@@ -589,7 +614,7 @@ EventSource::DispatchEvent(XString* p_event,ULONG p_id,XString* p_data)
     {
       // Already seen this event, skip it
       XString logMessage;
-      logMessage.Format("Dropped event with duplicate ID: %d:%s"
+      logMessage.Format(_T("Dropped event with duplicate ID: %d:%s")
                         ,(int)p_id,(*p_event).GetString());
       delete theEvent;
       return;
@@ -601,27 +626,27 @@ EventSource::DispatchEvent(XString* p_event,ULONG p_id,XString* p_data)
   event.MakeLower();
 
   // Handle special cases 'message' and 'error'
-  if(event.Compare("message") == 0)
+  if(event.Compare(_T("message")) == 0)
   {
     OnMessage(theEvent);
     return;
   }
-  if(event.Compare("error") == 0)
+  if(event.Compare(_T("error")) == 0)
   {
     OnError(theEvent);
     return;
   }
-  if(event.CompareNoCase("close") == 0)
+  if(event.CompareNoCase(_T("close")) == 0)
   {
     OnClose(theEvent);
     return;
   }
-  if(event.CompareNoCase("comment") == 0)
+  if(event.CompareNoCase(_T("comment")) == 0)
   {
     OnComment(theEvent);
     return;
   }
-  if(event.CompareNoCase("retry") == 0)
+  if(event.CompareNoCase(_T("retry")) == 0)
   {
     OnRetry(theEvent);
     return;
@@ -640,7 +665,7 @@ EventSource::DispatchEvent(XString* p_event,ULONG p_id,XString* p_data)
         HandleLastID(theEvent);
 
         // Async call
-        m_pool->SubmitWork((LPFN_CALLBACK)listener.m_handler,(void*)theEvent);
+        m_pool->SubmitWork(reinterpret_cast<LPFN_CALLBACK>(listener.m_handler),reinterpret_cast<void*>(theEvent));
         return;
       }
     }

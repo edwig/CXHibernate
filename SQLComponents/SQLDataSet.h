@@ -2,7 +2,7 @@
 //
 // File: SQLDataSet.h
 //
-// Copyright (c) 1998-2022 ir. W.E. Huisman
+// Copyright (c) 1998-2025 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy of 
@@ -52,8 +52,11 @@ namespace SQLComponents
 #define DATASET_TYPENAME  7
 #define NUM_DATASET_NAMES 8
 
+// Default waittime for a record lock (seconds!)
+#define DEFAULT_LOCK_TIMEOUT  15
+
 // Names for saving datasets to XML in various languages
-extern const char* dataset_names[LN_NUMLANG][NUM_DATASET_NAMES];
+extern LPCTSTR dataset_names[LN_NUMLANG][NUM_DATASET_NAMES];
 
 // Parameter for the query
 typedef struct _sql_parameter
@@ -92,7 +95,7 @@ class SQLDataSet
 {
 public:
   SQLDataSet();
-  SQLDataSet(XString p_name,SQLDatabase* p_database = NULL);
+  explicit SQLDataSet(XString p_name,SQLDatabase* p_database = NULL);
   virtual ~SQLDataSet();
 
   // Perform query: Do SetQuery first
@@ -123,7 +126,7 @@ public:
   // Insert new record (Manually)
   SQLRecord*   InsertRecord();
   // Insert new field in new record (manually)
-  int          InsertField(XString p_name,SQLVariant* p_value);
+  int          InsertField(XString p_name,const SQLVariant* p_value);
   // Calculate aggregate functions
   int          Aggregate(int p_num,AggregateInfo& p_info);
   // Cancel the mutations of this mutation ID
@@ -133,17 +136,17 @@ public:
   // In case synchronize doesn't work, ask for mixed mutations
   int          AllMixedMutations(MutationIDS& p_list,int p_mutationID);
   // Find the object record of a primary key
-  int          FindObjectRecNum(int p_primary);           // If your primary is an INTEGER     (Fast!!)
-  int          FindObjectRecNum(VariantSet& p_primary);   // If your primary is a compound key (Slower)
-  SQLRecord*   FindObjectRecord(int p_primary);           // If your primary is an INTEGER     (Fast!!)
-  SQLRecord*   FindObjectRecord(VariantSet& p_primary);   // If your primary is a compound key (Slower)
-  SQLRecord*   FindObjectFilter(SQLFilterSet& p_filters,bool p_primary = false);  // Fast & slow
-  RecordSet*   FindRecordSet   (SQLFilterSet& p_filters);                         // Always slow
+  int          FindObjectRecNum(int p_primary);               // If your primary is an INTEGER     (Fast!!)
+  int          FindObjectRecNum(const VariantSet& p_primary); // If your primary is a compound key (Slower)
+  SQLRecord*   FindObjectRecord(int p_primary);               // If your primary is an INTEGER     (Fast!!)
+  SQLRecord*   FindObjectRecord(const VariantSet& p_primary); // If your primary is a compound key (Slower)
+  SQLRecord*   FindObjectFilter(bool p_primary = false);      // Fast & slow
+  RecordSet*   FindRecordSet();                               // Always slow
   // Forget the records
   bool         Forget(bool p_force = false);
   // Forget just one record AND reset current cursor to first position
-  bool         ForgetObject(int p_primary,        bool p_force = false); // Forget 1 record and primary is an INTEGER     (Fast!!)
-  bool         ForgetObject(VariantSet& p_primary,bool p_force = false); // Forget 1 record and primary is a compound key (Slower)
+  bool         ForgetObject(int p_primary,              bool p_force = false); // Forget 1 record and primary is an INTEGER     (Fast!!)
+  bool         ForgetObject(const VariantSet& p_primary,bool p_force = false); // Forget 1 record and primary is a compound key (Slower)
 
   // SETTERS
 
@@ -153,17 +156,20 @@ public:
   virtual void SetSelection(XString p_selection);
   // Set the isolated query status
   virtual void SetIsolation(bool p_isolation);
+  // Set the lock-for-update / Waittime
+  virtual void SetLockForUpdate(bool p_lock);
+  virtual void SetLockWaitTime(unsigned p_seconds);
   // Set FROM selection of several tables (more than one!)
   virtual void SetFromTables(XString p_from);
   // Set FROM  primary table (for updates)
-  virtual void SetPrimaryTable(XString p_schema, XString p_tableName, XString p_alias = "");
+  virtual void SetPrimaryTable(XString p_schema, XString p_tableName, XString p_alias = _T(""));
   // Set WHERE condition by hand
   virtual void SetWhereCondition(XString p_condition);
   // Set WHERE filters for a query
   virtual void ResetFilters();
   virtual void SetFilters(SQLFilterSet* p_filters);
   // Add filter to current SQLFilterSet
-  virtual void SetFilter(SQLFilter p_filter);
+  virtual void SetFilter(const SQLFilter& p_filter);
   // Set GROUP BY 
   virtual void SetGroupBy(XString p_groupby);
   virtual void AddGroupby(XString p_property);
@@ -182,20 +188,20 @@ public:
   // Setting the sequence/generator name to something different than "<tablename>_seq"
   void         SetSequenceName(XString p_sequence);
   // Set parameter for a query
-  void         SetParameter(SQLParameter p_parameter);
-  void         SetParameter(XString p_naam,SQLVariant p_waarde);
+  void         SetParameter(const SQLParameter& p_parameter);
+  void         SetParameter(const XString& p_name,const SQLVariant& p_value);
   // Set maximum number of milliseconds alloted to the Open query
   void         SetQueryTime(int p_milliseconds);
   // Set top <n> records selection
   void         SetTopNRecords(int p_top,int p_skip = 0);
   // Set columns that can be updated
-  void         SetUpdateColumns(WordList p_list);
+  void         SetUpdateColumns(const WordList& p_list);
   // Set the status to modified/saved
   void         SetStatus(int m_add,int m_delete = 0);
   // Set a field value in the current record
-  bool         SetField(int p_num,      SQLVariant* p_value,int p_mutationID = 0);
+  bool         SetField(int p_num,const SQLVariant* p_value,int p_mutationID = 0);
   // Set a field value in the current record
-  bool         SetField(XString& p_name,SQLVariant* p_value,int p_mutationID = 0);
+  bool         SetField(const XString& p_name,const SQLVariant* p_value,int p_mutationID = 0);
 
   // GETTERS
 
@@ -228,6 +234,8 @@ public:
   XString      GetPrimaryAlias();
   // Getting the sequence name
   XString      GetSequenceName();
+  // Last inserted serial by our generator or sequence
+  XString      GetLastInsertedSerial();
   // Getting the query settings
   XString      GetSelection();
   XString      GetFromTables();
@@ -237,12 +245,15 @@ public:
   SQLFilterSet* GetHavings();
   // Exposing the statement for a SQLCancel
   void         SetCancelCallback(LPFN_CALLBACK p_cancelFunction);
+  // Getting the status
+  bool         GetLockForUpdate();
+  unsigned     GetLockWaitTime();
 
   // XML Saving and loading
-  bool         XMLSave(XString p_filename,XString p_name,StringEncoding p_encoding = StringEncoding::ENC_UTF8);
+  bool         XMLSave(XString p_filename,XString p_name,Encoding p_encoding = Encoding::UTF8);
   bool         XMLLoad(XString p_filename);
   void         XMLSave(XMLMessage* p_msg,XMLElement* p_dataset);
-  void         XMLLoad(XMLMessage* p_msg,XMLElement* p_dataset,LONG* p_abort = nullptr);
+  void         XMLLoad(XMLMessage* p_msg,XMLElement* p_dataset,const LONG* p_abort = nullptr);
 
 protected:
   // Set parameters in the query
@@ -255,7 +266,7 @@ protected:
   virtual XString ParseFilters(SQLQuery& p_query,XString p_sql);
 
   // Get the variant of a parameter
-  SQLVariant*  GetParameter(XString& p_name);
+  SQLVariant*  GetParameter(const XString& p_name);
   // Get all the columns of the record
   void         ReadNames(SQLQuery& qr);
   // Get all the datatypes of the columns
@@ -271,11 +282,11 @@ protected:
   // Read in a record from a SQLQuery
   bool         ReadRecordFromQuery(SQLQuery& p_query,bool p_modifiable,bool p_append = false);
   // Make a primary key record
-  XString      MakePrimaryKey(SQLRecord*  p_record);
-  XString      MakePrimaryKey(VariantSet& p_primary);
+  XString      MakePrimaryKey(const SQLRecord*  p_record);
+  XString      MakePrimaryKey(const VariantSet& p_primary);
   // Forget about a record
   bool         ForgetRecord(SQLRecord* p_record,bool p_force);
-  void         ForgetPrimaryObject(SQLRecord* p_record);
+  void         ForgetPrimaryObject(const SQLRecord* p_record);
   // Init the high performance counter
   void         InitCounter();
   ULONG64      GetCounter();
@@ -287,10 +298,10 @@ protected:
   void         Inserts(int p_mutationID);
   void         Reduce (int p_mutationID);
 
-  XString      GetSQLDelete  (SQLQuery* p_query,SQLRecord* p_record);
-  XString      GetSQLUpdate  (SQLQuery* p_query,SQLRecord* p_record);
-  XString      GetSQLInsert  (SQLQuery* p_query,SQLRecord* p_record,XString& p_serial);
-  XString      GetWhereClause(SQLQuery* p_query,SQLRecord* p_record,int& p_parameter);
+  XString      GetSQLDelete  (SQLQuery* p_query,const SQLRecord* p_record);
+  XString      GetSQLUpdate  (SQLQuery* p_query,const SQLRecord* p_record);
+  XString      GetSQLInsert  (SQLQuery* p_query,const SQLRecord* p_record);
+  XString      GetWhereClause(SQLQuery* p_query,const SQLRecord* p_record,int& p_parameter);
 
   // Base class data of the dataset
 
@@ -312,14 +323,16 @@ protected:
   ParameterSet m_parameters;
   NamenMap     m_primaryKey;
   WordList     m_updateColumns;
-  int          m_topRecords  { 0 };
-  int          m_skipRecords { 0 };
+  int          m_topRecords    { 0 };
+  int          m_skipRecords   { 0 };
   bool         m_stopNoColumns { false };
   bool         m_isolation     { false };
+  bool         m_lockForUpdate { false };
+  unsigned     m_lockWaitTime  { DEFAULT_LOCK_TIMEOUT };
   // Filter sets
-  SQLFilterSet* m_filters { nullptr };
-  SQLFilterSet* m_havings { nullptr };
-
+  SQLFilterSet* m_filters      { nullptr };
+  SQLFilterSet* m_havings      { nullptr };
+  bool          m_ownFilters   { false   };
   // Records and objects
   int          m_status    { SQL_Empty };
   int          m_current   { -1 };
@@ -327,6 +340,7 @@ protected:
   TypenMap     m_types;
   RecordSet    m_records;
   ObjectMap    m_objects;
+  XString      m_serial;
   // Maximum query timing
   int          m_queryTime { 0 };
   ULONG64      m_frequency { 0 };
@@ -427,7 +441,7 @@ SQLDataSet::Current()
 }
 
 inline void
-SQLDataSet::SetUpdateColumns(WordList p_list)
+SQLDataSet::SetUpdateColumns(const WordList& p_list)
 {
   m_updateColumns = p_list;
 }
@@ -490,6 +504,36 @@ inline int
 SQLDataSet::GetSkippedRecords()
 {
   return m_skipRecords;
+}
+
+inline bool
+SQLDataSet::GetLockForUpdate()
+{
+  return m_lockForUpdate;
+}
+
+inline void
+SQLDataSet::SetLockForUpdate(bool p_lock)
+{
+  m_lockForUpdate = p_lock;
+}
+
+inline unsigned
+SQLDataSet::GetLockWaitTime()
+{
+  return m_lockWaitTime;
+}
+
+inline void
+SQLDataSet::SetLockWaitTime(unsigned p_wait)
+{
+  m_lockWaitTime = p_wait;
+}
+
+inline XString
+SQLDataSet::GetLastInsertedSerial()
+{
+  return m_serial;
 }
 
 inline void

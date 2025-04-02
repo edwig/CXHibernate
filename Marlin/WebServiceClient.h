@@ -4,7 +4,7 @@
 //
 // Marlin Server: Internet server/client
 // 
-// Copyright (c) 2014-2022 ir. W.E. Huisman
+// Copyright (c) 2014-2024 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -77,10 +77,10 @@ using MessageStore = std::deque<SoapMsg>;
 class WebServiceClient
 {
 public:
-  WebServiceClient(XString p_contract
-                  ,XString p_url
-                  ,XString p_wsdlFile = ""
-                  ,bool    p_reliable = false);
+  explicit WebServiceClient(XString p_contract
+                           ,XString p_url
+                           ,XString p_wsdlFile = _T("")
+                           ,bool    p_reliable = false);
  ~WebServiceClient();
 
   // Opening and closing the sendport (HTTPClient)

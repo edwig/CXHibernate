@@ -2,7 +2,7 @@
 //
 // File: SQLColumnInfo.cpp
 //
-// Copyright (c) 1998-2022 ir. W.E. Huisman
+// Copyright (c) 1998-2025 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy of 
@@ -36,14 +36,14 @@ static char THIS_FILE[] = __FILE__;
 namespace SQLComponents
 {
   ColumnInfo::ColumnInfo()
+             :v_columnName(_T(""))
+             ,v_dataType  (0)
+             ,v_typeName  (_T(""))
+             ,v_precision (0)
+             ,v_length    (0)
+             ,v_scale     (0)
+             ,v_nullable  (0)
+             ,v_remarks   (_T(""))
   {
-    v_columnName = "";
-    v_dataType   = 0;
-    v_typeName   = "";
-    v_precision  = 0;
-    v_length     = 0;
-    v_scale      = 0;
-    v_nullable   = 0;
-    v_remarks    = "";
   }
 }

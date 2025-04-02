@@ -4,7 +4,7 @@
 //
 // Marlin Server: Internet server/client
 // 
-// Copyright (c) 2014-2022 ir. W.E. Huisman
+// Copyright (c) 2014-2025 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -54,7 +54,7 @@ using QOptionMap = std::map<int,QualityOption>;
 class ServiceQuality
 {
 public:
-  ServiceQuality(XString p_header);
+  explicit ServiceQuality(XString p_header);
  ~ServiceQuality() = default;
 
   // Request options from the HTTP header in order of preference. Starts with 0.

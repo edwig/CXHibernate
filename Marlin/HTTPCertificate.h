@@ -4,7 +4,7 @@
 //
 // Marlin Server: Internet server/client
 // 
-// Copyright (c) 2014-2022 ir. W.E. Huisman
+// Copyright (c) 2014-2024 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -45,7 +45,7 @@ public:
   // Encoding a thumbprint string
   // Preparing it to search in the certificate stores
   // Or for verification purposes.
-  static  bool EncodeThumbprint(XString& p_thumbprint,PCRYPT_HASH_BLOB p_blob,DWORD p_len);
+  static  bool EncodeThumbprint(const XString& p_thumbprint,PCRYPT_HASH_BLOB p_blob,DWORD p_len);
 
 private:
   bool    OpenContext();

@@ -49,7 +49,7 @@ CXHibernate::CXHibernate()
 {
   if(cxhibernate)
   {
-    ASSERT("You cannot define the CXHibernate object more than once in an application");
+    ASSERT(_T("You cannot define the CXHibernate object more than once in an application"));
   }
   else
   {
@@ -142,7 +142,7 @@ CXHibernate::AddSession(CXSession* p_session,CString p_sessionKey)
     m_sessions.insert(std::make_pair(p_sessionKey,p_session));
     return;
   }
-  throw StdException("Double registration of session: " + p_sessionKey);
+  throw StdException(_T("Double registration of session: ") + p_sessionKey);
 }
 
 // Removing a session, deleting it
@@ -289,14 +289,14 @@ CXHibernate::FindCreateCXO(CString p_name)
   // otherwise the programmer must implement a new class!!
   if(!m_incomplete)
   {
-    throw StdException("Class definition error: CreateCXO Function not found for class: " + p_name);
+    throw StdException(_T("Class definition error: CreateCXO Function not found for class: ") + p_name);
   }
   return nullptr;
 }
 
 // Log a message to the hibernate logfile
 void
-CXHibernate::Log(int p_level,bool p_format,const char* p_text,...)
+CXHibernate::Log(int p_level,bool p_format,LPCTSTR p_text,...)
 {
   // See if we have a logfile and must log
   if((m_logfile == nullptr) || (p_level > m_loglevel))
@@ -318,7 +318,7 @@ CXHibernate::Log(int p_level,bool p_format,const char* p_text,...)
     text = p_text;
   }
   // Stow it
-  m_logfile->AnalysisLog("Hibernate",LogType::LOG_INFO,false,text);
+  m_logfile->AnalysisLog(_T("Hibernate"),LogType::LOG_INFO,false,text);
 }
 
 // Getting the loglevel
@@ -344,7 +344,7 @@ CXHibernate::LoadConfiguration(CString p_sessionKey,CString p_configFile /*= ""*
   {
     filename = GetConfiguration();
   }
-  if(filename.Find('\\') < 0)
+  if(filename.Find(_T('\\')) < 0)
   {
     filename = GetExePath() + filename;
   }
@@ -355,7 +355,7 @@ CXHibernate::LoadConfiguration(CString p_sessionKey,CString p_configFile /*= ""*
   {
     // If no override on the file system
     // try our resources of the compiled application
-    CString configuration = CXHReadResourceData(IDR_HIBERNATE_CONFIG,"CFG");
+    CString configuration = CXHReadResourceData(IDR_HIBERNATE_CONFIG,_T("CFG"));
     if(configuration.IsEmpty())
     {
       // No configuration loaded
@@ -377,14 +377,14 @@ CXHibernate::LoadConfiguration(CString p_sessionKey,CString p_configFile /*= ""*
   }
 
   // Loading general attributes
-  m_default_catalog = config.GetElement("default_catalog");
-  m_default_schema  = config.GetElement("default_schema");
-  CString strategy  = config.GetElement("strategy");
+  m_default_catalog = config.GetElement(_T("default_catalog"));
+  m_default_schema  = config.GetElement(_T("default_schema"));
+  CString strategy  = config.GetElement(_T("strategy"));
   m_strategy = StringToMapStrategy(strategy);
 
   // Logging from here
-  CString logfile =      config.GetElement("logfile");
-  int    loglevel = atoi(config.GetElement("loglevel"));
+  CString logfile =      config.GetElement(_T("logfile"));
+  int    loglevel = _ttoi(config.GetElement(_T("loglevel")));
   StartLogging(logfile,loglevel);
 
   // Create a session and load from there
@@ -408,12 +408,12 @@ CXHibernate::SaveConfiguration(CXSession* p_session,CString p_configFile /*= ""*
 
   // Create an XMLMessage
   XMLMessage config;
-  config.SetRootNodeName("hibernate");
+  config.SetRootNodeName(_T("hibernate"));
 
   // Setting the general attributes
-  config.SetElement("default_catalog",m_default_catalog);
-  config.SetElement("default_schema", m_default_schema);
-  config.SetElement("strategy", MapStrategyToString(m_strategy));
+  config.SetElement(_T("default_catalog"),m_default_catalog);
+  config.SetElement(_T("default_schema"), m_default_schema);
+  config.SetElement(_T("strategy"), MapStrategyToString(m_strategy));
 
   // Saving our session
   p_session->SaveConfiguration(config);
@@ -439,11 +439,11 @@ CXHibernate::GetNewMutation()
 MapStrategy
 CXHibernate::StringToMapStrategy(CString p_strategy)
 {
-  if (p_strategy.CompareNoCase("standalone") == 0) return Strategy_standalone;
-  if (p_strategy.CompareNoCase("one_table")  == 0) return Strategy_one_table;
-  if (p_strategy.CompareNoCase("sub_table")  == 0) return Strategy_sub_table;
-  if (p_strategy.CompareNoCase("classtable") == 0) return Strategy_classtable;
-  throw StdException("Unknown mapping strategy: " + p_strategy);
+  if (p_strategy.CompareNoCase(_T("standalone")) == 0) return Strategy_standalone;
+  if (p_strategy.CompareNoCase(_T("one_table"))  == 0) return Strategy_one_table;
+  if (p_strategy.CompareNoCase(_T("sub_table"))  == 0) return Strategy_sub_table;
+  if (p_strategy.CompareNoCase(_T("classtable")) == 0) return Strategy_classtable;
+  throw StdException(_T("Unknown mapping strategy: ") + p_strategy);
 }
 
 CString
@@ -451,12 +451,12 @@ CXHibernate::MapStrategyToString(MapStrategy p_strategy)
 {
   switch (p_strategy)
   {
-    case Strategy_standalone: return "standalone";
-    case Strategy_one_table:  return "one_table";
-    case Strategy_sub_table:  return "sub_table";
-    case Strategy_classtable: return "classtable";
+    case Strategy_standalone: return _T("standalone");
+    case Strategy_one_table:  return _T("one_table");
+    case Strategy_sub_table:  return _T("sub_table");
+    case Strategy_classtable: return _T("classtable");
   }
-  return "standalone";
+  return _T("standalone");
 }
 
 // Create an opaque CX-Session key
@@ -465,7 +465,7 @@ CXHibernate::CreateSessionKey()
 {
   // Beware: Session keys MUST be lowercase at all times
   CString key;
-  key.Format("cxs%d",m_key++);
+  key.Format(_T("cxs%d"),m_key++);
   return key;
 }
 
@@ -489,11 +489,11 @@ CXHibernate::StartLogging(CString p_logfile,int p_level)
   {
     // Standard rotation logfile 
     // Default 1000 lines or 30 seconds flushing borderline
-    m_logfile = new LogAnalysis("CXHibernate");
+    m_logfile = LogAnalysis::CreateLogfile(_T("CXHibernate"));
     m_logfile->SetLogFilename(p_logfile);
     m_logfile->SetLogLevel(p_level);
     m_logfile->SetLogRotation(true);
-    m_logfile->AnalysisLog(__FUNCTION__,LogType::LOG_INFO,false,"CX-Hibernate started");
+    m_logfile->AnalysisLog(_T(__FUNCTION__),LogType::LOG_INFO,false,_T("CX-Hibernate started"));
   }
 }
 
@@ -505,7 +505,7 @@ CXHibernate::CloseLogfile()
   {
     m_logfile->Reset();
 
-    delete m_logfile;
+    LogAnalysis::DeleteLogfile(m_logfile);
     m_logfile  = nullptr;
     m_loglevel = CXH_LOG_NOTHING;
   }

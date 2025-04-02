@@ -4,7 +4,7 @@
 //
 // BaseLibrary: Indispensable general objects and functions
 // 
-// Copyright (c) 2014-2022 ir. W.E. Huisman
+// Copyright (c) 2014-2025 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -39,10 +39,12 @@
 #include "XMLParserJSON.h"
 #include <utility>
 
+#ifdef _AFX
 #ifdef _DEBUG
 #define new DEBUG_NEW
 #undef THIS_FILE
 static char THIS_FILE[] = __FILE__;
+#endif
 #endif
 
 #pragma region XTOR
@@ -57,19 +59,19 @@ SOAPMessage::SOAPMessage()
 // XTOR from an incoming message
 // Purpose: Incoming SOAP message from HTTP/POST
 SOAPMessage::SOAPMessage(HTTPMessage* p_msg)
+            :m_request       (p_msg->GetRequestHandle())
+            ,m_site          (p_msg->GetHTTPSite())
+            ,m_url           (p_msg->GetURL())
+            ,m_cracked       (p_msg->GetCrackedURL())
+            ,m_status        (p_msg->GetStatus())
+            ,m_user          (p_msg->GetUser())
+            ,m_password      (p_msg->GetPassword())
+            ,m_contentType   (p_msg->GetContentType())
+            ,m_acceptEncoding(p_msg->GetAcceptEncoding())
+            ,m_headers       (*p_msg->GetHeaderMap())
 {
-  m_request       = p_msg->GetRequestHandle();
-  m_site          = p_msg->GetHTTPSite();
-  m_url           = p_msg->GetURL();
-  m_cracked       = p_msg->GetCrackedURL();
-  m_status        = p_msg->GetStatus();
-  m_user          = p_msg->GetUser();
-  m_password      = p_msg->GetPassword();
-  m_contentType   = p_msg->GetContentType();
-  m_acceptEncoding= p_msg->GetAcceptEncoding();
-  m_sendBOM       = p_msg->GetSendBOM();
-  m_headers       =*p_msg->GetHeaderMap();
-  m_incoming      = p_msg->GetCommand() != HTTPCommand::http_response;
+  m_sendBOM  = p_msg->GetSendBOM();
+  m_incoming = p_msg->GetCommand() != HTTPCommand::http_response;
 
   // Overrides from class defaults
   m_soapVersion   = SoapVersion::SOAP_10;
@@ -97,71 +99,51 @@ SOAPMessage::SOAPMessage(HTTPMessage* p_msg)
   m_routing = p_msg->GetRouting();
 
   // Parse the body as a posted message
-  XString message;
   XString charset = FindCharsetInContentType(m_contentType);
-  if(charset.Left(6).CompareNoCase("utf-16") == 0)
+  if(charset.IsEmpty())
   {
-    // Works for "UTF-16", "UTF-16LE" and "UTF-16BE" as of RFC 2781
-    uchar* buffer = nullptr;
-    size_t length = 0;
-    p_msg->GetRawBody(&buffer,length);
+    charset = _T("utf-8");
+  }
+  m_encoding = (Encoding)CharsetToCodepage(charset);
 
-    int uni = IS_TEXT_UNICODE_UNICODE_MASK;  // Intel/AMD processors + BOM
-    if(IsTextUnicode(buffer,(int)length,&uni))
-    {
-      if(TryConvertWideString(buffer,(int)length,"",message,m_sendBOM))
-      {
-        m_sendUnicode = true;
-      }
-      else
-      {
-        // We are now officially in error state
-        m_errorstate = true;
-        SetFault("Charset","Client","Cannot convert UTF-16 buffer","");
-      }
-    }
-    else
-    {
-      // Probably already processed in HandleTextContext of the server
-      message = p_msg->GetBody();
-    }
-    delete [] buffer;
-  }
-  else
-  {
-    message = p_msg->GetBody();
-  }
+
+  // Parse buffer to string to XML structure
+  uchar* buffer = nullptr;
+  size_t length = 0;
+  p_msg->GetRawBody(&buffer,length);
+  XString message = ConstructFromRawBuffer(buffer,(unsigned)length,charset);
   ParseMessage(message);
 
   // If a SOAP version is not found during parsing
   if(m_soapVersion < SoapVersion::SOAP_12)
   {
     // Getting SOAP 1.0 or 1.1 SOAPAction from the unknown-headers
-    SetSoapActionFromHTTTP(p_msg->GetHeader("SOAPAction"));
+    SetSoapActionFromHTTTP(p_msg->GetHeader(_T("SOAPAction")));
   }
   else
   {
     // Getting SOAP 1.2 action from the Content-Type header
-    XString action = FindFieldInHTTPHeader(m_contentType,"Action");
+    XString action = FindFieldInHTTPHeader(m_contentType,_T("Action"));
     SetSoapActionFromHTTTP(action);
   }
+  delete[] buffer;
 }
 
 // XTOR from a JSON message
 SOAPMessage::SOAPMessage(JSONMessage* p_msg)
+            :m_request       (p_msg->GetRequestHandle())
+            ,m_site          (p_msg->GetHTTPSite())
+            ,m_url           (p_msg->GetURL())
+            ,m_cracked       (p_msg->GetCrackedURL())
+            ,m_status        (p_msg->GetStatus())
+            ,m_user          (p_msg->GetUser())
+            ,m_password      (p_msg->GetPassword())
+            ,m_contentType   (p_msg->GetContentType())
+            ,m_incoming      (p_msg->GetIncoming())
+            ,m_acceptEncoding(p_msg->GetAcceptEncoding())
+            ,m_headers       (*p_msg->GetHeaderMap())
 {
-  m_request       = p_msg->GetRequestHandle();
-  m_site          = p_msg->GetHTTPSite();
-  m_url           = p_msg->GetURL();
-  m_cracked       = p_msg->GetCrackedURL();
-  m_status        = p_msg->GetStatus();
-  m_user          = p_msg->GetUser();
-  m_password      = p_msg->GetPassword();
-  m_contentType   = p_msg->GetContentType();
-  m_sendBOM       = p_msg->GetSendBOM();
-  m_incoming      = p_msg->GetIncoming();
-  m_acceptEncoding= p_msg->GetAcceptEncoding();
-  m_headers       =*p_msg->GetHeaderMap();
+  m_sendBOM = p_msg->GetSendBOM();
 
   // Duplicate all cookies
   m_cookies = p_msg->GetCookies();
@@ -188,7 +170,7 @@ SOAPMessage::SOAPMessage(JSONMessage* p_msg)
   CreateParametersObject();
 
   // The message itself
-  XMLParserJSON(this,p_msg);
+  XMLParserJSON parser(this,p_msg);
 
   CheckAfterParsing();
 }
@@ -234,7 +216,7 @@ SOAPMessage::SOAPMessage(XString&     p_namespace
 
 // XTOR from an incoming message or string data
 // Purpose: Incoming SOAP message from other transport protocol than HTTP
-SOAPMessage::SOAPMessage(const char* p_soapMessage,bool p_incoming /*=true*/)
+SOAPMessage::SOAPMessage(LPCTSTR p_soapMessage,bool p_incoming /*=true*/)
             :m_incoming(p_incoming)
 {
   // Overrides from class defaults
@@ -251,27 +233,28 @@ SOAPMessage::SOAPMessage(const char* p_soapMessage,bool p_incoming /*=true*/)
 // XTOR for a copy constructor
 SOAPMessage::SOAPMessage(SOAPMessage* p_orig)
             :XMLMessage(p_orig)
+            ,m_errorstate    (p_orig->m_errorstate)
+            ,m_namespace     (p_orig->m_namespace)
+            ,m_soapAction    (p_orig->m_soapAction)
+            ,m_soapVersion   (p_orig->m_soapVersion)
+            ,m_acceptEncoding(p_orig->m_acceptEncoding)
+            ,m_url           (p_orig->m_url)
+            ,m_cracked       (p_orig->m_cracked)
+            ,m_status        (p_orig->m_status)
+            ,m_request       (p_orig->m_request)
+            ,m_user          (p_orig->m_user)
+            ,m_password      (p_orig->m_password)
+            ,m_site          (p_orig->m_site)
+            ,m_desktop       (p_orig->m_desktop)
+            ,m_order         (p_orig->m_order)
+            ,m_incoming      (p_orig->m_incoming)
+            ,m_headers       (p_orig->m_headers)
+            ,m_cookies       (p_orig->m_cookies)
+            ,m_routing       (p_orig->m_routing)
 {
   // Copy all data members
-  m_errorstate    = p_orig->m_errorstate;
-  m_namespace     = p_orig->m_namespace;
-  m_soapAction    = p_orig->m_soapAction;
-  m_soapVersion   = p_orig->m_soapVersion;
   m_encoding      = p_orig->m_encoding;
-  m_acceptEncoding= p_orig->m_acceptEncoding;
-  m_sendUnicode   = p_orig->m_sendUnicode;
   m_sendBOM       = p_orig->m_sendBOM;
-  m_url           = p_orig->m_url;
-  m_cracked       = p_orig->m_cracked;
-  m_status        = p_orig->m_status;
-  m_request       = p_orig->m_request;
-  m_user          = p_orig->m_user;
-  m_password      = p_orig->m_password;
-  m_site          = p_orig->m_site;
-  m_desktop       = p_orig->m_desktop;
-  m_order         = p_orig->m_order;
-  m_incoming      = p_orig->m_incoming;
-  m_headers       = p_orig->m_headers;
   // WS-Reliability
   m_addressing    = p_orig->m_addressing;
   m_reliable      = p_orig->m_reliable;
@@ -282,11 +265,6 @@ SOAPMessage::SOAPMessage(SOAPMessage* p_orig)
   m_encryption    = p_orig->m_encryption;
   m_signingMethod = p_orig->m_signingMethod;
   m_initialAction = p_orig->m_initialAction;
-
-  // Duplicate cookies
-  m_cookies = p_orig->m_cookies;
-  // Duplicate routing
-  m_routing = p_orig->m_routing;
 
   // Duplicate the HTTP token for ourselves
   if(DuplicateTokenEx(p_orig->m_token
@@ -335,8 +313,8 @@ SOAPMessage::SetSoapActionFromHTTTP(XString p_action)
     // STEP 2: If SOAP 1.2
     if(m_header)
     {
-      // STEP 3: Find WS-Adressing <Header>/<Action>
-      XMLElement* xmlaction = FindElement(m_header,"Action");
+      // STEP 3: Find WS-Addressing <Header>/<Action>
+      XMLElement* xmlaction = FindElement(m_header,_T("Action"));
       if(xmlaction)
       {
         SplitNamespaceAndAction(xmlaction->GetValue(),namesp,action);
@@ -347,6 +325,56 @@ SOAPMessage::SetSoapActionFromHTTTP(XString p_action)
   m_soapAction = action;
 }
 
+// TO BE CALLED FROM THE XTOR!!
+XString
+SOAPMessage::ConstructFromRawBuffer(uchar* p_buffer,unsigned p_length,XString p_charset)
+{
+  XString message;
+
+#ifdef _UNICODE
+  if(p_charset.CompareNoCase(_T("utf-16")) == 0)
+  {
+    // It's just our way of Unicode
+    message = reinterpret_cast<LPCTSTR>(p_buffer);
+    m_encoding = Encoding::LE_UTF16;
+  }
+  else
+  {
+    if(!TryConvertNarrowString(p_buffer,p_length,p_charset,message,m_sendBOM))
+    {
+      // We are now officially in error state
+      m_errorstate = true;
+      SetFault(_T("Charset"),_T("Client"),_T("Cannot convert buffer to internal Unicode-16"),_T(""));
+      message.Empty();
+    }
+  }
+#else
+  if(p_charset.Left(6).CompareNoCase(_T("utf-16")) == 0)
+  {
+    int uni = IS_TEXT_UNICODE_UNICODE_MASK;  // Intel/AMD processors + BOM
+    if(IsTextUnicode(p_buffer,(int)p_length,&uni))
+    {
+      if(TryConvertWideString(p_buffer,(int) p_length,_T(""),message,m_sendBOM) == false)
+      {
+        // We are now officially in error state
+        m_errorstate = true;
+        SetFault(_T("Charset"),_T("Client"),_T("Cannot convert UTF-16 buffer"),_T(""));
+      }
+    }
+    else
+    {
+      // Probably already processed in HandleTextContext of the server
+      message = p_buffer;
+    }
+  }
+  else 
+  {
+    message = DecodeStringFromTheWire(XString(p_buffer),p_charset);
+  }
+#endif
+  return message;
+}
+
 #pragma endregion XTOR and DTOR of a SOAP message
 
 #pragma region ReUse
@@ -354,7 +382,8 @@ SOAPMessage::SetSoapActionFromHTTTP(XString p_action)
 // Reset parameters, transforming it in an answer
 void 
 SOAPMessage::Reset(ResponseType p_responseType  /* = ResponseType::RESP_ACTION_NAME */
-                  ,XString      p_namespace     /* = "" */)
+                  ,XString      p_namespace     /* = ""    */
+                  ,bool         p_resetURL      /* = false */)
 {
   XMLMessage::Reset();
 
@@ -373,9 +402,12 @@ SOAPMessage::Reset(ResponseType p_responseType  /* = ResponseType::RESP_ACTION_N
   // Reset the HTTP headers
   m_headers.clear();
 
-  // Reset the URL
-  m_url.Empty();
-  m_cracked.Reset();
+  // Only reset the URL if we specifically request it
+  if(p_resetURL)
+  {
+    m_url.Empty();
+    m_cracked.Reset();
+  }
 
   // If, given: use the our namespace for an answer
   if(!p_namespace.IsEmpty())
@@ -416,7 +448,7 @@ SOAPMessage::SetSoapVersion(SoapVersion p_version)
     m_paramObject = m_root;
     CleanNode(m_root);
     m_root->SetName(m_soapAction);
-    m_root->SetNamespace("");
+    m_root->SetNamespace(_T(""));
   }
   else
   {
@@ -425,7 +457,7 @@ SOAPMessage::SetSoapVersion(SoapVersion p_version)
       CreateHeaderAndBody();
       CreateParametersObject();
     }
-    SetAttribute(m_root,"xmlns:s",p_version == SoapVersion::SOAP_11 ? NAMESPACE_SOAP11 : NAMESPACE_SOAP12);
+    SetAttribute(m_root,_T("xmlns:s"),p_version == SoapVersion::SOAP_11 ? NAMESPACE_SOAP11 : NAMESPACE_SOAP12);
   }
   // Record the change
   m_soapVersion = p_version;
@@ -445,7 +477,7 @@ SOAPMessage::AddHeader(XString p_name,XString p_value)
     {
       return;
     }
-    if(p_name.CompareNoCase("Set-Cookie") == 0)
+    if(p_name.CompareNoCase(_T("Set-Cookie")) == 0)
     {
       // Insert as a new header
       m_headers.insert(std::make_pair(p_name,p_value));
@@ -465,10 +497,7 @@ SOAPMessage::AddHeader(XString p_name,XString p_value)
 void
 SOAPMessage::AddHeader(HTTP_HEADER_ID p_id,XString p_value)
 {
-  extern const char* header_fields[HttpHeaderMaximum];
-  int maximum = m_incoming ? HttpHeaderMaximum : HttpHeaderResponseMaximum;
-
-  if(p_id >= 0 && p_id < maximum)
+  if(p_id >= 0 && p_id < HttpHeaderMaximum)
   {
     XString name(header_fields[p_id]);
     AddHeader(name,p_value);
@@ -488,10 +517,7 @@ SOAPMessage::DelHeader(XString p_name)
 void
 SOAPMessage::DelHeader(HTTP_HEADER_ID p_id)
 {
-  extern const char* header_fields[HttpHeaderMaximum];
-  int maximum = m_incoming ? HttpHeaderMaximum : HttpHeaderResponseMaximum;
-
-  if(p_id >= 0 && p_id < maximum)
+  if(p_id >= 0 && p_id < HttpHeaderMaximum)
   {
     XString name(header_fields[p_id]);
     DelHeader(name);
@@ -508,7 +534,7 @@ SOAPMessage::GetHeader(XString p_name)
   {
     return it->second;
   }
-  return "";
+  return _T("");
 }
 
 // OPERATORS
@@ -548,7 +574,7 @@ SOAPMessage::operator=(JSONMessage& p_json)
   CreateParametersObject();
 
   // The message itself
-  XMLParserJSON(this,&p_json);
+  XMLParserJSON parser(this,&p_json);
   CheckAfterParsing();
 
   return this;
@@ -571,27 +597,27 @@ SOAPMessage::LoadFile(const XString& p_fileName)
 }
 
 bool
-SOAPMessage::LoadFile(const XString& p_fileName,StringEncoding p_encoding)
+SOAPMessage::LoadFile(const XString& p_fileName,Encoding p_encoding)
 {
   m_encoding = p_encoding;
   return LoadFile(p_fileName);
 }
 
 bool
-SOAPMessage::SaveFile(const XString& p_fileName,bool p_withBom /*= false*/)
+SOAPMessage::SaveFile(const XString& p_fileName)
 {
   // Make sure all members are set to XML
   CompleteTheMessage();
 
   // Whole message encryption is done in the saving function!
-  return XMLMessage::SaveFile(p_fileName,p_withBom);
+  return XMLMessage::SaveFile(p_fileName);
 }
 
 bool
-SOAPMessage::SaveFile(const XString& p_fileName,StringEncoding p_encoding,bool p_withBom /*= false*/)
+SOAPMessage::SaveFile(const XString& p_fileName,Encoding p_encoding)
 {
   m_encoding = p_encoding;
-  return SaveFile(p_fileName,p_withBom);
+  return SaveFile(p_fileName);
 }
 
 #pragma endregion File Loading and Saving
@@ -645,8 +671,8 @@ SOAPMessage::GetContentType() const
     switch(m_soapVersion)
     {
       case SoapVersion::SOAP_10: [[fallthrough]];
-      case SoapVersion::SOAP_11: return "text/xml";
-      case SoapVersion::SOAP_12: return "application/soap+xml";
+      case SoapVersion::SOAP_11: return _T("text/xml");
+      case SoapVersion::SOAP_12: return _T("application/soap+xml");
     }
   }
   // Could be a simple override like "app/xml"
@@ -661,13 +687,22 @@ SOAPMessage::SetAcceptEncoding(XString p_encoding)
 
 // Addressing the message's has three levels
 // 1) The complete url containing both server and port number
-// 2) Setting server/port/absolutepath separately
+// 2) Setting server/port/absolute-path separately
 // 3) By remembering the requestID of the caller
 void
-SOAPMessage::SetURL(XString& p_url)
+SOAPMessage::SetURL(const XString& p_url)
 {
   m_url = p_url;
-  m_cracked.CrackURL(p_url);
+
+  CrackedURL url;
+  if(url.CrackURL(p_url))
+  {
+    m_cracked = url;
+  }
+  else
+  {
+    m_cracked.m_valid = false;
+  }
 }
 
 // URL without user/password
@@ -685,16 +720,16 @@ SOAPMessage::GetJSON_URL()
   XString url = GetURL();
 
   // Make sure path ends in a '/'
-  if(url.Right(1) != "/")
+  if(url.Right(1) != _T("/"))
   {
-    url += "/";
+    url += _T("/");
   }
 
   // Add parameters object name
   url += m_paramObject->GetName();
 
   // Here comes the parameters
-  url += "?";
+  url += _T("?");
 
   // Add parameters
   unsigned count = 0;
@@ -711,13 +746,13 @@ SOAPMessage::GetJSON_URL()
     // Do next param in the string
     if(count)
     {
-      url += "&";
+      url += _T("&");
     }
     // Add the parameter
     url += param->GetName();
     if(!param->GetValue().IsEmpty())
     {
-      url += "=";
+      url += _T("=");
       url += param->GetValue();
     }
     // Next parameter
@@ -734,7 +769,7 @@ SOAPMessage::GetRoute(int p_index)
   {
     return m_routing[p_index];
   }
-  return "";
+  return _T("");
 }
 
 // TO do after we set parts of the URL in setters
@@ -784,7 +819,7 @@ SOAPMessage::GetCookie(unsigned p_ind /*= 0*/,XString p_metadata /*= ""*/)
   {
     return monster->GetValue(p_metadata);
   }
-  return "";
+  return _T("");
 }
 
 XString
@@ -795,7 +830,7 @@ SOAPMessage::GetCookie(XString p_name /*= ""*/,XString p_metadata /*= ""*/)
   {
     return monster->GetValue(p_metadata);
   }
-  return "";
+  return _T("");
 }
 
 Cookie*
@@ -819,13 +854,13 @@ SOAPMessage::GetParameterMandatory(XString p_paramName)
     return element->GetValue();
   }
   XString msg;
-  msg.Format("Missing parameter [%s.%s]",m_soapAction.GetString(),p_paramName.GetString());
+  msg.Format(_T("Missing parameter [%s.%s]"),m_soapAction.GetString(),p_paramName.GetString());
   throw StdException(msg);
 }
 
 // Set/Add parameter to the header section (level 1.1 and 1.2 only!)
 XMLElement*  
-SOAPMessage::SetHeaderParameter(XString p_name,const char* p_value,bool p_first /*=false*/)
+SOAPMessage::SetHeaderParameter(XString p_name,LPCTSTR p_value,bool p_first /*=false*/)
 {
   if(!m_header && m_soapVersion > SoapVersion::SOAP_10)
   {
@@ -833,17 +868,17 @@ SOAPMessage::SetHeaderParameter(XString p_name,const char* p_value,bool p_first 
     // Header must be the first child element of Envelope
     if(!m_root->GetNamespace().IsEmpty())
     {
-      header = m_root->GetNamespace() + ":";
+      header = m_root->GetNamespace() + _T(":");
     }
-    header += "Header";
-    m_header = SetElement(m_root,header,XDT_String,"",true);
+    header += _T("Header");
+    m_header = SetElement(m_root,header,XDT_String,_T(""),true);
   }
   if(m_header)
   {
     return SetElement(m_header,p_name,XDT_String,p_value,p_first);
   }
   XString error;
-  error.Format("Tried to set a header parameter [%s:%s], but no header present (SOAP 1.0)!",p_name.GetString(),p_value);
+  error.Format(_T("Tried to set a header parameter [%s:%s], but no header present (SOAP 1.0)!"),p_name.GetString(),p_value);
   throw StdException(error);
 }
 
@@ -859,7 +894,7 @@ SOAPMessage::AddElement(XMLElement* p_base,XString p_name,XmlDataType p_type,XSt
     if(node == nullptr)
     {
       // In effect an error, but otherwise information will be list
-      // XSD/WSDL will have ot catch this
+      // XSD/WSDL will have to catch this
       node = m_body;
     }
   }
@@ -871,7 +906,7 @@ XMLElement*
 SOAPMessage::AddElement(XMLElement* p_base,XString p_name,XmlDataType p_type,int p_value,bool p_front /*=false*/)
 {
   XString value;
-  value.Format("%d",p_value);
+  value.Format(_T("%d"),p_value);
   return AddElement(p_base,p_name,p_type,value,p_front);
 }
 
@@ -879,7 +914,7 @@ XMLElement*
 SOAPMessage::AddElement(XMLElement* p_base,XString p_name,XmlDataType p_type,unsigned p_value,bool p_front /*=false*/)
 {
   XString value;
-  value.Format("%u",p_value);
+  value.Format(_T("%u"),p_value);
   return AddElement(p_base,p_name,p_type,value,p_front);
 }
 
@@ -887,7 +922,7 @@ XMLElement*
 SOAPMessage::AddElement(XMLElement* p_base,XString p_name,XmlDataType p_type,__int64 p_value,bool p_front /*= false*/)
 {
   XString value;
-  value.Format("%I64d",p_value);
+  value.Format(_T("%I64d"),p_value);
   return AddElement(p_base,p_name,p_type,value,p_front);
 }
 
@@ -895,12 +930,12 @@ XMLElement*
 SOAPMessage::AddElement(XMLElement* p_base,XString p_name,XmlDataType p_type,unsigned __int64 p_value,bool p_front /*= false*/)
 {
   XString value;
-  value.Format("%I64u",p_value);
+  value.Format(_T("%I64u"),p_value);
   return AddElement(p_base,p_name,p_type,value,p_front);
 }
 
 XMLElement*
-SOAPMessage::AddElement(XMLElement* p_base,XString p_name,XmlDataType p_type,const char* p_value,bool p_front /*=false*/)
+SOAPMessage::AddElement(XMLElement* p_base,XString p_name,XmlDataType p_type,LPCTSTR p_value,bool p_front /*=false*/)
 {
   XString value(p_value);
   return AddElement(p_base,p_name,p_type,value,p_front);
@@ -909,7 +944,7 @@ SOAPMessage::AddElement(XMLElement* p_base,XString p_name,XmlDataType p_type,con
 XMLElement*
 SOAPMessage::AddElement(XMLElement* p_base,XString p_name,XmlDataType p_type,bool p_value,bool p_front /*=false*/)
 {
-  XString value = p_value ? "true" : "false";
+  XString value = p_value ? _T("true") : _T("false");
   return AddElement(p_base,p_name,p_type,value,p_front);
 }
 
@@ -917,13 +952,13 @@ XMLElement*
 SOAPMessage::AddElement(XMLElement* p_base,XString p_name,XmlDataType p_type,double p_value,bool p_front /*=false*/)
 {
   XString value;
-  value.Format("16.16%g",p_value);
+  value.Format(_T("16.16%g"),p_value);
   value = value.TrimRight('0');
   return AddElement(p_base,p_name,p_type,value,p_front);
 }
 
 XMLElement*
-SOAPMessage::AddElement(XMLElement* p_base,XString p_name,XmlDataType p_type,bcd p_value,bool p_front /*=false*/)
+SOAPMessage::AddElement(XMLElement* p_base,XString p_name,XmlDataType p_type,const bcd& p_value,bool p_front /*=false*/)
 {
   XString value = p_value.AsString(bcd::Format::Bookkeeping,false,0);
   return AddElement(p_base,p_name,p_type,value,p_front);
@@ -940,10 +975,10 @@ SOAPMessage::GetHeaderParameter(XString p_paramName)
     {
       return element->GetValue();
     }
-    return "";
+    return _T("");
   }
   XString error;
-  error.Format("Tried to get a header parameter [%s], but no header present (yet)!",p_paramName.GetString());
+  error.Format(_T("Tried to get a header parameter [%s], but no header present (yet)!"),p_paramName.GetString());
   throw StdException(error);
 }
 
@@ -984,7 +1019,7 @@ SOAPMessage::GetParameterObject() const
   {
     return m_paramObject->GetName();
   }
-  return "";
+  return _T("");
 }
 
 XMLElement*
@@ -1000,7 +1035,7 @@ SOAPMessage::SetParameter(XString p_name,XString& p_value)
 }
 
 XMLElement*
-SOAPMessage::SetParameter(XString p_name,const char* p_value)
+SOAPMessage::SetParameter(XString p_name,LPCTSTR p_value)
 {
   XString value(p_value);
   return SetParameter(p_name,value);
@@ -1010,14 +1045,14 @@ XMLElement*
 SOAPMessage::SetParameter(XString p_name,int p_value)
 {
   XString value;
-  value.Format("%d",p_value);
+  value.Format(_T("%d"),p_value);
   return SetParameter(p_name,value);
 }
 
 XMLElement*
 SOAPMessage::SetParameter(XString p_name,bool p_value)
 {
-  XString value = p_value ? "true" : "false";
+  XString value = p_value ? _T("true") : _T("false");
   return SetParameter(p_name,value);
 }
 
@@ -1025,7 +1060,7 @@ XMLElement*
 SOAPMessage::SetParameter(XString p_name,double p_value)
 {
   XString value;
-  value.Format("%G",p_value);
+  value.Format(_T("%G"),p_value);
   return SetParameter(p_name,value);
 }
 
@@ -1042,11 +1077,11 @@ SOAPMessage::GetUnAuthorisedURL() const
   if((secure && port!=INTERNET_DEFAULT_HTTPS_PORT)||
     (!secure && port!=INTERNET_DEFAULT_HTTP_PORT))
   {
-    portstr.Format(":%d",port);
+    portstr.Format(_T(":%d"),port);
   }
 
-  url.Format("http%s://%s%s%s"
-            ,secure ? "s" : ""
+  url.Format(_T("http%s://%s%s%s")
+            ,secure ? _T("s") : _T("")
             ,m_cracked.m_host.GetString()
             ,portstr.GetString()
             ,m_cracked.AbsolutePath().GetString());
@@ -1060,7 +1095,7 @@ SOAPMessage::SetPreserveWhitespace(bool p_preserve /*= true*/)
   XMLElement* parm = GetParameterObjectNode();
   if(parm)
   {
-    SetAttribute(parm,"xml:space",p_preserve ? "preserve" : "default");
+    SetAttribute(parm,_T("xml:space"),p_preserve ? _T("preserve") : _T("default"));
     return true;
   }
   return false;
@@ -1121,9 +1156,9 @@ SOAPMessage::CompleteTheMessage()
 XString
 SOAPMessage::GetSoapMessageWithBOM()
 {
-  if(m_sendBOM && m_encoding == StringEncoding::ENC_UTF8)
+  if(m_sendBOM && m_encoding == Encoding::UTF8)
   {
-    XString msg = ConstructBOM();
+    XString msg = ConstructBOMUTF8();
     msg += GetSoapMessage();
     return msg;
   }
@@ -1151,9 +1186,9 @@ SOAPMessage::GetJsonMessage(bool p_full /*=false*/,bool p_attributes /*=false*/)
 XString 
 SOAPMessage::GetJsonMessageWithBOM(bool p_full /*=false*/,bool p_attributes /*=false*/)
 {
-  if(m_sendBOM && m_encoding == StringEncoding::ENC_UTF8)
+  if(m_sendBOM && m_encoding == Encoding::UTF8)
   {
-    XString msg = ConstructBOM();
+    XString msg = ConstructBOMUTF8();
     msg += GetJsonMessage(p_full,p_attributes);
     return msg;
   }
@@ -1172,7 +1207,7 @@ SOAPMessage::SetSoapEnvelope()
   }
 
   // If no "Envelope" node, fail silently
-  if(m_root->GetName().Compare("Envelope"))
+  if(m_root->GetName().Compare(_T("Envelope")))
   {
     return;
   }
@@ -1184,27 +1219,27 @@ SOAPMessage::SetSoapEnvelope()
   }
 
   // Namespaces for all
-  SetElementNamespace(m_root,"i",  NAMESPACE_INSTANCE);
-  SetElementNamespace(m_root,"xsd",NAMESPACE_XMLSCHEMA);
+  SetElementNamespace(m_root,_T("i"),  NAMESPACE_INSTANCE);
+  SetElementNamespace(m_root,_T("xsd"),NAMESPACE_XMLSCHEMA);
 
   if(m_addressing || m_reliable || m_soapVersion > SoapVersion::SOAP_11)
   {
-    SetElementNamespace(m_root,"a",NAMESPACE_WSADDRESS);
+    SetElementNamespace(m_root,_T("a"),NAMESPACE_WSADDRESS);
   }
   if(m_reliable)
   {
     // Special soap namespace + addressing and RM (reliable messaging)
-    SetElementNamespace(m_root,"s", NAMESPACE_ENVELOPE);
-    SetElementNamespace(m_root,"rm",NAMESPACE_RELIABLE);
+    SetElementNamespace(m_root,_T("s"), NAMESPACE_ENVELOPE);
+    SetElementNamespace(m_root,_T("rm"),NAMESPACE_RELIABLE);
   }
   else
   {
     // Very general soap namespace
     switch (m_soapVersion)
     {
-      case SoapVersion::SOAP_11: SetElementNamespace(m_root,"s",NAMESPACE_SOAP11,true);
+      case SoapVersion::SOAP_11: SetElementNamespace(m_root,_T("s"),NAMESPACE_SOAP11,true);
                                  break;
-      case SoapVersion::SOAP_12: SetElementNamespace(m_root,"s",NAMESPACE_SOAP12);
+      case SoapVersion::SOAP_12: SetElementNamespace(m_root,_T("s"),NAMESPACE_SOAP12);
                                  break;
     }
   }
@@ -1213,10 +1248,10 @@ SOAPMessage::SetSoapEnvelope()
   // Add WS-Message-Security namespaces
   if(m_encryption != XMLEncryption::XENC_Plain)
   {
-    SetElementNamespace(m_root,"ds",  NAMESPACE_SIGNATURE);
-    SetElementNamespace(m_root,"xenc",NAMESPACE_ENCODING);
-    SetElementNamespace(m_root,"wsse",NAMESPACE_SECEXT);
-    SetElementNamespace(m_root,"wsu", NAMESPACE_SECUTILITY);
+    SetElementNamespace(m_root,_T("ds"),  NAMESPACE_SIGNATURE);
+    SetElementNamespace(m_root,_T("xenc"),NAMESPACE_ENCODING);
+    SetElementNamespace(m_root,_T("wsse"),NAMESPACE_SECEXT);
+    SetElementNamespace(m_root,_T("wsu"), NAMESPACE_SECUTILITY);
   }
 }
 
@@ -1299,21 +1334,27 @@ SOAPMessage::SetSoapBody()
     if((m_body != m_root) && m_paramObject && (m_paramObject != m_body) && !m_namespace.IsEmpty())
     {
       XMLAttribute* xmlns(nullptr);
-      xmlns = FindAttribute(m_paramObject,"xmlns:tns");
+      xmlns = FindAttribute(m_paramObject,_T("xmlns:tns"));
       if(xmlns)
       {
-        xmlns->m_value = m_namespace;
-      }
-      else
-      {
-        xmlns = FindAttribute(m_paramObject,"xmlns");
-        if(xmlns)
+        if(m_forceNamespace)
         {
           xmlns->m_value = m_namespace;
         }
+      }
+      else
+      {
+        xmlns = FindAttribute(m_paramObject,_T("xmlns"));
+        if(xmlns)
+        {
+          if(m_forceNamespace)
+          {
+            xmlns->m_value = m_namespace;
+          }
+        }
         else
         {
-          SetAttribute(m_paramObject,"xmlns",m_namespace);
+          SetAttribute(m_paramObject,_T("xmlns"),m_namespace);
         }
       }
     }
@@ -1349,26 +1390,26 @@ SOAPMessage::AddToHeaderAcknowledgement()
 {
   if(m_serverMessageNumber)
   {
-    if(FindElement(m_header,"rm:SequenceAcknowledgement") == NULL)
+    if(FindElement(m_header,_T("rm:SequenceAcknowledgement")) == NULL)
     {
       if(m_ranges.size())
       {
-        XMLElement* ack = SetHeaderParameter("rm:SequenceAcknowledgement","");
-        SetElement(ack,"rm:Identifier",m_guidSequenceClient);
+        XMLElement* ack = SetHeaderParameter(_T("rm:SequenceAcknowledgement"),_T(""));
+        SetElement(ack,_T("rm:Identifier"),m_guidSequenceClient);
         for(unsigned int ind = 0;ind < m_ranges.size(); ++ind)
         {
-          XMLElement* rng = SetElement(ack,"rm:AcknowledgementRange","");
-          SetAttribute(rng,"Lower",m_ranges[ind].m_lower);
-          SetAttribute(rng,"Upper",m_ranges[ind].m_upper);
+          XMLElement* rng = SetElement(ack,_T("rm:AcknowledgementRange"),_T(""));
+          SetAttribute(rng,_T("Lower"),m_ranges[ind].m_lower);
+          SetAttribute(rng,_T("Upper"),m_ranges[ind].m_upper);
         }
       }
       else
       {
-        XMLElement* ack = SetHeaderParameter("rm:SequenceAcknowledgement","");
-                          SetElement(ack,"rm:Identifier",m_guidSequenceClient);
-        XMLElement* rng = SetElement(ack,"rm:AcknowledgementRange","");
-        SetAttribute(rng,"Lower",1);
-        SetAttribute(rng,"Upper",m_serverMessageNumber);
+        XMLElement* ack = SetHeaderParameter(_T("rm:SequenceAcknowledgement"),_T(""));
+                          SetElement(ack,_T("rm:Identifier"),m_guidSequenceClient);
+        XMLElement* rng = SetElement(ack,_T("rm:AcknowledgementRange"),_T(""));
+        SetAttribute(rng,_T("Lower"),1);
+        SetAttribute(rng,_T("Upper"),m_serverMessageNumber);
       }
     }
   }
@@ -1377,15 +1418,15 @@ SOAPMessage::AddToHeaderAcknowledgement()
 void
 SOAPMessage::AddToHeaderMessageNumber()
 {
-  if(m_clientMessageNumber && FindElement(m_header,"rm:Sequence") == NULL)
+  if(m_clientMessageNumber && FindElement(m_header,_T("rm:Sequence")) == NULL)
   {
-    XMLElement* seq = SetHeaderParameter("rm:Sequence","");
-    SetAttribute(seq,"s:mustUnderstand",1);
-    SetElement  (seq,"Identifier",   m_guidSequenceServer);
-    SetElement  (seq,"MessageNumber",m_clientMessageNumber);
+    XMLElement* seq = SetHeaderParameter(_T("rm:Sequence"),_T(""));
+    SetAttribute(seq,_T("s:mustUnderstand"),1);
+    SetElement  (seq,_T("Identifier"),   m_guidSequenceServer);
+    SetElement  (seq,_T("MessageNumber"),m_clientMessageNumber);
     if(m_lastMessage)
     {
-      SetElement(seq,"rm:LastMessage","");
+      SetElement(seq,_T("rm:LastMessage"),_T(""));
     }
   }
 }
@@ -1393,37 +1434,37 @@ SOAPMessage::AddToHeaderMessageNumber()
 void
 SOAPMessage::AddToHeaderMessageID()
 {
-  if(FindElement(m_header,"a:MessageID") == NULL)
+  if(FindElement(m_header,_T("a:MessageID")) == NULL)
   {
     if(m_messageGuidID.IsEmpty())
     {
       // Generate a message GuidID in case of addressing only
       // Do this in the Microsoft WCF fashion as an URN unique ID
-      m_messageGuidID = "urn:uuid:" + GenerateGUID();
+      m_messageGuidID = _T("urn:uuid:") + GenerateGUID();
     }
-    SetHeaderParameter("a:MessageID",m_messageGuidID);
+    SetHeaderParameter(_T("a:MessageID"),m_messageGuidID);
   }
 }
 
 void
 SOAPMessage::AddToHeaderReplyTo()
 {
-  if(FindElement(m_header,"a:ReplyTo") == NULL)
+  if(FindElement(m_header,_T("a:ReplyTo")) == NULL)
   {
     XString addressing(NAMESPACE_WSADDRESS);
-    addressing += "/anonymous";
-    XMLElement* param = SetHeaderParameter("a:ReplyTo","");
-    SetElement(param,"a:Address",addressing);
+    addressing += _T("/anonymous");
+    XMLElement* param = SetHeaderParameter(_T("a:ReplyTo"),_T(""));
+    SetElement(param,_T("a:Address"),addressing);
   }
 }
 
 void
 SOAPMessage::AddToHeaderToService()
 {
-  if(FindElement(m_header,"a:To") == NULL)
+  if(FindElement(m_header,_T("a:To")) == NULL)
   {
-    XMLElement* param = SetHeaderParameter("a:To",GetURL());
-    SetAttribute(param,"s:mustUnderstand",1);
+    XMLElement* param = SetHeaderParameter(_T("a:To"),GetURL());
+    SetAttribute(param,_T("s:mustUnderstand"),1);
   }
 }
 
@@ -1431,11 +1472,11 @@ void
 SOAPMessage::AddToHeaderAction()
 {
   XString action = CreateSoapAction(m_namespace, m_soapAction);
-  XMLElement* actParam = FindElement(m_header,"Action");
+  XMLElement* actParam = FindElement(m_header,_T("Action"));
   if(actParam == nullptr)
   {
     // Must come as the first element of the header
-    actParam = SetHeaderParameter("a:Action",action,true);
+    actParam = SetHeaderParameter(_T("a:Action"),action,true);
   }
   else
   {
@@ -1444,49 +1485,50 @@ SOAPMessage::AddToHeaderAction()
   // Make sure other SOAP Roles (proxy, ESB) parses the action header part or not
   if(actParam && m_addAttribute)
   {
-    SetAttribute(actParam,"s:mustUnderstand",m_understand);
+    SetAttribute(actParam,_T("s:mustUnderstand"),m_understand);
   }
 }
 
 void
 SOAPMessage::AddToHeaderSigning()
 {
-  XMLElement* secure = SetHeaderParameter("wsse:Security","");
+  XString empty;
+  XMLElement* secure = SetHeaderParameter(_T("wsse:Security"),empty);
 
   // Add optional username-token/username
   if(!m_enc_user.IsEmpty())
   {
-    XMLElement* usrToken = SetElement(secure,"wsse:UsernameToken",XDT_String,"");
-    SetElement(usrToken,"wsse:Username",XDT_String,m_enc_user);
+    XMLElement* usrToken = SetElement(secure,_T("wsse:UsernameToken"),XDT_String,empty);
+    SetElement(usrToken,_T("wsse:Username"),XDT_String,m_enc_user);
   }
 
   // Create a password token
   XString token = GetPasswordAsToken();
 
   // Default namespace settings
-  XMLElement* custTok = SetElement(secure,"sym:CustomToken",token);
-  SetAttribute(custTok,"wsu:Id","MyToken");
-  SetElementNamespace(custTok,"sym",DEFAULT_NAMESPACE);
+  XMLElement* custTok = SetElement(secure,_T("sym:CustomToken"),token);
+  SetAttribute(custTok,_T("wsu:Id"),_T("MyToken"));
+  SetElementNamespace(custTok,_T("sym"),DEFAULT_NAMESPACE);
 
 
   // General signature + info
-  XMLElement* signat = SetElement(secure,"ds:Signature","");
-  XMLElement* sigInf = SetElement(signat,"ds:SignedInfo","");
+  XMLElement* signat = SetElement(secure,_T("ds:Signature"),empty);
+  XMLElement* sigInf = SetElement(signat,_T("ds:SignedInfo"),empty);
 
   // Referring the signing to the body element
-  XMLElement* refer  = SetElement(sigInf,"ds:Reference","");
+  XMLElement* refer  = SetElement(sigInf,_T("ds:Reference"),empty);
 
   // Setting the signing
-  XMLElement* digMet = SetElement(refer,  "ds:DigestMethod","");
-  XMLElement* digVal = FindElement(refer, "ds:DigestValue");
-  XMLElement* sigVal = FindElement(signat,"ds:SignatureValue");
+  XMLElement* digMet = SetElement(refer,  _T("ds:DigestMethod"),empty);
+  XMLElement* digVal = FindElement(refer, _T("ds:DigestValue"));
+  XMLElement* sigVal = FindElement(signat,_T("ds:SignatureValue"));
 
   // Only of not previously signed
   if(!sigVal || sigVal->GetValue().IsEmpty())
   {
     // Set body ID
-    SetAttribute(refer, "URI",  "#MsgBody");
-    SetAttribute(m_body,"wsu:Id","MsgBody");
+    SetAttribute(refer, _T("URI"),   _T("#MsgBody"));
+    SetAttribute(m_body,_T("wsu:Id"),_T("MsgBody"));
 
     // Body extra attribute set and signing is empty
     // now calculate the signing
@@ -1495,7 +1537,7 @@ SOAPMessage::AddToHeaderSigning()
     Crypto crypto(m_signingMethod);
     XString method = NAMESPACE_SIGNATURE;
     method += crypto.GetHashMethod(m_signingMethod);
-    SetAttribute(digMet,"Algorithm",method);
+    SetAttribute(digMet,_T("Algorithm"),method);
 
     // setting the signing
     if(digVal)
@@ -1504,7 +1546,7 @@ SOAPMessage::AddToHeaderSigning()
     }
     else
     {
-      SetElement(refer,"ds:DigestValue",sign);
+      SetElement(refer,_T("ds:DigestValue"),sign);
     }
     if(sigVal)
     {
@@ -1512,14 +1554,14 @@ SOAPMessage::AddToHeaderSigning()
     }
     else
     {
-      SetElement(signat,"ds:SignatureValue",sign);
+      SetElement(signat,_T("ds:SignatureValue"),sign);
     }
   }
   // KeyInfo reference to the Symphonies token
-  XMLElement* keyInf = SetElement(signat,"ds:KeyInfo","");
-  XMLElement* secRef = SetElement(keyInf,"wsse:SecurityTokenReference","");
-  XMLElement* krefer = SetElement(secRef,"wsse:Reference","");
-  SetAttribute(krefer,"URI","#MyToken");
+  XMLElement* keyInf = SetElement(signat,_T("ds:KeyInfo"),empty);
+  XMLElement* secRef = SetElement(keyInf,_T("wsse:SecurityTokenReference"),empty);
+  XMLElement* krefer = SetElement(secRef,_T("wsse:Reference"),empty);
+  SetAttribute(krefer,_T("URI"),_T("#MyToken"));
 }
 
 #pragma endregion WS-Header_Output
@@ -1531,8 +1573,8 @@ void
 SOAPMessage::ParseMessage(XString& p_message)
 {
   // Clean out everything we have
-  CleanNode(m_root);     // Structure
-  m_root->SetName("");     // Envelope name if any
+  CleanNode(m_root);         // Structure
+  m_root->SetName(_T(""));   // Envelope name if any
 
   // Do the 'real' XML parsing
   XMLMessage::ParseMessage(p_message);
@@ -1581,8 +1623,12 @@ SOAPMessage::Url2SoapParameters(const CrackedURL& p_url)
   CreateParametersObject();
 
   WinFile part(p_url.m_path);
-  XString action = part.GetFilenamePartFilename();
-
+  XString action = part.GetFilenamePartBasename();
+  XString extens = part.GetFilenamePartExtension();
+  if(!extens.IsEmpty() && !isalpha(extens.GetAt(0)))
+  {
+    action = _T("Doc_") + action;
+  }
   SetSoapAction(action);
   SetParameterObject(action);
 
@@ -1611,7 +1657,7 @@ SOAPMessage::CheckAfterParsing()
     m_soapAction = m_paramObject ? m_paramObject->GetName() : XString();
     if(m_paramObject) // Could be <Envelope> or <Body>
     {
-      XString namesp = GetAttribute(m_paramObject,"xmlns");
+      XString namesp = GetAttribute(m_paramObject,_T("xmlns"));
       if(!namesp.IsEmpty())
       {
         m_namespace = namesp;
@@ -1623,13 +1669,13 @@ SOAPMessage::CheckAfterParsing()
     // get the name of first element within body/root
     if(m_paramObject && m_paramObject != m_body && m_paramObject != m_root)
     {
-      m_soapAction = m_paramObject ? m_paramObject->GetName() : XString();
+      m_soapAction = m_paramObject->GetName();
       // SOAP namespace override (leave HTTP header SOAPAction intact)
-      XString namesp = GetAttribute(m_paramObject, "xmlns");
+      XString namesp = GetAttribute(m_paramObject, _T("xmlns"));
       if (namesp.IsEmpty())
       {
-        XMLAttribute* targetns = FindAttribute(m_paramObject, "tns");
-        if (targetns && targetns->m_namespace.Compare("xmlns") == 0)
+        XMLAttribute* targetns = FindAttribute(m_paramObject, _T("tns"));
+        if (targetns && targetns->m_namespace.Compare(_T("xmlns")) == 0)
         {
           namesp = targetns->m_value;
         }
@@ -1643,7 +1689,7 @@ SOAPMessage::CheckAfterParsing()
   // OPTIONAL ENCRYPTION CHECK
 
   // Check Encrypted body
-  if(m_soapAction == "EncryptionData")
+  if(m_soapAction == _T("EncryptionData"))
   {
     // Record the encryption in the password field
     m_enc_password = CheckBodyEncryption();
@@ -1672,7 +1718,7 @@ SOAPMessage::CheckAfterParsing()
   }
   // See if there exists a <Fault> node
   // SoapVersion already known
-  XMLElement* fault = FindElement("Fault");
+  XMLElement* fault = FindElement(_T("Fault"));
   if(fault)
   {
     HandleSoapFault(fault);
@@ -1684,7 +1730,7 @@ void
 SOAPMessage::FindHeaderAndBody()
 {
   // Check if root = 'Envelope'
-  if(m_root->GetName().Compare("Envelope"))
+  if(m_root->GetName().Compare(_T("Envelope")))
   {
     // Not an Envelope, must be POS (Plain-Old-Soap)
     m_soapVersion = SoapVersion::SOAP_10;
@@ -1695,14 +1741,14 @@ SOAPMessage::FindHeaderAndBody()
   else
   {
     m_soapVersion = SoapVersion::SOAP_11;
-    m_header = FindElement(m_root,"Header");
-    m_body   = FindElement(m_root,"Body");
+    m_header = FindElement(m_root,_T("Header"));
+    m_body   = FindElement(m_root,_T("Body"));
 
     // Header can be missing, but we need a body now!
     if(m_body == nullptr)
     {
       XMLElement* first = GetElementFirstChild(m_root);
-      if(first && first->GetName().Compare("EncryptionData") == 0)
+      if(first && first->GetName().Compare(_T("EncryptionData")) == 0)
       {
         // Not a body, but an encoded message. Which is OK
         m_encryption  = XMLEncryption::XENC_Message;
@@ -1721,7 +1767,7 @@ SOAPMessage::FindHeaderAndBody()
       // Check for a SOAP 'Action' in the header
       if(m_header)
       {
-        XMLElement* action = FindElement(m_header, "Action");
+        XMLElement* action = FindElement(m_header,_T("Action"));
         if(action)
         {
           // If found, it's an override of the parameter element of the body
@@ -1750,10 +1796,10 @@ SOAPMessage::CreateHeaderAndBody()
   }
   if(m_root->GetChildren().size() == 0)
   {
-    m_root->SetNamespace("s");
-    m_root->SetName("Envelope");
-    m_header = SetElement(m_root,"s:Header","");
-    m_body   = SetElement(m_root,"s:Body",  "");
+    m_root->SetNamespace(_T("s"));
+    m_root->SetName(_T("Envelope"));
+    m_header = SetElement(m_root,_T("s:Header"),_T(""));
+    m_body   = SetElement(m_root,_T("s:Body"),  _T(""));
   }
 }
 
@@ -1774,19 +1820,20 @@ SOAPMessage::CreateParametersObject(ResponseType p_responseType)
       {
         // Make sure we have a valid XML name
         // If not, we provide a generic default name to proceed with fingers crossed
-        if(m_soapAction.IsEmpty() || !XMLElement::IsValidName(m_soapAction))
+        if(m_soapVersion == SoapVersion::SOAP_12 &&
+          (m_soapAction.IsEmpty() || !XMLElement::IsValidName(m_soapAction)))
         {
-          m_soapAction = "SoapAction";
+          m_soapAction = _T("SoapAction");
         }
 
         // When soapVersion = 1.1 or 1.2
         switch(p_responseType)
         {
-	        case ResponseType::RESP_ACTION_NAME: m_paramObject = SetElement(m_body,m_soapAction,"");
+	        case ResponseType::RESP_ACTION_NAME: m_paramObject = SetElement(m_body,m_soapAction,_T(""));
 	                                             break;
 	        case ResponseType::RESP_EMPTY_BODY:  m_paramObject = m_body;
 	                                             break;
-	        case ResponseType::RESP_ACTION_RESP: m_paramObject = SetElement(m_body,m_soapAction + "Response","");
+	        case ResponseType::RESP_ACTION_RESP: m_paramObject = SetElement(m_body,m_soapAction + _T("Response"),_T(""));
 	                                             break;
         }
       }
@@ -1825,43 +1872,43 @@ SOAPMessage::CheckHeader()
 void
 SOAPMessage::CheckHeaderHasSequence()
 {
-  XMLElement* sequence = FindElement(m_header,"Sequence");
+  XMLElement* sequence = FindElement(m_header,_T("Sequence"));
   if(sequence == NULL) 
   {
     return;
   }
-  XMLElement* identifier = FindElement(sequence,"Identifier");
+  XMLElement* identifier = FindElement(sequence,_T("Identifier"));
   if(identifier)
   {
     m_guidSequenceClient = identifier->GetValue();
   }
-  XMLElement* messageNumber = FindElement(sequence,"MessageNumber");
-  m_serverMessageNumber = atoi(messageNumber->GetValue());
+  XMLElement* messageNumber = FindElement(sequence,_T("MessageNumber"));
+  m_serverMessageNumber = _ttoi(messageNumber->GetValue());
 
   // Find last message
-  XMLElement* lastMessage = FindElement(sequence,"LastMessage");
+  const XMLElement* lastMessage = FindElement(sequence,_T("LastMessage"));
   m_lastMessage = (lastMessage != NULL);
 }
 
 void
 SOAPMessage::CheckHeaderHasAcknowledgement()
 {
-  XMLElement* acknow = FindElement(m_header,"SequenceAcknowledgement");
+  XMLElement* acknow = FindElement(m_header,_T("SequenceAcknowledgement"));
   if(acknow == NULL)
   {
     return;
   }
-  XMLElement* identifier = FindElement(acknow,"Identifier");
+  XMLElement* identifier = FindElement(acknow,_T("Identifier"));
   m_guidSequenceServer = identifier->GetValue();
 
   // Find ranges from server
   XString tag;
-  XMLElement* range = FindElement(acknow,"AcknowledgementRange");
+  XMLElement* range = FindElement(acknow,_T("AcknowledgementRange"));
   if(range) do 
   {
     RelRange relrange = { 0, 0};
-    relrange.m_lower = GetAttributeInteger(range,"Lower");
-    relrange.m_upper = GetAttributeInteger(range,"Upper");
+    relrange.m_lower = GetAttributeInteger(range,_T("Lower"));
+    relrange.m_upper = GetAttributeInteger(range,_T("Upper"));
 
     // Range incomplete -> Retransmit
     m_ranges.push_back(relrange);
@@ -1876,7 +1923,7 @@ SOAPMessage::CheckHeaderHasAcknowledgement()
         tag = range->GetName();
       }
     } 
-    while(range && tag.Compare("AcknowledgementRange"));
+    while(range && tag.Compare(_T("AcknowledgementRange")));
   } 
   while (range);
 }
@@ -1884,7 +1931,7 @@ SOAPMessage::CheckHeaderHasAcknowledgement()
 void
 SOAPMessage::CheckHeaderRelatesTo()
 {
-  XMLElement* relates = FindElement(m_header,"RelatesTo");
+  XMLElement* relates = FindElement(m_header,_T("RelatesTo"));
   if(relates == NULL)
   {
     return;
@@ -1898,14 +1945,14 @@ SOAPMessage::CheckHeaderAction()
   bool must = false;
   XString expectedResponse = CreateSoapAction(m_namespace,m_soapAction);
 
-  XMLElement* action = FindElement(m_header,"Action");
+  XMLElement* action = FindElement(m_header,_T("Action"));
   if(action == NULL)
   {
     return;
   }
   // OK, We have an action service protocol
   m_initialAction = true;
-  must = GetAttributeBoolean(action,"mustUnderstand");
+  must = GetAttributeBoolean(action,_T("mustUnderstand"));
 
   // Record the mustUnderstand for an incoming message
   if(m_incoming)
@@ -1928,12 +1975,12 @@ SOAPMessage::CheckHeaderAction()
     }
     else if(response.IsEmpty())
     {
-        error.Format("Answer on webservice [%s/%s] with empty response protocol."
+        error.Format(_T("Answer on webservice [%s/%s] with empty response protocol.")
                      ,m_namespace.GetString()
                      ,m_soapAction.GetString());
         m_errorstate      = true;
-        m_soapFaultCode   = "Soap-Envelope";
-        m_soapFaultActor  = "Message";
+        m_soapFaultCode   = _T("Soap-Envelope");
+        m_soapFaultActor  = _T("Message");
         m_soapFaultString = error;
         m_internalError   = XmlError::XE_UnknownProtocol;
     }
@@ -1942,13 +1989,13 @@ SOAPMessage::CheckHeaderAction()
       // Not what we expected. See if it is a fault
       int pos = response.ReverseFind('/');
       XString fault = response.Mid(pos + 1);
-      if(fault.CompareNoCase("fault") == 0)
+      if(fault.CompareNoCase(_T("fault")) == 0)
       {
         // Some sort of a SOAP Fault response is ok
         return;
       }
       XString acknowledge;
-      acknowledge.Format("%s/SequenceAcknowledgement",NAMESPACE_RELIABLE);
+      acknowledge.Format(_T("%s/SequenceAcknowledgement"),NAMESPACE_RELIABLE);
       if(response.CompareNoCase(acknowledge) == 0)
       {
         // Sequence ack from RM is OK
@@ -1959,13 +2006,13 @@ SOAPMessage::CheckHeaderAction()
       if(response.Find(m_namespace) != 0)
       {
         // Unknown namespace
-        error.Format("Answer on webservice [%s/%s] with unknown response protocol: %s\n"
+        error.Format(_T("Answer on webservice [%s/%s] with unknown response protocol: %s\n")
                      ,m_namespace.GetString()
                      ,m_soapAction.GetString()
                      ,response.GetString());
         m_errorstate      = true;
-        m_soapFaultCode   = "WS-Addressing";
-        m_soapFaultActor  = "Message";
+        m_soapFaultCode   = _T("WS-Addressing");
+        m_soapFaultActor  = _T("Message");
         m_soapFaultString = error;
         m_internalError   = XmlError::XE_UnknownProtocol;
       }
@@ -1977,9 +2024,9 @@ SOAPMessage::CheckHeaderAction()
     }
   }
   // Check for further WS-Addressing above only <Action>
-  XMLElement* messID = FindElement(m_header,"MessageID");
-  XMLElement* replTO = FindElement(m_header,"ReplyTo");
-  XMLElement* parmTO = FindElement(m_header,"To");
+        XMLElement* messID = FindElement(m_header,_T("MessageID"));
+  const XMLElement* replTO = FindElement(m_header,_T("ReplyTo"));
+  const XMLElement* parmTO = FindElement(m_header,_T("To"));
   if(messID || replTO || parmTO)
   {
     m_addressing = true;
@@ -2004,12 +2051,12 @@ SOAPMessage::HandleSoapFault(XMLElement* p_fault)
   m_soapFaultDetail.Empty();
 
   // Search for soap Version 1.0/1.1 type of faultcode
-  XMLElement* fcode = FindElement(p_fault,"faultcode");
+  XMLElement* fcode = FindElement(p_fault,_T("faultcode"));
   if(fcode)
   {
-    XMLElement* actor  = FindElement(p_fault,"faultactor");
-    XMLElement* fmess  = FindElement(p_fault,"faultstring");
-    XMLElement* detail = FindElement(p_fault,"detail");
+    XMLElement* actor  = FindElement(p_fault,_T("faultactor"));
+    XMLElement* fmess  = FindElement(p_fault,_T("faultstring"));
+    XMLElement* detail = FindElement(p_fault,_T("detail"));
 
     m_soapFaultCode   =          fcode ->GetValue();
     m_soapFaultActor  = actor  ? actor ->GetValue() : XString();
@@ -2019,9 +2066,9 @@ SOAPMessage::HandleSoapFault(XMLElement* p_fault)
   else
   {
     // Soap Version 1.2 Fault expected
-    XMLElement* code    = FindElement(p_fault,"Code");
-    XMLElement* reason  = FindElement(p_fault,"Reason");
-    XMLElement* detail  = FindElement(p_fault,"Detail");
+    XMLElement* code    = FindElement(p_fault,_T("Code"));
+    XMLElement* reason  = FindElement(p_fault,_T("Reason"));
+    XMLElement* detail  = FindElement(p_fault,_T("Detail"));
 
     XMLElement* value1  = NULL;
     XMLElement* value2  = NULL;
@@ -2031,16 +2078,16 @@ SOAPMessage::HandleSoapFault(XMLElement* p_fault)
     {
       XMLElement* subcode = NULL;
 
-      value1  = FindElement(code,"Value");
-      subcode = FindElement(code,"Subcode");
+      value1  = FindElement(code,_T("Value"));
+      subcode = FindElement(code,_T("Subcode"));
       if(subcode)
       {
-        value2 = FindElement(subcode,"Value");
+        value2 = FindElement(subcode,_T("Value"));
       }
     }
     if(reason)
     {
-      text = FindElement(reason,"Text");
+      text = FindElement(reason,_T("Text"));
     }
     m_soapFaultCode   = value1 ? value1->GetValue() : XString();
     m_soapFaultActor  = value2 ? value2->GetValue() : XString();
@@ -2052,7 +2099,7 @@ SOAPMessage::HandleSoapFault(XMLElement* p_fault)
 void
 SOAPMessage::SetBodyToFault()
 {
-  if(FindElement(m_body,"Fault"))
+  if(FindElement(m_body,_T("Fault")))
   {
     // Presume that the Fault is already filled in
     return;
@@ -2062,47 +2109,47 @@ SOAPMessage::SetBodyToFault()
   CleanNode(m_body);
 
   // Opening of a fault
-  XMLElement* fault = SetElement(m_body,"Fault","");
+  XMLElement* fault = SetElement(m_body,_T("Fault"),_T(""));
   CreateParametersObject();
 
   if(m_soapVersion < SoapVersion::SOAP_12)
   {
-    SetElement(fault,"faultcode",  m_soapFaultCode);
-    SetElement(fault,"faultactor", m_soapFaultActor);
-    SetElement(fault,"faultstring",m_soapFaultString);
-    SetElement(fault,"detail",     m_soapFaultDetail);
+    SetElement(fault,_T("faultcode"),  m_soapFaultCode);
+    SetElement(fault,_T("faultactor"), m_soapFaultActor);
+    SetElement(fault,_T("faultstring"),m_soapFaultString);
+    SetElement(fault,_T("detail"),     m_soapFaultDetail);
   }
   else
   {
-    XMLElement* code = SetElement(fault,"Code","");
+    XMLElement* code = SetElement(fault,_T("Code"),_T(""));
 
     // Subcodes
-    SetElement(code,"Value",m_soapFaultCode);
-    XMLElement* subcode = SetElement(code,"Subcode","");
-    SetElement(subcode,"Value",m_soapFaultActor);
+    SetElement(code,_T("Value"),m_soapFaultCode);
+    XMLElement* subcode = SetElement(code,_T("Subcode"),_T(""));
+    SetElement(subcode,_T("Value"),m_soapFaultActor);
 
-    XMLElement* reason = SetElement(fault,"Reason","");
-    SetElement(reason,"Text",m_soapFaultString);
+    XMLElement* reason = SetElement(fault,_T("Reason"),_T(""));
+    SetElement(reason,_T("Text"),m_soapFaultString);
     // Voeg detail toe
-    SetElement(fault,"Detail",m_soapFaultDetail);
+    SetElement(fault,_T("Detail"),m_soapFaultDetail);
   }
 }
 
 // Get SOAP Fault as a total string
 XString 
-SOAPMessage::GetFault() 
+SOAPMessage::GetFault() const
 {
   XString soapFault;
-  soapFault.Format("Soap message '%s' contains an error:\n\n"
-                   "Code  : %s\n"
-                   "Actor : %s\n"
-                   "String: %s\n"
-                   "Detail: %s\n"
-                   ,GetSoapAction().GetString()
-                   ,GetFaultCode().GetString()
-                   ,GetFaultActor().GetString()
-                   ,GetFaultString().GetString()
-                   ,GetFaultDetail().GetString());
+  soapFault.Format(_T("Soap message '%s' contains an error:\n\n"
+                      "Code  : %s\n"
+                      "Actor : %s\n"
+                      "String: %s\n"
+                      "Detail: %s\n")
+                      ,GetSoapAction().GetString()
+                      ,GetFaultCode().GetString()
+                      ,GetFaultActor().GetString()
+                      ,GetFaultString().GetString()
+                      ,GetFaultDetail().GetString());
   return soapFault;
 }
 
@@ -2133,19 +2180,19 @@ SOAPMessage::CleanNode(XMLElement* p_element)
 
 // Remove namespace from a node name
 XString
-SOAPMessage::StripNamespace(const char* p_naam)
+SOAPMessage::StripNamespace(LPCTSTR p_naam)
 {
-  char* pointer = (char *) strchr(p_naam,':');
+  TCHAR* pointer = (TCHAR*)_tcschr(p_naam,':');
   if(pointer)
   {
-    return (const char*)(++pointer);
+    return (LPCTSTR)(++pointer);
   }
   return p_naam;
 }
 
 // Return only the namespace of a node
 XString
-SOAPMessage::FindNamespace(const char* p_naam)
+SOAPMessage::FindNamespace(LPCTSTR p_naam)
 {
   XString naam(p_naam);
   int pos = naam.Find(':');
@@ -2166,8 +2213,13 @@ SOAPMessage::SignBody()
 {
   Crypto md5(m_signingMethod);
   XString total = GetBodyPart();
-  XString sign = md5.Digest(total,m_enc_password);
 
+#ifdef _UNICODE
+  AutoCSTR body(total);
+  XString sign = md5.Digest(body.cstr(),body.size());
+#else
+  XString sign = md5.Digest(total.GetString(),total.GetLength());
+#endif
   if(!md5.GetError().IsEmpty())
   {
     sign = md5.GetError();
@@ -2178,7 +2230,7 @@ SOAPMessage::SignBody()
 XString 
 SOAPMessage::GetBodyPart()
 {
-  bool utf8 = m_encoding == StringEncoding::ENC_UTF8;
+  bool utf8 = m_encoding == Encoding::UTF8;
   if(m_body == nullptr)
   {
     FindHeaderAndBody();
@@ -2189,7 +2241,7 @@ SOAPMessage::GetBodyPart()
 XString
 SOAPMessage::GetCanonicalForm(XMLElement* p_element)
 {
-  bool utf8 = m_encoding == StringEncoding::ENC_UTF8;
+  bool utf8 = m_encoding == Encoding::UTF8;
   return PrintElements(p_element,utf8);
 }
 
@@ -2215,14 +2267,14 @@ SOAPMessage::EncryptBody()
     return;
   }
   // See if already encrypted. If so, don't do it twice
-  XMLElement* crypt = FindElement(m_body,"xenc:EncryptionData",false);
+  const XMLElement* crypt = FindElement(m_body,_T("xenc:EncryptionData"),false);
   if(crypt)
   {
     return;
   }
 
   // Printing the body 
-  bool utf8 = (m_encoding == StringEncoding::ENC_UTF8);
+  bool utf8 = (m_encoding == Encoding::UTF8);
   XString bodyString = PrintElements(m_body,utf8);
 
   // Encrypt the body
@@ -2233,22 +2285,23 @@ SOAPMessage::EncryptBody()
 
   // Create password token
   XString token = GetPasswordAsToken();
+  XString empty;
 
   // Construct the new body
-  XMLElement* encrypt = SetElement(m_body, "xenc:EncryptionData","");
-  XMLElement* custTok = SetElement(encrypt,"sym:CustomToken",    token);
-  XMLElement* keyInfo = SetElement(encrypt,"ds:KeyInfo",         "");
-  XMLElement* cdata   = SetElement(encrypt,"ds:CypherData",      "");
-                        SetElement(cdata,  "ds:CypherValue",     bodyString);
+  XMLElement* encrypt = SetElement(m_body, _T("xenc:EncryptionData"),empty);
+  XMLElement* custTok = SetElement(encrypt,_T("sym:CustomToken"),    token);
+  XMLElement* keyInfo = SetElement(encrypt,_T("ds:KeyInfo"),         empty);
+  XMLElement* cdata   = SetElement(encrypt,_T("ds:CypherData"),      empty);
+                        SetElement(cdata,  _T("ds:CypherValue"),     bodyString);
 
   // Our default namespace settings
-  SetAttribute(custTok,"wsu:Id","MyToken");
-  SetElementNamespace(custTok,"sym",DEFAULT_NAMESPACE);
+  SetAttribute(custTok,_T("wsu:Id"),_T("MyToken"));
+  SetElementNamespace(custTok,_T("sym"),DEFAULT_NAMESPACE);
 
   // KeyInfo reference to the default namespace token
-  XMLElement* secRef = SetElement(keyInfo,"wsse:SecurityTokenReference","");
-  XMLElement* refer  = SetElement(secRef, "wsse:Reference","");
-  SetAttribute(refer,"URI","#MyToken");
+  XMLElement* secRef = SetElement(keyInfo,_T("wsse:SecurityTokenReference"),empty);
+  XMLElement* refer  = SetElement(secRef, _T("wsse:Reference"),empty);
+  SetAttribute(refer,_T("URI"),_T("#MyToken"));
 
   // Re-create the parameters object as 'EncryptionData'
   CreateParametersObject();
@@ -2278,42 +2331,40 @@ SOAPMessage::EncryptMessage(XString& p_message)
   // Create password token
   XString token = GetPasswordAsToken();
 
-  p_message = "<Envelope>\n"
-              "<xenc:EncryptionData>\n"
-
-              // Our token
-              "  <sym:CustomToken wsu:Id=\"MyToken\" xmlns:sym=\"" DEFAULT_NAMESPACE  "\">" + token + "</sym:CustomToken>\n"
-
-              // Key Info
-              "  <ds:KeyInfo>\n"
-              "    <wsse:SecurityTokenReference>\n"
-              "      <wsse:Reference URI=\"#MyToken\" />\n"
-              "    </wsse:SecurityTokenReference>\n"
-              "  </ds:KeyInfo>\n"
-              // The real message (coded data)
-              "  <ds:CypherData>\n"
-              "    <ds:CypherValue>" + p_message + "</ds:CypherValue>\n"
-              "  </ds:CypherData>\n"
-              "</xenc:EncryptionData>\n"
-              "</Envelope>\n";
+  p_message = _T("<Envelope>\n")
+              _T("<xenc:EncryptionData>\n")
+                // Our token
+              _T("  <sym:CustomToken wsu:Id=\"MyToken\" xmlns:sym=\"" DEFAULT_NAMESPACE  "\">") + token + _T("</sym:CustomToken>\n")
+                // Key Info
+              _T("  <ds:KeyInfo>\n")
+              _T("    <wsse:SecurityTokenReference>\n")
+              _T("      <wsse:Reference URI=\"#MyToken\" />\n")
+              _T("    </wsse:SecurityTokenReference>\n")
+              _T("  </ds:KeyInfo>\n")
+                // The real message (coded data)
+              _T("  <ds:CypherData>\n")
+              _T("    <ds:CypherValue>") + p_message + _T("</ds:CypherValue>\n")
+              _T("  </ds:CypherData>\n")
+              _T("</xenc:EncryptionData>\n")
+              _T("</Envelope>\n");
 }
 
 // Get body signing and authentication from the security header
 void
 SOAPMessage::CheckBodySigning()
 {
-  XMLElement* secur = FindElement(m_header,"Security",false);
+  XMLElement* secur = FindElement(m_header,_T("Security"),false);
   if(secur)
   {
-    XMLElement* usertok = FindElement(secur,"UsernameToken",false);
+    XMLElement* usertok = FindElement(secur,_T("UsernameToken"),false);
     if(usertok)
     {
       CheckUsernameToken(usertok);
     }
-    XMLElement* sign = FindElement(secur,"Signature",false);
+    XMLElement* sign = FindElement(secur,_T("Signature"),false);
     if(sign)
     {
-      XMLElement* sval = FindElement(sign,"SignatureValue",false);
+      XMLElement* sval = FindElement(sign,_T("SignatureValue"),false);
       if(sval)
       {
         m_encryption = XMLEncryption::XENC_Signing;
@@ -2331,13 +2382,13 @@ SOAPMessage::CheckBodyEncryption()
 
   // Check explicitly that we have a body,
   // so we distinguish from whole-message encryption
-  XMLElement* body = FindElement("Body");
+  XMLElement* body = FindElement(_T("Body"));
   if(body)
   {
-    XMLElement* cypher = FindElement(body,"CypherData");
+    XMLElement* cypher = FindElement(body,_T("CypherData"));
     if(cypher)
     {
-      XMLElement* val = FindElement(cypher,"CypherValue");
+      XMLElement* val = FindElement(cypher,_T("CypherValue"));
       if(val)
       {
         m_encryption = XMLEncryption::XENC_Body;
@@ -2354,10 +2405,10 @@ SOAPMessage::CheckMesgEncryption()
 {
   XString encryption;
 
-  XMLElement* cypher = FindElement(m_paramObject,"CypherData");
+  XMLElement* cypher = FindElement(m_paramObject,_T("CypherData"));
   if(cypher)
   {
-    XMLElement* val = FindElement(cypher,"CypherValue");
+    XMLElement* val = FindElement(cypher,_T("CypherValue"));
     if(val)
     {
       m_encryption = XMLEncryption::XENC_Message;
@@ -2369,10 +2420,8 @@ SOAPMessage::CheckMesgEncryption()
 
 // Get password as a custom token
 XString
-SOAPMessage::GetPasswordAsToken()
+SOAPMessage::GetPasswordAsToken() const
 {
-  XString token;
-
   // Create password token
   XString revPassword(m_enc_password);
   revPassword.MakeReverse();
@@ -2380,12 +2429,7 @@ SOAPMessage::GetPasswordAsToken()
 
   // Create binary token
   Base64 base;
-  int len = (int) base.B64_length(encode.GetLength());
-  char* tokPointer = token.GetBufferSetLength(len);
-  base.Encrypt((const unsigned char*) encode.GetString(),encode.GetLength(),(unsigned char*)tokPointer);
-  token.ReleaseBufferSetLength(len);
-
-  return token;
+  return base.Encrypt(encode);
 }
 
 // Get incoming authentication from the Security/UsernameToken
@@ -2395,9 +2439,9 @@ SOAPMessage::GetPasswordAsToken()
 void
 SOAPMessage::CheckUsernameToken(XMLElement* p_token)
 {
-  XMLElement* usern = FindElement(p_token,"Username",false);
-  XMLElement* psswd = FindElement(p_token,"Password",false);
-  XMLElement* creat = FindElement(p_token,"Created", false);
+  XMLElement* usern = FindElement(p_token,_T("Username"),false);
+  XMLElement* psswd = FindElement(p_token,_T("Password"),false);
+  XMLElement* creat = FindElement(p_token,_T("Created"), false);
 
   // Nothing to do here
   if(usern == nullptr || psswd == nullptr)
@@ -2416,14 +2460,14 @@ SOAPMessage::CheckUsernameToken(XMLElement* p_token)
   }
 
   // Find nonce/created
-  XMLAttribute* type = FindAttribute(psswd,"Type");
-  if(type && type->m_value.Find("#PasswordDigest") >= 0)
+  XMLAttribute* type = FindAttribute(psswd,_T("Type"));
+  if(type && type->m_value.Find(_T("#PasswordDigest")) >= 0)
   {
-    XMLElement*  nonce = FindElement(p_token,"Nonce",false);
+    XMLElement*  nonce = FindElement(p_token,_T("Nonce"),false);
     // IMPLICIT: Password text = Base64 ( SHA1 ( nonce + created + password ))
     if(nonce && creat)
     {
-      m_tokenNonce   = nonce->GetValue();
+      m_tokenNonce = nonce->GetValue();
     }
   }
 }
@@ -2433,35 +2477,37 @@ SOAPMessage::SetTokenProfile(XString p_user,XString p_password,XString p_created
 {
   XString namesp(NAMESPACE_SECEXT);
   XString secure(NAMESPACE_SECURITY);
+  XString unametoken(NAMESPACE_UNAMETOKEN);
+  XString empty;
 
-  XMLElement* header = FindElement("Header", false);
+  XMLElement* header = FindElement(_T("Header"), false);
   if(!header) return false;
-  XMLElement* secur = FindElement(header,"Security",false);
+  XMLElement* secur = FindElement(header,_T("Security"),false);
   if(!secur)
   {
-    SetElementNamespace(m_root,"wsse",namesp);
-    secur = AddElement(header,"wsse:Security",XDT_String,"");
+    SetElementNamespace(m_root,_T("wsse"),namesp);
+    secur = AddElement(header,_T("wsse:Security"),XDT_String,empty);
   }
 
-  XMLElement* token = FindElement(secur,"UsernameToken",false);
+  XMLElement* token = FindElement(secur,_T("UsernameToken"),false);
   if(!token)
   {
-    token = AddElement(secur,"wsse:UsernameToken",XDT_String,"");
+    token = AddElement(secur,_T("wsse:UsernameToken"),XDT_String,empty);
   }
 
   // Fill in the user
-  XMLElement* user = FindElement(token,"Username",false);
+  XMLElement* user = FindElement(token,_T("Username"),false);
   if(!user)
   {
-    user = AddElement(token,"wsse:Username",XDT_String,"");
+    user = AddElement(token,_T("wsse:Username"),XDT_String,empty);
   }
   user->SetValue(p_user);
 
   // Fill in unencrypted(!) password
-  XMLElement* passwd = FindElement(token,"Password",false);
+  XMLElement* passwd = FindElement(token,_T("Password"),false);
   if(!passwd)
   {
-    passwd = AddElement(token,"wsse:Password",XDT_String,"");
+    passwd = AddElement(token,_T("wsse:Password"),XDT_String,empty);
   }
   passwd->SetValue(p_password);
 
@@ -2471,31 +2517,44 @@ SOAPMessage::SetTokenProfile(XString p_user,XString p_password,XString p_created
     Crypto crypt;
     // Password text = Base64(SHA1(nonce + created + password))
     XString combined = p_nonce + p_created + p_password;
-    XString password = crypt.Digest(combined.GetString(),combined.GetLength(),CALG_SHA1);
-    passwd->SetValue(password);
-    SetAttribute(passwd,"Type",namesp + "#PasswordDigest");
 
-    XMLElement* nonce = FindElement(token,"Nonce",false);
+    #ifdef _UNICODE
+    std::string basic = WinFile().TranslateOutputBuffer(combined);
+    XString password = crypt.Digest(basic.c_str(), basic.length(), CALG_SHA1);
+    #else
+    XString password = crypt.Digest(combined.GetString(),combined.GetLength(),CALG_SHA1);
+    #endif
+    passwd->SetValue(password);
+    SetAttribute(passwd,_T("Type"),unametoken + _T("#PasswordDigest"));
+
+    XMLElement* nonce = FindElement(token,_T("Nonce"),false);
     if(!nonce)
     {
-      nonce = AddElement(token,"wsse:Nonce",XDT_String,"");
+      nonce = AddElement(token,_T("wsse:Nonce"),XDT_String,"");
     }
-    nonce->SetValue(Base64::Encrypt(p_nonce));
-    SetAttribute(nonce,"EncodingType",secure + "#Base64Binary");
+    Base64 base;
+
+    #ifdef _UNICODE
+    basic = WinFile().TranslateOutputBuffer(p_nonce);
+    nonce->SetValue(base.Encrypt((BYTE*)basic.c_str(), (int)basic.length()));
+    #else
+    nonce->SetValue(base.Encrypt(p_nonce));
+    #endif
+    SetAttribute(nonce,_T("EncodingType"),secure + _T("#Base64Binary"));
   }
   else
   {
     // Mark password as plain text password!
-    SetAttribute(passwd,"Type",namesp + "#PasswordText");
+    SetAttribute(passwd,_T("Type"),namesp + _T("#PasswordText"));
   }
-    
+
   // Fill in the creation time (preferable in UTC!!)
-    XMLElement* creat = FindElement(token,"Created",false);
-    if(!creat)
-    {
-      creat = AddElement(token,"wsse:Created",XDT_String,"");
-    }
-    creat->SetValue(p_created);
+  XMLElement* creat = FindElement(token,_T("Created"),false);
+  if(!creat)
+  {
+    creat = AddElement(token,_T("wsse:Created"),XDT_String,empty);
+  }
+  creat->SetValue(p_created);
 
   return true;
 }

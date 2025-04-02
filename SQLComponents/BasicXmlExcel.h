@@ -59,11 +59,11 @@ class BasicXmlCell
 {
 public:
   // new empty cell
-  BasicXmlCell(int p_row,int p_col);                    
+  explicit BasicXmlCell(int p_row,int p_col);                    
   // new integer cell or string cell
-  BasicXmlCell(int p_row,int p_col,int p_value,CellType p_type);
+  explicit BasicXmlCell(int p_row,int p_col,int p_value,CellType p_type);
   // new double cell
-  BasicXmlCell(int p_row,int p_col,double p_value);   
+  explicit BasicXmlCell(int p_row,int p_col,double p_value);   
   // DTOR
  ~BasicXmlCell();
 
@@ -92,7 +92,7 @@ typedef std::vector<XString>          Names;
 class BasicXmlWorksheet
 {
 public:
-  BasicXmlWorksheet(BasicXmlExcel* p_workbook,XString p_sheetname);
+  explicit BasicXmlWorksheet(BasicXmlExcel* p_workbook,XString p_sheetname);
  ~BasicXmlWorksheet();
 
   // OPERATIONS
@@ -120,7 +120,7 @@ typedef std::vector<BasicXmlWorksheet*> WorkSheets;
 class BasicXmlExcel
 {
 public:
-  BasicXmlExcel(XString p_filename);
+  explicit BasicXmlExcel(XString p_filename);
  ~BasicXmlExcel();
 
   // OPERATIONS
@@ -144,6 +144,7 @@ private:
   bool       LoadStrings();
   bool       LoadStyles();
   bool       LoadWorksheets();
+  XString    DecodeUTF8ZipItem(char* p_buffer);
 
   XString    m_filename;      // Filename
   HZIP       m_zip;           // ZIP handle for unzipping

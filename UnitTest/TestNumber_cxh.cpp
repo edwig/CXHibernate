@@ -44,10 +44,10 @@ TestNumber::Serialize(SOAPMessage& p_message, XMLElement* p_entity)
 
   CXObject::Serialize(p_message,p_entity);
 
-  CXObject::SetMsgElement(p_message,p_entity,"id",    m_id);
-  CXObject::SetMsgElement(p_message,p_entity,"field1",m_field1);
-  CXObject::SetMsgElement(p_message,p_entity,"field2",m_field2);
-  CXObject::SetMsgElement(p_message,p_entity,"field3",m_field3);
+  CXObject::SetMsgElement(p_message,p_entity,_T("id"),    m_id);
+  CXObject::SetMsgElement(p_message,p_entity,_T("field1"),m_field1);
+  CXObject::SetMsgElement(p_message,p_entity,_T("field2"),m_field2);
+  CXObject::SetMsgElement(p_message,p_entity,_T("field3"),m_field3);
 
   PostSerialize(p_message, p_entity);
 }
@@ -60,10 +60,10 @@ TestNumber::DeSerialize(SOAPMessage& p_message, XMLElement* p_entity)
 
   CXObject::DeSerialize(p_message,p_entity);
 
-  CXObject::GetMsgElement(p_message,p_entity,"id",m_id);
-  CXObject::GetMsgElement(p_message,p_entity,"field1",m_field1);
-  CXObject::GetMsgElement(p_message,p_entity,"field2",m_field2);
-  CXObject::GetMsgElement(p_message,p_entity,"field3",m_field3);
+  CXObject::GetMsgElement(p_message,p_entity,_T("id"),m_id);
+  CXObject::GetMsgElement(p_message,p_entity,_T("field1"),m_field1);
+  CXObject::GetMsgElement(p_message,p_entity,_T("field2"),m_field2);
+  CXObject::GetMsgElement(p_message,p_entity,_T("field3"),m_field3);
 
   PostDeSerialize(p_message, p_entity);
 }
@@ -75,10 +75,10 @@ TestNumber::Serialize(SQLRecord& p_record, int p_mutation /*= 0*/)
 
   CXObject::Serialize(p_record,p_mutation);
 
-  p_record.ModifyField("id",     m_id,     p_mutation);
-  p_record.ModifyField("field1", m_field1, p_mutation);
-  p_record.ModifyField("field2", m_field2, p_mutation);
-  p_record.ModifyField("field3", m_field3, p_mutation);
+  p_record.ModifyField(_T("id"),     m_id,     p_mutation);
+  p_record.ModifyField(_T("field1"), m_field1, p_mutation);
+  p_record.ModifyField(_T("field2"), m_field2, p_mutation);
+  p_record.ModifyField(_T("field3"), m_field3, p_mutation);
 
   PostSerialize(p_record);
 }
@@ -90,10 +90,10 @@ TestNumber::DeSerialize(SQLRecord& p_record)
 
   CXObject::DeSerialize(p_record);
 
-  CXObject::GetRecordField(p_record,"id",    m_id);
-  CXObject::GetRecordField(p_record,"field1",m_field1);
-  CXObject::GetRecordField(p_record,"field2",m_field2);
-  CXObject::GetRecordField(p_record,"field3",m_field3);
+  CXObject::GetRecordField(p_record,_T("id"),    m_id);
+  CXObject::GetRecordField(p_record,_T("field1"),m_field1);
+  CXObject::GetRecordField(p_record,_T("field2"),m_field2);
+  CXObject::GetRecordField(p_record,_T("field3"),m_field3);
 
   PostDeSerialize(p_record);
 }
@@ -104,7 +104,7 @@ TestNumber::DeSerializeGenerator(SQLRecord& p_record)
   // Re-Sync the primary key & the record
   PreDeSerialize(p_record);
   // Re-sync the generator column
-  CXObject::GetRecordField(p_record,"id",m_id);
+  CXObject::GetRecordField(p_record,_T("id"),m_id);
 }
 
 // Create our new object factory
@@ -118,7 +118,7 @@ CXObject* CreateCXObjectTestNumber(void)
 CString
 TestNumber::ClassName()
 {
-  return "TestNumber";
+  return _T("TestNumber");
 }
 
 #pragma  section(".ccxo$m",read)
@@ -128,7 +128,7 @@ class CXORegTestNumber
 public:
   CXORegTestNumber()
   {
-    hibernate.RegisterCreateCXO("TestNumber",CreateCXObjectTestNumber);
+    hibernate.RegisterCreateCXO(_T("TestNumber"),CreateCXObjectTestNumber);
   }
   ~CXORegTestNumber() {};
 };

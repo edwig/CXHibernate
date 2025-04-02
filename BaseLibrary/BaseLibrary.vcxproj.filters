@@ -48,9 +48,6 @@
     <ClInclude Include="AutoFont.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="SchemaReWriter.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="WinFile.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -81,7 +78,7 @@
     <ClInclude Include="CrackURL.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="DefuseBOM.h">
+    <ClInclude Include="Encoding.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Namespace.h">
@@ -264,11 +261,32 @@
     <ClInclude Include="HTTPError.h">
       <Filter>Header Files\HTTP_JSON</Filter>
     </ClInclude>
+    <ClInclude Include="WideMessageBox.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="XStringBuilder.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="QueryReWriter.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="StringUtilities.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="AuthenticationHeader.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="XSDSchema.h">
+      <Filter>Header Files\XML_SOAP</Filter>
+    </ClInclude>
+    <ClInclude Include="Environment.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="ServiceQuality.h">
+      <Filter>Header Files\HTTP_JSON</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="pch.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="bcd.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -279,9 +297,6 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="AutoFont.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="SchemaReWriter.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="WinFile.cpp">
@@ -309,9 +324,6 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="CrackURL.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="DefuseBOM.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Namespace.cpp">
@@ -461,10 +473,32 @@
     <ClCompile Include="ZIP\adler32.cpp">
       <Filter>ZIP</Filter>
     </ClCompile>
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="ZIP\deflate.d">
-      <Filter>ZIP</Filter>
-    </None>
+    <ClCompile Include="WideMessageBox.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="XStringBuilder.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="QueryReWriter.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="StringUtilities.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="AuthenticationHeader.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="XSDSchema.cpp">
+      <Filter>Source Files\XML_SOAP</Filter>
+    </ClCompile>
+    <ClCompile Include="pch.cpp">
+      <Filter>Configuration</Filter>
+    </ClCompile>
+    <ClCompile Include="Environment.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="ServiceQuality.cpp">
+      <Filter>Source Files\HTTP_JSON</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>

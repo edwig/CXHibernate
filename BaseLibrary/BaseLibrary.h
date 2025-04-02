@@ -12,7 +12,7 @@
 //                          __/ |                                           
 //                         |___/                                            
 //
-// Copyright (c) 2014-2022 ir. W.E. Huisman
+// Copyright (c) 2014-2025 ir. W.E. Huisman
 // All rights reserved
 //
 // MIT License:
@@ -47,16 +47,28 @@
 #include "bcd.h"
 
 // VERSION NUMBER OF THIS LIBRARY
-#define BASELIBRARY_VERSION 1.0.4
+#define BASELIBRARY_VERSION 1.3.2
 
 // Selecting the right library to link with automatically
 // So we do not need to worry about which library to use in the linker settings
 // As long as we use the $(SolutionDir)Lib\ as the library location of all our projects
+
+#ifdef _UNICODE
+#if defined _M_IX86
+#define BASELIBRARY_PLATFORM "Ux86"
+#else
+#define BASELIBRARY_PLATFORM "Ux64"
+#endif
+
+#else // UNICODE
+
 #if defined _M_IX86
 #define BASELIBRARY_PLATFORM "x86"
 #else
 #define BASELIBRARY_PLATFORM "x64"
 #endif
+
+#endif  // UNICODE
 
 #if defined _DEBUG
 #define BASELIBRARY_CONFIGURATION "D"
@@ -67,4 +79,6 @@
 #ifndef BASELIBRARY_NOAUTOLINK
 #pragma comment(lib,"BaseLibrary_"                        BASELIBRARY_PLATFORM BASELIBRARY_CONFIGURATION ".lib")
 #pragma message("Automatically linking with BaseLibrary_" BASELIBRARY_PLATFORM BASELIBRARY_CONFIGURATION ".lib")
+#else
+#pragma message("Creating library BaseLibrary_" BASELIBRARY_PLATFORM BASELIBRARY_CONFIGURATION ".lib")
 #endif 

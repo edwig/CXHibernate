@@ -128,9 +128,9 @@ public:
   bool          Synchronize();
 
   // Getting the result of an association
-  CXResultSet   FollowAssociation(CXObject* p_object,CString p_toClass,int         p_value,CString p_associationName = "");
-  CXResultSet   FollowAssociation(CXObject* p_object,CString p_toClass,SQLVariant* p_value,CString p_associationName = "");
-  CXResultSet   FollowAssociation(CXObject* p_object,CString p_toClass,VariantSet& p_value,CString p_associationName = "");
+  CXResultSet   FollowAssociation(CXObject* p_object,CString p_toClass,int         p_value,CString p_associationName = _T(""));
+  CXResultSet   FollowAssociation(CXObject* p_object,CString p_toClass,SQLVariant* p_value,CString p_associationName = _T(""));
+  CXResultSet   FollowAssociation(CXObject* p_object,CString p_toClass,VariantSet& p_value,CString p_associationName = _T(""));
 
 private:
   // Getting meta-session info from our database
@@ -141,8 +141,8 @@ private:
   // Getting a HTTP client object
   HTTPClient*   GetHTTPClient();
   // Clear the table cache
-  void          ClearCache  (CString p_className = "");
-  void          ClearClasses(CString p_className = "");
+  void          ClearCache  (CString p_className = _T(""));
+  void          ClearClasses(CString p_className = _T(""));
   // Add an object to the cache
   bool          AddObjectInCache(CXObject* p_object);
   // And remove again from the cache

@@ -87,7 +87,7 @@ CXTable::GetSchemaTableName()
 
   if(!m_table.m_schema.IsEmpty())
   {
-    name += m_table.m_schema + ".";
+    name += m_table.m_schema + _T(".");
   }
   name += GetTableName();
   return name;
@@ -100,11 +100,11 @@ CXTable::GetFullQualifiedTableName()
 
   if(!m_table.m_catalog.IsEmpty())
   {
-    name = m_table.m_catalog + ".";
+    name = m_table.m_catalog + _T(".");
   }
   if (!m_table.m_schema.IsEmpty())
   {
-    name += m_table.m_schema + ".";
+    name += m_table.m_schema + _T(".");
   }
   name += GetTableName();
 
@@ -142,7 +142,7 @@ CXTable::GetDMLTableName(SQLInfoDB* p_info)
     if (!m_table.m_schema.IsEmpty())
     {
       name += m_table.m_schema;
-      name += ".";
+      name += _T(".");
     }
   }
 
@@ -162,27 +162,27 @@ CXTable::GetDMLTableName(SQLInfoDB* p_info)
 bool
 CXTable::GetIsTable()
 {
-  return (m_table.m_objectType.Compare(OBJECT_TYPE_TABLE) == 0);
+  return (m_table.m_objectType.Compare(_T(OBJECT_TYPE_TABLE)) == 0);
 }
 
 bool
 CXTable::GetIsView()
 {
-  return (m_table.m_objectType.Compare(OBJECT_TYPE_VIEW) == 0);
+  return (m_table.m_objectType.Compare(_T(OBJECT_TYPE_VIEW)) == 0);
 }
 
 bool
 CXTable::GetIsTemporary()
 {
-  return (m_table.m_objectType.Compare(OBJECT_TYPE_GLOBALTEMP) == 0 ||
-          m_table.m_objectType.Compare(OBJECT_TYPE_LOCALTEMP)  == 0 );
+  return (m_table.m_objectType.Compare(_T(OBJECT_TYPE_GLOBALTEMP)) == 0 ||
+          m_table.m_objectType.Compare(_T(OBJECT_TYPE_LOCALTEMP))  == 0 );
 }
 
 bool
 CXTable::GetIsSynonym()
 {
-  return (m_table.m_objectType.Compare(OBJECT_TYPE_SYNONYM) == 0 ||
-          m_table.m_objectType.Compare(OBJECT_TYPE_ALIAS)   == 0 );
+  return (m_table.m_objectType.Compare(_T(OBJECT_TYPE_SYNONYM)) == 0 ||
+          m_table.m_objectType.Compare(_T(OBJECT_TYPE_ALIAS))   == 0 );
 }
 
 void
@@ -270,7 +270,7 @@ CXTable::SaveMetaInfo(CXSession* p_session,CString p_filename)
 {
   // Getting a XML SOAPMessage
   CString namesp(DEFAULT_NAMESPACE);
-  CString action("TableMetaInfo");
+  CString action(_T("TableMetaInfo"));
   SOAPMessage msg(namesp,action);
 
   // Saving table info to the XML message
@@ -333,7 +333,7 @@ CXTable::GetTableInfo(SQLInfoDB* p_info)
   // Find table info
   if(!p_info->MakeInfoTableTable(tables,errors,m_table.m_schema,m_table.m_table))
   {
-    throw StdException("Cannot find table: " + GetFullQualifiedTableName() + " : " + errors);
+    throw StdException(_T("Cannot find table: ") + GetFullQualifiedTableName() + _T(" : ") + errors);
   }
 
   // Some engines get a synonym AND a table/view record
@@ -353,7 +353,7 @@ CXTable::GetColumnInfo(SQLInfoDB* p_info)
   m_columns.clear();
   if(!p_info->MakeInfoTableColumns(m_columns,errors,m_table.m_schema,m_table.m_table))
   {
-    throw StdException("Cannot find columns for table: " + GetFullQualifiedTableName() + " : " + errors);
+    throw StdException(_T("Cannot find columns for table: ") + GetFullQualifiedTableName() + _T(" : ") + errors);
   }
 }
 
@@ -367,7 +367,7 @@ CXTable::GetPrimaryKeyInfo(SQLInfoDB* p_info)
   p_info->MakeInfoTablePrimary(m_primary,errors,m_table.m_schema,m_table.m_table);
   if(!errors.IsEmpty())
   {
-    throw StdException("Cannot find the primary key for table: " + GetFullQualifiedTableName() + " : " + errors);
+    throw StdException(_T("Cannot find the primary key for table: ") + GetFullQualifiedTableName() + _T(" : ") + errors);
   }
 }
 
@@ -381,7 +381,7 @@ CXTable::GetForeignKeyInfo(SQLInfoDB* p_info)
   p_info->MakeInfoTableForeign(m_foreigns,errors,m_table.m_schema,m_table.m_table);
   if (!errors.IsEmpty())
   {
-    throw StdException("Cannot find the foreign keys for table: " + GetFullQualifiedTableName() + " : " + errors);
+    throw StdException(_T("Cannot find the foreign keys for table: ") + GetFullQualifiedTableName() + _T(" : ") + errors);
   }
 }
 
@@ -395,7 +395,7 @@ CXTable::GetIndexInfo(SQLInfoDB* p_info)
   p_info->MakeInfoTableStatistics(m_indices,errors,m_table.m_schema,m_table.m_table,nullptr);
   if (!errors.IsEmpty())
   {
-    throw StdException("Cannot find indices for table: " + GetFullQualifiedTableName() + " : " + errors);
+    throw StdException(_T("Cannot find indices for table: ") + GetFullQualifiedTableName() + _T(" : ") + errors);
   }
 }
 
@@ -409,7 +409,7 @@ CXTable::GetPrivilegeInfo(SQLInfoDB* p_info)
   p_info->MakeInfoTablePrivileges(m_privileges,errors,m_table.m_schema,m_table.m_table);
   if(!errors.IsEmpty())
   {
-    throw StdException("Cannot find the privileges for table: " + GetFullQualifiedTableName() + " : " + errors);
+    throw StdException(_T("Cannot find the privileges for table: ") + GetFullQualifiedTableName() + _T(" : ") + errors);
   }
 }
 
@@ -480,62 +480,62 @@ CXTable::GetAttributesAsList()
 void 
 CXTable::SaveTableInfo(SOAPMessage& p_msg)
 {
-  XMLElement* elem = p_msg.SetParameter("TableInfo","");
+  XMLElement* elem = p_msg.SetParameter(_T("TableInfo"),_T(""));
 
-  p_msg.AddElement(elem,"Schema",    XDT_String |XDT_Type,m_table.m_schema);
-  p_msg.AddElement(elem,"Table",     XDT_String |XDT_Type,m_table.m_table);
-  p_msg.AddElement(elem,"ObjectType",XDT_String |XDT_Type,m_table.m_objectType);
-  p_msg.AddElement(elem,"Remarks",   XDT_String |XDT_Type,m_table.m_remarks);
-  p_msg.AddElement(elem,"FullName",  XDT_String |XDT_Type,m_table.m_fullName);
-  p_msg.AddElement(elem,"Tablespace",XDT_String |XDT_Type,m_table.m_tablespace);
-  p_msg.AddElement(elem,"Temporary", XDT_Boolean|XDT_Type,m_table.m_temporary);
+  p_msg.AddElement(elem,_T("Schema"),    XDT_String |XDT_Type,m_table.m_schema);
+  p_msg.AddElement(elem,_T("Table"),     XDT_String |XDT_Type,m_table.m_table);
+  p_msg.AddElement(elem,_T("ObjectType"),XDT_String |XDT_Type,m_table.m_objectType);
+  p_msg.AddElement(elem,_T("Remarks"),   XDT_String |XDT_Type,m_table.m_remarks);
+  p_msg.AddElement(elem,_T("FullName"),  XDT_String |XDT_Type,m_table.m_fullName);
+  p_msg.AddElement(elem,_T("Tablespace"),XDT_String |XDT_Type,m_table.m_tablespace);
+  p_msg.AddElement(elem,_T("Temporary"), XDT_Boolean|XDT_Type,m_table.m_temporary);
 }
 
 void 
 CXTable::SaveColumnInfo(SOAPMessage& p_msg)
 {
-  XMLElement* columns = p_msg.SetParameter("Columns", "");
+  XMLElement* columns = p_msg.SetParameter(_T("Columns"), _T(""));
 
   for(auto& col : m_columns)
   {
-    XMLElement* column = p_msg.AddElement(columns,"Column",XDT_String,"");
+    XMLElement* column = p_msg.AddElement(columns,_T("Column"),XDT_String,_T(""));
 
-    p_msg.AddElement(column, "Position",      XDT_Integer|XDT_Type,col.m_position);
-    p_msg.AddElement(column, "ColumnName",    XDT_String |XDT_Type,col.m_column);
-    p_msg.AddElement(column, "ODBC_Type",     XDT_Integer|XDT_Type,col.m_datatype);
-    p_msg.AddElement(column, "RDBMS_Type",    XDT_String |XDT_Type,col.m_typename);
-    p_msg.AddElement(column, "ColumnSize",    XDT_Integer|XDT_Type,col.m_columnSize);
-    p_msg.AddElement(column, "BufferLength",  XDT_Integer|XDT_Type,(int) col.m_bufferLength);
-    p_msg.AddElement(column, "DecimalDigits", XDT_Integer|XDT_Type,col.m_decimalDigits);
-    p_msg.AddElement(column, "Radix",         XDT_Integer|XDT_Type,col.m_numRadix);
-    p_msg.AddElement(column, "Nullable",      XDT_Integer|XDT_Type,col.m_nullable);
-    p_msg.AddElement(column, "Remarks",       XDT_String |XDT_Type,col.m_remarks);
-    p_msg.AddElement(column, "DefaultValue",  XDT_String |XDT_Type,col.m_default);
-    p_msg.AddElement(column, "ODBC_Type3",    XDT_Integer|XDT_Type,col.m_datatype3);
-    p_msg.AddElement(column, "SubType",       XDT_Integer|XDT_Type,col.m_sub_datatype);
-    p_msg.AddElement(column, "OctetLength",   XDT_Integer|XDT_Type,(int)col.m_octet_length);
+    p_msg.AddElement(column, _T("Position"),      XDT_Integer|XDT_Type,col.m_position);
+    p_msg.AddElement(column, _T("ColumnName"),    XDT_String |XDT_Type,col.m_column);
+    p_msg.AddElement(column, _T("ODBC_Type"),     XDT_Integer|XDT_Type,col.m_datatype);
+    p_msg.AddElement(column, _T("RDBMS_Type"),    XDT_String |XDT_Type,col.m_typename);
+    p_msg.AddElement(column, _T("ColumnSize"),    XDT_Integer|XDT_Type,col.m_columnSize);
+    p_msg.AddElement(column, _T("BufferLength"),  XDT_Integer|XDT_Type,(int) col.m_bufferLength);
+    p_msg.AddElement(column, _T("DecimalDigits"), XDT_Integer|XDT_Type,col.m_decimalDigits);
+    p_msg.AddElement(column, _T("Radix"),         XDT_Integer|XDT_Type,col.m_numRadix);
+    p_msg.AddElement(column, _T("Nullable"),      XDT_Integer|XDT_Type,col.m_nullable);
+    p_msg.AddElement(column, _T("Remarks"),       XDT_String |XDT_Type,col.m_remarks);
+    p_msg.AddElement(column, _T("DefaultValue"),  XDT_String |XDT_Type,col.m_default);
+    p_msg.AddElement(column, _T("ODBC_Type3"),    XDT_Integer|XDT_Type,col.m_datatype3);
+    p_msg.AddElement(column, _T("SubType"),       XDT_Integer|XDT_Type,col.m_sub_datatype);
+    p_msg.AddElement(column, _T("OctetLength"),   XDT_Integer|XDT_Type,(int)col.m_octet_length);
   }
 }
 
 void 
 CXTable::SavePrimaryKey(SOAPMessage& p_msg)
 {
-  XMLElement* elem = p_msg.SetParameter("PrimaryKey", "");
+  XMLElement* elem = p_msg.SetParameter(_T("PrimaryKey"), _T(""));
 
   bool first = true;
   for(auto& pkey : m_primary)
   {
     if(first)
     {
-      p_msg.AddElement(elem,"ConstraintName",   XDT_String |XDT_Type,pkey.m_constraintName);
-      p_msg.AddElement(elem,"Deferrable",       XDT_Integer|XDT_Type,pkey.m_deferrable);
-      p_msg.AddElement(elem,"InitiallyDeferred",XDT_Integer|XDT_Type,pkey.m_initiallyDeferred);
+      p_msg.AddElement(elem,_T("ConstraintName"),   XDT_String |XDT_Type,pkey.m_constraintName);
+      p_msg.AddElement(elem,_T("Deferrable"),       XDT_Integer|XDT_Type,pkey.m_deferrable);
+      p_msg.AddElement(elem,_T("InitiallyDeferred"),XDT_Integer|XDT_Type,pkey.m_initiallyDeferred);
     }
     first = false;
 
-    XMLElement* col = p_msg.AddElement(elem,"Column",  XDT_String,"");
-    p_msg.AddElement(col,"Position",XDT_Integer|XDT_Type,pkey.m_columnPosition);
-    p_msg.AddElement(col,"Name",    XDT_String |XDT_Type,pkey.m_columnName);
+    XMLElement* col = p_msg.AddElement(elem,_T("Column"),  XDT_String,_T(""));
+    p_msg.AddElement(col,_T("Position"),XDT_Integer|XDT_Type,pkey.m_columnPosition);
+    p_msg.AddElement(col,_T("Name"),    XDT_String |XDT_Type,pkey.m_columnName);
   }
 }
 
@@ -546,38 +546,38 @@ CXTable::SaveForeignKey(SOAPMessage& p_msg)
   XMLElement* columns = nullptr;
   XMLElement* pkcols  = nullptr;
 
-  XMLElement* elem = p_msg.SetParameter("ForeignKeys","");
+  XMLElement* elem = p_msg.SetParameter(_T("ForeignKeys"),_T(""));
 
   for(auto& fkey : m_foreigns)
   {
     if(fkey.m_keySequence == 1)
     {
-      foreign = p_msg.AddElement(elem,"ForeignKey",XDT_String,"");
+      foreign = p_msg.AddElement(elem,_T("ForeignKey"),XDT_String,_T(""));
 
       // Foreign key part
-      p_msg.AddElement(foreign,"Constraint",XDT_String |XDT_Type,fkey.m_foreignConstraint);
-      p_msg.AddElement(foreign,"UpdateRule",XDT_Integer|XDT_Type,fkey.m_updateRule);
-      p_msg.AddElement(foreign,"DeleteRule",XDT_Integer|XDT_Type,fkey.m_deleteRule);
-      p_msg.AddElement(foreign,"Deferrable",XDT_Integer|XDT_Type,fkey.m_deferrable);
-      p_msg.AddElement(foreign,"Match",     XDT_Integer|XDT_Type,fkey.m_match);
-      p_msg.AddElement(foreign,"InitiallyDeferred",XDT_Integer|XDT_Type,fkey.m_initiallyDeferred);
-      p_msg.AddElement(foreign,"Enabled",   XDT_Integer|XDT_Type,fkey.m_enabled);
+      p_msg.AddElement(foreign,_T("Constraint"),XDT_String |XDT_Type,fkey.m_foreignConstraint);
+      p_msg.AddElement(foreign,_T("UpdateRule"),XDT_Integer|XDT_Type,fkey.m_updateRule);
+      p_msg.AddElement(foreign,_T("DeleteRule"),XDT_Integer|XDT_Type,fkey.m_deleteRule);
+      p_msg.AddElement(foreign,_T("Deferrable"),XDT_Integer|XDT_Type,fkey.m_deferrable);
+      p_msg.AddElement(foreign,_T("Match"),     XDT_Integer|XDT_Type,fkey.m_match);
+      p_msg.AddElement(foreign,_T("InitiallyDeferred"),XDT_Integer|XDT_Type,fkey.m_initiallyDeferred);
+      p_msg.AddElement(foreign,_T("Enabled"),   XDT_Integer|XDT_Type,fkey.m_enabled);
 
       // Prepare for foreign-key columns
-      columns = p_msg.AddElement(foreign,"Columns",XDT_String,"");
+      columns = p_msg.AddElement(foreign,_T("Columns"),XDT_String,_T(""));
 
       // Primary key part
-      XMLElement* prim = p_msg.AddElement(foreign,"Primary",XDT_String,"");
-      p_msg.AddElement(prim,"Schema",    XDT_String|XDT_Type,fkey.m_pkSchemaName);
-      p_msg.AddElement(prim,"Table",     XDT_String|XDT_Type,fkey.m_pkTableName);
+      XMLElement* prim = p_msg.AddElement(foreign,_T("Primary"),XDT_String,_T(""));
+      p_msg.AddElement(prim,_T("Schema"),    XDT_String|XDT_Type,fkey.m_pkSchemaName);
+      p_msg.AddElement(prim,_T("Table"),     XDT_String|XDT_Type,fkey.m_pkTableName);
 
       // Prepare for primary-key columns
-      pkcols = p_msg.AddElement(prim,"Columns",XDT_String,"");
+      pkcols = p_msg.AddElement(prim,_T("Columns"),XDT_String,_T(""));
     }
 
     // For all columns
-    p_msg.AddElement(columns,"Column",XDT_String|XDT_Type,fkey.m_fkColumnName);
-    p_msg.AddElement(pkcols ,"Column",XDT_String|XDT_Type,fkey.m_pkColumnName);
+    p_msg.AddElement(columns,_T("Column"),XDT_String|XDT_Type,fkey.m_fkColumnName);
+    p_msg.AddElement(pkcols ,_T("Column"),XDT_String|XDT_Type,fkey.m_pkColumnName);
   }
 }
 
@@ -586,82 +586,82 @@ CXTable::SaveIndices(SOAPMessage& p_msg)
 {
   XMLElement* index   = nullptr;
   XMLElement* columns = nullptr;
-  XMLElement* elem    = p_msg.SetParameter("Indices","");
+  XMLElement* elem    = p_msg.SetParameter(_T("Indices"),_T(""));
 
   for(auto& ind : m_indices)
   {
     if(ind.m_position == 1)
     {
-      index = p_msg.AddElement(elem,"Index",XDT_String,"");
-      p_msg.AddElement(index,"Name",     XDT_String |XDT_Type,ind.m_indexName);
-      p_msg.AddElement(index,"Unique",   XDT_Boolean|XDT_Type,! ind.m_nonunique);
-      p_msg.AddElement(index,"Ascending",XDT_Boolean|XDT_Type,ind.m_ascending == "A");
-      p_msg.AddElement(index,"Filter",   XDT_String |XDT_Type,ind.m_filter);
+      index = p_msg.AddElement(elem,_T("Index"),XDT_String,_T(""));
+      p_msg.AddElement(index,_T("Name"),     XDT_String |XDT_Type,ind.m_indexName);
+      p_msg.AddElement(index,_T("Unique"),   XDT_Boolean|XDT_Type,! ind.m_nonunique);
+      p_msg.AddElement(index,_T("Ascending"),XDT_Boolean|XDT_Type,ind.m_ascending == _T("A"));
+      p_msg.AddElement(index,_T("Filter"),   XDT_String |XDT_Type,ind.m_filter);
 
-      columns = p_msg.AddElement(index,"Columns",XDT_String,"");
+      columns = p_msg.AddElement(index,_T("Columns"),XDT_String,_T(""));
     }
     // Add all columns
-    p_msg.AddElement(columns,"Column",XDT_String|XDT_Type,ind.m_columnName);
+    p_msg.AddElement(columns,_T("Column"),XDT_String|XDT_Type,ind.m_columnName);
   }
 }
 
 void 
 CXTable::SavePrivileges(SOAPMessage& p_msg)
 {
-  XMLElement* privs = p_msg.SetParameter("Privileges","");
+  XMLElement* privs = p_msg.SetParameter(_T("Privileges"),_T(""));
 
   for(auto& priv : m_privileges)
   {
-    XMLElement* pri = p_msg.AddElement(privs,"Privilege",XDT_String,"");
+    XMLElement* pri = p_msg.AddElement(privs,_T("Privilege"),XDT_String,_T(""));
 
-    p_msg.AddElement(pri,"Grantor",  XDT_String |XDT_Type,priv.m_grantor);
-    p_msg.AddElement(pri,"Grantee",  XDT_String |XDT_Type,priv.m_grantee);
-    p_msg.AddElement(pri,"Right",    XDT_String |XDT_Type,priv.m_privilege);
-    p_msg.AddElement(pri,"Grantable",XDT_Boolean|XDT_Type,priv.m_grantable);
+    p_msg.AddElement(pri,_T("Grantor"),  XDT_String |XDT_Type,priv.m_grantor);
+    p_msg.AddElement(pri,_T("Grantee"),  XDT_String |XDT_Type,priv.m_grantee);
+    p_msg.AddElement(pri,_T("Right"),    XDT_String |XDT_Type,priv.m_privilege);
+    p_msg.AddElement(pri,_T("Grantable"),XDT_Boolean|XDT_Type,priv.m_grantable);
   }
 }
 
 void 
 CXTable::LoadTableInfo(SOAPMessage& p_msg)
 {
-  XMLElement* elem = p_msg.FindElement("TableInfo");
+  XMLElement* elem = p_msg.FindElement(_T("TableInfo"));
 
   if(elem)
   {
-    m_table.m_schema      = p_msg.GetElement(elem,"Schema");
-    m_table.m_table       = p_msg.GetElement(elem,"Table");
-    m_table.m_objectType  = p_msg.GetElement(elem,"ObjectType");
-    m_table.m_remarks     = p_msg.GetElement(elem,"Remarks");
-    m_table.m_fullName    = p_msg.GetElement(elem,"FullName");
-    m_table.m_tablespace  = p_msg.GetElement(elem,"Tablespace");
-    m_table.m_temporary   = p_msg.GetElementBoolean(elem,"Temporary");
+    m_table.m_schema      = p_msg.GetElement(elem,_T("Schema"));
+    m_table.m_table       = p_msg.GetElement(elem,_T("Table"));
+    m_table.m_objectType  = p_msg.GetElement(elem,_T("ObjectType"));
+    m_table.m_remarks     = p_msg.GetElement(elem,_T("Remarks"));
+    m_table.m_fullName    = p_msg.GetElement(elem,_T("FullName"));
+    m_table.m_tablespace  = p_msg.GetElement(elem,_T("Tablespace"));
+    m_table.m_temporary   = p_msg.GetElementBoolean(elem,_T("Temporary"));
   }
 }
 
 void 
 CXTable::LoadColumnInfo(SOAPMessage& p_msg)
 {
-  XMLElement* columns = p_msg.FindElement("Columns");
-  XMLElement* column  = p_msg.FindElement(columns,"Column",false);
+  XMLElement* columns = p_msg.FindElement(_T("Columns"));
+  XMLElement* column  = p_msg.FindElement(columns,_T("Column"),false);
 
   while(column)
   {
     MetaColumn col;
 
-    col.m_position      = p_msg.GetElementInteger(column,"Position");
-    col.m_column        = p_msg.GetElement       (column,"ColumnName");
-    col.m_datatype      = p_msg.GetElementInteger(column,"ODBC_Type");
-    col.m_typename      = p_msg.GetElement       (column,"RDBMS_Type");
-    col.m_columnSize    = p_msg.GetElementInteger(column,"ColumnSize");
-    col.m_bufferLength  = p_msg.GetElementInteger(column,"BufferLength");
-    col.m_decimalDigits = p_msg.GetElementInteger(column,"DecimalDigits");
-    col.m_numRadix      = p_msg.GetElementInteger(column,"Radix");
-    col.m_nullable      = p_msg.GetElementInteger(column,"Nullable");
-    col.m_remarks       = p_msg.GetElement       (column,"Remarks");
-    col.m_default       = p_msg.GetElement       (column,"DefaultValue");
-    col.m_datatype3     = p_msg.GetElementInteger(column,"ODCB_Type3");
-    col.m_sub_datatype  = p_msg.GetElementInteger(column,"SubType");
-    col.m_octet_length  = p_msg.GetElementInteger(column,"OctetLength");
+    col.m_position      = p_msg.GetElementInteger(column,_T("Position"));
+    col.m_column        = p_msg.GetElement       (column,_T("ColumnName"));
+    col.m_datatype      = p_msg.GetElementInteger(column,_T("ODBC_Type"));
+    col.m_typename      = p_msg.GetElement       (column,_T("RDBMS_Type"));
+    col.m_columnSize    = p_msg.GetElementInteger(column,_T("ColumnSize"));
+    col.m_bufferLength  = p_msg.GetElementInteger(column,_T("BufferLength"));
+    col.m_decimalDigits = p_msg.GetElementInteger(column,_T("DecimalDigits"));
+    col.m_numRadix      = p_msg.GetElementInteger(column,_T("Radix"));
+    col.m_nullable      = p_msg.GetElementInteger(column,_T("Nullable"));
+    col.m_remarks       = p_msg.GetElement       (column,_T("Remarks"));
+    col.m_default       = p_msg.GetElement       (column,_T("DefaultValue"));
+    col.m_datatype3     = p_msg.GetElementInteger(column,_T("ODCB_Type3"));
+    col.m_sub_datatype  = p_msg.GetElementInteger(column,_T("SubType"));
+    col.m_octet_length  = p_msg.GetElementInteger(column,_T("OctetLength"));
 
     // Keep the column info
     m_columns.push_back(col);
@@ -674,7 +674,7 @@ CXTable::LoadColumnInfo(SOAPMessage& p_msg)
 void 
 CXTable::LoadPrimaryKey(SOAPMessage& p_msg)
 {
-  XMLElement*  elem = p_msg.FindElement("PrimaryKey");
+  XMLElement*  elem = p_msg.FindElement(_T("PrimaryKey"));
   MetaPrimary* fkey = nullptr;
 
   bool first = true;
@@ -684,9 +684,9 @@ CXTable::LoadPrimaryKey(SOAPMessage& p_msg)
 
     if(first)
     {
-      prim.m_constraintName    = p_msg.GetElement       (elem,"ConstraintName");
-      prim.m_deferrable        = p_msg.GetElementInteger(elem,"Deferrable");
-      prim.m_initiallyDeferred = p_msg.GetElementInteger(elem,"InitiallyDeferred");
+      prim.m_constraintName    = p_msg.GetElement       (elem,_T("ConstraintName"));
+      prim.m_deferrable        = p_msg.GetElementInteger(elem,_T("Deferrable"));
+      prim.m_initiallyDeferred = p_msg.GetElementInteger(elem,_T("InitiallyDeferred"));
     }
     else
     {
@@ -695,11 +695,11 @@ CXTable::LoadPrimaryKey(SOAPMessage& p_msg)
       prim.m_initiallyDeferred = fkey->m_initiallyDeferred;
     }
 
-    XMLElement* column = p_msg.FindElement(elem,"Column",false);
+    XMLElement* column = p_msg.FindElement(elem,_T("Column"),false);
     while(column)
     {
-      prim.m_columnPosition = p_msg.GetElementInteger(column, "Position");
-      prim.m_columnName     = p_msg.GetElement(column,"Name");
+      prim.m_columnPosition = p_msg.GetElementInteger(column, _T("Position"));
+      prim.m_columnName     = p_msg.GetElement(column,_T("Name"));
 
       // Keep the primary key (column) info
       m_primary.push_back(prim);
@@ -718,7 +718,7 @@ CXTable::LoadPrimaryKey(SOAPMessage& p_msg)
 void 
 CXTable::LoadForeignKey(SOAPMessage& p_msg)
 {
-  XMLElement* keys = p_msg.FindElement("ForeignKeys");
+  XMLElement* keys = p_msg.FindElement(_T("ForeignKeys"));
   if(!keys) return;
 
   XMLElement* columns = nullptr;
@@ -727,29 +727,29 @@ CXTable::LoadForeignKey(SOAPMessage& p_msg)
   CString lastkey;
   int sequence = 1;
 
-  XMLElement* foreign = p_msg.FindElement(keys,"ForeignKey",false);
+  XMLElement* foreign = p_msg.FindElement(keys,_T("ForeignKey"),false);
   while(foreign)
   {
     MetaForeign fkey;
 
     fkey.m_keySequence        = sequence;
-    fkey.m_foreignConstraint  = p_msg.GetElement       (foreign,"Constraint");
-    fkey.m_updateRule         = p_msg.GetElementInteger(foreign,"UpdateRule");
-    fkey.m_deleteRule         = p_msg.GetElementInteger(foreign,"DeleteRule");
-    fkey.m_deferrable         = p_msg.GetElementInteger(foreign,"Deferrable");
-    fkey.m_match              = p_msg.GetElementInteger(foreign,"Match");
-    fkey.m_initiallyDeferred  = p_msg.GetElementInteger(foreign,"InitiallyDeferred");
+    fkey.m_foreignConstraint  = p_msg.GetElement       (foreign,_T("Constraint"));
+    fkey.m_updateRule         = p_msg.GetElementInteger(foreign,_T("UpdateRule"));
+    fkey.m_deleteRule         = p_msg.GetElementInteger(foreign,_T("DeleteRule"));
+    fkey.m_deferrable         = p_msg.GetElementInteger(foreign,_T("Deferrable"));
+    fkey.m_match              = p_msg.GetElementInteger(foreign,_T("Match"));
+    fkey.m_initiallyDeferred  = p_msg.GetElementInteger(foreign,_T("InitiallyDeferred"));
 
-    columns = p_msg.FindElement(foreign,"Columns",false);
-    columns = p_msg.FindElement(columns,"Column", false);
+    columns = p_msg.FindElement(foreign,_T("Columns"),false);
+    columns = p_msg.FindElement(columns,_T("Column"), false);
 
-    pkcols  = p_msg.FindElement(foreign,"Primary",false);
+    pkcols  = p_msg.FindElement(foreign,_T("Primary"),false);
 
-    fkey.m_pkSchemaName = p_msg.GetElement(pkcols,"Schema");
-    fkey.m_pkTableName  = p_msg.GetElement(pkcols,"Table");
+    fkey.m_pkSchemaName = p_msg.GetElement(pkcols,_T("Schema"));
+    fkey.m_pkTableName  = p_msg.GetElement(pkcols,_T("Table"));
 
-    pkcols  = p_msg.FindElement(pkcols,"Columns",false);
-    pkcols  = p_msg.FindElement(pkcols,"Column", false);
+    pkcols  = p_msg.FindElement(pkcols,_T("Columns"),false);
+    pkcols  = p_msg.FindElement(pkcols,_T("Column"), false);
 
     fkey.m_fkColumnName = columns->GetValue();
     fkey.m_pkColumnName = pkcols ->GetValue();
@@ -787,21 +787,21 @@ CXTable::LoadForeignKey(SOAPMessage& p_msg)
 void 
 CXTable::LoadIndices(SOAPMessage& p_msg)
 {
-  XMLElement* indices = p_msg.FindElement("Indices");
-  XMLElement* index   = p_msg.FindElement(indices,"Index");
+  XMLElement* indices = p_msg.FindElement(_T("Indices"));
+  XMLElement* index   = p_msg.FindElement(indices,_T("Index"));
   int position = 1;
   while(index)
   {
     MetaIndex ind;
 
-    ind.m_indexName = p_msg.GetElement       (index,"Name");
-    ind.m_nonunique = ! p_msg.GetElementBoolean(index,"Unique");
-    ind.m_ascending = p_msg.GetElementBoolean(index,"Ascending") ? "A" : "D";
-    ind.m_filter    = p_msg.GetElement       (index,"Filter");
+    ind.m_indexName = p_msg.GetElement       (index,_T("Name"));
+    ind.m_nonunique = ! p_msg.GetElementBoolean(index,_T("Unique"));
+    ind.m_ascending = p_msg.GetElementBoolean(index,_T("Ascending")) ? _T("A") : _T("D");
+    ind.m_filter    = p_msg.GetElement       (index,_T("Filter"));
     ind.m_position  = position;
 
-    XMLElement* columns = p_msg.FindElement(index,"Columns",false);
-    XMLElement* column  = p_msg.FindElement(columns,"Column",false);
+    XMLElement* columns = p_msg.FindElement(index,_T("Columns"),false);
+    XMLElement* column  = p_msg.FindElement(columns,_T("Column"),false);
     ind.m_columnName = column->GetValue();
 
     m_indices.push_back(ind);
@@ -830,17 +830,17 @@ CXTable::LoadIndices(SOAPMessage& p_msg)
 void 
 CXTable::LoadPrivileges(SOAPMessage& p_msg)
 {
-  XMLElement* privs = p_msg.FindElement("Privileges");
-  XMLElement* pri   = p_msg.FindElement(privs,"Privilege");
+  XMLElement* privs = p_msg.FindElement(_T("Privileges"));
+  XMLElement* pri   = p_msg.FindElement(privs,_T("Privilege"));
 
   while(pri)
   {
     MetaPrivilege priv;
 
-    priv.m_grantor   = p_msg.GetElement(pri,"Grantor");
-    priv.m_grantee   = p_msg.GetElement(pri,"Grantee");
-    priv.m_privilege = p_msg.GetElement(pri,"Right");
-    priv.m_grantable = p_msg.GetElementBoolean(pri,"Grantable");
+    priv.m_grantor   = p_msg.GetElement(pri,_T("Grantor"));
+    priv.m_grantee   = p_msg.GetElement(pri,_T("Grantee"));
+    priv.m_privilege = p_msg.GetElement(pri,_T("Right"));
+    priv.m_grantable = p_msg.GetElementBoolean(pri,_T("Grantable"));
 
     m_privileges.push_back(priv);
 

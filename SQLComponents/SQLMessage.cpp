@@ -2,7 +2,7 @@
 //
 // File: SQLMessage.h
 //
-// Copyright (c) 1998-2022 ir. W.E. Huisman
+// Copyright (c) 1998-2025 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy of 
@@ -46,14 +46,15 @@ SQLMessage(HWND p_wnd,XString p_message,XString p_title,int p_buttons)
   if(g_SQLComponentsInServer)
   {
     // print to the event log
-    LPCTSTR lpszStrings[2];
-    HANDLE  hEventSource = OpenEventLog(NULL,"SQLComponents ODBC");
+    HANDLE  hEventSource = OpenEventLog(NULL,_T("SQLComponents ODBC"));
     WORD    type  = (p_buttons & MB_ICONERROR) ? EVENTLOG_ERROR_TYPE : EVENTLOG_INFORMATION_TYPE;
     DWORD   ident = (p_buttons & MB_ICONERROR) ? SVC_ERROR           : SVC_INFO;
 
     if (hEventSource != NULL)
     {
-      lpszStrings[0] = "SQLComponents (ODBC 3.51) Version: " SQL_COMPONENTS_VERSION;
+      LPCTSTR lpszStrings[2];
+
+      lpszStrings[0] = _T("SQLComponents (ODBC 3.51) Version: ") SQL_COMPONENTS_VERSION;
       lpszStrings[1] = p_message;
 
       ReportEvent(hEventSource,  // event log handle

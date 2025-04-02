@@ -4,7 +4,7 @@
 //
 // Marlin Server: Internet server/client
 // 
-// Copyright (c) 2014-2022 ir. W.E. Huisman
+// Copyright (c) 2014-2024 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -27,16 +27,20 @@
 //
 #include "stdafx.h"
 #include "MediaType.h"
-#include "EnsureFile.h"
+#include <WinFile.h>
+#include <assert.h>
 
+#ifdef _AFX
 #ifdef _DEBUG
 #define new DEBUG_NEW
 #undef THIS_FILE
 static char THIS_FILE[] = __FILE__;
 #endif
+#endif
 
-MediaType::MediaType(XString p_extension,XString p_contentType)
-          :m_extension(p_extension)
+MediaType::MediaType(bool p_logging,XString p_extension,XString p_contentType)
+          :m_logging(p_logging)
+          ,m_extension(p_extension)
           ,m_contentType(p_contentType)
 {
 }
@@ -50,7 +54,7 @@ MediaType::IsVendorSpecific()
 {
   XString content(m_contentType);
   content.MakeLower();
-  return (m_contentType.Find("/vnd.") > 0);
+  return (m_contentType.Find(_T("/vnd.")) > 0);
 }
 
 // Return the base type
@@ -63,7 +67,7 @@ MediaType::BaseType()
   {
     return m_contentType.Left(pos);
   }
-  return "";
+  return _T("");
 }
 
 // Return the short content
@@ -82,7 +86,7 @@ MediaType::GetContent()
     }
     return content;
   }
-  return "";
+  return _T("");
 }
 
 // Return the extended type
@@ -95,7 +99,7 @@ MediaType::ExtendedType()
   {
     return m_contentType.Mid(pos);
   }
-  return "";
+  return _T("");
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -116,7 +120,7 @@ MediaTypes::MediaTypes()
   }
   else
   {
-    ASSERT("There can only be ONE mediatypes object");
+    assert(_T("There can only be ONE mediatypes object"));
   }
 }
 
@@ -130,72 +134,73 @@ void
 MediaTypes::Init()
 {
   // General media types
-  m_types.insert(std::make_pair("txt",   MediaType("txt",    "text")));
-  m_types.insert(std::make_pair("html",  MediaType("html",   "text/html")));
-  m_types.insert(std::make_pair("htm",   MediaType("htm",    "text/html")));
-  m_types.insert(std::make_pair("css",   MediaType("css",    "text/css")));
-  m_types.insert(std::make_pair("rtf",   MediaType("rtf",    "text/rtf")));
-  m_types.insert(std::make_pair("js",    MediaType("js",     "application/javascript")));
-  m_types.insert(std::make_pair("xml",   MediaType("xml",    "application/soap+xml")));
-  m_types.insert(std::make_pair("dtd",   MediaType("dtd",    "application/xml+dtd")));
-  m_types.insert(std::make_pair("xslt",  MediaType("xslt",   "application/xslt+xml")));
-  m_types.insert(std::make_pair("mathml",MediaType("mathml", "application/mathml+xml")));
-  m_types.insert(std::make_pair("pdf",   MediaType("pdf",    "application/pdf")));
-  m_types.insert(std::make_pair("ttf",   MediaType("ttf",    "application/octet-stream")));
-  m_types.insert(std::make_pair("png",   MediaType("png",    "image/png")));
-  m_types.insert(std::make_pair("jpg",   MediaType("jpg",    "image/jpg")));
-  m_types.insert(std::make_pair("jpeg",  MediaType("jpeg",   "image/jpg")));
-  m_types.insert(std::make_pair("gif",   MediaType("gif",    "image/gif")));
-  m_types.insert(std::make_pair("svg",   MediaType("svg",    "image/svg+xml")));
-  m_types.insert(std::make_pair("ico",   MediaType("ico",    "image/x-icon")));
+  AddContentType(true, _T("txt"),    _T("text"));
+  AddContentType(true, _T("html"),   _T("text/html"));
+  AddContentType(true, _T("htm"),    _T("text/html"));
+  AddContentType(true, _T("css"),    _T("text/css"));
+  AddContentType(true, _T("rtf"),    _T("text/rtf"));
+  AddContentType(true, _T("js"),     _T("application/javascript"));
+  AddContentType(true, _T("xml"),    _T("application/soap+xml"));
+  AddContentType(true, _T("dtd"),    _T("application/xml+dtd"));
+  AddContentType(true, _T("xslt"),   _T("application/xslt+xml"));
+  AddContentType(true, _T("mathml"), _T("application/mathml+xml"));
+  AddContentType(true, _T("json"),   _T("application/json"));
+  AddContentType(true, _T("svg"),    _T("image/svg+xml"));
+  AddContentType(false,_T("pdf"),    _T("application/pdf"));
+  AddContentType(false,_T("ttf"),    _T("application/octet-stream"));
+  AddContentType(false,_T("png"),    _T("image/png"));
+  AddContentType(false,_T("jpg"),    _T("image/jpg"));
+  AddContentType(false,_T("jpeg"),   _T("image/jpg"));
+  AddContentType(false,_T("gif"),    _T("image/gif"));
+  AddContentType(false,_T("ico"),    _T("image/x-icon"));
   // Old style MS-Word upto version 2013/XP
-  m_types.insert(std::make_pair("doc",   MediaType("doc",    "application/msword")));
-  m_types.insert(std::make_pair("dot",   MediaType("doc",    "application/msword")));
-  m_types.insert(std::make_pair("xls",   MediaType("xls",    "application/vnd.ms-excel")));
-  m_types.insert(std::make_pair("xlt",   MediaType("xlt",    "application/vnd.ms-excel")));
-  m_types.insert(std::make_pair("xla",   MediaType("xla",    "application/vnd.ms-excel")));
+  AddContentType(false,_T("doc"),    _T("application/msword"));
+  AddContentType(false,_T("doc"),    _T("application/msword"));
+  AddContentType(false,_T("xls"),    _T("application/vnd.ms-excel"));
+  AddContentType(false,_T("xlt"),    _T("application/vnd.ms-excel"));
+  AddContentType(false,_T("xla"),    _T("application/vnd.ms-excel"));
   // Old style Powerpoint documents                                                                                                                                                                                                                    m_types.insert(std::make_pair(".xlam     application/vnd.ms-excel.addin.macroEnabled.12
-  m_types.insert(std::make_pair("ppt",   MediaType("ppt",    "application/vnd.ms-powerpoint")));
-  m_types.insert(std::make_pair("pot",   MediaType("pot",    "application/vnd.ms-powerpoint")));
-  m_types.insert(std::make_pair("pps",   MediaType("pps",    "application/vnd.ms-powerpoint")));
-  m_types.insert(std::make_pair("ppa",   MediaType("ppa",    "application/vnd.ms-powerpoint")));
+  AddContentType(false,_T("ppt"),    _T("application/vnd.ms-powerpoint"));
+  AddContentType(false,_T("pot"),    _T("application/vnd.ms-powerpoint"));
+  AddContentType(false,_T("pps"),    _T("application/vnd.ms-powerpoint"));
+  AddContentType(false,_T("ppa"),    _T("application/vnd.ms-powerpoint"));
   // New MS-Word OOXML text documents
-  m_types.insert(std::make_pair("docx",  MediaType("docx",   "application/vnd.openxmlformats-officedocument.wordprocessingml.document")));
-  m_types.insert(std::make_pair("dotx",  MediaType("dotx",   "application/vnd.openxmlformats-officedocument.wordprocessingml.template")));
-  m_types.insert(std::make_pair("docm",  MediaType("docm",   "application/vnd.ms-word.document.macroEnabled.12")));
-  m_types.insert(std::make_pair("dotm",  MediaType("dotm",   "application/vnd.ms-word.template.macroEnabled.12")));
+  AddContentType(false,_T("docx"),   _T("application/vnd.openxmlformats-officedocument.wordprocessingml.document"));
+  AddContentType(false,_T("dotx"),   _T("application/vnd.openxmlformats-officedocument.wordprocessingml.template"));
+  AddContentType(false,_T("docm"),   _T("application/vnd.ms-word.document.macroEnabled.12"));
+  AddContentType(false,_T("dotm"),   _T("application/vnd.ms-word.template.macroEnabled.12"));
   // New MS-Word OOXML spreadsheet documents
-  m_types.insert(std::make_pair("xlsx",  MediaType("xlsx",   "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")));
-  m_types.insert(std::make_pair("xltx",  MediaType("xltx",   "application/vnd.openxmlformats-officedocument.spreadsheetml.template")));
-  m_types.insert(std::make_pair("xlsm",  MediaType("xlsm",   "application/vnd.ms-excel.sheet.macroEnabled.12")));
-  m_types.insert(std::make_pair("xltm",  MediaType("xltm",   "application/vnd.ms-excel.template.macroEnabled.12")));
+  AddContentType(false,_T("xlsx"),   _T("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"));
+  AddContentType(false,_T("xltx"),   _T("application/vnd.openxmlformats-officedocument.spreadsheetml.template"));
+  AddContentType(false,_T("xlsm"),   _T("application/vnd.ms-excel.sheet.macroEnabled.12"));
+  AddContentType(false,_T("xltm"),   _T("application/vnd.ms-excel.template.macroEnabled.12"));
   // New MS-Word OOXML Powerpoint documents
-  m_types.insert(std::make_pair("pptx",  MediaType("pptx",   "application/vnd.openxmlformats-officedocument.presentationml.presentation")));
-  m_types.insert(std::make_pair("potx",  MediaType("potx",   "application/vnd.openxmlformats-officedocument.presentationml.template")));
-  m_types.insert(std::make_pair("ppsx",  MediaType("ppsx",   "application/vnd.openxmlformats-officedocument.presentationml.slideshow")));
-  m_types.insert(std::make_pair("ppam",  MediaType("ppam",   "application/vnd.ms-powerpoint.addin.macroEnabled.12")));
-  m_types.insert(std::make_pair("pptm",  MediaType("pptm",   "application/vnd.ms-powerpoint.presentation.macroEnabled.12")));
-  m_types.insert(std::make_pair("potm",  MediaType("potm",   "application/vnd.ms-powerpoint.template.macroEnabled.12")));
-  m_types.insert(std::make_pair("ppsm",  MediaType("ppsm",   "application/vnd.ms-powerpoint.slideshow.macroEnabled.12")));
+  AddContentType(false,_T("pptx"),   _T("application/vnd.openxmlformats-officedocument.presentationml.presentation"));
+  AddContentType(false,_T("potx"),   _T("application/vnd.openxmlformats-officedocument.presentationml.template"));
+  AddContentType(false,_T("ppsx"),   _T("application/vnd.openxmlformats-officedocument.presentationml.slideshow"));
+  AddContentType(false,_T("ppam"),   _T("application/vnd.ms-powerpoint.addin.macroEnabled.12"));
+  AddContentType(false,_T("pptm"),   _T("application/vnd.ms-powerpoint.presentation.macroEnabled.12"));
+  AddContentType(false,_T("potm"),   _T("application/vnd.ms-powerpoint.template.macroEnabled.12"));
+  AddContentType(false,_T("ppsm"),   _T("application/vnd.ms-powerpoint.slideshow.macroEnabled.12"));
   // Open Office documents (OpenOffice 2.0 and later, StarOffice 8.0 and later)
   // For older mimetypes see: https://www.openoffice.org/framework/documentation/mimetypes/mimetypes.html
-  m_types.insert(std::make_pair("odt",   MediaType("odt",    "application/vnd.oasis.opendocument.text")));
-  m_types.insert(std::make_pair("ott",   MediaType("ott",    "application/vnd.oasis.opendocument.text-template")));
-  m_types.insert(std::make_pair("oth",   MediaType("oth",    "application/vnd.oasis.opendocument.text-web")));
-  m_types.insert(std::make_pair("odm",   MediaType("odm",    "application/vnd.oasis.opendocument.text-master")));
-  m_types.insert(std::make_pair("odg",   MediaType("odg",    "application/vnd.oasis.opendocument.graphics")));
-  m_types.insert(std::make_pair("otg",   MediaType("otg",    "application/vnd.oasis.opendocument.graphics-template")));
-  m_types.insert(std::make_pair("odp",   MediaType("odp",    "application/vnd.oasis.opendocument.presentation")));
-  m_types.insert(std::make_pair("otp",   MediaType("otp",    "application/vnd.oasis.opendocument.presentation-template")));
-  m_types.insert(std::make_pair("ods",   MediaType("ods",    "application/vnd.oasis.opendocument.spreadsheet")));
-  m_types.insert(std::make_pair("ots",   MediaType("ots",    "application/vnd.oasis.opendocument.spreadsheet-template")));
-  m_types.insert(std::make_pair("odc",   MediaType("odc",    "application/vnd.oasis.opendocument.chart")));
-  m_types.insert(std::make_pair("odf",   MediaType("odf",    "application/vnd.oasis.opendocument.formula")));
-  m_types.insert(std::make_pair("odb",   MediaType("odb",    "application/vnd.oasis.opendocument.database")));
-  m_types.insert(std::make_pair("odi",   MediaType("odi",    "application/vnd.oasis.opendocument.image")));
-  m_types.insert(std::make_pair("oxt",   MediaType("oxt",    "application/vnd.openofficeorg.extension")));
+  AddContentType(false,_T("odt"),    _T("application/vnd.oasis.opendocument.text"));
+  AddContentType(false,_T("ott"),    _T("application/vnd.oasis.opendocument.text-template"));
+  AddContentType(false,_T("oth"),    _T("application/vnd.oasis.opendocument.text-web"));
+  AddContentType(false,_T("odm"),    _T("application/vnd.oasis.opendocument.text-master"));
+  AddContentType(false,_T("odg"),    _T("application/vnd.oasis.opendocument.graphics"));
+  AddContentType(false,_T("otg"),    _T("application/vnd.oasis.opendocument.graphics-template"));
+  AddContentType(false,_T("odp"),    _T("application/vnd.oasis.opendocument.presentation"));
+  AddContentType(false,_T("otp"),    _T("application/vnd.oasis.opendocument.presentation-template"));
+  AddContentType(false,_T("ods"),    _T("application/vnd.oasis.opendocument.spreadsheet"));
+  AddContentType(false,_T("ots"),    _T("application/vnd.oasis.opendocument.spreadsheet-template"));
+  AddContentType(false,_T("odc"),    _T("application/vnd.oasis.opendocument.chart"));
+  AddContentType(false,_T("odf"),    _T("application/vnd.oasis.opendocument.formula"));
+  AddContentType(false,_T("odb"),    _T("application/vnd.oasis.opendocument.database"));
+  AddContentType(false,_T("odi"),    _T("application/vnd.oasis.opendocument.image"));
+  AddContentType(false,_T("oxt"),    _T("application/vnd.openofficeorg.extension"));
   // The grand default of all MIME media types
-  m_types.insert(std::make_pair("",      MediaType("",       "application/octet-stream")));
+  AddContentType(false,_T(""),       _T("application/octet-stream"));
 }
 
 /* static*/ void
@@ -204,16 +209,17 @@ MediaTypes::CheckValid()
 #ifdef _DEBUG
   if(g_mt_instance == nullptr)
   {
-    throw StdException("INTERNAL: No MediaTypes object found/initialized");
+    throw StdException(_T("INTERNAL: No MediaTypes object found/initialized"));
   }
 #endif
 }
 
 // Registering your own
 void   
-MediaTypes::AddContentType(XString p_extension,XString p_contentType)
+MediaTypes::AddContentType(bool p_logging,XString p_extension,XString p_contentType)
 {
-  m_types.insert(std::make_pair(p_extension, MediaType(p_extension,p_contentType)));
+  m_types  .insert(std::make_pair(p_extension,  MediaType(p_logging,p_extension,p_contentType)));
+  m_content.insert(std::make_pair(p_contentType,MediaType(p_logging,p_extension,p_contentType)));
 }
 
 /* static */ XString  
@@ -226,15 +232,15 @@ MediaTypes::FindContentTypeByExtension(XString p_extension)
   {
     return it->second.GetContentType();
   }
-  return "";
+  return _T("");
 }
 
 /* static */ XString
 MediaTypes::FindContentTypeByResouceName(XString p_resource)
 {
   CheckValid();
-  EnsureFile ensure;
-  XString extens = ensure.ExtensionPart(p_resource);
+  WinFile ensure(p_resource);
+  XString extens = ensure.GetFilenamePartExtension();
   return FindContentTypeByExtension(extens);
 }
 
@@ -251,16 +257,29 @@ MediaTypes::FindMediaTypeByExtension(XString p_extension)
   return nullptr;
 }
 
+/*static */ MediaType*
+MediaTypes::FindMediaTypeByContentType(XString p_contentType)
+{
+  p_contentType.MakeLower();
+  MediaTypeMap::iterator it = g_mt_instance->m_content.find(p_contentType);
+
+  if(it != g_mt_instance->m_content.end())
+  {
+    return &it->second;
+  }
+  return nullptr;
+}
+
 /* static */ XString  
 MediaTypes::FindExtensionByContentType(XString p_contentType)
 {
-  for(auto& mt : g_mt_instance->m_types)
+  p_contentType.MakeLower();
+  MediaTypeMap::iterator it = g_mt_instance->m_content.find(p_contentType);
+
+  if (it != g_mt_instance->m_content.end())
   {
-    if(mt.second.GetContentType().CompareNoCase(p_contentType) == 0)
-    {
-      return mt.first;
-    }
+    return it->first;
   }
-  return "";
+  return _T("");
 }
 

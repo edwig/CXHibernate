@@ -191,24 +191,24 @@ CXAttribute::SetHasNotNull(bool p_notNull)
 bool
 CXAttribute::SaveMetaInfo(XMLMessage& p_message,XMLElement* p_elem)
 {
-  XMLElement* attrib = p_message.AddElement(p_elem,"attribute",XDT_String,"");
+  XMLElement* attrib = p_message.AddElement(p_elem,_T("attribute"),XDT_String,_T(""));
   CString datatype = CXDataTypeToConfig(m_datatype);
 
-  p_message.SetAttribute(attrib,"name",    m_name);
-  p_message.SetAttribute(attrib,"datatype",datatype);
+  p_message.SetAttribute(attrib,_T("name"),    m_name);
+  p_message.SetAttribute(attrib,_T("datatype"),datatype);
 
-  if(m_maxlength) p_message.SetAttribute(attrib,"maxlength",m_maxlength);
-  if(m_generator) p_message.SetAttribute(attrib,"generator",m_generator);
-  if(m_isPrimary) p_message.SetAttribute(attrib,"isprimary",m_isPrimary);
-  if(m_isForeign) p_message.SetAttribute(attrib,"isforeign",m_isForeign);
-  if(m_notNull)   p_message.SetAttribute(attrib,"not-null", m_notNull);
+  if(m_maxlength) p_message.SetAttribute(attrib,_T("maxlength"),m_maxlength);
+  if(m_generator) p_message.SetAttribute(attrib,_T("generator"),m_generator);
+  if(m_isPrimary) p_message.SetAttribute(attrib,_T("isprimary"),m_isPrimary);
+  if(m_isForeign) p_message.SetAttribute(attrib,_T("isforeign"),m_isForeign);
+  if(m_notNull)   p_message.SetAttribute(attrib,_T("not-null"), m_notNull);
   if(!m_dbs_column.IsEmpty())
   {
-    p_message.SetAttribute(attrib,"dbs_column",m_dbs_column);
+    p_message.SetAttribute(attrib,_T("dbs_column"),m_dbs_column);
   }
   if(!m_default.IsEmpty())
   {
-    p_message.SetAttribute(attrib,"default",m_default);
+    p_message.SetAttribute(attrib,_T("default"),m_default);
   }
   return true;
 }
@@ -217,16 +217,16 @@ CXAttribute::SaveMetaInfo(XMLMessage& p_message,XMLElement* p_elem)
 bool
 CXAttribute::LoadMetaInfo(XMLMessage& p_message,XMLElement* p_elem)
 {
-  CString type = p_message.GetAttribute(p_elem,"datatype");
+  CString type = p_message.GetAttribute(p_elem,_T("datatype"));
   m_datatype = CXConfigToDataType(type);
 
-  m_maxlength  = p_message.GetAttributeInteger(p_elem,"maxlength");
-  m_generator  = p_message.GetAttributeBoolean(p_elem,"generator");
-  m_isPrimary  = p_message.GetAttributeBoolean(p_elem,"isprimary");
-  m_isForeign  = p_message.GetAttributeBoolean(p_elem,"isforeign");
-  m_notNull    = p_message.GetAttributeBoolean(p_elem,"not-null");
-  m_dbs_column = p_message.GetAttribute       (p_elem,"dbs_column");
-  m_notNull    = p_message.GetAttribute       (p_elem,"default");
+  m_maxlength  = p_message.GetAttributeInteger(p_elem,_T("maxlength"));
+  m_generator  = p_message.GetAttributeBoolean(p_elem,_T("generator"));
+  m_isPrimary  = p_message.GetAttributeBoolean(p_elem,_T("isprimary"));
+  m_isForeign  = p_message.GetAttributeBoolean(p_elem,_T("isforeign"));
+  m_notNull    = p_message.GetAttributeBoolean(p_elem,_T("not-null"));
+  m_dbs_column = p_message.GetAttribute       (p_elem,_T("dbs_column"));
+  m_notNull    = p_message.GetAttribute       (p_elem,_T("default"));
 
   return false;
 }
@@ -236,9 +236,9 @@ CXAttribute::LoadMetaInfo(XMLMessage& p_message,XMLElement* p_elem)
 
 CXAssocType CXStringToAssocType(CString p_type)
 {
-  if(p_type.Compare("many-to-one")  == 0) return ASSOC_MANY_TO_ONE;
-  if(p_type.Compare("one-to-many")  == 0) return ASSOC_ONE_TO_MANY;
-  if(p_type.Compare("many-to-many") == 0) return ASSOC_MANY_TO_MANY;
+  if(p_type.Compare(_T("many-to-one"))  == 0) return ASSOC_MANY_TO_ONE;
+  if(p_type.Compare(_T("one-to-many"))  == 0) return ASSOC_ONE_TO_MANY;
+  if(p_type.Compare(_T("many-to-many")) == 0) return ASSOC_MANY_TO_MANY;
 
   return ASSOC_UNKNOWN;
 }
@@ -247,9 +247,9 @@ CString CXAssocTypeToSTring(CXAssocType p_type)
 {
   switch(p_type)
   {
-    case ASSOC_MANY_TO_ONE:  return "many-to-one";
-    case ASSOC_ONE_TO_MANY:  return "one-to-many";
-    case ASSOC_MANY_TO_MANY: return "many-to-many";
+    case ASSOC_MANY_TO_ONE:  return _T("many-to-one");
+    case ASSOC_ONE_TO_MANY:  return _T("one-to-many");
+    case ASSOC_MANY_TO_MANY: return _T("many-to-many");
   }
-  return "";
+  return _T("");
 }

@@ -36,45 +36,45 @@ static char THIS_FILE[] = __FILE__;
 // All datatypes to ODBC types
 CXType cxtypes[] =
 {
-  { "CString",      SQL_C_CHAR     }
- ,{ "int",          SQL_C_LONG     }
- ,{ "int",          SQL_C_SLONG    }
- ,{ "bool",         SQL_C_BIT      }
- ,{ "bcd",          SQL_C_NUMERIC  }
- ,{ "uint",         SQL_C_ULONG    }
- ,{ "short",        SQL_C_SHORT    }
- ,{ "short",        SQL_C_SSHORT   }
- ,{ "ushort",       SQL_C_USHORT   }
- ,{ "long",         SQL_C_LONG     }
- ,{ "ulong",        SQL_C_ULONG    }
- ,{ "char",         SQL_C_TINYINT  }
- ,{ "char",         SQL_C_STINYINT }
- ,{ "uchar",        SQL_C_UTINYINT }
- ,{ "bigint",       SQL_C_SBIGINT  }
- ,{ "ubigint",      SQL_C_UBIGINT  }
- ,{ "float",        SQL_C_FLOAT    }
- ,{ "double",       SQL_C_DOUBLE   }
- ,{ "SQLDate",      SQL_C_DATE            }
- ,{ "SQLDate",      SQL_C_TYPE_DATE       }
- ,{ "SQLTime",      SQL_C_TIME            }
- ,{ "SQLTime",      SQL_C_TYPE_TIME       }
- ,{ "SQLTimestamp", SQL_C_TIMESTAMP       }
- ,{ "SQLTimestamp", SQL_C_TYPE_TIMESTAMP  }
- ,{ "SQLGuid",      SQL_C_GUID            }
- ,{ "SQLVariant",   0                     }
- ,{ "SQLInterval",  SQL_C_INTERVAL_DAY_TO_SECOND    }
- ,{ "SQLInterval",  SQL_C_INTERVAL_YEAR_TO_MONTH    }
- ,{ "SQLInterval",  SQL_C_INTERVAL_HOUR_TO_SECOND   }
- ,{ "SQLInterval",  SQL_C_INTERVAL_HOUR_TO_MINUTE   }
- ,{ "SQLInterval",  SQL_C_INTERVAL_DAY_TO_MINUTE    }
- ,{ "SQLInterval",  SQL_C_INTERVAL_DAY_TO_HOUR      }
- ,{ "SQLInterval",  SQL_C_INTERVAL_MINUTE_TO_SECOND }
- ,{ "SQLInterval",  SQL_C_INTERVAL_YEAR             }
- ,{ "SQLInterval",  SQL_C_INTERVAL_MONTH            }
- ,{ "SQLInterval",  SQL_C_INTERVAL_DAY              }
- ,{ "SQLInterval",  SQL_C_INTERVAL_HOUR             }
- ,{ "SQLInterval",  SQL_C_INTERVAL_MINUTE           }
- ,{ "SQLInterval",  SQL_C_INTERVAL_SECOND           }
+  { _T("CString"),      SQL_C_CHAR     }
+ ,{ _T("int"),          SQL_C_LONG     }
+ ,{ _T("int"),          SQL_C_SLONG    }
+ ,{ _T("bool"),         SQL_C_BIT      }
+ ,{ _T("bcd"),          SQL_C_NUMERIC  }
+ ,{ _T("uint"),         SQL_C_ULONG    }
+ ,{ _T("short"),        SQL_C_SHORT    }
+ ,{ _T("short"),        SQL_C_SSHORT   }
+ ,{ _T("ushort"),       SQL_C_USHORT   }
+ ,{ _T("long"),         SQL_C_LONG     }
+ ,{ _T("ulong"),        SQL_C_ULONG    }
+ ,{ _T("char"),         SQL_C_TINYINT  }
+ ,{ _T("char"),         SQL_C_STINYINT }
+ ,{ _T("uchar"),        SQL_C_UTINYINT }
+ ,{ _T("bigint"),       SQL_C_SBIGINT  }
+ ,{ _T("ubigint"),      SQL_C_UBIGINT  }
+ ,{ _T("float"),        SQL_C_FLOAT    }
+ ,{ _T("double"),       SQL_C_DOUBLE   }
+ ,{ _T("SQLDate"),      SQL_C_DATE            }
+ ,{ _T("SQLDate"),      SQL_C_TYPE_DATE       }
+ ,{ _T("SQLTime"),      SQL_C_TIME            }
+ ,{ _T("SQLTime"),      SQL_C_TYPE_TIME       }
+ ,{ _T("SQLTimestamp"), SQL_C_TIMESTAMP       }
+ ,{ _T("SQLTimestamp"), SQL_C_TYPE_TIMESTAMP  }
+ ,{ _T("SQLGuid"),      SQL_C_GUID            }
+ ,{ _T("SQLVariant"),   0                     }
+ ,{ _T("SQLInterval"),  SQL_C_INTERVAL_DAY_TO_SECOND    }
+ ,{ _T("SQLInterval"),  SQL_C_INTERVAL_YEAR_TO_MONTH    }
+ ,{ _T("SQLInterval"),  SQL_C_INTERVAL_HOUR_TO_SECOND   }
+ ,{ _T("SQLInterval"),  SQL_C_INTERVAL_HOUR_TO_MINUTE   }
+ ,{ _T("SQLInterval"),  SQL_C_INTERVAL_DAY_TO_MINUTE    }
+ ,{ _T("SQLInterval"),  SQL_C_INTERVAL_DAY_TO_HOUR      }
+ ,{ _T("SQLInterval"),  SQL_C_INTERVAL_MINUTE_TO_SECOND }
+ ,{ _T("SQLInterval"),  SQL_C_INTERVAL_YEAR             }
+ ,{ _T("SQLInterval"),  SQL_C_INTERVAL_MONTH            }
+ ,{ _T("SQLInterval"),  SQL_C_INTERVAL_DAY              }
+ ,{ _T("SQLInterval"),  SQL_C_INTERVAL_HOUR             }
+ ,{ _T("SQLInterval"),  SQL_C_INTERVAL_MINUTE           }
+ ,{ _T("SQLInterval"),  SQL_C_INTERVAL_SECOND           }
 };
 
 // Types names are Case-Sensitive!!
@@ -109,47 +109,47 @@ CXDataTypeToString(int p_datatype)
     }
     ++types;
   }
-  return "var";
+  return _T("var");
 }
 
 CXType configtypes[] =
 {
-  { "string",       SQL_C_CHAR      }
- ,{ "int",          SQL_C_LONG      }
- ,{ "int",          SQL_C_SLONG     }
- ,{ "bool",         SQL_C_BIT       }
- ,{ "bcd",          SQL_C_NUMERIC   }
- ,{ "uint",         SQL_C_ULONG     }
- ,{ "short",        SQL_C_SHORT     }
- ,{ "short",        SQL_C_SSHORT    }
- ,{ "ushort",       SQL_C_USHORT    }
- ,{ "long",         SQL_C_LONG      }
- ,{ "ulong",        SQL_C_ULONG     }
- ,{ "tinyint",      SQL_C_TINYINT   }
- ,{ "tinyint",      SQL_C_STINYINT  }
- ,{ "utinyint",     SQL_C_UTINYINT  }
- ,{ "bigint",       SQL_C_SBIGINT   }
- ,{ "ubigint",      SQL_C_UBIGINT   }
- ,{ "float",        SQL_C_FLOAT     }
- ,{ "double",       SQL_C_DOUBLE    }
- ,{ "date",         SQL_C_DATE      }
- ,{ "time",         SQL_C_TIME      }
- ,{ "timestamp",    SQL_C_TIMESTAMP }
- ,{ "guid",         SQL_C_GUID      }
- ,{ "var",          0               }
- ,{ "interval_day_to_second",     SQL_C_INTERVAL_DAY_TO_SECOND    }
- ,{ "interval_year_to_month",     SQL_C_INTERVAL_YEAR_TO_MONTH    }
- ,{ "interval_hour_to_second",    SQL_C_INTERVAL_HOUR_TO_SECOND   }
- ,{ "interval_hour_to_minute",    SQL_C_INTERVAL_HOUR_TO_MINUTE   }
- ,{ "interval_day_to_minute",     SQL_C_INTERVAL_DAY_TO_MINUTE    }
- ,{ "interval_day_to_hour",       SQL_C_INTERVAL_DAY_TO_HOUR      }
- ,{ "interval_minute_to_second",  SQL_C_INTERVAL_MINUTE_TO_SECOND }
- ,{ "interval_year",              SQL_C_INTERVAL_YEAR             }
- ,{ "interval_month",             SQL_C_INTERVAL_MONTH            }
- ,{ "interval_day",               SQL_C_INTERVAL_DAY              }
- ,{ "interval_hour",              SQL_C_INTERVAL_HOUR             }
- ,{ "interval_minute",            SQL_C_INTERVAL_MINUTE           }
- ,{ "interval_second",            SQL_C_INTERVAL_SECOND           }
+  { _T("string"),       SQL_C_CHAR      }
+ ,{ _T("int"),          SQL_C_LONG      }
+ ,{ _T("int"),          SQL_C_SLONG     }
+ ,{ _T("bool"),         SQL_C_BIT       }
+ ,{ _T("bcd"),          SQL_C_NUMERIC   }
+ ,{ _T("uint"),         SQL_C_ULONG     }
+ ,{ _T("short"),        SQL_C_SHORT     }
+ ,{ _T("short"),        SQL_C_SSHORT    }
+ ,{ _T("ushort"),       SQL_C_USHORT    }
+ ,{ _T("long"),         SQL_C_LONG      }
+ ,{ _T("ulong"),        SQL_C_ULONG     }
+ ,{ _T("tinyint"),      SQL_C_TINYINT   }
+ ,{ _T("tinyint"),      SQL_C_STINYINT  }
+ ,{ _T("utinyint"),     SQL_C_UTINYINT  }
+ ,{ _T("bigint"),       SQL_C_SBIGINT   }
+ ,{ _T("ubigint"),      SQL_C_UBIGINT   }
+ ,{ _T("float"),        SQL_C_FLOAT     }
+ ,{ _T("double"),       SQL_C_DOUBLE    }
+ ,{ _T("date"),         SQL_C_DATE      }
+ ,{ _T("time"),         SQL_C_TIME      }
+ ,{ _T("timestamp"),    SQL_C_TIMESTAMP }
+ ,{ _T("guid"),         SQL_C_GUID      }
+ ,{ _T("var"),          0               }
+ ,{ _T("interval_day_to_second"),     SQL_C_INTERVAL_DAY_TO_SECOND    }
+ ,{ _T("interval_year_to_month"),     SQL_C_INTERVAL_YEAR_TO_MONTH    }
+ ,{ _T("interval_hour_to_second"),    SQL_C_INTERVAL_HOUR_TO_SECOND   }
+ ,{ _T("interval_hour_to_minute"),    SQL_C_INTERVAL_HOUR_TO_MINUTE   }
+ ,{ _T("interval_day_to_minute"),     SQL_C_INTERVAL_DAY_TO_MINUTE    }
+ ,{ _T("interval_day_to_hour"),       SQL_C_INTERVAL_DAY_TO_HOUR      }
+ ,{ _T("interval_minute_to_second"),  SQL_C_INTERVAL_MINUTE_TO_SECOND }
+ ,{ _T("interval_year"),              SQL_C_INTERVAL_YEAR             }
+ ,{ _T("interval_month"),             SQL_C_INTERVAL_MONTH            }
+ ,{ _T("interval_day"),               SQL_C_INTERVAL_DAY              }
+ ,{ _T("interval_hour"),              SQL_C_INTERVAL_HOUR             }
+ ,{ _T("interval_minute"),            SQL_C_INTERVAL_MINUTE           }
+ ,{ _T("interval_second"),            SQL_C_INTERVAL_SECOND           }
 };
 
 int 
@@ -181,5 +181,5 @@ CXDataTypeToConfig(int p_datatype)
     }
     ++types;
   }
-  return "var";
+  return _T("var");
 }

@@ -2,7 +2,7 @@
 //
 // File: SQLAssociation.cpp
 //
-// Copyright (c) 1998-2022 ir. W.E. Huisman
+// Copyright (c) 1998-2025 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy of 
@@ -114,9 +114,9 @@ SQLAssociation::GetAssocationName(int p_column)
   {
     // Returns "master.id->detail.id_master"
     XString name;
-    name = m_master->GetName() + "." +
-           m_assocs[p_column]->m_primary + "->" + 
-           m_detail->GetName() + "." + 
+    name = m_master->GetName() + _T(".") +
+           m_assocs[p_column]->m_primary + _T("->") + 
+           m_detail->GetName() + _T(".") + 
            m_assocs[p_column]->m_foreign;
     return name;
   }
@@ -148,7 +148,7 @@ SQLAssociation::BasicChecks()
     if(m_assocs.size() > 0)
     {
       result = true;
-      for(auto& key : m_assocs)
+      for(const auto key : m_assocs)
       {
         if(!key->m_value)
         {
@@ -166,7 +166,7 @@ SQLAssociation::GetSQLCondition()
   // See if we can do it
   if(!m_master || !m_detail)
   {
-    return "";
+    return _T("");
   }
   XString malias = m_master->GetPrimaryAlias();
   XString dalias = m_detail->GetPrimaryAlias();
@@ -181,17 +181,18 @@ SQLAssociation::GetSQLCondition()
   // Check if both sides are set
   if(malias.IsEmpty() || dalias.IsEmpty())
   {
-    return "";
+    return _T("");
   }
-  XString condition("(");
+  XString condition(_T("("));
   bool multi(false);
-  for(auto& assoc : m_assocs)
+  for(const auto assoc : m_assocs)
   {
     if(multi)
     {
-      condition += " AND ";
+      condition += _T(" AND ");
     }
-    condition += malias + "." + assoc->m_primary + " = " + dalias + "." + assoc->m_foreign;
+    condition += malias + _T(".") + assoc->m_primary + _T(" = ") + dalias + _T(".") + assoc->m_foreign;
+    multi = true;
   }
   condition += ")";
   return condition;
@@ -199,7 +200,7 @@ SQLAssociation::GetSQLCondition()
 
 
 SQLRecord*
-SQLAssociation::FollowToMaster()
+SQLAssociation::FollowToMaster(bool p_all /*=true*/)
 {
   // Check if we can do the update
   if(!BasicChecks())
@@ -208,21 +209,22 @@ SQLAssociation::FollowToMaster()
   }
 
   // Create filter-set and add to the master
-  SQLFilterSet* filters = new SQLFilterSet();
+  // If we want all records, reset the filters
+  if(p_all)
+  {
+    m_master->ResetFilters();
+  }
   for(unsigned ind = 0;ind < m_assocs.size();++ind)
   {
     SQLFilter filter(m_assocs[ind]->m_primary,OP_Equal,m_assocs[ind]->m_value);
-    filters->AddFilter(&filter);
+    m_master->SetFilter(filter);
   }
-
-  m_master->ResetFilters();
-  m_master->SetFilters(filters);
 
   bool result = m_master->IsOpen() ? m_master->Append() : m_master->Open();
   if(result)
   {
     // FindBy Filter (primary = true)
-    return m_master->FindObjectFilter(*filters,true);
+    return m_master->FindObjectFilter(true);
   }
   return nullptr;
 }
@@ -230,7 +232,7 @@ SQLAssociation::FollowToMaster()
 // Find a record-set of details
 // Caller must 'delete' the RecordSet
 RecordSet*
-SQLAssociation::FollowToDetails()
+SQLAssociation::FollowToDetails(bool p_all /*=true*/)
 {
   // Check if we can do the update
   if(!BasicChecks())
@@ -239,21 +241,21 @@ SQLAssociation::FollowToDetails()
   }
 
   // Create filter-set and add to the detail
-  SQLFilterSet* filters = new SQLFilterSet();
+  // If we want all records, reset the filters
+  if(p_all)
+  {
+    m_detail->ResetFilters();
+  }
   for(unsigned ind = 0;ind < m_assocs.size();++ind)
   {
     SQLFilter filter(m_assocs[ind]->m_foreign,OP_Equal,m_assocs[ind]->m_value);
-    filters->AddFilter(filter);
+    m_detail->SetFilter(filter);
   }
-
-  // Begin a new filter set
-  m_detail->ResetFilters();
-  m_detail->SetFilters(filters);
 
   bool result = m_detail->IsOpen() ? m_detail->Append() : m_detail->Open();
   if(result)
   {
-    return m_detail->FindRecordSet(*filters);
+    return m_detail->FindRecordSet();
   }
   return nullptr;
 }

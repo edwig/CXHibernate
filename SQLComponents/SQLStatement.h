@@ -2,7 +2,7 @@
 //
 // File: SQLStatement.h
 //
-// Copyright (c) 1998-2022 ir. W.E. Huisman
+// Copyright (c) 1998-2025 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy of 
@@ -35,7 +35,7 @@ public :
   SQLStatement(int p_number,char* p_statement,int p_minimum,int p_maximum);
  ~SQLStatement();
   bool    CheckRecords(int p_records);
-  void    AddToStatement(XString& p_statement);
+  void    AddToStatement(const XString& p_statement);
 
   // SETTERS
 

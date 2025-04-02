@@ -3,14 +3,14 @@
 ; File:     MarlinModule\Installer_64BIts.nsi
 ; Author:   W.E. Huisman
 ;
-; Copyright (c) 2019 Edwig Huisman
+; Copyright (c) 2019-2024 Edwig Huisman
 ;
-; Date of last change: 10-01-2022
-; Version:             7.3
+; Date of last change: 14-03-2025
+; Version:             8.4.1
 ;-------------------------------------------------------
  !define PRODUCT_NAME                         "Marlin IIS Module 64Bits"
- !define PRODUCT_VERSION                      "7.3.0"
- !define PRODUCT_EXT                          "730"
+ !define PRODUCT_VERSION                      "8.4.1"
+ !define PRODUCT_EXT                          "841"
  !define PRODUCT_PUBLISHER                    "Edwig Huisman"
  !define PRODUCT_WEB_SITE                     "https://github.com/Edwig/Marlin"
  !define PRODUCT_DIR_REGKEY                   "Software\Microsoft\Windows\CurrentVersion\App Paths\${PRODUCT_NAME}"
@@ -22,7 +22,7 @@
  !define LogFile                              "MarlinIISModule_64bits"
   
  ; Directories containing our files
- !define InputDirectory64                     "C:\Develop\Marlin\BinRelease_x64"
+ !define InputDirectory64                     "C:\Develop\Marlin\BinReleaseUnicode_x64"
  !define ExtraDirectory                       "C:\Develop\Marlin\ExtraParts"
  !define RedistMap                            "C:\Develop\Marlin\Documentation"
 
@@ -157,18 +157,18 @@ Section "MarlinModule"
 
  ; Registering the module
  !insertmacro LogDetail "Registering the MarlinModule with IIS"
- ExecWait '"$INSTDIR\appcmd.exe" install module /name:MarlinModule${PRODUCT_EXT} /image:"$INSTDIR\MarlinModule${PRODUCT_EXT}.dll"' $0
+ ExecWait '"$INSTDIR\appcmd.exe" install module /name:MarlinModule${PRODUCT_EXT} /image:"%windir%\system32\inetsrv\MarlinModule${PRODUCT_EXT}.dll"' $0
  !insertmacro LogDetail "Registering MarlinModule${PRODUCT_EXT} with appcmd returned: $0"
 
 SectionEnd
 
 ;--------------------------------------------------------------------------------------------------------
 Section -Post
- WriteUninstaller "$INSTDIR\uninstall ${PRODUCT_NAME} ${PRODUCT_VERSION}.exe"
+ WriteUninstaller "$INSTDIR\uninstall ${PRODUCT_NAME} ${PRODUCT_VERSION}U.exe"
  
  WriteRegStr ${PRODUCT_UNINST_ROOT_KEY} "${PRODUCT_UNINST_KEY}" "DisplayName"     "$(^Name)"
- WriteRegStr ${PRODUCT_UNINST_ROOT_KEY} "${PRODUCT_UNINST_KEY}" "UninstallString" "$INSTDIR\uninstall ${PRODUCT_NAME} ${PRODUCT_VERSION}.exe"
- WriteRegStr ${PRODUCT_UNINST_ROOT_KEY} "${PRODUCT_UNINST_KEY}" "DisplayIcon"     "$INSTDIR\uninstall ${PRODUCT_NAME} ${PRODUCT_VERSION}.exe"
+ WriteRegStr ${PRODUCT_UNINST_ROOT_KEY} "${PRODUCT_UNINST_KEY}" "UninstallString" "$INSTDIR\uninstall ${PRODUCT_NAME} ${PRODUCT_VERSION}U.exe"
+ WriteRegStr ${PRODUCT_UNINST_ROOT_KEY} "${PRODUCT_UNINST_KEY}" "DisplayIcon"     "$INSTDIR\uninstall ${PRODUCT_NAME} ${PRODUCT_VERSION}U.exe"
  WriteRegStr ${PRODUCT_UNINST_ROOT_KEY} "${PRODUCT_UNINST_KEY}" "DisplayVersion"  "${PRODUCT_VERSION}"
  WriteRegStr ${PRODUCT_UNINST_ROOT_KEY} "${PRODUCT_UNINST_KEY}" "URLInfoAbout"    "${PRODUCT_WEB_SITE}"
  WriteRegStr ${PRODUCT_UNINST_ROOT_KEY} "${PRODUCT_UNINST_KEY}" "Publisher"       "${PRODUCT_PUBLISHER}"

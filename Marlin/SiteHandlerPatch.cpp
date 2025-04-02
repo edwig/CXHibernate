@@ -4,7 +4,7 @@
 //
 // Marlin Server: Internet server/client
 // 
-// Copyright (c) 2014-2022 ir. W.E. Huisman
+// Copyright (c) 2014-2024 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -33,10 +33,12 @@
 #include <winhttp.h>
 #include <io.h>
 
+#ifdef _AFX
 #ifdef _DEBUG
 #define new DEBUG_NEW
 #undef THIS_FILE
 static char THIS_FILE[] = __FILE__;
+#endif
 #endif
 
 bool
@@ -65,16 +67,16 @@ SiteHandlerPatch::Handle(HTTPMessage* p_message)
 {
   // Getting the path of the file
   XString pathname = m_site->GetWebroot() + p_message->GetAbsoluteResource();
-  DWORD error = 0;
 
   p_message->Reset();
   p_message->SetStatus(HTTP_STATUS_DENIED);
 
   // Check existence
-  if(_access(pathname,0) == 0)
+  if(_taccess(pathname,0) == 0)
   {
+    DWORD error = 0;
     // Check for write access
-    if(_access(pathname,2) == 0)
+    if(_taccess(pathname,2) == 0)
     {
       // Save file in temporary buffer
       FileBuffer tmpBuffer;
@@ -86,7 +88,7 @@ SiteHandlerPatch::Handle(HTTPMessage* p_message)
         {
           // Now append the original file
           FILE* file = nullptr;
-          fopen_s(&file,pathname,"a");
+          _tfopen_s(&file,pathname,_T("a"));
           if(file)
           {
             uchar* buffer = nullptr;
@@ -108,7 +110,7 @@ SiteHandlerPatch::Handle(HTTPMessage* p_message)
             if(error == 0)
             {
               p_message->SetStatus(HTTP_STATUS_OK);
-              SITE_DETAILLOGS("HTTP MERGED: ",pathname);
+              SITE_DETAILLOGS(_T("HTTP MERGED: "),pathname);
             }
             else
             {
@@ -145,7 +147,7 @@ SiteHandlerPatch::Handle(HTTPMessage* p_message)
     {
       // Server error
       XString text;
-      text.Format("FAILED: HTTP PATCH: %s",pathname.GetString());
+      text.Format(_T("FAILED: HTTP PATCH: %s"),pathname.GetString());
       SITE_ERRORLOG(error,text);
     }
   }
@@ -154,7 +156,7 @@ SiteHandlerPatch::Handle(HTTPMessage* p_message)
     // File does not exist, or no read access
     p_message->SetStatus(HTTP_STATUS_NOT_FOUND);
     XString text;
-    text.Format("HTTP PATCH: File not found: %s\n",pathname.GetString());
+    text.Format(_T("HTTP PATCH: File not found: %s\n"),pathname.GetString());
     SITE_ERRORLOG(ERROR_FILE_NOT_FOUND,text);
   }
   // Ready with the put

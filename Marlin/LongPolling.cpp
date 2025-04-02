@@ -4,7 +4,7 @@
 //
 // Marlin Server: Internet server/client
 // 
-// Copyright (c) 2014-2022 ir. W.E. Huisman
+// Copyright (c) 2014-2024 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -32,20 +32,22 @@
 #include "AutoCritical.h"
 #include "Base64.h"
 
+#ifdef _AFX
 #ifdef _DEBUG
 #define new DEBUG_NEW
 #undef THIS_FILE
 static char THIS_FILE[] = __FILE__;
 #endif
+#endif
 
 // Logging via the client
-#define DETAILLOG1(text)        if(m_logfile) m_logfile->AnalysisLog(__FUNCTION__,LogType::LOG_INFO,false,text)
-#define DETAILLOGS(text,extra)  if(m_logfile) m_logfile->AnalysisLog(__FUNCTION__,LogType::LOG_INFO,true, text,extra)
-#define DETAILLOGV(text,...)    if(m_logfile) m_logfile->AnalysisLog(__FUNCTION__,LogType::LOG_INFO,true, text,__VA_ARGS__)
-#define WARNINGLOG(text,...)    if(m_logfile) m_logfile->AnalysisLog(__FUNCTION__,LogType::LOG_WARN,true, text,__VA_ARGS__)
-#define ERRORLOG(code,text)     if(m_logfile) m_logfile->AnalysisLog(__FUNCTION__,LogType::LOG_ERROR,true,text,code)
+#define DETAILLOG1(text)        if(m_logfile) m_logfile->AnalysisLog(_T(__FUNCTION__),LogType::LOG_INFO,false,text)
+#define DETAILLOGS(text,extra)  if(m_logfile) m_logfile->AnalysisLog(_T(__FUNCTION__),LogType::LOG_INFO,true, text,extra)
+#define DETAILLOGV(text,...)    if(m_logfile) m_logfile->AnalysisLog(_T(__FUNCTION__),LogType::LOG_INFO,true, text,__VA_ARGS__)
+#define WARNINGLOG(text,...)    if(m_logfile) m_logfile->AnalysisLog(_T(__FUNCTION__),LogType::LOG_WARN,true, text,__VA_ARGS__)
+#define ERRORLOG(code,text)     if(m_logfile) m_logfile->AnalysisLog(_T(__FUNCTION__),LogType::LOG_ERROR,true,text,code)
 
-static XString polling_namespace = "http://www.marlin.org/polling";
+static XString polling_namespace = _T("http://www.marlin.org/polling");
 
 LongPolling::LongPolling()
 {
@@ -71,7 +73,7 @@ LongPolling::StartLongPolling(XString p_session,XString p_cookie,XString p_secre
     return false;
   }
 
-  DETAILLOGV("Starting long-polling on: %s",m_url.GetString());
+  DETAILLOGV(_T("Starting long-polling on: %s"),m_url.GetString());
 
   // Start polling thread and fire first message
   if(StartPollingThread())
@@ -86,10 +88,10 @@ LongPolling::StartLongPolling(XString p_session,XString p_cookie,XString p_secre
 void 
 LongPolling::StopLongPolling()
 {
-  DETAILLOG1("Stopping the long-polling: Send closing message.");
+  DETAILLOG1(_T("Stopping the long-polling: Send closing message."));
   int status = SendCloseMessage();
   // Log the status
-  DETAILLOGV("Long polling closed with status: %d",status);
+  DETAILLOGV(_T("Long polling closed with status: %d"),status);
 
   // Kick the worker bee out of work
   m_receiving = false;
@@ -106,6 +108,8 @@ LongPolling::StopLongPolling()
   }
   if(m_thread)
   {
+    // Since waiting on the thread did not work, we must preemptively terminate it.
+#pragma warning(disable:6258)
     TerminateThread(m_thread,3);
     m_thread = NULL;
   }
@@ -115,7 +119,7 @@ void
 LongPolling::SetURL(XString p_url)
 {
   m_url = p_url;
-  DETAILLOGV("Registered long-polling URL: %s",m_url.GetString());
+  DETAILLOGV(_T("Registered long-polling URL: %s"),m_url.GetString());
 }
 
 void 
@@ -125,7 +129,7 @@ LongPolling::SetApplication(LPFN_EVENTCALLBACK p_callback,void* p_application)
   m_application = p_application;
   if(m_callback && m_application)
   {
-    DETAILLOG1("Registered application callback.");
+    DETAILLOG1(_T("Registered application callback."));
   }
 }
 
@@ -151,7 +155,7 @@ LongPolling::RegisterEvent(XString p_payload,EvtType p_type,int p_number /*=0*/)
   event->m_number  = p_number;
   event->m_sent    = 0;
 
-  DETAILLOGV("Register incoming event [%d] %s",p_number,p_payload.GetString());
+  DETAILLOGV(_T("Register incoming event [%d] %s"),p_number,p_payload.GetString());
 
   if(m_callback && m_application)
   {
@@ -172,7 +176,7 @@ LongPolling::RegisterEvent(XString p_payload,EvtType p_type,int p_number /*=0*/)
 void 
 LongPolling::PostEvent(LTEvent* p_event)
 {
-  DETAILLOGV("Post event to server: %s",p_event->m_payload.GetString());
+  DETAILLOGV(_T("Post event to server: %s"),p_event->m_payload.GetString());
 
   switch(p_event->m_type)
   {
@@ -223,27 +227,28 @@ LongPolling::AskForMessages(LTEvent* p_event /*=nullptr*/)
   AutoCritSec lock(&m_lock);
 
   XString url(m_url);
-  XString action("GetMessage");
-  url += "/" + action;
+  XString action(_T("GetMessage"));
+  url += _T("/") + action;
   SOAPMessage msg(polling_namespace,action,SoapVersion::SOAP_12,url);
-  msg.SetParameter("Acknowledged",m_lastNumber);
+  msg.SetParameter(_T("Acknowledged"),m_lastNumber);
   msg.SetCookie(m_cookie,m_secret);
 
   // Add an optional message to the server
   if(p_event)
   {
-    msg.SetParameter("Type",   LTEvent::EventTypeToString(p_event->m_type));
+    msg.SetParameter(_T("Type"),   LTEvent::EventTypeToString(p_event->m_type));
     if(p_event->m_type == EvtType::EV_Binary)
     {
-      msg.SetParameter("Message",Base64::Encrypt(p_event->m_payload));
+      Base64 base;
+      msg.SetParameter(_T("Message"),base.Encrypt(p_event->m_payload));
     }
     else
     {
-      msg.SetParameter("Message", p_event->m_payload);
+      msg.SetParameter(_T("Message"), p_event->m_payload);
     }
   }
 
-  DETAILLOG1("Asking server for message.");
+  DETAILLOG1(_T("Asking server for message."));
 
   bool result = m_client.Send(&msg);
   if(result)
@@ -251,10 +256,10 @@ LongPolling::AskForMessages(LTEvent* p_event /*=nullptr*/)
     if(msg.GetFaultActor().IsEmpty())
     {
       // Legal answer received!
-      bool empty = msg.GetParameterBoolean("Empty");
-      int number = msg.GetParameterInteger("Number");
-      XString eventType = msg.GetParameter("Type");
-      XString payload   = msg.GetParameter("Message");
+      bool empty = msg.GetParameterBoolean(_T("Empty"));
+      int number = msg.GetParameterInteger(_T("Number"));
+      XString eventType = msg.GetParameter(_T("Type"));
+      XString payload   = msg.GetParameter(_T("Message"));
       EvtType type      = LTEvent::StringToEventType(eventType);
 
       // OK. End of queue reached. Wait longer
@@ -264,7 +269,7 @@ LongPolling::AskForMessages(LTEvent* p_event /*=nullptr*/)
       }
       if(!m_openSeen && type != EvtType::EV_Open)
       {
-        RegisterEvent("",EvtType::EV_Open,0);
+        RegisterEvent(_T(""),EvtType::EV_Open,0);
         m_openSeen = true;
       }
       // Post event
@@ -284,7 +289,7 @@ LongPolling::AskForMessages(LTEvent* p_event /*=nullptr*/)
     // No answer or channel now closed
     XString error,message;
     m_client.GetError(&error);
-    message.Format("Error while asking for message. HTTP status [%d] %s",m_client.GetStatus(),error.GetString());
+    message.Format(_T("Error while asking for message. HTTP status [%d] %s"),m_client.GetStatus(),error.GetString());
     RegisterEvent(message,EvtType::EV_Error);
   }
   // Error occurred in HTTP channel
@@ -302,11 +307,11 @@ LongPolling::SendCloseMessage()
   AutoCritSec lock(&m_lock);
 
   XString url(m_url);
-  XString action("GetMessage");
-  url += "/" + action;
+  XString action(_T("GetMessage"));
+  url += _T("/") + action;
   SOAPMessage msg(polling_namespace,action,SoapVersion::SOAP_12,url);
-  msg.SetParameter("Acknowledged",m_lastNumber);
-  msg.SetParameter("CloseChannel", true);
+  msg.SetParameter(_T("Acknowledged"),m_lastNumber);
+  msg.SetParameter(_T("CloseChannel"), true);
   msg.SetCookie(m_cookie,m_secret);
 
   bool result = m_client.Send(&msg);
@@ -315,7 +320,7 @@ LongPolling::SendCloseMessage()
     if(msg.GetFaultCode().IsEmpty())
     {
       // Legally closed
-      bool closed = msg.GetParameterBoolean("ChannelClosed");
+      bool closed = msg.GetParameterBoolean(_T("ChannelClosed"));
       return closed == true ? 1 : 0;
     }
     else
@@ -363,15 +368,15 @@ LongPolling::StartPollingThread()
   {
     // Thread for the client queue
     unsigned int threadID = 0;
-    if((m_thread = (HANDLE)_beginthreadex(NULL,0,StartingThePollingThread,(void*)(this),0,&threadID)) == INVALID_HANDLE_VALUE)
+    if((m_thread = reinterpret_cast<HANDLE>(_beginthreadex(NULL,0,StartingThePollingThread,reinterpret_cast<void*>(this),0,&threadID))) == INVALID_HANDLE_VALUE)
     {
       m_thread = NULL;
       threadID = 0;
-      ERRORLOG(ERROR_SERVICE_NOT_ACTIVE, "Code [%d] Cannot start a thread for an Long-Polling channel.");
+      ERRORLOG(ERROR_SERVICE_NOT_ACTIVE, _T("Code [%d] Cannot start a thread for an Long-Polling channel."));
     }
     else
     {
-      DETAILLOGV("Thread started with threadID [%d] for Long-Polling channel.", threadID);
+      DETAILLOGV(_T("Thread started with threadID [%d] for Long-Polling channel."), threadID);
       return true;
     }
   }
@@ -386,7 +391,7 @@ LongPolling::PollingThreadRunning()
 
   // Tell we are running
   m_receiving = true;
-  DETAILLOG1("Polling monitor started.");
+  DETAILLOG1(_T("Polling monitor started."));
 
   m_interval = POLL_INTERVAL_START;
 
@@ -417,7 +422,7 @@ LongPolling::PollingThreadRunning()
   // Thread is now ready
   m_thread = NULL;
 
-  DETAILLOG1("Polling monitor stopped.");
+  DETAILLOG1(_T("Polling monitor stopped."));
 }
 
 void
@@ -446,7 +451,7 @@ LongPolling::AskingForMessages()
     {
       m_interval = POLL_INTERVAL_MAX;
     }
-    DETAILLOGV("Long-polling back in [%d] milliseconds.",m_interval);
+    DETAILLOGV(_T("Long-polling back in [%d] milliseconds."),m_interval);
   }
   else
   {

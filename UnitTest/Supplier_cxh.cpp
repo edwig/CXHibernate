@@ -13,35 +13,35 @@ static char THIS_FILE[] = __FILE__;
 #endif
 
 BEGIN_XML_SERIALIZE(Supplier,Subject)
-  CXO_XML_SERIALIZE(m_deliveryAddress ,"deliveryAddress");
-  CXO_XML_SERIALIZE(m_balance         ,"balance");
-  CXO_XML_SERIALIZE(m_open_orders     ,"open_orders");
-  CXO_XML_SERIALIZE(m_open_billings   ,"open_billings");
+  CXO_XML_SERIALIZE(m_deliveryAddress ,_T("deliveryAddress"));
+  CXO_XML_SERIALIZE(m_balance         ,_T("balance"));
+  CXO_XML_SERIALIZE(m_open_orders     ,_T("open_orders"));
+  CXO_XML_SERIALIZE(m_open_billings   ,_T("open_billings"));
 END_XML_SERIALIZE
 
 BEGIN_XML_DESERIALIZE(Supplier,Subject)
-  CXO_XML_DESERIALIZE(m_deliveryAddress ,"deliveryAddress");
-  CXO_XML_DESERIALIZE(m_balance         ,"balance");
-  CXO_XML_DESERIALIZE(m_open_orders     ,"open_orders");
-  CXO_XML_DESERIALIZE(m_open_billings   ,"open_billings");
+  CXO_XML_DESERIALIZE(m_deliveryAddress ,_T("deliveryAddress"));
+  CXO_XML_DESERIALIZE(m_balance         ,_T("balance"));
+  CXO_XML_DESERIALIZE(m_open_orders     ,_T("open_orders"));
+  CXO_XML_DESERIALIZE(m_open_billings   ,_T("open_billings"));
 END_XML_DESERIALIZE
 
 BEGIN_DBS_SERIALIZE(Supplier,Subject)
-  CXO_DBS_SERIALIZE(m_deliveryAddress ,"deliveryAddress");
-  CXO_DBS_SERIALIZE(m_balance         ,"balance");
-  CXO_DBS_SERIALIZE(m_open_orders     ,"open_orders");
-  CXO_DBS_SERIALIZE(m_open_billings   ,"open_billings");
+  CXO_DBS_SERIALIZE(m_deliveryAddress ,_T("deliveryAddress"));
+  CXO_DBS_SERIALIZE(m_balance         ,_T("balance"));
+  CXO_DBS_SERIALIZE(m_open_orders     ,_T("open_orders"));
+  CXO_DBS_SERIALIZE(m_open_billings   ,_T("open_billings"));
 END_DBS_SERIALIZE
 
 BEGIN_DBS_DESERIALIZE(Supplier,Subject)
-  CXO_DBS_DESERIALIZE(m_deliveryAddress ,"deliveryAddress");
-  CXO_DBS_DESERIALIZE(m_balance         ,"balance");
-  CXO_DBS_DESERIALIZE(m_open_orders     ,"open_orders");
-  CXO_DBS_DESERIALIZE(m_open_billings   ,"open_billings");
+  CXO_DBS_DESERIALIZE(m_deliveryAddress ,_T("deliveryAddress"));
+  CXO_DBS_DESERIALIZE(m_balance         ,_T("balance"));
+  CXO_DBS_DESERIALIZE(m_open_orders     ,_T("open_orders"));
+  CXO_DBS_DESERIALIZE(m_open_billings   ,_T("open_billings"));
 END_DBS_DESERIALIZE
 
 BEGIN_DESERIALIZE_GENERATOR(Supplier)
-  CXO_DBS_DESERIALIZE(m_id, "id");
+  CXO_DBS_DESERIALIZE(m_id, _T("id"));
 END_DESERIALIZE_GENERATOR
 
 // Static factory to create a new object if this class

@@ -4,7 +4,7 @@
 //
 // BaseLibrary: Indispensable general objects and functions
 // 
-// Copyright (c) 2014-2022 ir. W.E. Huisman
+// Copyright (c) 2014-2025 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -49,26 +49,27 @@
 #include <vector>
 
 // XML & SOAP
-constexpr auto NAMESPACE_SOAP11     = "http://schemas.xmlsoap.org/soap/envelope/";
-constexpr auto NAMESPACE_SOAP12     = "http://www.w3.org/2003/05/soap-envelope";
-constexpr auto NAMESPACE_WSADDRESS  = "http://www.w3.org/2005/08/addressing";
-constexpr auto NAMESPACE_XMLSCHEMA  = "http://www.w3.org/2001/XMLSchema";
-constexpr auto NAMESPACE_INSTANCE   = "http://www.w3.org/2001/XMLSchema-instance";
-constexpr auto NAMESPACE_ENVELOPE   = "http://www.w3.org/2003/05/soap-envelope";
-constexpr auto NAMESPACE_RELIABLE   = "http://schemas.xmlsoap.org/ws/2005/02/rm";
+constexpr auto NAMESPACE_SOAP11     = _T("http://schemas.xmlsoap.org/soap/envelope/");
+constexpr auto NAMESPACE_SOAP12     = _T("http://www.w3.org/2003/05/soap-envelope");
+constexpr auto NAMESPACE_WSADDRESS  = _T("http://www.w3.org/2005/08/addressing");
+constexpr auto NAMESPACE_XMLSCHEMA  = _T("http://www.w3.org/2001/XMLSchema");
+constexpr auto NAMESPACE_INSTANCE   = _T("http://www.w3.org/2001/XMLSchema-instance");
+constexpr auto NAMESPACE_ENVELOPE   = _T("http://www.w3.org/2003/05/soap-envelope");
+constexpr auto NAMESPACE_RELIABLE   = _T("http://schemas.xmlsoap.org/ws/2005/02/rm");
 // WS-Security
-constexpr auto NAMESPACE_SIGNATURE  = "http://www.w3.org/2000/09/xmldsig#";
-constexpr auto NAMESPACE_ENCODING   = "http://www.w3.org/2001/04/xmlenc#";
-constexpr auto NAMESPACE_SECEXT     = "http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-secext-1.0.xsd";
-constexpr auto NAMESPACE_SECUTILITY = "http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-utility-1.0.xsd";
-constexpr auto NAMESPACE_SECURITY   = "http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-soap-message-security-1.0";
+constexpr auto NAMESPACE_SIGNATURE  = _T("http://www.w3.org/2000/09/xmldsig#");
+constexpr auto NAMESPACE_ENCODING   = _T("http://www.w3.org/2001/04/xmlenc#");
+constexpr auto NAMESPACE_SECEXT     = _T("http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-secext-1.0.xsd");
+constexpr auto NAMESPACE_SECUTILITY = _T("http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-utility-1.0.xsd");
+constexpr auto NAMESPACE_SECURITY   = _T("http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-soap-message-security-1.0");
+constexpr auto NAMESPACE_UNAMETOKEN = _T("http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-username-token-profile-1.0");
 
 // Must have a default namespace
 #ifndef DEFAULT_NAMESPACE 
-#define DEFAULT_NAMESPACE "http://www.marlinserver.org/Services"
+#define DEFAULT_NAMESPACE _T("http://www.marlinserver.org/Services")
 #endif
 #ifndef DEFAULT_TOKEN
-#define DEFAULT_TOKEN     ":MarlinServer:"
+#define DEFAULT_TOKEN     _T(":MarlinServer:")
 #endif
 
 using ushort = unsigned short;
@@ -115,27 +116,29 @@ public:
   // Default XTOR
   SOAPMessage();
   // XTOR from an incoming message
-  SOAPMessage(HTTPMessage*  p_msg);
+  explicit SOAPMessage(HTTPMessage*  p_msg);
   // XTOR from a JSON message
-  SOAPMessage(JSONMessage* p_msg);
+  explicit SOAPMessage(JSONMessage* p_msg);
   // XTOR from an incoming message or string data
-  SOAPMessage(const char* p_soapMessage,bool p_incoming = true);
+  explicit SOAPMessage(LPCTSTR p_soapMessage,bool p_incoming = true);
   // XTOR for a copy
-  SOAPMessage(SOAPMessage* p_orig);
+  explicit SOAPMessage(SOAPMessage* p_orig);
   // XTOR for new outgoing message
-  SOAPMessage(XString&    p_namespace
-             ,XString&    p_soapAction
-             ,SoapVersion p_version = SoapVersion::SOAP_12
-             ,XString     p_url     = ""
-             ,bool        p_secure  = false
-             ,XString     p_server  = ""
-             ,int         p_port    = INTERNET_DEFAULT_HTTP_PORT
-             ,XString     p_absPath = "");
+  explicit SOAPMessage(XString&    p_namespace
+                      ,XString&    p_soapAction
+                      ,SoapVersion p_version = SoapVersion::SOAP_12
+                      ,XString     p_url     = _T("")
+                      ,bool        p_secure  = false
+                      ,XString     p_server  = _T("")
+                      ,int         p_port    = INTERNET_DEFAULT_HTTP_PORT
+                      ,XString     p_absPath = _T(""));
   // DTOR
   virtual ~SOAPMessage();
 
   // Reset parameters, transforming it in an answer, preferable in our namespace
-  virtual void    Reset(ResponseType p_responseType = ResponseType::RESP_ACTION_NAME,XString p_namespace = "");
+  virtual void    Reset(ResponseType p_responseType = ResponseType::RESP_ACTION_NAME
+                       ,XString      p_namespace    = _T("")
+                       ,bool         p_resetURL     = false);
   // Parse incoming message to members
   virtual void    ParseMessage(XString& p_message);
   // Parse incoming soap as new body of the message
@@ -146,18 +149,19 @@ public:
   // FILE OPERATIONS
 
   // Load from file
-  virtual bool    LoadFile(const XString& p_fileName);
-  virtual bool    LoadFile(const XString& p_fileName, StringEncoding p_encoding);
+  virtual bool    LoadFile(const XString& p_fileName) override;
+  virtual bool    LoadFile(const XString& p_fileName, Encoding p_encoding) override;
   // Save to file
-  virtual bool    SaveFile(const XString& p_fileName, bool p_withBom = false);
-  virtual bool    SaveFile(const XString& p_fileName, StringEncoding p_encoding, bool p_withBom = false);
+  virtual bool    SaveFile(const XString& p_fileName) override;
+  virtual bool    SaveFile(const XString& p_fileName, Encoding p_encoding) override;
 
   // SETTERS
 
   // Set the alternative namespace
   void            SetNamespace(XString p_namespace);
+  void            SetForceNamespace(bool p_force);
   // Set Command name
-  void            SetSoapAction(XString& p_name);
+  void            SetSoapAction(const XString& p_name);
   void            SetHasInitialAction(bool p_initial);
   void            SetSoapMustBeUnderstood(bool p_addAttribute = true,bool p_understand = true);
   // Set the SOAP version
@@ -173,25 +177,25 @@ public:
   bool            SetPreserveWhitespace(bool p_preserve = true);
   // Set the cookies
   void            SetCookie(Cookie& p_cookie);
-  void            SetCookie(XString p_name,XString p_value,XString p_metadata = "",bool p_secure = false);
-  void            SetCookies(Cookies& p_cookies);
+  void            SetCookie(XString p_name,XString p_value,XString p_metadata = _T(""),bool p_secure = false);
+  void            SetCookies(const Cookies& p_cookies);
   // Set request Handle
   void            SetRequestHandle(HTTP_OPAQUE_ID p_request);
   // Set URL to send message to
-  void            SetURL(XString& p_url);
+  void            SetURL(const XString& p_url);
   void            SetStatus(unsigned p_status);
   // Set parts of the URL
   void            SetSecure(bool p_secure);
-  void            SetServer(XString& p_server);
+  void            SetServer(const XString& p_server);
   void            SetPort(unsigned p_port);
-  void            SetAbsolutePath(XString& p_path);
+  void            SetAbsolutePath(const XString& p_path);
   void            SetExtension(XString p_extension);
   // Set security details
-  void            SetUser(XString& p_user);
-  void            SetPassword(XString& p_password);
+  void            SetUser(const XString& p_user);
+  void            SetPassword(const XString& p_password);
   void            SetTokenNonce(XString p_nonce);
   void            SetTokenCreated(XString p_created);
-  bool            SetTokenProfile(XString p_user,XString p_password,XString p_created,XString p_nonce = "");
+  bool            SetTokenProfile(XString p_user,XString p_password,XString p_created,XString p_nonce = _T(""));
   // Set security access token
   void            SetAccessToken(HANDLE p_token);
   // Set senders address
@@ -233,6 +237,7 @@ public:
 
   // Get the service level namespace
   XString         GetNamespace() const;
+  bool            GetForceNamespace() const;
   // Get name of the soap action command (e.g. for messages and debug)
   XString         GetSoapAction() const;
   bool            GetMustUnderstandAction() const;
@@ -250,14 +255,14 @@ public:
   XString         GetAcceptEncoding() const;
   // Get the cookies
   Cookie*         GetCookie(unsigned p_ind);
-  XString         GetCookie(unsigned p_ind = 0, XString p_metadata = "");
-  XString         GetCookie(XString p_name = "",XString p_metadata = "");
-  Cookies&        GetCookies();
+  XString         GetCookie(unsigned p_ind = 0,     XString p_metadata = _T(""));
+  XString         GetCookie(XString p_name = _T(""),XString p_metadata = _T(""));
+  const Cookies&  GetCookies() const;
   // Get URL destination
   XString         GetURL() const;
   const CrackedURL& GetCrackedURL() const;
   XString         GetUnAuthorisedURL() const;
-  unsigned        GetStatus();
+  unsigned        GetStatus() const;
   // Get Request handle
   HTTP_OPAQUE_ID  GetRequestHandle() const;
   HTTPSite*       GetHTTPSite() const;
@@ -291,7 +296,7 @@ public:
   XString         GetFaultString() const;
   XString         GetFaultDetail() const;
   // Get SOAP Fault as a total string
-  XString         GetFault();
+  XString         GetFault() const;
   // WS-Reliability
   bool            GetAddressing() const;
   bool            GetReliability() const;
@@ -302,7 +307,7 @@ public:
   XString         GetMessageNonce() const;
   bool            GetLastMessage()  const;
   RangeMap&       GetRangeMap();
-  HeaderMap*      GetHeaderMap();
+  const HeaderMap* GetHeaderMap() const;
   XMLEncryption   GetSecurityLevel() const;
   XString         GetSecurityPassword() const;
   WsdlOrder       GetWSDLOrder() const;
@@ -311,29 +316,29 @@ public:
   XString         GetBodyPart();
   XString         GetCanonicalForm(XMLElement* p_element);
   bool            GetHasInitialAction() const;
-  bool            GetHasBeenAnswered();
-  Routing&        GetRouting();
+  bool            GetHasBeenAnswered() const;
+  const Routing&  GetRouting() const;
   XString         GetRoute(int p_index);
 
   // PARAMETER INTERFACE
   // Most of it now is in XMLMessage in the Set/Get-Element interface
-  XMLElement*     SetParameter(XString p_name,XString&    p_value);
-  XMLElement*     SetParameter(XString p_name,const char* p_value);
-  XMLElement*     SetParameter(XString p_name,int         p_value);
-  XMLElement*     SetParameter(XString p_name,bool        p_value);
-  XMLElement*     SetParameter(XString p_name,double      p_value);
+  XMLElement*     SetParameter(XString p_name,XString& p_value);
+  XMLElement*     SetParameter(XString p_name,LPCTSTR  p_value);
+  XMLElement*     SetParameter(XString p_name,int      p_value);
+  XMLElement*     SetParameter(XString p_name,bool     p_value);
+  XMLElement*     SetParameter(XString p_name,double   p_value);
   // Set parameter object name
   void            SetParameterObject(XString p_name);
   // Set/Add parameter to the header section (level 1 only)
-  XMLElement*     SetHeaderParameter(XString p_paramName, const char* p_value, bool p_first = false);
+  XMLElement*     SetHeaderParameter(XString p_paramName, LPCTSTR p_value, bool p_first = false);
   // General add a parameter (always adds, so multiple parameters of same name can be added)
   XMLElement*     AddElement(XMLElement* p_base,XString p_name,XmlDataType p_type,XString           p_value,bool p_front = false);
-  XMLElement*     AddElement(XMLElement* p_base,XString p_name,XmlDataType p_type,const char*       p_value,bool p_front = false);
+  XMLElement*     AddElement(XMLElement* p_base,XString p_name,XmlDataType p_type,LPCTSTR           p_value,bool p_front = false);
   XMLElement*     AddElement(XMLElement* p_base,XString p_name,XmlDataType p_type,int               p_value,bool p_front = false);
   XMLElement*     AddElement(XMLElement* p_base,XString p_name,XmlDataType p_type,unsigned          p_value,bool p_front = false);
   XMLElement*     AddElement(XMLElement* p_base,XString p_name,XmlDataType p_type,bool              p_value,bool p_front = false);
   XMLElement*     AddElement(XMLElement* p_base,XString p_name,XmlDataType p_type,double            p_value,bool p_front = false);
-  XMLElement*     AddElement(XMLElement* p_base,XString p_name,XmlDataType p_type,bcd               p_value,bool p_front = false);
+  XMLElement*     AddElement(XMLElement* p_base,XString p_name,XmlDataType p_type,const bcd&        p_value,bool p_front = false);
   XMLElement*     AddElement(XMLElement* p_base,XString p_name,XmlDataType p_type,__int64           p_value,bool p_front = false);
   XMLElement*     AddElement(XMLElement* p_base,XString p_name,XmlDataType p_type,unsigned __int64  p_value,bool p_front = false);
 
@@ -361,8 +366,10 @@ public:
   bool            CleanUp();
 
 protected:
+  // TO BE CALLED FROM THE XTOR!!
+  XString         ConstructFromRawBuffer(uchar* p_buffer,unsigned p_length,XString p_charset);
   // Encrypt the whole message: yielding a new message
-  virtual void    EncryptMessage(XString& p_message);
+  virtual void    EncryptMessage(XString& p_message) override;
 
   // Set the SOAP 1.1 SOAPAction from the HTTP protocol
   void            SetSoapActionFromHTTTP(XString p_action);
@@ -377,9 +384,9 @@ protected:
   // TO do after we set parts of the URL in setters
   void            ReparseURL();
   // Remove namespace from a node's name
-  XString         StripNamespace(const char* p_naam);
+  XString         StripNamespace(LPCTSTR p_naam);
   // Return the namespace of an XML node
-  XString         FindNamespace (const char* p_naam);
+  XString         FindNamespace (LPCTSTR p_naam);
   // Find Fault nodes in the message at the parse state
   void            HandleSoapFault(XMLElement* p_fault);
   // Setting the fault stack of the message
@@ -421,7 +428,7 @@ protected:
   // Get whole message encryption value
   XString         CheckMesgEncryption();
   // Get password as a custom token
-  XString         GetPasswordAsToken();
+  XString         GetPasswordAsToken() const;
 
   // DATA MEMBERS
 
@@ -435,6 +442,7 @@ protected:
   bool            m_incoming      { false };              // Incoming SOAP message
   bool            m_addAttribute  { true  };              // Add "mustUnderstand" attribute to <Envelope>/<Action>
   bool            m_understand    { true  };              // Set "mustUnderstand" to true or false
+  bool            m_forceNamespace{ true  };              // Force message namespace in first body node
   // DESTINATION
   unsigned        m_status        { HTTP_STATUS_OK };     // HTTP status return code
   HTTP_OPAQUE_ID  m_request       { NULL  };              // Request it must answer
@@ -495,7 +503,7 @@ SOAPMessage::GetNamespace() const
 }
 
 inline void
-SOAPMessage::SetSoapAction(XString& p_name)
+SOAPMessage::SetSoapAction(const XString& p_name)
 {
   m_soapAction = p_name;
 }
@@ -536,13 +544,13 @@ SOAPMessage::SetSecure(bool p_secure)
 }
 
 inline void    
-SOAPMessage::SetUser(XString& p_user)
+SOAPMessage::SetUser(const XString& p_user)
 {
   m_user = p_user;
 }
 
 inline void    
-SOAPMessage::SetPassword(XString& p_password)
+SOAPMessage::SetPassword(const XString& p_password)
 {
   m_password = p_password;
 }
@@ -560,7 +568,7 @@ SOAPMessage::SetTokenCreated(XString p_created)
 }
 
 inline void    
-SOAPMessage::SetServer(XString& p_server)
+SOAPMessage::SetServer(const XString& p_server)
 {
   m_cracked.m_host = p_server;
   ReparseURL();
@@ -581,7 +589,7 @@ SOAPMessage::SetExtension(XString p_extension)
 }
 
 inline void    
-SOAPMessage::SetAbsolutePath(XString& p_path)
+SOAPMessage::SetAbsolutePath(const XString& p_path)
 {
   m_cracked.m_path = p_path;
   ReparseURL();
@@ -815,8 +823,8 @@ SOAPMessage::GetRangeMap()
   return m_ranges;
 }
 
-inline HeaderMap*
-SOAPMessage::GetHeaderMap()
+inline const HeaderMap*
+SOAPMessage::GetHeaderMap() const
 {
   return &m_headers;
 }
@@ -864,14 +872,14 @@ SOAPMessage::SetCookie(Cookie& p_cookie)
   m_cookies.AddCookie(p_cookie);
 }
 
-inline Cookies&
-SOAPMessage::GetCookies()
+inline const Cookies&
+SOAPMessage::GetCookies() const
 {
   return m_cookies;
 }
 
 inline void
-SOAPMessage::SetCookies(Cookies& p_cookies)
+SOAPMessage::SetCookies(const Cookies& p_cookies)
 {
   m_cookies = p_cookies;
 }
@@ -961,7 +969,7 @@ SOAPMessage::GetXMLBodyPart() const
 }
 
 inline bool
-SOAPMessage::GetHasBeenAnswered()
+SOAPMessage::GetHasBeenAnswered() const
 {
   return m_request == NULL;
 }
@@ -978,14 +986,14 @@ SOAPMessage::AddRoute(XString p_route)
   m_routing.push_back(p_route);
 }
 
-inline Routing&
-SOAPMessage::GetRouting()
+inline const Routing&
+SOAPMessage::GetRouting() const
 {
   return m_routing;
 }
 
 inline unsigned
-SOAPMessage::GetStatus() 
+SOAPMessage::GetStatus() const
 {
   return m_status; 
 };
@@ -994,6 +1002,18 @@ inline void
 SOAPMessage::SetStatus(unsigned p_status)
 {
   m_status = p_status;
+}
+
+inline bool
+SOAPMessage::GetForceNamespace() const
+{
+  return m_forceNamespace;
+}
+
+inline void
+SOAPMessage::SetForceNamespace(bool p_force)
+{
+  m_forceNamespace = p_force;
 }
 
 //////////////////////////////////////////////////////////////////////////

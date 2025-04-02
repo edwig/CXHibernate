@@ -13,39 +13,39 @@ static char THIS_FILE[] = __FILE__;
 #endif
 
 BEGIN_XML_SERIALIZE(Subject,CXObject)
-  CXO_XML_SERIALIZE(m_id              ,"id");
-  CXO_XML_SERIALIZE(m_name            ,"name");
-  CXO_XML_SERIALIZE(m_adresline1      ,"adresline1");
-  CXO_XML_SERIALIZE(m_adresline2      ,"adresline2");
-  CXO_XML_SERIALIZE(m_account_id      ,"account_id");
+  CXO_XML_SERIALIZE(m_id              ,_T("id"));
+  CXO_XML_SERIALIZE(m_name            ,_T("name"));
+  CXO_XML_SERIALIZE(m_adresline1      ,_T("adresline1"));
+  CXO_XML_SERIALIZE(m_adresline2      ,_T("adresline2"));
+  CXO_XML_SERIALIZE(m_account_id      ,_T("account_id"));
 END_XML_SERIALIZE
 
 BEGIN_XML_DESERIALIZE(Subject,CXObject)
-  CXO_XML_DESERIALIZE(m_id              ,"id");
-  CXO_XML_DESERIALIZE(m_name            ,"name");
-  CXO_XML_DESERIALIZE(m_adresline1      ,"adresline1");
-  CXO_XML_DESERIALIZE(m_adresline2      ,"adresline2");
-  CXO_XML_DESERIALIZE(m_account_id      ,"account_id");
+  CXO_XML_DESERIALIZE(m_id              ,_T("id"));
+  CXO_XML_DESERIALIZE(m_name            ,_T("name"));
+  CXO_XML_DESERIALIZE(m_adresline1      ,_T("adresline1"));
+  CXO_XML_DESERIALIZE(m_adresline2      ,_T("adresline2"));
+  CXO_XML_DESERIALIZE(m_account_id      ,_T("account_id"));
 END_XML_DESERIALIZE
 
 BEGIN_DBS_SERIALIZE(Subject,CXObject)
-  CXO_DBS_SERIALIZE(m_id              ,"id");
-  CXO_DBS_SERIALIZE(m_name            ,"name");
-  CXO_DBS_SERIALIZE(m_adresline1      ,"adresline1");
-  CXO_DBS_SERIALIZE(m_adresline2      ,"adresline2");
-  CXO_DBS_SERIALIZE(m_account_id      ,"account_id");
+  CXO_DBS_SERIALIZE(m_id              ,_T("id"));
+  CXO_DBS_SERIALIZE(m_name            ,_T("name"));
+  CXO_DBS_SERIALIZE(m_adresline1      ,_T("adresline1"));
+  CXO_DBS_SERIALIZE(m_adresline2      ,_T("adresline2"));
+  CXO_DBS_SERIALIZE(m_account_id      ,_T("account_id"));
 END_DBS_SERIALIZE
 
 BEGIN_DBS_DESERIALIZE(Subject,CXObject)
-  CXO_DBS_DESERIALIZE(m_id              ,"id");
-  CXO_DBS_DESERIALIZE(m_name            ,"name");
-  CXO_DBS_DESERIALIZE(m_adresline1      ,"adresline1");
-  CXO_DBS_DESERIALIZE(m_adresline2      ,"adresline2");
-  CXO_DBS_DESERIALIZE(m_account_id      ,"account_id");
+  CXO_DBS_DESERIALIZE(m_id              ,_T("id"));
+  CXO_DBS_DESERIALIZE(m_name            ,_T("name"));
+  CXO_DBS_DESERIALIZE(m_adresline1      ,_T("adresline1"));
+  CXO_DBS_DESERIALIZE(m_adresline2      ,_T("adresline2"));
+  CXO_DBS_DESERIALIZE(m_account_id      ,_T("account_id"));
 END_DBS_DESERIALIZE
 
 BEGIN_DESERIALIZE_GENERATOR(Subject)
-  CXO_DBS_DESERIALIZE(m_id, "id");
+  CXO_DBS_DESERIALIZE(m_id, _T("id"));
 END_DESERIALIZE_GENERATOR
 
 // Static factory to create a new object if this class

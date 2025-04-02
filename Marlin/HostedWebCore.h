@@ -4,7 +4,7 @@
 //
 // Marlin Server: Internet server/client
 // 
-// Copyright (c) 2014-2022 ir. W.E. Huisman
+// Copyright (c) 2014-2024 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -45,4 +45,4 @@ extern XString g_webconfig;            // Web.config file to use
 extern DWORD g_hwcShutdownMode;
 
 // The main entry for a Hosted Web Core application
-int HWC_main(int argc,char* argv[]);
+int HWC_main(int argc,const char* argv[]);

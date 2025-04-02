@@ -2,7 +2,7 @@
 //
 // SourceFile: XMLMessage.cpp
 //
-// Copyright (c) 2014-2022 ir. W.E. Huisman
+// Copyright (c) 2014-2025 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -29,10 +29,12 @@
 #include "XMLRestriction.h"
 #include "Namespace.h"
 
+#ifdef _AFX
 #ifdef _DEBUG
 #define new DEBUG_NEW
 #undef THIS_FILE
 static char THIS_FILE[] = __FILE__;
+#endif
 #endif
 
 // Defined in FileBuffer
@@ -64,7 +66,7 @@ XMLElement::XMLElement(const XMLElement& source)
            ,m_restriction(source.m_restriction)
            ,m_parent     (nullptr)
 {
-  for(auto& element : source.m_elements)
+  for(const auto& element : source.m_elements)
   {
     XMLElement* param = new XMLElement(*element);
     param->m_parent = this;
@@ -121,7 +123,7 @@ XMLElement::IsValidName(const XString& p_name)
 
   for (int i = p_name.GetLength() - 1; i >= 0; --i)
   {
-    char c = p_name[i];
+    TCHAR c = p_name[i];
     if (c == '_' ||
      // c == ':' || Formally correct, but gives unwanted results
        (c >= 'A' && c <= 'Z') ||
@@ -143,8 +145,8 @@ XString
 XMLElement::InvalidNameMessage(const XString& p_name)
 {
   XString message;
-  message.Format("Invalid XML element name: %s\n"
-                 "Names must start with a letter or underscore followed by more or hyphen, digit or dot.", p_name.GetString());
+  message.Format(_T("Invalid XML element name: %s\n"
+                    "Names must start with a letter or underscore followed by more or hyphen, digit or dot."), p_name.GetString());
   return message;
 }
 
@@ -216,6 +218,12 @@ XMLMessage::SetRoot(XMLElement* p_root)
   m_root->AddReference();
 }
 
+void
+XMLMessage::SetStandalone(bool p_alone)
+{
+  m_standalone = p_alone ? _T("yes") : _T("no");
+}
+
 #pragma endregion XMLMessage_XTOR
 
 #pragma region File_Load_Save
@@ -230,48 +238,44 @@ XMLMessage::SetRoot(XMLElement* p_root)
 bool
 XMLMessage::LoadFile(const XString& p_fileName)
 {
-  FILE* file = nullptr;
-  if(fopen_s(&file,p_fileName,"r") == 0 && file)
+  WinFile file(p_fileName);
+
+  // Check for the streaming limit
+  size_t length = file.GetFileSize();
+  if(length > g_streaming_limit)
   {
-    // Find the length of a file
-    fseek(file,0,SEEK_END);
-    unsigned long length = ftell(file);
-    fseek(file,0,SEEK_SET);
+    // Return also if error in GetFileSize!
+    return false;
+  }
 
-    // Check for the streaming limit
-    if(length > g_streaming_limit)
+  if(file.Open(winfile_read | open_trans_text | open_shared_read))
+  {
+    // Reading in the contents
+    XString contents;
+    XString line;
+    while(file.Read(line))
     {
-      fclose(file);
-      return false;
+      contents += line;
     }
 
-    // Prepare buffer
-    // XString buffers are allocated on the heap
-    // so shut up the warning about stack overflow
-    XString inhoud;
-    char* buffer = inhoud.GetBufferSetLength(length + 1);
-    if(buffer)
+    // Record the found encodings
+    m_encoding = file.GetEncoding();
+    m_sendBOM  = file.GetFoundBOM();
+
+    // No encoding in the file: presume it is a file from our OS
+    // XML is always UTF-8 by default
+    if(!m_sendBOM && m_encoding == Encoding::EN_ACP)
     {
-    // Read the buffer
-      size_t count = fread(buffer,1,length,file);
-      if(ferror(file) || count > length)
-    {
-      fclose(file);
-      return false;
+      m_encoding = Encoding::UTF8;
     }
-      buffer[count] = 0;
-    }
-    // Buffer unlock
-    inhoud.ReleaseBuffer(length);
 
     // Close the file
-    if(fclose(file))
+    if(!file.Close())
     {
       return false;
     }
-
     // And parse it
-    ParseMessage(inhoud);
+    ParseMessage(contents);
     return true;
   }
   return false;
@@ -279,7 +283,7 @@ XMLMessage::LoadFile(const XString& p_fileName)
 
 // Load from file in pre-known encoding
 bool
-XMLMessage::LoadFile(const XString& p_fileName,StringEncoding p_encoding)
+XMLMessage::LoadFile(const XString& p_fileName,Encoding p_encoding)
 {
   m_encoding = p_encoding;
   return LoadFile(p_fileName);
@@ -287,27 +291,24 @@ XMLMessage::LoadFile(const XString& p_fileName,StringEncoding p_encoding)
 
 // Save to file
 bool
-XMLMessage::SaveFile(const XString& p_fileName,bool p_withBom /*= false*/)
+XMLMessage::SaveFile(const XString& p_fileName)
 {
   bool result = false;
-  FILE* file = nullptr;
-  if(fopen_s(&file,p_fileName,"w") == 0 && file)
-  {
-    if(p_withBom)
-    {
-      XString bom = ConstructBOM(m_encoding);
-      fwrite(bom.GetString(),bom.GetLength(),1,file);
-    }
+  WinFile file(p_fileName);
+  file.SetEncoding(m_encoding);
 
+  if(file.Open(winfile_write | open_trans_text))
+  {
     XString inhoud = Print();
     // Allow derived classes (SOAP) to encrypt the whole message
     EncryptMessage(inhoud);
-    if(fwrite(inhoud.GetString(),inhoud.GetLength(),1,file) == 1)
+
+    if(file.Write(inhoud))
     {
       result = true;
     }
     // Close and flush the file
-    if(fclose(file))
+    if(!file.Close())
     {
       return false;
     }
@@ -317,10 +318,10 @@ XMLMessage::SaveFile(const XString& p_fileName,bool p_withBom /*= false*/)
 
 // Save to file in pre-known encoding
 bool
-XMLMessage::SaveFile(const XString& p_fileName,StringEncoding p_encoding,bool p_withBom /*= false*/)
+XMLMessage::SaveFile(const XString& p_fileName,Encoding p_encoding)
 {
   m_encoding = p_encoding;
-  return SaveFile(p_fileName,p_withBom);
+  return SaveFile(p_fileName);
 }
 
 #pragma endregion File_Load_Save
@@ -370,15 +371,14 @@ XMLMessage::ParseForNode(XMLElement* p_node,XString& p_message,WhiteSpace p_whit
 XString
 XMLMessage::Print()
 {
-  bool utf8 = (m_encoding == StringEncoding::ENC_UTF8);
-
   XString message = PrintHeader();
 
   message += PrintStylesheet();
-  message += PrintElements(m_root,utf8);
+  message += PrintElements(m_root,false,0);
+
   if(m_condensed)
   {
-    message += "\n";
+    message += _T("\n");
   }
   return message;
 }
@@ -386,41 +386,32 @@ XMLMessage::Print()
 XString
 XMLMessage::PrintHeader()
 {
-  XString header("<?xml");
-
   // Check what we should do
-  if(m_version.IsEmpty() && m_encoding == StringEncoding::ENC_Plain && m_standalone.IsEmpty())
+  if(m_version.IsEmpty() && m_encoding == Encoding::EN_ACP && m_standalone.IsEmpty())
   {
-    return "";
+    return _T("");
   }
+  XString header(_T("<?xml"));
 
   // Construct the header
   if(!m_version.IsEmpty())
   {
-    header.AppendFormat(" version=\"%s\"",m_version.GetString());
+    header.AppendFormat(_T(" version=\"%s\""),m_version.GetString());
   }
   // Take care of character encoding
-  int acp = -1;
-  switch(m_encoding)
-  {
-    case StringEncoding::ENC_Plain:   acp =    -1; break; // Find Active Code Page
-    case StringEncoding::ENC_UTF8:    acp = 65001; break; // See ConvertWideString.cpp
-    case StringEncoding::ENC_UTF16:   acp =  1200; break; // See ConvertWideString.cpp
-    case StringEncoding::ENC_ISO88591:acp = 28591; break; // See ConvertWideString.cpp
-    default:                          break;
-  }
-  header.AppendFormat(" encoding=\"%s\"",CodepageToCharset(acp).GetString());
+  XString charset = CodepageToCharset((int)m_encoding);
+  header.AppendFormat(_T(" encoding=\"%s\""),charset.GetString());
 
   // Add standalone?
   if(!m_standalone.IsEmpty())
   {
-    header.AppendFormat(" standalone=\"%s\"",m_standalone.GetString());
+    header.AppendFormat(_T(" standalone=\"%s\""),m_standalone.GetString());
   }
   // Closing of the header
-  header += "?>";
+  header += _T("?>");
   if(m_condensed == false)
   {
-    header += "\n";
+    header += _T("\n");
   }
   return header;
 }
@@ -431,16 +422,16 @@ XMLMessage::PrintStylesheet()
   XString header;
   if(!m_stylesheetType.IsEmpty() || !m_stylesheet.IsEmpty())
   {
-    header = "<?xml-stylesheet";
+    header = _T("<?xml-stylesheet");
     if(!m_stylesheetType.IsEmpty())
     {
-      header.AppendFormat(" type=\"%s\"",m_stylesheetType.GetString());
+      header.AppendFormat(_T(" type=\"%s\""),m_stylesheetType.GetString());
     }
     if(!m_stylesheet.IsEmpty())
     {
-      header.AppendFormat(" href=\"%s\"",m_stylesheet.GetString());
+      header.AppendFormat(_T(" href=\"%s\""),m_stylesheet.GetString());
     }
-    header += "?>";
+    header += _T("?>");
   }
   return header;
 }
@@ -459,10 +450,10 @@ XMLMessage::PrintElements(XMLElement* p_element
   // Find indentation
   if(m_condensed == false)
   {
-    newline = "\n";
+    newline = _T("\n");
     for(int ind = 0;ind < p_level; ++ind)
     {
-      spaces += "  ";
+      spaces += _T("  ");
     }
   }
 
@@ -473,7 +464,7 @@ XMLMessage::PrintElements(XMLElement* p_element
   // Check namespace
   if(!namesp.IsEmpty())
   {
-    name = namesp + ":" + name;
+    name = namesp + _T(":") + name;
   }
 
   // Print domain value restriction of the element
@@ -493,20 +484,20 @@ XMLMessage::PrintElements(XMLElement* p_element
   if(p_element->GetType() & XDT_CDATA)
   {
     // CDATA section
-    temp.Format("<%s><![CDATA[%s]]>",XMLParser::PrintXmlString(name,p_utf8).GetString(),value.GetString());
+    temp.Format(_T("<%s><![CDATA[%s]]>"),XMLParser::PrintXmlString(name,p_utf8).GetString(),value.GetString());
     message += spaces + temp;
   }
   else if(value.IsEmpty() && p_element->GetAttributes().size() == 0 && p_element->GetChildren().size() == 0)
   {
     // A 'real' empty node
-    temp.Format("<%s />%s",XMLParser::PrintXmlString(name,p_utf8).GetString(),newline.GetString());
+    temp.Format(_T("<%s />%s"),XMLParser::PrintXmlString(name,p_utf8).GetString(),newline.GetString());
     message += spaces + temp;
     return message;
   }
   else
   {
     // Parameter printing with attributes
-    temp.Format("<%s",XMLParser::PrintXmlString(name,p_utf8).GetString());
+    temp.Format(_T("<%s"),XMLParser::PrintXmlString(name,p_utf8).GetString());
     message += spaces + temp;
 
     // Print all of our attributes
@@ -517,21 +508,21 @@ XMLMessage::PrintElements(XMLElement* p_element
       // Append attribute name
       if(attrib.m_namespace.IsEmpty())
       {
-        temp.Format(" %s=",XMLParser::PrintXmlString(attribute,p_utf8).GetString());
+        temp.Format(_T(" %s="),XMLParser::PrintXmlString(attribute,p_utf8).GetString());
       }
       else
       {
-        temp.Format(" %s:%s=",attrib.m_namespace.GetString(),XMLParser::PrintXmlString(attribute,p_utf8).GetString());
+        temp.Format(_T(" %s:%s="),attrib.m_namespace.GetString(),XMLParser::PrintXmlString(attribute,p_utf8).GetString());
       }
       message += temp;
 
       switch(attrib.m_type & XDT_Mask & ~XDT_Type)
       {
-        default:                    temp.Format("\"%s\"",attrib.m_value.GetString());
+        default:                    temp.Format(_T("\"%s\""),attrib.m_value.GetString());
                                     break;
         case XDT_String:            [[fallthrough]];
         case XDT_AnyURI:            [[fallthrough]];
-        case XDT_NormalizedString:  temp.Format("\"%s\"",XMLParser::PrintXmlString(attrib.m_value,p_utf8).GetString());
+        case XDT_NormalizedString:  temp.Format(_T("\"%s\""),XMLParser::PrintXmlString(attrib.m_value,p_utf8).GetString());
                                     break;
       }
       message += temp;
@@ -540,20 +531,20 @@ XMLMessage::PrintElements(XMLElement* p_element
     // Mandatory type in the xml
     if(p_element->GetType() & XDT_Type)
     {
-      temp.Format(" type=\"%s\"",XmlDataTypeToString(p_element->GetType() & XDT_MaskTypes).GetString());
+      temp.Format(_T(" type=\"%s\""),XmlDataTypeToString(p_element->GetType() & XDT_MaskTypes).GetString());
       message += temp;
     }
 
     // After the attributes, empty value or value
     if(value.IsEmpty() && p_element->GetChildren().empty())
     {
-      message += XString("/>") + newline;
+      message += XString(_T("/>")) + newline;
       return message;
     }
     else
     {
       // Write value and end of the key
-      temp.Format(">%s",XMLParser::PrintXmlString(value,p_utf8).GetString());
+      temp.Format(_T(">%s"),XMLParser::PrintXmlString(value,p_utf8).GetString());
       message += temp;
     }
   }
@@ -569,7 +560,7 @@ XMLMessage::PrintElements(XMLElement* p_element
     message += spaces;
   }
   // Write ending of parameter name
-  temp.Format("</%s>%s",XMLParser::PrintXmlString(name,p_utf8).GetString(),newline.GetString());
+  temp.Format(_T("</%s>%s"),XMLParser::PrintXmlString(name,p_utf8).GetString(),newline.GetString());
   message += temp;
 
   return message;
@@ -578,22 +569,22 @@ XMLMessage::PrintElements(XMLElement* p_element
 XString
 XMLMessage::PrintWSDLComment(XMLElement* p_element)
 {
-  XString comment("<!--");
+  XString comment(_T("<!--"));
   switch(p_element->GetType() & WSDL_MaskField)
   {
-    case WSDL_Mandatory: comment += "Mandatory";    break;
+    case WSDL_Mandatory: comment += _T("Mandatory");    break;
     case WSDL_Optional:  [[fallthrough]];
-    case WSDL_ZeroOne:   comment += "Optional";     break;
-    case WSDL_OnceOnly:  comment += "Exactly ONE";  break;
-    case WSDL_ZeroMany:  comment += "ZERO or more"; break;
-    case WSDL_OneMany:   comment += "At LEAST one"; break;
+    case WSDL_ZeroOne:   comment += _T("Optional");     break;
+    case WSDL_OnceOnly:  comment += _T("Exactly ONE");  break;
+    case WSDL_ZeroMany:  comment += _T("ZERO or more"); break;
+    case WSDL_OneMany:   comment += _T("At LEAST one"); break;
   }
   switch(p_element->GetType() & WSDL_MaskOrder)
   {
-    case WSDL_Choice:    comment += ": You have a CHOICE at this level"; break;
-    case WSDL_Sequence:  comment += ": Exactly in this SEQUENCE";        break;
+    case WSDL_Choice:    comment += _T(": You have a CHOICE at this level"); break;
+    case WSDL_Sequence:  comment += _T(": Exactly in this SEQUENCE");        break;
   }
-  comment += ":-->";
+  comment += _T(":-->");
 
   return comment;
 }
@@ -601,20 +592,19 @@ XMLMessage::PrintWSDLComment(XMLElement* p_element)
 XString 
 XMLMessage::PrintJson(bool p_attributes)
 {
-  XString message = PrintElementsJson(m_root,p_attributes,m_encoding);
+  XString message = PrintElementsJson(m_root,p_attributes);
   if(m_condensed)
   {
-    message += "\n";
+    message += _T("\n");
   }
   return message;
 }
 
 // Print the elements stack
 XString
-XMLMessage::PrintElementsJson(XMLElement*     p_element
-                             ,bool            p_attributes
-                             ,StringEncoding  p_encoding /*=XMLEncoding = ENC_UTF8 */
-                             ,int             p_level    /* = 0*/)
+XMLMessage::PrintElementsJson(XMLElement* p_element
+                             ,bool        p_attributes
+                             ,int         p_level /* = 0*/)
 {
   XString temp;
   XString spaces;
@@ -624,10 +614,10 @@ XMLMessage::PrintElementsJson(XMLElement*     p_element
   // Find indentation
   if(m_condensed == false)
   {
-    newline = "\n";
+    newline = _T("\n");
     for(int ind = 0; ind < p_level; ++ind)
     {
-      spaces += "  ";
+      spaces += _T("  ");
     }
   }
 
@@ -636,34 +626,34 @@ XMLMessage::PrintElementsJson(XMLElement*     p_element
 
   if(!name.IsEmpty())
   {
-    message = spaces + "\""+ name + "\": ";
+    message = spaces + _T("\"") + name + _T("\": ");
   }
 
   // Optional attributes group
   if(p_attributes && !p_element->GetAttributes().empty())
   {
-    message += XString("{") + newline;
+    message += XString(_T("{")) + newline;
 
-    for(auto& attrib : p_element->GetAttributes())
+    for(const auto& attrib : p_element->GetAttributes())
     {
       XString attrName  = attrib.m_name;
       XString attrValue = attrib.m_value;
-      temp.Format("\"@%s\": \"%s'\"",attrName.GetString(),attrValue.GetString());
+      temp.Format(_T("\"@%s\": \"%s'\""),attrName.GetString(),attrValue.GetString());
       message = spaces + temp + newline;
     }
     message += spaces;
-    message += "\"#text\": ";
+    message += _T("\"#text\": ");
   }
 
   // print element value
   switch(p_element->GetType() & XDT_Mask & ~XDT_Type)
   {
-    default:                    temp.Format("%s",value.GetString());
+    default:                    temp.Format(_T("%s"),value.GetString());
                                 break;
     case XDT_CDATA:             [[fallthrough]];
     case XDT_String:            [[fallthrough]];
     case XDT_AnyURI:            [[fallthrough]];
-    case XDT_NormalizedString:  temp = XMLParser::PrintJsonString(value,m_encoding);
+    case XDT_NormalizedString:  temp = XMLParser::PrintJsonString(value);
                                 break;
   }
   message += temp + newline;
@@ -672,7 +662,7 @@ XMLMessage::PrintElementsJson(XMLElement*     p_element
   if(p_attributes && !p_element->GetAttributes().empty())
   {
     message += spaces;
-    message += "}";
+    message += _T("}");
     message += newline;
   }
 
@@ -680,14 +670,14 @@ XMLMessage::PrintElementsJson(XMLElement*     p_element
   if(!p_element->GetChildren().empty())
   {
     message += spaces;
-    message += "{";
+    message += _T("{");
     message += newline;
     for(auto& elem : p_element->GetChildren())
     {
-      PrintElementsJson(elem,p_attributes,p_encoding,p_level + 1);
+      PrintElementsJson(elem,p_attributes,p_level + 1);
     }
     message += spaces;
-    message += "}";
+    message += _T("}");
     message += newline;
   }
 
@@ -714,7 +704,7 @@ XMLMessage::EncryptMessage(XString& /*p_message*/)
 
 // General add a parameter (always adds, so multiple parameters of same name can be added)
 XMLElement*
-XMLMessage::AddElement(XMLElement* p_base,XString p_name,XmlDataType p_type,XString p_value,bool p_front /*=false*/)
+XMLMessage::AddElement(XMLElement* p_base,XString p_name,XmlDataType p_type /*=XDT_String*/, XString p_value /*=""*/, bool p_front /*=false*/)
 {
   // Removing the namespace from the name
   XString namesp = SplitNamespace(p_name);
@@ -722,7 +712,7 @@ XMLMessage::AddElement(XMLElement* p_base,XString p_name,XmlDataType p_type,XStr
   // Check for stupid programmers
   if(p_name.Find(' ') > 0)
   {
-    throw StdException("XML Messages with spaces in elementnames are invalid!");
+    throw StdException(_T("XML Messages with spaces in elementnames are invalid!"));
   }
 
   XmlElementMap& elements = p_base ? p_base->GetChildren() : m_root->GetChildren();
@@ -771,13 +761,13 @@ XMLMessage::SetElement(XMLElement* p_base,XString p_name,XmlDataType p_type,XStr
 }
 
 XMLElement*
-XMLMessage::SetElement(XString p_name,XString& p_value)
+XMLMessage::SetElement(XString p_name,const XString& p_value)
 {
   return SetElement(m_root,p_name,XDT_String,p_value);
 }
 
 XMLElement*
-XMLMessage::SetElement(XString p_name, const char* p_value)
+XMLMessage::SetElement(XString p_name,LPCTSTR p_value)
 {
   XString value(p_value);
   return SetElement(m_root,p_name,XDT_String,value);
@@ -787,7 +777,7 @@ XMLElement*
 XMLMessage::SetElement(XString p_name,int p_value)
 {
   XString value;
-  value.Format("%d",p_value);
+  value.Format(_T("%d"),p_value);
   return SetElement(m_root,p_name,XDT_Integer,value);
 }
 
@@ -795,7 +785,7 @@ XMLElement*
 XMLMessage::SetElement(XString p_name,bool p_value)
 {
   XString value;
-  value.Format("%s",p_value ? "true" : "false");
+  value.Format(_T("%s"),p_value ? _T("true") : _T("false"));
   return SetElement(m_root,p_name,XDT_Boolean,value);
 }
 
@@ -803,20 +793,19 @@ XMLElement*
 XMLMessage::SetElement(XString p_name,double p_value)
 {
   XString value;
-  value.Format("%G",p_value);
+  value.Format(_T("%G"),p_value);
   return SetElement(m_root,p_name,XDT_Double,value);
 }
 
 XMLElement*
-XMLMessage::SetElement(XMLElement* p_base,XString p_name,XString& p_value)
+XMLMessage::SetElement(XMLElement* p_base,XString p_name,const XString& p_value)
 {
   return SetElement(p_base,p_name,XDT_String,p_value);
 }
 
 XMLElement*
-XMLMessage::SetElement(XMLElement* p_base,XString p_name,const char* p_value)
+XMLMessage::SetElement(XMLElement* p_base,XString p_name,LPCTSTR p_value)
 {
-  XString value(p_value);
   return SetElement(p_base,p_name,XDT_String,p_value);
 }
 
@@ -824,7 +813,7 @@ XMLElement*
 XMLMessage::SetElement(XMLElement* p_base,XString p_name,int p_value)
 {
   XString value;
-  value.Format("%d", p_value);
+  value.Format(_T("%d"), p_value);
   return SetElement(p_base,p_name,XDT_Integer,value);
 }
 
@@ -832,7 +821,7 @@ XMLElement*
 XMLMessage::SetElement(XMLElement* p_base,XString p_name,bool p_value)
 {
   XString value;
-  value.Format("%s",p_value ? "true" : "false");
+  value.Format(_T("%s"),p_value ? _T("true") : _T("false"));
   return SetElement(p_base,p_name,XDT_Boolean,value);
 }
 
@@ -840,7 +829,7 @@ XMLElement*
 XMLMessage::SetElement(XMLElement* p_base,XString p_name,double p_value)
 {
   XString value;
-  value.Format("%G",p_value);
+  value.Format(_T("%G"),p_value);
   return SetElement(p_base,p_name,XDT_Double,value);
 }
 
@@ -865,15 +854,15 @@ XMLMessage::SetElementOptions(XMLElement* p_elem,XmlDataType p_options)
   }
 }
 
-// Setting the namespace' name and contract of an element
+// Setting the namespace name and contract of an element
 // Beware that a contract never ends on a '/' or a '\\'
 void
 XMLMessage::SetElementNamespace(XMLElement* p_elem, XString p_namespace, XString p_contract,bool p_trailingSlash /*=false*/)
 {
-  XString name = "xmlns";
+  XString name = _T("xmlns");
   if (!p_namespace.IsEmpty())
   {
-    name += ":";
+    name += _T(":");
     name += p_namespace;
   }
   if(p_trailingSlash == false)
@@ -886,7 +875,7 @@ XMLMessage::SetElementNamespace(XMLElement* p_elem, XString p_namespace, XString
 
 // Set attribute of an element
 XMLAttribute*
-XMLMessage::SetAttribute(XMLElement* p_elem,XString p_name,XString& p_value)
+XMLMessage::SetAttribute(XMLElement* p_elem,XString p_name,const XString& p_value)
 {
   if(p_elem == NULL)
   {
@@ -918,7 +907,7 @@ XMLMessage::SetAttribute(XMLElement* p_elem,XString p_name,XString& p_value)
 
 // Set attribute of a element
 XMLAttribute*
-XMLMessage::SetAttribute(XMLElement* p_elem,XString p_name,const char* p_value)
+XMLMessage::SetAttribute(XMLElement* p_elem,XString p_name,LPCTSTR p_value)
 {
   XString value(p_value);
   return SetAttribute(p_elem,p_name,value);
@@ -929,7 +918,7 @@ XMLAttribute*
 XMLMessage::SetAttribute(XMLElement* p_elem,XString p_name,int p_value)
 {
   XString value;
-  value.Format("%d",p_value);
+  value.Format(_T("%d"),p_value);
   XMLAttribute* attrib = SetAttribute(p_elem,p_name,value);
   attrib->m_type = XDT_Integer;
   return attrib;
@@ -940,7 +929,7 @@ XMLAttribute*
 XMLMessage::SetAttribute(XMLElement* p_elem,XString p_name,bool p_value)
 {
   XString value;
-  value.Format("%s",p_value ? "true" : "false");
+  value.Format(_T("%s"),p_value ? _T("true") : _T("false"));
   XMLAttribute* attrib = SetAttribute(p_elem,p_name,value);
   attrib->m_type = XDT_Boolean;
   return attrib;
@@ -951,7 +940,7 @@ XMLAttribute*
 XMLMessage::SetAttribute(XMLElement* p_elem,XString p_name,double p_value)
 {
   XString value;
-  value.Format("%G",p_value);
+  value.Format(_T("%G"),p_value);
   XMLAttribute* attrib = SetAttribute(p_elem,p_name,value);
   attrib->m_type = XDT_Double;
   return attrib;
@@ -981,25 +970,25 @@ XMLMessage::GetElement(XMLElement* p_elem,XString p_name)
       return map[ind]->GetValue();
     }
   }
-  return "";
+  return _T("");
 }
 
 int      
 XMLMessage::GetElementInteger(XMLElement* p_elem,XString p_name)
 {
-  return atoi(GetElement(p_elem,p_name));
+  return _ttoi(GetElement(p_elem,p_name));
 }
 
 bool
 XMLMessage::GetElementBoolean(XMLElement* p_elem,XString p_name)
 {
   XString value = GetElement(p_elem,p_name);
-  if((value.CompareNoCase("true") == 0) ||
-     (value.CompareNoCase("yes") == 0))
+  if((value.CompareNoCase(_T("true")) == 0) ||
+     (value.CompareNoCase(_T("yes")) == 0))
   {
     return true;
   }
-  if(atoi(value) > 0)
+  if(_ttoi(value) > 0)
   {
     return true;
   }
@@ -1009,7 +998,7 @@ XMLMessage::GetElementBoolean(XMLElement* p_elem,XString p_name)
 double
 XMLMessage::GetElementDouble(XMLElement* p_elem,XString p_name)
 {
-  return atof(GetElement(p_elem,p_name));
+  return _ttof(GetElement(p_elem,p_name));
 }
 
 XString
@@ -1064,7 +1053,7 @@ XMLMessage::GetElementSibling(XMLElement* p_elem)
           // Check for last node
           if(ind < parent->GetChildren().size() - 1)
           {
-            return parent->GetChildren()[ind + 1];
+            return parent->GetChildren()[(size_t)ind + 1];
           }
         }
       }
@@ -1162,22 +1151,31 @@ XMLMessage::GetAttribute(XMLElement* p_elem,XString p_attribName)
 {
   if(p_elem)
   {
+    XString namesp = SplitNamespace(p_attribName);
+
     for(auto& attrib : p_elem->GetAttributes())
     {
       if(attrib.m_name.Compare(p_attribName) == 0)
       {
-        return attrib.m_value;
+        if(namesp.IsEmpty())
+        {
+          return attrib.m_value;
+        }
+        if(attrib.m_namespace.Compare(namesp) == 0)
+        {
+          return attrib.m_value;
+        }
       }
     }
   }
-  return "";
+  return _T("");
 }
 
 // Get the integer attribute
 int
 XMLMessage::GetAttributeInteger(XMLElement* p_elem,XString p_attribName)
 {
-  return atoi(GetAttribute(p_elem,p_attribName));
+  return _ttoi(GetAttribute(p_elem,p_attribName));
 }
 
 // Get the boolean attribute
@@ -1185,11 +1183,11 @@ bool
 XMLMessage::GetAttributeBoolean(XMLElement* p_elem,XString p_attribName)
 {
   XString value = GetAttribute(p_elem,p_attribName);
-  if(value.CompareNoCase("true") == 0)
+  if(value.CompareNoCase(_T("true")) == 0)
   {
     return true;
   }
-  if(atoi(value) > 0)
+  if(_ttoi(value) > 0)
   {
     // Fallback for integer booleans
     return true;
@@ -1201,7 +1199,7 @@ XMLMessage::GetAttributeBoolean(XMLElement* p_elem,XString p_attribName)
 double
 XMLMessage::GetAttributeDouble(XMLElement* p_elem,XString p_attribName)
 {
-  return atof(GetAttribute(p_elem,p_attribName));
+  return _ttof(GetAttribute(p_elem,p_attribName));
 }
 
 XMLAttribute*
@@ -1360,27 +1358,12 @@ XMLMessage::FindElementByAttribute(XMLElement* p_element, XString p_attribute, X
   return nullptr;
 }
 
-void
-XMLMessage::SetEncoding(StringEncoding p_encoding)
+Encoding
+XMLMessage::SetEncoding(Encoding p_encoding)
 {
-  m_encoding    = p_encoding;
-  m_sendUnicode = (p_encoding == StringEncoding::ENC_UTF16);
-}
-
-// Set sending in Unicode
-void
-XMLMessage::SetSendUnicode(bool p_unicode)
-{
-  m_sendUnicode = p_unicode;
-  if(p_unicode)
-  {
-    m_encoding = StringEncoding::ENC_UTF16;
-  }
-  else if(m_encoding == StringEncoding::ENC_UTF16)
-  {
-    // Reset/Degrade to UTF-8 (Default encoding)
-    m_encoding = StringEncoding::ENC_UTF8;
-  }
+  Encoding previous = m_encoding;
+  m_encoding = p_encoding;
+  return previous;
 }
 
 #pragma endregion Operations

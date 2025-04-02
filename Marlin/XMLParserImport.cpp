@@ -4,7 +4,7 @@
 //
 // Marlin Server: Internet server/client
 // 
-// Copyright (c) 2014-2022 ir. W.E. Huisman
+// Copyright (c) 2014-2024 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -31,10 +31,12 @@
 #include "XMLParserImport.h"
 #include "XMLMessage.h"
 
+#ifdef _AFX
 #ifdef _DEBUG
 #define new DEBUG_NEW
 #undef THIS_FILE
 static char THIS_FILE[] = __FILE__;
+#endif
 #endif
 
 XMLParserImport::XMLParserImport(XMLMessage* p_message)
@@ -47,11 +49,11 @@ XMLParserImport::XMLParserImport(XMLMessage* p_message)
 void
 XMLParserImport::ParseAfterElement()
 {
-  if(m_lastElement->GetName().CompareNoCase("import") == 0)
+  if(m_lastElement->GetName().CompareNoCase(_T("import")) == 0)
   {
     // Getting the attributes
-    XString namesp   = m_message->GetAttribute(m_lastElement,"namespace");
-    XString location = m_message->GetAttribute(m_lastElement,"schemaLocation");
+    XString namesp   = m_message->GetAttribute(m_lastElement,_T("namespace"));
+    XString location = m_message->GetAttribute(m_lastElement,_T("schemaLocation"));
 
     // Remove original <import> element
     m_message->DeleteElement(m_element,m_lastElement);
@@ -60,7 +62,7 @@ XMLParserImport::ParseAfterElement()
     {
       // Save current parser state on the stack
       XMLElement* element = m_element;
-      uchar*      pointer = m_pointer;
+      _TUCHAR*    pointer = m_pointer;
       // replace this element by the import from the schema location
       ParseSchemaImport(location);
       // Return to this point in the parsing state
@@ -70,8 +72,8 @@ XMLParserImport::ParseAfterElement()
   }
 }
 
-void
-XMLParserImport::ParseSchemaImport(XString p_location)
+bool
+XMLParserImport::ParseSchemaImport(const XString& p_location)
 {
   bool result = false;
 
@@ -80,7 +82,7 @@ XMLParserImport::ParseSchemaImport(XString p_location)
   XString protocol2 = filename.Left(7);
   protocol1.MakeLower();
   protocol2.MakeLower();
-  if(protocol1 == "https://" || protocol2 == "http://")
+  if(protocol1 == _T("https://") || protocol2 == _T("http://"))
   {
     result = ReadXSDFileFromURL(filename);
   }
@@ -90,10 +92,12 @@ XMLParserImport::ParseSchemaImport(XString p_location)
   }
   // Reset last element of the parser
   m_lastElement = nullptr;
+
+  return result;
 }
 
 bool
-XMLParserImport::ReadXSDFileFromURL(XString p_url)
+XMLParserImport::ReadXSDFileFromURL(const XString& p_url)
 {
   bool result = false;
 
@@ -106,7 +110,7 @@ XMLParserImport::ReadXSDFileFromURL(XString p_url)
     size_t size = 0;
     if(buffer.GetBufferCopy(contents,size))
     {
-      XString message((LPCTSTR)contents);
+      XString message(reinterpret_cast<LPCTSTR>(contents));
       result = ReadXSD(message);
     }
     delete [] contents;
@@ -115,7 +119,7 @@ XMLParserImport::ReadXSDFileFromURL(XString p_url)
 }
 
 bool
-XMLParserImport::ReadXSDLocalFile(XString p_filename)
+XMLParserImport::ReadXSDLocalFile(const XString& p_filename)
 {
   bool result = false;
   FileBuffer buf(p_filename);
@@ -126,7 +130,7 @@ XMLParserImport::ReadXSDLocalFile(XString p_filename)
     size_t size = 0;
     if(buf.GetBufferCopy(contents,size))
     {
-      XString message((LPCTSTR)contents);
+      XString message(reinterpret_cast<LPCTSTR>(contents));
       result = ReadXSD(message);
     }
     delete [] contents;
@@ -135,18 +139,18 @@ XMLParserImport::ReadXSDLocalFile(XString p_filename)
 }
 
 bool 
-XMLParserImport::ReadXSD(XString p_message)
+XMLParserImport::ReadXSD(const XString& p_message)
 {
   XMLMessage xsd;
   XMLParserImport parser(m_message);
-  xsd.ParseMessage(&parser,p_message);
+  xsd.ParseMessage(&parser,const_cast<XString&>(p_message));
   
   // Check if XSD is legal XML
   if(xsd.GetInternalError() != XmlError::XE_NoError)
   {
     return false;
   }
-  XMLElement* schema = xsd.FindElement("schema");
+  XMLElement* schema = xsd.FindElement(_T("schema"));
   if(schema == nullptr)
   {
     return false;
@@ -160,7 +164,7 @@ XMLParserImport::ReadXSD(XString p_message)
 
   // Restart parsing from here
   // Adding this part of the XSD to the original XML document
-  m_pointer = (uchar*) toParse.GetString();
+  m_pointer = reinterpret_cast<_TUCHAR*>(const_cast<TCHAR*>(toParse.GetString()));
 
   // MAIN PARSING LOOP
   try
@@ -171,10 +175,10 @@ XMLParserImport::ReadXSD(XString p_message)
     // Checks after parsing
     if(*m_pointer)
     {
-      SetError(XmlError::XE_ExtraText,m_pointer);
+      SetError(XmlError::XE_ExtraText,(LPCTSTR)m_pointer);
     }
   }
-  catch(XmlError& error)
+  catch(const XmlError& error)
   {
     // Error message text already set
     m_message->m_internalError = error;

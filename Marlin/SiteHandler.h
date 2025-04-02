@@ -4,7 +4,7 @@
 //
 // Marlin Server: Internet server/client
 // 
-// Copyright (c) 2014-2022 ir. W.E. Huisman
+// Copyright (c) 2014-2024 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -32,10 +32,10 @@
 #include "LogAnalysis.h"
 
 // Macro's for logging in the site handlers
-#define SITE_DETAILLOG1(text)       m_site->GetHTTPServer()->DetailLog (__FUNCTION__,LogType::LOG_INFO,(text))
-#define SITE_DETAILLOGS(text,extra) m_site->GetHTTPServer()->DetailLogS(__FUNCTION__,LogType::LOG_INFO,(text),(extra))
-#define SITE_DETAILLOGV(text,...)   m_site->GetHTTPServer()->DetailLogV(__FUNCTION__,LogType::LOG_INFO,(text),__VA_ARGS__)
-#define SITE_ERRORLOG(code,text)    m_site->GetHTTPServer()->ErrorLog  (__FUNCTION__,(code),(text));
+#define SITE_DETAILLOG1(text)       m_site->GetHTTPServer()->DetailLog (_T(__FUNCTION__),LogType::LOG_INFO,(text))
+#define SITE_DETAILLOGS(text,extra) m_site->GetHTTPServer()->DetailLogS(_T(__FUNCTION__),LogType::LOG_INFO,(text),(extra))
+#define SITE_DETAILLOGV(text,...)   m_site->GetHTTPServer()->DetailLogV(_T(__FUNCTION__),LogType::LOG_INFO,(text),__VA_ARGS__)
+#define SITE_ERRORLOG(code,text)    m_site->GetHTTPServer()->ErrorLog  (_T(__FUNCTION__),(code),(text));
 
 // Main base class for a HTTPSite:SiteHandler
 
@@ -55,7 +55,7 @@ public:
 
   // Go handle this message
   virtual void HandleMessage(HTTPMessage* p_message);
-  virtual void HandleStream (HTTPMessage* p_message,EventStream* p_stream);
+  virtual bool HandleStream (HTTPMessage* p_message,EventStream* p_stream);
   virtual void CleanUp      (HTTPMessage* p_message);
 
   // When stopping the site

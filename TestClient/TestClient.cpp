@@ -27,14 +27,14 @@ void StartSession()
     if(g_session)
     {
       // Where we have our filestore
-      g_session->SetFilestore("C:\\WWW\\Testing");
+      g_session->SetFilestore(_T("C:\\WWW\\Testing"));
 
       // Set our internet role
       g_session->SetInternet(g_url);
     }
     else
     {
-      printf("ERROR: No Hibernate session started.\n");
+      _tprintf(_T("ERROR: No Hibernate session started.\n"));
       exit(-3);
     }
   }
@@ -58,47 +58,47 @@ void CloseSession()
 void PrintMaster(Master* p_master)
 {
   CString text;
-  text.Format("Record ID      : %d", p_master->GetID());                           puts(text);
-  text.Format("Invoice number : %d", p_master->GetInvoice());                      puts(text);
-  text.Format("Description    : %s", p_master->GetDescription().GetString());      puts(text);
-  text.Format("Total amount   : %s", p_master->GetTotal().AsString().GetString()); puts(text);
+  text.Format(_T("Record ID      : %d"), p_master->GetID());                           _putts(text);
+  text.Format(_T("Invoice number : %d"), p_master->GetInvoice());                      _putts(text);
+  text.Format(_T("Description    : %s"), p_master->GetDescription().GetString());      _putts(text);
+  text.Format(_T("Total amount   : %s"), p_master->GetTotal().AsString().GetString()); _putts(text);
 }
 
 void PrintDetail(Detail* p_detail)
 {
   CString text;
-  text.Format("Record ID      : %d", p_detail->GetID());                            puts(text);
-  text.Format("Master ID      : %d", p_detail->GetMasterID());                      puts(text);
-  text.Format("Line number    : %d", p_detail->GetLine());                          puts(text);
-  text.Format("Description    : %s", p_detail->GetDescription().GetString());       puts(text);
-  text.Format("Part amount    : %s", p_detail->GetAmount().AsString().GetString()); puts(text);
+  text.Format(_T("Record ID      : %d"), p_detail->GetID());                            _putts(text);
+  text.Format(_T("Master ID      : %d"), p_detail->GetMasterID());                      _putts(text);
+  text.Format(_T("Line number    : %d"), p_detail->GetLine());                          _putts(text);
+  text.Format(_T("Description    : %s"), p_detail->GetDescription().GetString());       _putts(text);
+  text.Format(_T("Part amount    : %s"), p_detail->GetAmount().AsString().GetString()); _putts(text);
 }
 
 void T01_SelectMaster()
 {
-  printf("%s: Getting a record from the MASTER table\n",__FUNCTION__);
+  _tprintf(_T("%s: Getting a record from the MASTER table\n"),_T(__FUNCTION__));
 
   try
   {
     Master* master = (Master*)g_session->Load(Master::ClassName(), 2);
 
     ASSERT(master != nullptr);
-    printf("Testing 2th master record\n");
+    _tprintf(_T("Testing 2th master record\n"));
     PrintMaster(master);
   }
   catch(StdException& er)
   {
-    printf("ERROR: %s\n", er.GetErrorMessage().GetString());
+    _tprintf(_T("ERROR: %s\n"), er.GetErrorMessage().GetString());
   }
 }
 
 void T02_SelectDetails()
 {
-  printf("%s: Getting all records from the DETAIL table with 'line > 1'\n",__FUNCTION__);
+  _tprintf(_T("%s: Getting all records from the DETAIL table with 'line > 1'\n"),_T(__FUNCTION__));
 
   try
   {
-    Filter filter("line",OP_Greater,1);
+    Filter filter(_T("line"),OP_Greater,1);
 
     CXResultSet set = g_session->Load(Detail::ClassName(),&filter);
     for(auto& object : set)
@@ -109,13 +109,13 @@ void T02_SelectDetails()
   }
   catch (StdException& er)
   {
-    printf("ERROR: %s\n", er.GetErrorMessage().GetString());
+    _tprintf(_T("ERROR: %s\n"), er.GetErrorMessage().GetString());
   }
 }
 
 void T03_UpdateTest()
 {
-  printf("%s: Updating a record from the MASTER table\n",__FUNCTION__);
+  _tprintf(_T("%s: Updating a record from the MASTER table\n"),_T(__FUNCTION__));
 
   try
   {
@@ -123,13 +123,13 @@ void T03_UpdateTest()
     Master* master = reinterpret_cast<Master*>(object);
 
     ASSERT(master != nullptr);
-    printf("Updating 1th master record\n");
+    _tprintf(_T("Updating 1th master record\n"));
 
     // Keeping the old one (750.00)
     bcd old_total = master->GetTotal();
 
     // Setting new value
-    bcd total("935.12");
+    bcd total(_T("935.12"));
     master->SetTotal(total);
     bool res = g_session->Save(master);
     ASSERT(res == true);
@@ -139,17 +139,17 @@ void T03_UpdateTest()
     res = g_session->Save(master);
     ASSERT(res == true);
 
-    printf("Record updated\n");
+    _tprintf(_T("Record updated\n"));
   }
   catch (StdException& er)
   {
-    printf("ERROR: %s\n", er.GetErrorMessage().GetString());
+    _tprintf(_T("ERROR: %s\n"), er.GetErrorMessage().GetString());
   }
 }
 
 void T04_InsertDelete()
 {
-  printf("%s: Insert a record into the TEST_NUMBER table.\n",__FUNCTION__);
+  _tprintf(_T("%s: Insert a record into the TEST_NUMBER table.\n"),_T(__FUNCTION__));
 
   try
   {
@@ -157,7 +157,7 @@ void T04_InsertDelete()
     // Do Not set the ID field: this will be done by the generator
     numbers->SetField1(42);
     numbers->SetField2(89975.123);
-    numbers->SetField3("300.77");
+    numbers->SetField3(bcd(_T("300.77")));
 
     // Insert this object in the database
     bool result = g_session->Insert(numbers);
@@ -165,18 +165,18 @@ void T04_InsertDelete()
 
     // Show id of inserted object
     int id = numbers->GetID();
-    printf("Test_number object [%d] inserted.\n",id);
+    _tprintf(_T("Test_number object [%d] inserted.\n"),id);
 
     // Delete the object again and destroy the derived object!
     result = g_session->Delete(numbers);
     ASSERT(result == true);
 
     // Test that it is gone
-    printf("Test_number record deleted again!\n");
+    _tprintf(_T("Test_number record deleted again!\n"));
   }
   catch (StdException& er)
   {
-    printf("ERROR: %s\n", er.GetErrorMessage().GetString());
+    _tprintf(_T("ERROR: %s\n"), er.GetErrorMessage().GetString());
   }
 }
 
@@ -185,35 +185,35 @@ void T04_InsertDelete()
 void
 WaitForKey()
 {
-  char buffer[256];
+  TCHAR buffer[256];
   size_t readIn = 0;
-  _cgets_s(buffer, 256, &readIn);
+  _cgetts_s(buffer, 256, &readIn);
 }
 
-int main(int argc,char* argv[])
+int _tmain(int argc,TCHAR* argv[])
 {
   // initialize MFC and print and error on failure
   if(!AfxWinInit(::GetModuleHandle(NULL),NULL,::GetCommandLine(), 0))
   {
     CString command = ::GetCommandLine();
-    CString message = "Fatal Error in TestClient: MFC initialization failed " + command;
-    fprintf(stderr, message + "\n");
+    CString message = _T("Fatal Error in TestClient: MFC initialization failed ") + command;
+    _ftprintf(stderr, message + _T("\n"));
     return -3;
   }
 
   // Test if we should connect to an IIS installation
   if(argc == 2)
   {
-    if(_stricmp(argv[1], "/iis") == 0)
+    if(_tcsicmp(argv[1], _T("/iis")) == 0)
     {
       ++g_port;
     }
   }
-  g_url.Format("http://localhost:%d/CXServer/",g_port);
+  g_url.Format(_T("http://localhost:%d/CXServer/"),g_port);
 
   // Print who we are
-  printf("CXHibernate test client program\n");
-  printf("===============================\n");
+  _tprintf(_T("CXHibernate test client program\n"));
+  _tprintf(_T("===============================\n"));
 
   // Start our CX-Hibernate session
   StartSession();

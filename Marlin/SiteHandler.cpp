@@ -4,7 +4,7 @@
 //
 // Marlin Server: Internet server/client
 // 
-// Copyright (c) 2014-2022 ir. W.E. Huisman
+// Copyright (c) 2014-2024 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -29,10 +29,12 @@
 #include "SiteHandler.h"
 #include "HTTPMessage.h"
 
+#ifdef _AFX
 #ifdef _DEBUG
 #define new DEBUG_NEW
 #undef THIS_FILE
 static char THIS_FILE[] = __FILE__;
+#endif
 #endif
 
 SiteHandler::SiteHandler()
@@ -63,10 +65,11 @@ SiteHandler::OnStopSite()
 {
 }
 
-void 
+bool 
 SiteHandler::HandleStream(HTTPMessage* /*p_message*/,EventStream* /*p_stream*/)
 {
   // Nothing to do
+  return false;
 }
 
 // Go handle this message
@@ -104,7 +107,7 @@ SiteHandler::PreHandle(HTTPMessage* /*p_message*/)
 bool     
 SiteHandler::Handle(HTTPMessage* p_message)
 {
-  SITE_ERRORLOG(ERROR_INVALID_PARAMETER,"INTERNAL: Unhandled request caught by base HTTPSite::SiteHandler::Handle");
+  SITE_ERRORLOG(ERROR_INVALID_PARAMETER,_T("INTERNAL: Unhandled request caught by base HTTPSite::SiteHandler::Handle"));
   p_message->Reset();
   p_message->SetStatus(HTTP_STATUS_BAD_REQUEST);
   return true;

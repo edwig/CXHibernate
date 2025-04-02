@@ -2,7 +2,7 @@
 //
 // File: SQLTimestamp.h
 //
-// Copyright (c) 1998-2022 ir. W.E. Huisman
+// Copyright (c) 1998-2025 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy of 
@@ -78,12 +78,12 @@ class SQLTimestamp
 {  
 public:
   SQLTimestamp();
-  SQLTimestamp(const XString& p_string);
-  SQLTimestamp(const SQLTimestamp& p_timestamp);
-  SQLTimestamp(const SQLDate& p_date, const SQLTime& p_time);
-  SQLTimestamp(int p_year,int p_month,int p_day,int p_hour,int p_min,int p_sec,int p_fraction = 0);
-  SQLTimestamp(TIMESTAMP_STRUCT* p_stamp);
-  SQLTimestamp(StampValue p_value,int p_fraction = 0);
+  explicit SQLTimestamp(const XString& p_string);
+           SQLTimestamp(const SQLTimestamp& p_timestamp);
+           SQLTimestamp(const SQLDate& p_date, const SQLTime& p_time);
+           SQLTimestamp(int p_year,int p_month,int p_day,int p_hour,int p_min,int p_sec,int p_fraction = 0);
+  explicit SQLTimestamp(const TIMESTAMP_STRUCT* p_stamp);
+  explicit SQLTimestamp(StampValue p_value,int p_fraction = 0);
  ~SQLTimestamp();
  
   void Init(const XString& string);

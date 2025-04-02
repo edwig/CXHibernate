@@ -4,7 +4,7 @@
 //
 // Marlin Server: Internet server/client
 // 
-// Copyright (c) 2014-2022 ir. W.E. Huisman
+// Copyright (c) 2014-2024 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -80,8 +80,8 @@ typedef void(* LPFN_EVENTHANDLER)(ServerEvent* p_event,void* p_data);
 typedef struct _eventListener
 {
   XString           m_event;
-  LPFN_EVENTHANDLER m_handler;
-  bool              m_capture;
+  LPFN_EVENTHANDLER m_handler { nullptr };
+  bool              m_capture { false   };
 }
 EventListener;
 
@@ -136,7 +136,7 @@ private:
   // Set to connection state
   void        SetConnecting();
   // Handle the last-event-id of a generic listener
-  void        HandleLastID(ServerEvent* p_event);
+  void        HandleLastID(const ServerEvent* p_event);
   // Parse incoming data
   void        Parse(BYTE* p_buffer,unsigned& p_length);
   // Parse buffer in string form
@@ -171,6 +171,8 @@ private:
   // Incoming event
   XString     m_eventName;
   XString     m_eventData;
+
+  CRITICAL_SECTION m_parseLock;
 };
 
 inline ReadyState

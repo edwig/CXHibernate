@@ -191,7 +191,7 @@ CXClass::AddAttribute(CXAttribute* p_attribute)
   if(FindAttribute(name))
   {
     CString error;
-    error.Format("Duplicate attribute [%s] cannot be added to class: %s",name.GetString(),m_name.GetString());
+    error.Format(_T("Duplicate attribute [%s] cannot be added to class: %s"),name.GetString(),m_name.GetString());
     throw StdException(error);
   }
   // Just to be sure
@@ -356,21 +356,21 @@ CXClass::GetCalcHashcode()
 bool
 CXClass::SaveMetaInfo(XMLMessage& p_message,XMLElement* p_elem)
 {
-  XMLElement* theclass = p_message.AddElement(p_elem,"class",XDT_String,"");
+  XMLElement* theclass = p_message.AddElement(p_elem,_T("class"),XDT_String,_T(""));
 
   // Class attributes
-  p_message.AddElement(theclass,"name",XDT_String,m_name);
+  p_message.AddElement(theclass,_T("name"),XDT_String,m_name);
   if(!m_discriminator.IsEmpty())
   {
-    p_message.AddElement(theclass,"discriminator",XDT_String,m_discriminator);
+    p_message.AddElement(theclass,_T("discriminator"),XDT_String,m_discriminator);
   }
   if(m_super)
   {
-    p_message.AddElement(theclass,"super",XDT_String,m_super->GetName());
+    p_message.AddElement(theclass,_T("super"),XDT_String,m_super->GetName());
   }
   if(m_table)
   {
-    p_message.AddElement(theclass,"table",XDT_String,m_table->GetTableName());
+    p_message.AddElement(theclass,_T("table"),XDT_String,m_table->GetTableName());
   }
 
   // Add subclass references
@@ -394,9 +394,9 @@ CXClass::LoadMetaInfo(CXSession* p_session,XMLMessage& p_message,XMLElement* p_e
   // Load underlying table name
   if(m_table)
   {
-    CString schemaName = p_message.GetElement(p_elem,"schema");
-    CString tableName  = p_message.GetElement(p_elem,"table");
-    m_table->SetSchemaTableType(schemaName,tableName,"TABLE");
+    CString schemaName = p_message.GetElement(p_elem,_T("schema"));
+    CString tableName  = p_message.GetElement(p_elem,_T("table"));
+    m_table->SetSchemaTableType(schemaName,tableName,_T("TABLE"));
   }
   // Load subclasses
   LoadMetaInfoSubClasses(p_message,p_elem);
@@ -441,15 +441,15 @@ CXClass::BuildPrimaryKeyFilter(SOAPMessage& p_message,XMLElement* p_entity,Varia
   // Check number of primaries against VariantSet
   if(m_identity.m_attributes.size() != p_primary.size())
   {
-    throw StdException("Primary key size mismatches the load key");
+    throw StdException(_T("Primary key size mismatches the load key"));
   }
   if(p_primary.empty())
   {
-    throw StdException("Cannot select an object without a filter");
+    throw StdException(_T("Cannot select an object without a filter"));
   }
 
   // All filters under this node
-  XMLElement* filters = p_message.AddElement(p_entity,"Filters",XDT_String,"");
+  XMLElement* filters = p_message.AddElement(p_entity,_T("Filters"),XDT_String,_T(""));
 
   // Prepare for iteration
   CXAttribMap::iterator att = m_identity.m_attributes.begin();
@@ -463,10 +463,10 @@ CXClass::BuildPrimaryKeyFilter(SOAPMessage& p_message,XMLElement* p_entity,Varia
     CString value;
     (*key)->GetAsString(value);
 
-    XMLElement* filter = p_message.AddElement(filters,"Filter",XDT_String,"");
-    p_message.AddElement(filter,"Column",  XDT_String,column);
-    p_message.AddElement(filter,"Operator",XDT_String,operat);
-    p_message.AddElement(filter,"Value",   xmltype,   value);
+    XMLElement* filter = p_message.AddElement(filters,_T("Filter"),XDT_String,_T(""));
+    p_message.AddElement(filter,_T("Column"),  XDT_String,column);
+    p_message.AddElement(filter,_T("Operator"),XDT_String,operat);
+    p_message.AddElement(filter,_T("Value"),   xmltype,   value);
 
     // Next attribute
     ++att;
@@ -480,7 +480,7 @@ CXClass::BuildFilter(CXAttribMap& p_attributes,VariantSet& p_values,SQLFilterSet
 {
   if(p_attributes.size() != p_values.size())
   {
-    throw StdException("Attributes / values mismatch in building an SQL Filter set");
+    throw StdException(_T("Attributes / values mismatch in building an SQL Filter set"));
   }
   CXAttribMap::iterator att = p_attributes.begin();
   VariantSet::iterator  val = p_values.begin();
@@ -504,7 +504,7 @@ CXClass::BuildClassTable(CXSession* p_session)
   {
     if(m_super == nullptr)
     {
-      CXAttribute* attrib = new CXAttribute("string","discriminator",3);
+      CXAttribute* attrib = new CXAttribute(_T("string"),_T("discriminator"),3);
       AddAttribute(attrib);
     }
   }
@@ -585,7 +585,7 @@ CXClass::InsertObjectInDatabase(SQLDatabase* p_database,SQLDataSet* p_dataset,CX
       return GetRootClass()->REALInsertObjectInDatabase(p_database,p_dataset,p_object,p_mutation,true);
     }
     // No legal table definition found
-    throw StdException("No table while inserting object into class: " + m_name);
+    throw StdException(_T("No table while inserting object into class: ") + m_name);
   }
 
   // Default status for stand alone / single-table classes
@@ -682,7 +682,7 @@ CXClass::UpdateObjectInDatabase(SQLDatabase* p_database,SQLDataSet* p_dataset,CX
       return GetRootClass()->REALUpdateObjectInDatabase(p_database,p_dataset,p_object,p_mutation);
     }
     // No legal table definition found
-    throw StdException("No table while updating an object of class: " + m_name);
+    throw StdException(_T("No table while updating an object of class: ") + m_name);
   }
 
   // Default status for stand alone / single-table classes
@@ -705,7 +705,7 @@ CXClass::UpdateObjectInDatabase(SQLDatabase* p_database,SQLDataSet* p_dataset,CX
       }
       catch(StdException& ex)
       {
-        hibernate.Log(LOGLEVEL_ERROR,true,"Error updating in super table: %s. Error: %s"
+        hibernate.Log(LOGLEVEL_ERROR,true,_T("Error updating in super table: %s. Error: %s")
                       ,m_super->GetName().GetString()
                       ,ex.GetErrorMessage().GetString());
       }
@@ -755,7 +755,7 @@ CXClass::DeleteObjectInDatabase(SQLDatabase* p_database,SQLDataSet* p_dataset,CX
       return GetRootClass()->REALDeleteObjectInDatabase(p_database,p_dataset,p_object,p_mutation);
     }
     // No legal table definition found
-    throw StdException("No table while deleting an object of class: " + m_name);
+    throw StdException(_T("No table while deleting an object of class: ") + m_name);
   }
 
   // Default status for stand alone / single-table classes
@@ -778,7 +778,7 @@ CXClass::DeleteObjectInDatabase(SQLDatabase* p_database,SQLDataSet* p_dataset,CX
       }
       catch(StdException& ex)
       {
-        hibernate.Log(LOGLEVEL_ERROR,true,"Error deleting in super table: %s. Error: %s"
+        hibernate.Log(LOGLEVEL_ERROR,true,_T("Error deleting in super table: %s. Error: %s")
                      ,m_super->GetName().GetString()
                      ,ex.GetErrorMessage().GetString());
         throw;
@@ -855,7 +855,7 @@ CXClass::CreateFilterSet(VariantSet& p_primary,SQLFilterSet&  p_filters)
   CString discriminator = GetRootClass()->GetDiscriminator();
   for (auto& column : list)
   {
-    CString dbscolumn = discriminator + "." + column;
+    CString dbscolumn = discriminator + _T(".") + column;
     SQLFilter filter(dbscolumn, SQLOperator::OP_Equal, p_primary[ind++]);
     p_filters.AddFilter(filter);
   }
@@ -876,7 +876,7 @@ CXClass::AddDiscriminatorToFilters(SQLFilterSet& p_filters)
     // Find discriminators
     CString discriminator = GetDiscriminator();
     CString rootdiscrim   = GetRootClass()->GetDiscriminator();
-    CString column = rootdiscrim + ".discriminator";
+    CString column = rootdiscrim + _T(".discriminator");
 
     SubClasses& subs = GetSubClasses();
     if (subs.empty())
@@ -906,7 +906,7 @@ CXClass::SerializeDiscriminator(CXObject* p_object,SQLRecord* p_record,int p_mut
   if(hibernate.GetStrategy() != MapStrategy::Strategy_standalone)
   {
     SQLVariant disc(p_object->GetDiscriminator());
-    p_record->SetField("discriminator", &disc, p_mutation);
+    p_record->SetField(_T("discriminator"), &disc, p_mutation);
   }
 }
 
@@ -918,10 +918,10 @@ CXClass::SaveMetaInfoSubClasses(XMLMessage& p_message,XMLElement* p_theClass)
 {
   if(!m_subClasses.empty())
   {
-    XMLElement* subs = p_message.AddElement(p_theClass,"subclasses",XDT_String,"");
+    XMLElement* subs = p_message.AddElement(p_theClass,_T("subclasses"),XDT_String,_T(""));
     for(auto& sub : m_subClasses)
     {
-      p_message.AddElement(subs,"subclass",XDT_String,sub->GetName());
+      p_message.AddElement(subs,_T("subclass"),XDT_String,sub->GetName());
     }
   }
 }
@@ -930,7 +930,7 @@ CXClass::SaveMetaInfoSubClasses(XMLMessage& p_message,XMLElement* p_theClass)
 void 
 CXClass::SaveMetaInfoAttributes(XMLMessage& p_message,XMLElement* p_theClass)
 {
-  XMLElement* attribs = p_message.AddElement(p_theClass,"attributes",XDT_String,"");
+  XMLElement* attribs = p_message.AddElement(p_theClass,_T("attributes"),XDT_String,_T(""));
   for(auto& attr : m_attributes)
   {
     attr->SaveMetaInfo(p_message,attribs);
@@ -943,23 +943,23 @@ CXClass::SaveMetaInfoIdentity(XMLMessage& p_message,XMLElement* p_theClass)
 {
   if(!m_identity.m_attributes.empty())
   {
-    XMLElement* identity = p_message.AddElement(p_theClass,"identity",XDT_String,"");
-    p_message.SetAttribute(identity,"name",m_identity.m_constraintName);
+    XMLElement* identity = p_message.AddElement(p_theClass,_T("identity"),XDT_String,_T(""));
+    p_message.SetAttribute(identity,_T("name"),m_identity.m_constraintName);
     CString deferrable;
     switch(m_identity.m_deferrable)
     {
-      case SQL_INITIALLY_DEFERRED:    deferrable = "initially_deferred";  break;
-      case SQL_INITIALLY_IMMEDIATE:   deferrable = "initially_immediate"; break;
-      case SQL_NOT_DEFERRABLE:        deferrable = "not_deferrable";      break;
+      case SQL_INITIALLY_DEFERRED:    deferrable = _T("initially_deferred");  break;
+      case SQL_INITIALLY_IMMEDIATE:   deferrable = _T("initially_immediate"); break;
+      case SQL_NOT_DEFERRABLE:        deferrable = _T("not_deferrable");      break;
     }
-    p_message.SetAttribute(identity,"deferrable",deferrable);
-    p_message.SetAttribute(identity,"initially_deferred",m_identity.m_initiallyDeferred ? "deferred" : "immediate");
+    p_message.SetAttribute(identity,_T("deferrable"),deferrable);
+    p_message.SetAttribute(identity,_T("initially_deferred"),m_identity.m_initiallyDeferred ? _T("deferred") : _T("immediate"));
 
     // Add the columns of the primary key
     for(auto& col : m_identity.m_attributes)
     {
-      XMLElement* column = p_message.AddElement(identity,"attribute",XDT_String,"");
-      p_message.SetAttribute(column,"name",col->GetDatabaseColumn());
+      XMLElement* column = p_message.AddElement(identity,_T("attribute"),XDT_String,_T(""));
+      p_message.SetAttribute(column,_T("name"),col->GetDatabaseColumn());
     }
   }
 }
@@ -968,18 +968,18 @@ CXClass::SaveMetaInfoIdentity(XMLMessage& p_message,XMLElement* p_theClass)
 void 
 CXClass::SaveMetaInfoAssociations(XMLMessage& p_message,XMLElement* p_theClass)
 {
-  XMLElement* associations = p_message.AddElement(p_theClass,"associations",XDT_String,"");
+  XMLElement* associations = p_message.AddElement(p_theClass,_T("associations"),XDT_String,_T(""));
   for(auto& assoc : m_associations)
   {
-    XMLElement* ass = p_message.AddElement(associations,"association",XDT_String,"");
-    p_message.SetAttribute(ass,"name",assoc->m_constraintName);
-    p_message.SetAttribute(ass,"type",CXAssocTypeToSTring(assoc->m_assocType));
+    XMLElement* ass = p_message.AddElement(associations,_T("association"),XDT_String,_T(""));
+    p_message.SetAttribute(ass,_T("name"),assoc->m_constraintName);
+    p_message.SetAttribute(ass,_T("type"),CXAssocTypeToSTring(assoc->m_assocType));
     // update / delete / deferrable / match / initially-deferred / enabled
-    p_message.AddElement(ass,"association_class",XDT_String,assoc->m_primaryTable);
+    p_message.AddElement(ass,_T("association_class"),XDT_String,assoc->m_primaryTable);
     for(auto& col : assoc->m_attributes)
     {
-      XMLElement* column = p_message.AddElement(ass,"attribute",XDT_String,"");
-      p_message.SetAttribute(column,"name",col->GetDatabaseColumn());
+      XMLElement* column = p_message.AddElement(ass,_T("attribute"),XDT_String,_T(""));
+      p_message.SetAttribute(column,_T("name"),col->GetDatabaseColumn());
     }
   }
 }
@@ -988,21 +988,21 @@ CXClass::SaveMetaInfoAssociations(XMLMessage& p_message,XMLElement* p_theClass)
 void 
 CXClass::SaveMetaInfoIndices(XMLMessage& p_message,XMLElement* p_theClass)
 {
-  XMLElement* indices = p_message.AddElement(p_theClass,"indices",XDT_String,"");
+  XMLElement* indices = p_message.AddElement(p_theClass,_T("indices"),XDT_String,_T(""));
   for(auto& ind : m_indices)
   {
-    XMLElement* index = p_message.AddElement(indices,"index",XDT_String,"");
-    p_message.SetAttribute(index,"name",      ind->m_name);
-    p_message.SetAttribute(index,"unique",    ind->m_unique);
-    p_message.SetAttribute(index,"ascending", ind->m_ascending);
+    XMLElement* index = p_message.AddElement(indices,_T("index"),XDT_String,_T(""));
+    p_message.SetAttribute(index,_T("name"),      ind->m_name);
+    p_message.SetAttribute(index,_T("unique"),    ind->m_unique);
+    p_message.SetAttribute(index,_T("ascending"), ind->m_ascending);
     for(auto& attrib : ind->m_attributes)
     {
-      XMLElement* attr = p_message.AddElement(index,"attribute",XDT_String,"");
-      p_message.SetAttribute(attr,"name",attrib->GetName());
+      XMLElement* attr = p_message.AddElement(index,_T("attribute"),XDT_String,_T(""));
+      p_message.SetAttribute(attr,_T("name"),attrib->GetName());
     }
     if(!ind->m_filter.IsEmpty())
     {
-      p_message.AddElement(index,"filter",XDT_String|XDT_CDATA,ind->m_filter);
+      p_message.AddElement(index,_T("filter"),XDT_String|XDT_CDATA,ind->m_filter);
     }
   }
 }
@@ -1013,9 +1013,9 @@ CXClass::SaveMetaInfoGenerator(XMLMessage& p_message,XMLElement* p_theClass)
 {
   if(!m_generator.IsEmpty())
   {
-    XMLElement* generator = p_message.AddElement(p_theClass, "generator", XDT_String, "");
-    p_message.SetAttribute(generator,"name", m_generator);
-    p_message.SetAttribute(generator,"start",m_gen_value);
+    XMLElement* generator = p_message.AddElement(p_theClass, _T("generator"), XDT_String, _T(""));
+    p_message.SetAttribute(generator,_T("name"), m_generator);
+    p_message.SetAttribute(generator,_T("start"),m_gen_value);
   }
 }
 
@@ -1023,15 +1023,15 @@ CXClass::SaveMetaInfoGenerator(XMLMessage& p_message,XMLElement* p_theClass)
 void 
 CXClass::SaveMetaInfoPrivileges(XMLMessage& p_message,XMLElement* p_theClass)
 {
-  XMLElement* access = p_message.AddElement(p_theClass,"access",XDT_String,"");
+  XMLElement* _taccess = p_message.AddElement(p_theClass,_T("access"),XDT_String,_T(""));
   for(auto& priv : m_privileges)
   {
-    XMLElement* user = p_message.AddElement(access,"user",XDT_String,"");
-    p_message.SetAttribute(user,"name",  priv.m_grantee);
-    p_message.SetAttribute(user,"rights",priv.m_privilege);
+    XMLElement* user = p_message.AddElement(_taccess,_T("user"),XDT_String,_T(""));
+    p_message.SetAttribute(user,_T("name"),  priv.m_grantee);
+    p_message.SetAttribute(user,_T("rights"),priv.m_privilege);
     if(priv.m_grantable)
     {
-      p_message.SetAttribute(user,"grantable",true);
+      p_message.SetAttribute(user,_T("grantable"),true);
     }
   }
 }
@@ -1043,10 +1043,10 @@ CXClass::SaveMetaInfoPrivileges(XMLMessage& p_message,XMLElement* p_theClass)
 void 
 CXClass::LoadMetaInfoSubClasses(XMLMessage& p_message,XMLElement* p_theClass)
 {
-  XMLElement* subs = p_message.FindElement(p_theClass,"subclasses");
+  XMLElement* subs = p_message.FindElement(p_theClass,_T("subclasses"));
   if(subs)
   {
-    XMLElement* sub = p_message.FindElement(subs,"subclass");
+    XMLElement* sub = p_message.FindElement(subs,_T("subclass"));
     while(sub)
     {
       m_subNames.push_back(sub->GetValue());
@@ -1059,14 +1059,14 @@ CXClass::LoadMetaInfoSubClasses(XMLMessage& p_message,XMLElement* p_theClass)
 void 
 CXClass::LoadMetaInfoAttributes(XMLMessage& p_message,XMLElement* p_theClass)
 {
-  XMLElement* attribs = p_message.FindElement(p_theClass,"attributes");
+  XMLElement* attribs = p_message.FindElement(p_theClass,_T("attributes"));
   if(attribs)
   {
-    XMLElement* attrib = p_message.FindElement(attribs,"attribute");
+    XMLElement* attrib = p_message.FindElement(attribs,_T("attribute"));
     while(attrib)
     {
       // Create the attribute
-      CString name = p_message.GetAttribute(attrib,"name");
+      CString name = p_message.GetAttribute(attrib,_T("name"));
       CXAttribute* attribute = new CXAttribute(name);
 
       // Load the attribute
@@ -1085,21 +1085,21 @@ CXClass::LoadMetaInfoAttributes(XMLMessage& p_message,XMLElement* p_theClass)
 void 
 CXClass::LoadMetaInfoIdentity(XMLMessage& p_message,XMLElement* p_theClass)
 {
-  XMLElement* identity = p_message.FindElement(p_theClass,"identity");
+  XMLElement* identity = p_message.FindElement(p_theClass,_T("identity"));
   if(identity)
   {
-    m_identity.m_constraintName = p_message.GetAttribute(identity,"name");
-    CString deferr  = p_message.GetAttribute(identity,"deferrable");
-    CString initdef = p_message.GetAttribute(identity,"initially_deferred");
-    if(deferr.CompareNoCase("initailly_deferred") == 0) m_identity.m_deferrable = SQL_INITIALLY_DEFERRED;
-    if(deferr.CompareNoCase("initially_immediate")== 0) m_identity.m_deferrable = SQL_INITIALLY_IMMEDIATE;
-    if(deferr.CompareNoCase("not_deferrable") == 0)     m_identity.m_deferrable = SQL_NOT_DEFERRABLE;
-    m_identity.m_initiallyDeferred = initdef.CompareNoCase("deferred") == 0;
+    m_identity.m_constraintName = p_message.GetAttribute(identity,_T("name"));
+    CString deferr  = p_message.GetAttribute(identity,_T("deferrable"));
+    CString initdef = p_message.GetAttribute(identity,_T("initially_deferred"));
+    if(deferr.CompareNoCase(_T("initailly_deferred")) == 0) m_identity.m_deferrable = SQL_INITIALLY_DEFERRED;
+    if(deferr.CompareNoCase(_T("initially_immediate"))== 0) m_identity.m_deferrable = SQL_INITIALLY_IMMEDIATE;
+    if(deferr.CompareNoCase(_T("not_deferrable")) == 0)     m_identity.m_deferrable = SQL_NOT_DEFERRABLE;
+    m_identity.m_initiallyDeferred = initdef.CompareNoCase(_T("deferred")) == 0;
 
-    XMLElement* column = p_message.FindElement(identity,"attribute");
+    XMLElement* column = p_message.FindElement(identity,_T("attribute"));
     while(column)
     {
-      CString name = p_message.GetAttribute(column,"name");
+      CString name = p_message.GetAttribute(column,_T("name"));
       CXAttribute* attrib = FindAttribute(name);
       if(attrib)
       {
@@ -1114,21 +1114,21 @@ CXClass::LoadMetaInfoIdentity(XMLMessage& p_message,XMLElement* p_theClass)
 void 
 CXClass::LoadMetaInfoAssociations(XMLMessage& p_message,XMLElement* p_theClass,CXSession* p_session)
 {
-  XMLElement* assocs = p_message.FindElement(p_theClass,"associations");
+  XMLElement* assocs = p_message.FindElement(p_theClass,_T("associations"));
   if(assocs)
   {
-    XMLElement* assoc = p_message.FindElement(assocs,"association");
+    XMLElement* assoc = p_message.FindElement(assocs,_T("association"));
     while(assoc)
     {
       CXAssociation* ass = new CXAssociation();
-      ass->m_assocType      = CXStringToAssocType(p_message.GetAttribute(assoc,"type"));
-      ass->m_constraintName = p_message.GetAttribute(assoc,"name");
-      ass->m_primaryTable   = p_message.GetElement(assoc,"association_class");
+      ass->m_assocType      = CXStringToAssocType(p_message.GetAttribute(assoc,_T("type")));
+      ass->m_constraintName = p_message.GetAttribute(assoc,_T("name"));
+      ass->m_primaryTable   = p_message.GetElement(assoc,_T("association_class"));
 
-      XMLElement* column = p_message.FindElement(assoc,"attribute");
+      XMLElement* column = p_message.FindElement(assoc,_T("attribute"));
       while(column)
       {
-        CString name = p_message.GetAttribute(column,"name");
+        CString name = p_message.GetAttribute(column,_T("name"));
         CXAttribute* attrib = FindAttribute(name);
         if(attrib)
         {
@@ -1161,22 +1161,22 @@ CXClass::LoadMetaInfoAssociations(XMLMessage& p_message,XMLElement* p_theClass,C
 void 
 CXClass::LoadMetaInfoIndices(XMLMessage& p_message,XMLElement* p_theClass)
 {
-  XMLElement* indices = p_message.FindElement(p_theClass,"indices");
+  XMLElement* indices = p_message.FindElement(p_theClass,_T("indices"));
   if(indices)
   {
-    XMLElement* index = p_message.FindElement(indices,"index");
+    XMLElement* index = p_message.FindElement(indices,_T("index"));
     while (index)
     {
       CXIndex* ind = new CXIndex();
-      ind->m_name      = p_message.GetAttribute(index,"name");
-      ind->m_unique    = p_message.GetAttributeBoolean(index,"unique");
-      ind->m_ascending = p_message.GetAttributeBoolean(index,"ascending");
-      ind->m_filter    = p_message.GetElement(index,"filter");
+      ind->m_name      = p_message.GetAttribute(index,_T("name"));
+      ind->m_unique    = p_message.GetAttributeBoolean(index,_T("unique"));
+      ind->m_ascending = p_message.GetAttributeBoolean(index,_T("ascending"));
+      ind->m_filter    = p_message.GetElement(index,_T("filter"));
 
-      XMLElement* attr = p_message.FindElement(index,"attribute");
+      XMLElement* attr = p_message.FindElement(index,_T("attribute"));
       while(attr)
       {
-        CString name = p_message.GetAttribute(attr,"name");
+        CString name = p_message.GetAttribute(attr,_T("name"));
         CXAttribute* attribute = FindAttribute(name);
         if (attribute)
         {
@@ -1197,11 +1197,11 @@ CXClass::LoadMetaInfoIndices(XMLMessage& p_message,XMLElement* p_theClass)
 void 
 CXClass::LoadMetaInfoGenerator(XMLMessage& p_message,XMLElement* p_theClass)
 {
-  XMLElement* generator = p_message.FindElement(p_theClass,"generator");
+  XMLElement* generator = p_message.FindElement(p_theClass,_T("generator"));
   if(generator)
   {
-    m_generator = p_message.GetAttribute(generator,"name");
-    m_gen_value = p_message.GetAttributeInteger(generator,"start");
+    m_generator = p_message.GetAttribute(generator,_T("name"));
+    m_gen_value = p_message.GetAttributeInteger(generator,_T("start"));
   }
 }
 
@@ -1209,16 +1209,16 @@ CXClass::LoadMetaInfoGenerator(XMLMessage& p_message,XMLElement* p_theClass)
 void 
 CXClass::LoadMetaInfoPrivileges(XMLMessage& p_message,XMLElement* p_theClass)
 {
-  XMLElement* access = p_message.FindElement(p_theClass,"access");
-  if(access)
+  XMLElement* _taccess = p_message.FindElement(p_theClass,_T("access"));
+  if(_taccess)
   {
-    XMLElement* user = p_message.FindElement(access,"user");
+    XMLElement* user = p_message.FindElement(_taccess,_T("user"));
     while(user)
     {
       CXAccess acc;
-      acc.m_grantee   = p_message.GetAttribute(user,"name");
-      acc.m_privilege = p_message.GetAttribute(user,"rights");
-      acc.m_grantable = p_message.GetAttributeBoolean(user,"grantable");
+      acc.m_grantee   = p_message.GetAttribute(user,_T("name"));
+      acc.m_privilege = p_message.GetAttribute(user,_T("rights"));
+      acc.m_grantable = p_message.GetAttributeBoolean(user,_T("grantable"));
 
       m_privileges.push_back(acc);
       // Next privilege
@@ -1238,7 +1238,7 @@ CXClass::LinkClasses(CXSession* p_session)
     {
       AddSubClass(subclass);
     }
-    else throw StdException("Declared subclass not found: " + sub);
+    else throw StdException(_T("Declared subclass not found: ") + sub);
   }
 }
 
@@ -1325,7 +1325,7 @@ CXClass::FillTableInfoFromClassInfo()
       ind.m_indexName  = index->m_name;
       ind.m_columnName = col->GetDatabaseColumn();
       ind.m_nonunique  = ! index->m_unique;
-      ind.m_ascending  = index->m_ascending ? 'A' : 'D';
+      ind.m_ascending  = index->m_ascending ? _T('A') : _T('D');
       ind.m_position   = position++;
       ind.m_filter     = index->m_filter;
 
@@ -1345,14 +1345,14 @@ CXClass::FillTableInfoFromClassInfo()
   }
 
   // Add privileges
-  for(auto& access : m_privileges)
+  for(auto& _taccess : m_privileges)
   {
     MetaPrivilege priv;
     priv.m_schemaName = GetTable()->GetSchemaName();
     priv.m_tableName  = GetTable()->GetTableName();
-    priv.m_grantee    = access.m_grantee;
-    priv.m_privilege  = access.m_privilege;
-    priv.m_grantable  = access.m_grantable;
+    priv.m_grantee    = _taccess.m_grantee;
+    priv.m_privilege  = _taccess.m_privilege;
+    priv.m_grantable  = _taccess.m_grantable;
 
     GetTable()->AddPrivilege(priv);
   }
@@ -1367,9 +1367,9 @@ CXClass::FillTableInfoFromClassInfo()
 CString 
 CXClass::BuildSelectQueryOneTable(SQLInfoDB* p_info)
 {
-  CString  columns("SELECT ");
+  CString  columns(_T("SELECT "));
   CString  discrim   = GetRootClass()->GetDiscriminator();
-  CString  asalias   = " as " + discrim;
+  CString  asalias   = _T(" as ") + discrim;
   WordList dbsNames  = FindAllDBSAttributes(true);
   bool     firstdone = false;
 
@@ -1378,16 +1378,16 @@ CXClass::BuildSelectQueryOneTable(SQLInfoDB* p_info)
   {
     if(firstdone)
     {
-      columns += "      ,";
+      columns += _T("      ,");
     }
-    columns  += discrim + "." + dbsname + "\n";
+    columns  += discrim + _T(".") + dbsname + _T("\n");
     firstdone = true;
   }
 
   // Default query will be built as
   // "SELECT disc.columnname\n"
   // "  FROM table as disc"
-  CString query = columns + "  FROM " + GetTable()->GetDMLTableName(p_info) + asalias;
+  CString query = columns + _T("  FROM ") + GetTable()->GetDMLTableName(p_info) + asalias;
 
   return query;
 }
@@ -1395,7 +1395,7 @@ CXClass::BuildSelectQueryOneTable(SQLInfoDB* p_info)
 CString 
 CXClass::BuildSelectQuerySubTable(SQLInfoDB* p_info)
 {
-  CString columns("SELECT ");
+  CString columns(_T("SELECT "));
   CString frompart;
   bool    firstdone = false;
 
@@ -1407,7 +1407,7 @@ CXClass::BuildSelectQuerySubTable(SQLInfoDB* p_info)
 CString 
 CXClass::BuildSelectQuerySubclass(SQLInfoDB* p_info)
 {
-  return "";
+  return _T("");
 }
 
 void 
@@ -1425,20 +1425,20 @@ CXClass::BuildSelectQuerySubTableRecursive(SQLInfoDB* p_info,CString& p_columns,
   {
     if(p_firstdone)
     {
-      p_columns += "      ,";
+      p_columns += _T("      ,");
     }
-    p_columns += m_discriminator + "." + dbsname + "\n";
+    p_columns += m_discriminator + _T(".") + dbsname + _T("\n");
     p_firstdone = true;
   }
 
   if(p_frompart.IsEmpty())
   {
-    p_frompart = "  FROM " + GetTable()->GetDMLTableName(p_info) + " as " + m_discriminator;
+    p_frompart = _T("  FROM ") + GetTable()->GetDMLTableName(p_info) + _T(" as ") + m_discriminator;
   }
   else
   {
-    p_frompart += "\n       INNER JOIN " + GetTable()->GetDMLTableName(p_info) + " as " + m_discriminator;
-    p_frompart += " ON (";
+    p_frompart += _T("\n       INNER JOIN ") + GetTable()->GetDMLTableName(p_info) + _T(" as ") + m_discriminator;
+    p_frompart += _T(" ON (");
 
     // Link on the identities of the classes
     int ind = 0;
@@ -1448,14 +1448,14 @@ CXClass::BuildSelectQuerySubTableRecursive(SQLInfoDB* p_info,CString& p_columns,
     {
       if(ind > 0)
       {
-        p_frompart += " AND ";
+        p_frompart += _T(" AND ");
       }
-      p_frompart += supdis + "." + supiden.m_attributes[ind]->GetDatabaseColumn();
-      p_frompart += " = ";
-      p_frompart += m_discriminator + "." + attrib->GetDatabaseColumn();
+      p_frompart += supdis + _T(".") + supiden.m_attributes[ind]->GetDatabaseColumn();
+      p_frompart += _T(" = ");
+      p_frompart += m_discriminator + _T(".") + attrib->GetDatabaseColumn();
       ++ind;
     }
-    p_frompart += ")";
+    p_frompart += _T(")");
   }
 }
 

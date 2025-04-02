@@ -4,7 +4,7 @@
 //
 // BaseLibrary: Indispensable general objects and functions
 // 
-// Copyright (c) 2014-2022 ir. W.E. Huisman
+// Copyright (c) 2014-2025 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -29,17 +29,19 @@
 #include "BaseLibrary.h"
 #include "GetUserAccount.h"
 
+#ifdef _AFX
 #ifdef _DEBUG
 #define new DEBUG_NEW
 #undef THIS_FILE
 static char THIS_FILE[] = __FILE__;
 #endif
+#endif
 
-XString 
+XString
 GetUserAccount(EXTENDED_NAME_FORMAT p_format /*=NameUnknown*/,bool p_normalized /*=false*/)
 {
   BOOL ret = FALSE;
-  char name[MAX_USER_NAME + 1] = "";
+  TCHAR  name[MAX_USER_NAME + 1] = _T("");
   unsigned long lengte = MAX_USER_NAME;
 
   if(p_format != NameUnknown)
@@ -65,7 +67,7 @@ GetUserAccount(EXTENDED_NAME_FORMAT p_format /*=NameUnknown*/,bool p_normalized 
   {
     // No ADS or no SAM/WIN32 account
     // or getting the VERY LONG name from the AD?
-    return XString("GUEST");
+    return XString(_T("GUEST"));
   }
   // Remember our user
   XString user(name);
@@ -83,16 +85,16 @@ GetUserAccount(EXTENDED_NAME_FORMAT p_format /*=NameUnknown*/,bool p_normalized 
     // eg: engineering.widget.com/software\nJohn Doe
     // www/srv.engineering.com/engineering.com
     // eg: engineering.widget.com\JohnDoe
-    user.Replace("\\","_");
-    user.Replace("\n","_");
-    user.Replace("/", "_");
-    user.Replace("=", "_");
-    user.Replace(".", "_");
-    user.Replace(",", "_");
-    user.Replace("{", "_");
-    user.Replace("}", "_");
-    user.Replace(" ", "_");
-    user.Replace("@", "_");
+    user.Replace(_T("\\"),_T("_"));
+    user.Replace(_T("\n"),_T("_"));
+    user.Replace(_T("/"), _T("_"));
+    user.Replace(_T("="), _T("_"));
+    user.Replace(_T("."), _T("_"));
+    user.Replace(_T(","), _T("_"));
+    user.Replace(_T("{"), _T("_"));
+    user.Replace(_T("}"), _T("_"));
+    user.Replace(_T(" "), _T("_"));
+    user.Replace(_T("@"), _T("_"));
   }
   return user;
 }

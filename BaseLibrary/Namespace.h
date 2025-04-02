@@ -2,7 +2,7 @@
 //
 // SourceFile: Namespace.h
 //
-// Copyright (c) 2014-2022 ir. W.E. Huisman
+// Copyright (c) 2014-2025 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -31,7 +31,7 @@ int CompareNamespaces(XString p_namespace1,XString p_namespace2);
 
 // Can be used to split SOAPAction from the HTTP protocol
 // or from the Soap envelope <Action>  node
-bool SplitNamespaceAndAction(XString p_soapAction,XString& p_namespace,XString& p_action);
+bool SplitNamespaceAndAction(XString p_soapAction,XString& p_namespace,XString& p_action,bool p_nmsp_ends_in_slash = false);
 
 // Concatenate namespace and action to a soapaction entry
 // Can be used in HTTP and in SOAP messages

@@ -4,7 +4,7 @@
 //
 // Marlin Server: Internet server/client
 // 
-// Copyright (c) 2014-2022 ir. W.E. Huisman
+// Copyright (c) 2014-2024 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -41,21 +41,21 @@
 class SessionAddress
 {
 public:
-  XString       m_userSID; // User in the SIDL form
-  ULONG         m_address; // sin6_flowinfo of IP address of caller
-  UINT          m_desktop; // TerminalServices desktop
-  XString       m_absPath; // Absolute path of session
+  XString       m_userSID;        // User in the SIDL form
+  ULONG         m_address { 0 };  // sin6_flowinfo of IP address of caller
+  UINT          m_desktop { 0 };  // TerminalServices desktop
+  XString       m_absPath;        // Absolute path of session
 };
 
 // Reliable messaging server sequence
 class SessionSequence
 {
 public:
-  XString m_clientGUID;       // Client challenging nonce
-  XString m_serverGUID;       // Server challenging nonce
-  int     m_clientMessageID;  // Clients message number
-  int     m_serverMessageID;  // Servers message number
-  bool    m_lastMessage;      // Last message in stream flag
+  XString m_clientGUID;             // Client challenging nonce
+  XString m_serverGUID;             // Server challenging nonce
+  int     m_clientMessageID { 0 };  // Clients message number
+  int     m_serverMessageID { 0 };  // Servers message number
+  bool    m_lastMessage { false };  // Last message in stream flag
 };
 
 // Operator for associative mapping for the internet addresses
@@ -152,7 +152,7 @@ public:
   // OPTIONAL: Set site's callback function
   void            SetCallback(LPFN_CALLBACK p_callback);
   // OPTIONAL: Set one or more text-based content types
-  void            AddContentType(XString p_extension,XString p_contentType);
+  void            AddContentType(bool p_logging,XString p_extension,XString p_contentType);
   // OPTIONAL: Set the encryption level (signing/body/message)
   void            SetEncryptionLevel(XMLEncryption p_level);
   // OPTIONAL: Set the encryption password
@@ -213,34 +213,37 @@ public:
   void            SetCookiesExpires(int p_minutes);
   // OPTIONAL: Set all cookies to max-age 
   void            SetCookiesMaxAge(int p_seconds);
-
+  // OPTIONAL: Another site is registered as a sub-site of me
+  void            SetHasSubSites(bool p_subsite);
+ 
   // GETTERS
-  XString         GetSite()                         { return m_site;          };
-  int             GetPort()                         { return m_port;          };
-  bool            GetIsStarted()                    { return m_isStarted;     };
-  bool            GetIsSubsite()                    { return m_isSubsite;     };
-  bool            GetAsync()                        { return m_async;         };
-  XString         GetPrefixURL()                    { return m_prefixURL;     };
-  bool            GetIsEventStream()                { return m_isEventStream; };
-  LPFN_CALLBACK   GetCallback()                     { return m_callback;      };
-  MediaTypeMap&   GetContentTypeMap()               { return m_contentTypes;  };
-  XMLEncryption   GetEncryptionLevel()              { return m_securityLevel; };
-  XString         GetEncryptionPassword()           { return m_enc_password;  };
-  bool            GetReliable()                     { return m_reliable;      };
-  bool            GetReliableLogIn()                { return m_reliableLogIn; };
-  void*           GetPayload()                      { return m_payload;       };
-  HTTPServer*     GetHTTPServer()                   { return m_server;        };
-  HTTPSite*       GetMainSite()                     { return m_mainSite;      };
-  bool            GetSendUnicode()                  { return m_sendUnicode;   };
-  bool            GetSendSoapBOM()                  { return m_sendSoapBOM;   };
-  bool            GetSendJsonBOM()                  { return m_sendJsonBOM;   };
-  bool            GetVerbTunneling()                { return m_verbTunneling; };
-  bool            GetHTTPCompression()              { return m_compression;   };
-  bool            GetHTTPThrotteling()              { return m_throttling;    };
-  bool            GetUseCORS()                      { return m_useCORS;       };
-  XString         GetCORSOrigin()                   { return m_allowOrigin;   };
-  XString         GetCORSHeaders()                  { return m_allowHeaders;  };
-  int             GetCORSMaxAge()                   { return m_corsMaxAge;    };
+  XString         GetSite() const                   { return m_site;          }
+  int             GetPort() const                   { return m_port;          }
+  bool            GetIsStarted()                    { return m_isStarted;     }
+  bool            GetIsSubsite()                    { return m_isSubsite;     }
+  bool            GetHasSubSites()                  { return m_hasSubSites;   }
+  bool            GetAsync()                        { return m_async;         }
+  XString         GetPrefixURL()                    { return m_prefixURL;     }
+  bool            GetIsEventStream()                { return m_isEventStream; }
+  LPFN_CALLBACK   GetCallback()                     { return m_callback;      }
+  MediaTypeMap&   GetContentTypeMap()               { return m_contentTypes;  }
+  XMLEncryption   GetEncryptionLevel()              { return m_securityLevel; }
+  XString         GetEncryptionPassword()           { return m_enc_password;  }
+  bool            GetReliable()                     { return m_reliable;      }
+  bool            GetReliableLogIn()                { return m_reliableLogIn; }
+  void*           GetPayload()                      { return m_payload;       }
+  HTTPServer*     GetHTTPServer()                   { return m_server;        }
+  HTTPSite*       GetMainSite()                     { return m_mainSite;      }
+  bool            GetSendUnicode()                  { return m_sendUnicode;   }
+  bool            GetSendSoapBOM()                  { return m_sendSoapBOM;   }
+  bool            GetSendJsonBOM()                  { return m_sendJsonBOM;   }
+  bool            GetVerbTunneling()                { return m_verbTunneling; }
+  bool            GetHTTPCompression()              { return m_compression;   }
+  bool            GetHTTPThrotteling()              { return m_throttling;    }
+  bool            GetUseCORS()                      { return m_useCORS;       }
+  XString         GetCORSOrigin()                   { return m_allowOrigin;   }
+  XString         GetCORSHeaders()                  { return m_allowHeaders;  }
+  int             GetCORSMaxAge()                   { return m_corsMaxAge;    }
   bool            GetCORSAllowCredentials()         { return m_corsCredentials;  }
   bool            GetCookieHasSecure()              { return m_cookieHasSecure;  }
   bool            GetCookieHasHttpOnly()            { return m_cookieHasHttp;    }
@@ -278,7 +281,7 @@ public:
   // Call the correct HTTP handler!
   void HandleHTTPMessage(HTTPMessage* p_message);
   // Call the correct EventStream handler
-  void HandleEventStream(HTTPMessage* p_message,EventStream* p_stream);
+  bool HandleEventStream(HTTPMessage* p_message,EventStream* p_stream);
   // Check WS-ReliableMessaging protocol
   bool HttpReliableCheck(SOAPMessage* p_message);
   // Check WS-Security protocol
@@ -355,6 +358,7 @@ protected:
   HTTPServer*       m_server          { nullptr };        // Site of this server
   HTTPURLGroup*     m_group           { nullptr };        // Site is in this group
   HTTPSite*         m_mainSite        { nullptr };        // Main site of this site
+  bool              m_hasSubSites     { false   };        // This sites has sub sites
   XString           m_webroot;                            // Webroot of this site
   bool              m_virtualDirectory{ false   };        // Webroot is a virtual directory outside the server webroot
   XString           m_prefixURL;                          // Channel prefix
@@ -541,4 +545,10 @@ inline void
 HTTPSite::SetCORSMaxAge(unsigned p_maxAge)
 {
   m_corsMaxAge = p_maxAge;
+}
+
+inline void
+HTTPSite::SetHasSubSites(bool p_subsite)
+{
+  m_hasSubSites = p_subsite;
 }

@@ -4,7 +4,7 @@
 //
 // Marlin Server: Internet server/client
 // 
-// Copyright (c) 2014-2022 ir. W.E. Huisman
+// Copyright (c) 2014-2024 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -28,11 +28,11 @@
 #pragma once
 
 // Initial event keep alive milliseconds
-constexpr auto DEFAULT_EVENT_KEEPALIVE = 10000;
+constexpr auto DEFAULT_EVENT_KEEPALIVE = 60000;
 // Initial event retry time in milliseconds
 constexpr auto DEFAULT_EVENT_RETRYTIME = 3000;
 // Minimum and maximum values
-constexpr auto EVENT_KEEPALIVE_MIN =  1000;   //  1 second
+constexpr auto EVENT_KEEPALIVE_MIN = 15000;   //  1 second
 constexpr auto EVENT_KEEPALIVE_MAX = 90000;   // 90 seconds
 constexpr auto EVENT_RETRYTIME_MIN =  1000;   //  1 second
 constexpr auto EVENT_RETRYTIME_MAX =  5000;   //  5 seconds
@@ -61,15 +61,17 @@ public:
 
   // Construct and init
   EventStream()
+    :m_desktop  (0)
+    ,m_port     (0)
+    ,m_site     (nullptr)
+    ,m_requestID(NULL)
+    ,m_lastID   (0)
+    ,m_alive    (false)
+    ,m_lastPulse(NULL)
+    ,m_chunks   (0)
   {
-    m_desktop   = 0;
-    m_port      = 0;
-    m_site      = nullptr;
-    m_requestID = NULL;
-    m_lastID    = 0;
-    m_alive     = false;
-    m_lastPulse = NULL;
-    m_chunks    = 0;
+    memset(&m_sender,  0,sizeof(SOCKADDR_IN6));
+    memset(&m_response,0,sizeof(HTTP_RESPONSE));
     InitializeCriticalSection(&m_lock);
   }
 

@@ -4,7 +4,7 @@
 //
 // BaseLibrary: Indispensable general objects and functions
 // 
-// Copyright (c) 2014-2022 ir. W.E. Huisman
+// Copyright (c) 2014-2025 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -29,10 +29,12 @@
 #include "GenerateGUID.h"
 #include <combaseapi.h>
 
+#ifdef _AFX
 #ifdef _DEBUG
 #define new DEBUG_NEW
 #undef THIS_FILE
 static char THIS_FILE[] = __FILE__;
+#endif
 #endif
 
 // Caller **MUST** do the COM+ (un)initialize with
@@ -43,9 +45,13 @@ _Check_return_ WINOLEAPI CoCreateGuid(_Out_ GUID* pguid);
 
 XString GenerateGUID()
 {
-  _TUCHAR *guidStr = 0x00;
-  GUID    *pguid   = 0x00;
-  XString result;
+#ifdef _UNICODE
+  RPC_WSTR guidStr = nullptr;
+#else
+  RPC_CSTR guidStr = nullptr;
+#endif
+  GUID*    pguid   = nullptr;
+  XString  result;
   
   pguid = new GUID; 
   // COM+ Initialize is already done
@@ -54,7 +60,7 @@ XString GenerateGUID()
     // Convert the GUID to a string
     if(UuidToString(pguid,&guidStr) == RPC_S_OK)
     {
-      result = guidStr;
+      result = reinterpret_cast<TCHAR*>(guidStr);
     }
   }
   delete pguid;

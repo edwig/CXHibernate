@@ -4,7 +4,7 @@
 //
 // Marlin Server: Internet server/client
 // 
-// Copyright (c) 2014-2022 ir. W.E. Huisman
+// Copyright (c) 2014-2024 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -33,10 +33,12 @@
 #include <winhttp.h>
 #include <io.h>
 
+#ifdef _AFX
 #ifdef _DEBUG
 #define new DEBUG_NEW
 #undef THIS_FILE
 static char THIS_FILE[] = __FILE__;
+#endif
 #endif
 
 bool
@@ -57,7 +59,7 @@ SiteHandlerTrace::Handle(HTTPMessage* p_message)
   // See RFC 2616 section 9.8 TRACE
   p_message->SetCommand(HTTPCommand::http_response);
   p_message->SetStatus(HTTP_STATUS_OK);
-  p_message->SetContentType("message/http");
+  p_message->SetContentType(_T("message/http"));
   // Empty the response part. Just to be sure!
   p_message->Reset();
   p_message->GetFileBuffer()->Reset();
@@ -75,6 +77,6 @@ SiteHandlerTrace::PostHandle(HTTPMessage* p_message)
     // send our answer 
     p_message->SetCommand(HTTPCommand::http_response);
     m_site->SendResponse(p_message);
-    SITE_DETAILLOGS("Answered a TRACE message from: ",SocketToServer(p_message->GetSender()));
+    SITE_DETAILLOGS(_T("Answered a TRACE message from: "),SocketToServer(p_message->GetSender()));
   }
 }

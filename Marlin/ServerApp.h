@@ -4,7 +4,7 @@
 //
 // Marlin Server: Internet server/client
 // 
-// Copyright (c) 2014-2022 ir. W.E. Huisman
+// Copyright (c) 2014-2024 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -44,9 +44,11 @@ using IISModules = std::set<XString>;
 class ServerApp;
 
 // Exported functions that can be called from the MarlinModule
-typedef ServerApp*    (CALLBACK* CreateServerAppFunc)(IHttpServer*,const char*,const char*);
+typedef ServerApp*    (CALLBACK* CreateServerAppFunc)(IHttpServer*,LPCTSTR,LPCTSTR);
+typedef bool          (CALLBACK* InitServerAppFunc)  (ServerApp*,IHttpApplication* p_hhtpapp,XString p_physial);
+typedef void          (CALLBACK* ExitServerAppFunc)  (ServerApp*);
 typedef HTTPSite*     (CALLBACK* FindHTTPSiteFunc)   (ServerApp*,int port,PCWSTR p_url);
-typedef bool          (CALLBACK* GetHTTPStreamFunc)  (ServerApp*,IHttpContext*,HTTPSite*,PHTTP_REQUEST);
+typedef int           (CALLBACK* GetHTTPStreamFunc)  (ServerApp*,IHttpContext*,HTTPSite*,PHTTP_REQUEST);
 typedef HTTPMessage*  (CALLBACK* GetHTTPMessageFunc) (ServerApp*,IHttpContext*,HTTPSite*,PHTTP_REQUEST);
 typedef bool          (CALLBACK* HandleMessageFunc)  (ServerApp*,HTTPSite* p_site,HTTPMessage*);
 typedef int           (CALLBACK* SitesInApplicPool)  (ServerApp*);
@@ -55,6 +57,7 @@ typedef bool          (CALLBACK* MinVersionFunc)     (ServerApp*,int version);
 extern IHttpServer*  g_iisServer;
 extern LogAnalysis*  g_analysisLog;
 extern ErrorReport*  g_report;
+extern IHttpServer*  g_iisServer;
 
 //////////////////////////////////////////////////////////////////////////
 //
@@ -64,9 +67,9 @@ extern ErrorReport*  g_report;
 class ServerApp
 {
 public:
-  ServerApp(IHttpServer*  p_iis
-           ,const char*   p_webroot
-           ,const char*   p_appName);
+  ServerApp(IHttpServer* p_iis
+           ,PCWSTR       p_webroot
+           ,PCWSTR       p_appName);
   virtual ~ServerApp();
 
   // BEWARE: MarlinModule uses VTABLE in this order
@@ -87,7 +90,7 @@ public:
   virtual void SetLogLevel(int p_logLevel);
 
   // Start our sites from the IIS configuration
-  virtual void LoadSites(IHttpApplication* p_app,XString p_physicalPath);
+  virtual void LoadSites(IHttpApplication* p_app,PCWSTR p_physicalPath);
   // Stopping all of our sites in the IIS configuration
   virtual void UnloadSites();
 
@@ -122,7 +125,6 @@ protected:
   // Read the site's configuration from the IIS internal structures
   bool  ReadSite    (IAppHostElementCollection* p_sites,XString p_site,int p_num,IISSiteConfig& p_config);
   bool  ReadBinding (IAppHostElementCollection* p_bindings,int p_item,IISBinding& p_binding);
-  void  ReadModules (CComBSTR& p_configPath);
   void  ReadHandlers(CComBSTR& p_configPath,IISSiteConfig& p_config);
 
   // General way to read a property
@@ -153,9 +155,9 @@ class ServerAppFactory
 public:
   ServerAppFactory();
 
-  virtual ServerApp* CreateServerApp(IHttpServer*  p_iis
-                                    ,const char*   p_webroot
-                                    ,const char*   p_appName);
+  virtual ServerApp* CreateServerApp(IHttpServer* p_iis
+                                    ,PCWSTR       p_webroot
+                                    ,PCWSTR       p_appName);
 };
 
 extern ServerAppFactory* appFactory;

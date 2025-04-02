@@ -4,7 +4,7 @@
 //
 // Marlin Server: Internet server/client
 // 
-// Copyright (c) 2014-2022 ir. W.E. Huisman
+// Copyright (c) 2014-2024 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -32,10 +32,12 @@
 #include <winhttp.h>
 #include <io.h>
 
+#ifdef _AFX
 #ifdef _DEBUG
 #define new DEBUG_NEW
 #undef THIS_FILE
 static char THIS_FILE[] = __FILE__;
+#endif
 #endif
 
 bool
@@ -75,6 +77,6 @@ SiteHandlerConnect::PostHandle(HTTPMessage* p_message)
   {
     p_message->SetCommand(HTTPCommand::http_response);
     m_site->SendResponse(p_message);
-    SITE_DETAILLOGS("Answered a CONNECT message from: ", SocketToServer(p_message->GetSender()));
+    SITE_DETAILLOGS(_T("Answered a CONNECT message from: "), SocketToServer(p_message->GetSender()));
   }
 }

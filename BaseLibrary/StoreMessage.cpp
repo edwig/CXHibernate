@@ -4,7 +4,7 @@
 //
 // BaseLibrary: Indispensable general objects and functions
 // 
-// Copyright (c) 2014-2022 ir. W.E. Huisman
+// Copyright (c) 2014-2025 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -30,10 +30,12 @@
 #include "HTTPMessage.h"
 #include "GetLastErrorAsString.h"
 
+#ifdef _AFX
 #ifdef _DEBUG
 #define new DEBUG_NEW
 #undef THIS_FILE
 static char THIS_FILE[] = __FILE__;
+#endif
 #endif
 
 StoreMessage::StoreMessage()
@@ -43,6 +45,8 @@ StoreMessage::StoreMessage()
 StoreMessage::StoreMessage(XString p_filename)
              :m_filename(p_filename)
 {
+  // Use file with UTF-8 encoding for strings
+  m_file.SetFilename(m_filename);
 }
 
 StoreMessage::~StoreMessage()
@@ -72,9 +76,9 @@ bool
 StoreMessage::StoreIncomingMessage(HTTPMessage* p_message)
 {
   bool result = false;
-  m_error = fopen_s(&m_file,m_filename,"wb+");
-  if(m_error)
+  if(!m_file.Open(winfile_write | open_trans_binary | open_random_access))
   {
+    m_error = m_file.GetLastError();
     return result;
   }
 
@@ -104,9 +108,9 @@ bool
 StoreMessage::StoreResponseMessage(HTTPMessage* p_message)
 {
   bool result = false;
-  m_error = fopen_s(&m_file,m_filename,"rb+");
-  if(m_error)
+  if(!m_file.Open(winfile_read | open_trans_binary | open_random_access))
   {
+    m_error = m_file.GetLastError();
     return result;
   }
 
@@ -132,9 +136,9 @@ StoreMessage::StoreResponseMessage(HTTPMessage* p_message)
 HTTPMessage* 
 StoreMessage::ReadIncomingMessage()
 {
-  m_error = fopen_s(&m_file,m_filename,"rb");
-  if(m_error)
+  if(!m_file.Open(winfile_read | open_trans_binary))
   {
+    m_error = m_file.GetLastError();
     return nullptr;
   }
   HTTPMessage* msg = new HTTPMessage();
@@ -163,9 +167,9 @@ StoreMessage::ReadIncomingMessage()
 HTTPMessage* 
 StoreMessage::ReadResponseMessage()
 {
-  m_error = fopen_s(&m_file,m_filename,"rb+");
-  if(m_error)
+  if(!m_file.Open(winfile_read | open_trans_binary | open_random_access))
   {
+    m_error = m_file.GetLastError();
     return nullptr;
   }
   HTTPMessage* msg = new HTTPMessage();
@@ -199,15 +203,15 @@ StoreMessage::GetErrorMessage()
   {
     switch(m_error)
     {
-      case ERROR_FT_VERSION:        error = "Not a HTTPMessage storage version number";       break;
-      case ERROR_FT_WRONGVERSION:   error = "Wrong HTTPMessage storage version number";       break;
-      case ERROR_FT_RESPONSEOFFSET: error = "Not a HTTPMessage storage response offset field";break;
-      case ERROR_FT_UNKNOWNFIELD:   error = "Not a known HTTP field member (higher version?)";break;
-      case ERROR_FT_BODY:           error = "While reading the HTTP body (wrong length?)";    break;
-      case ERROR_FT_ENDMARKER:      error = "Not a HTTPMessage ending marker";                break;
-      case ERROR_FT_RESPONSE:       error = "Cannot skip to HTTPMessage response";            break;
-      case ERROR_FT_NOFILE:         error = "Cannot skip to EOF of HTTPMessage";              break;
-      case ERROR_FT_NORESPONSE:     error = "HTTPMessage file has no response part";          break;
+      case ERROR_FT_VERSION:        error = _T("Not a HTTPMessage storage version number");       break;
+      case ERROR_FT_WRONGVERSION:   error = _T("Wrong HTTPMessage storage version number");       break;
+      case ERROR_FT_RESPONSEOFFSET: error = _T("Not a HTTPMessage storage response offset field");break;
+      case ERROR_FT_UNKNOWNFIELD:   error = _T("Not a known HTTP field member (higher version?)");break;
+      case ERROR_FT_BODY:           error = _T("While reading the HTTP body (wrong length?)");    break;
+      case ERROR_FT_ENDMARKER:      error = _T("Not a HTTPMessage ending marker");                break;
+      case ERROR_FT_RESPONSE:       error = _T("Cannot skip to HTTPMessage response");            break;
+      case ERROR_FT_NOFILE:         error = _T("Cannot skip to EOF of HTTPMessage");              break;
+      case ERROR_FT_NORESPONSE:     error = _T("HTTPMessage file has no response part");          break;
     }
   }
   else
@@ -226,10 +230,9 @@ StoreMessage::GetErrorMessage()
 void
 StoreMessage::CloseFile()
 {
-  if(m_file)
+  if(m_file.GetIsOpen())
   {
-    fclose(m_file);
-    m_file = nullptr;
+    m_file.Close();
   }
 }
 
@@ -238,14 +241,13 @@ StoreMessage::CloseFile()
 void
 StoreMessage::ReWriteOffset()
 {
-  long  position = ftell(m_file);
-  __int64 offset = STORE_HTTP_RESPONSE_OFFSET;
-  const fpos_t* off = &offset;
-  if(fsetpos(m_file,off))
+  size_t position = m_file.Position();
+
+  if(m_file.Position(FSeek::file_begin,STORE_HTTP_RESPONSE_OFFSET) != STORE_HTTP_RESPONSE_OFFSET)
   {
     throw StdException(GetLastError());
   }
-  WriteResponseOffset(position);
+  WriteResponseOffset((DWORD)position);
 }
 
 // Find the offset for the incoming message
@@ -254,29 +256,22 @@ void
 StoreMessage::SkipToResponse(bool p_checkPresence)
 {
   // Reread the offset first
-  __int64 offset = 0L;
-  const fpos_t* off = &offset;
-  offset = ReadResponseOffset();
+  size_t offset = ReadResponseOffset();
 
   // See if we are *NOT* at the EOF
   if(p_checkPresence)
   {
     // Check the length of the file
-    if(fseek(m_file,0,SEEK_END))
-    {
-      throw StdException(ERROR_FT_NOFILE);
-    }
-    long total = ftell(m_file);
+    size_t size = m_file.GetFileSize();
 
     // Check if offset is not at the EOF
-    if((long)offset >= total)
+    if((size_t)offset >= size)
     {
       throw StdException(ERROR_FT_NORESPONSE);
     }
   }
-
   // Skipping to the response part
-  if(fsetpos(m_file,off))
+  if(m_file.Position(FSeek::file_begin,offset) == (size_t)-1)
   {
     throw StdException(ERROR_FT_RESPONSE);
   }
@@ -348,7 +343,7 @@ void
 StoreMessage::WriteHeader(MSGFieldType p_type)
 {
   uchar buffer = (uchar)p_type;
-  if(fwrite(&buffer,1,sizeof(uchar),m_file) != sizeof(uchar))
+  if(!m_file.Write(&buffer,1))
   {
     throw StdException(GetLastError());
   }
@@ -357,7 +352,7 @@ StoreMessage::WriteHeader(MSGFieldType p_type)
 void
 StoreMessage::WriteNumber8(unsigned char p_number)
 {
-  if(fwrite(&p_number,1,sizeof(uchar),m_file) != sizeof(uchar))
+  if(!m_file.Write(&p_number,1))
   {
     throw StdException(GetLastError());
   }
@@ -367,7 +362,7 @@ void
 StoreMessage::WriteNumber16(unsigned int p_number)
 {
   ushort buffer = (ushort)p_number;
-  if(fwrite(&buffer,1,sizeof(ushort),m_file) != sizeof(ushort))
+  if(!m_file.Write(&buffer,2))
   {
     throw StdException(GetLastError());
   }
@@ -376,7 +371,7 @@ StoreMessage::WriteNumber16(unsigned int p_number)
 void
 StoreMessage::WriteNumber32(unsigned int p_number)
 {
-  if(fwrite(&p_number,1,sizeof(unsigned),m_file) != sizeof(unsigned))
+  if(!m_file.Write(&p_number,4))
   {
     throw StdException(GetLastError());
   }
@@ -385,7 +380,7 @@ StoreMessage::WriteNumber32(unsigned int p_number)
 void
 StoreMessage::WriteNumber64(unsigned __int64 p_number)
 {
-  if(fwrite(&p_number,1,sizeof(unsigned __int64),m_file) != sizeof(unsigned __int64))
+  if(!m_file.Write(&p_number,8))
   {
     throw StdException(GetLastError());
   }
@@ -394,10 +389,11 @@ StoreMessage::WriteNumber64(unsigned __int64 p_number)
 void
 StoreMessage::WriteString(XString p_string)
 {
-  WriteNumber32((unsigned)p_string.GetLength());
-  if(p_string.GetLength())
+  std::string output = m_file.TranslateOutputBuffer(p_string);
+  WriteNumber32((unsigned)output.size());
+  if(output.size())
   {
-    if(fwrite(p_string.GetString(),1,p_string.GetLength(),m_file) != (unsigned) p_string.GetLength())
+    if(!m_file.Write(const_cast<char*>(output.c_str()),output.size()))
     {
       throw StdException(GetLastError());
     }
@@ -501,11 +497,11 @@ StoreMessage::WriteDesktop(unsigned p_desktop)
 }
 
 void
-StoreMessage::WriteHeaders(HeaderMap* p_headers)
+StoreMessage::WriteHeaders(const HeaderMap* p_headers)
 {
   WriteHeader(MSGFieldType::FT_HEADERS);
   WriteNumber16((short)p_headers->size());
-  for(auto& header : *p_headers)
+  for(const auto& header : *p_headers)
   {
     WriteString(header.first);
     WriteString(header.second);
@@ -517,7 +513,7 @@ StoreMessage::WriteRouting(Routing& p_routing)
 {
   WriteHeader(MSGFieldType::FT_ROUTING);
   WriteNumber16((short)p_routing.size());
-  for(auto& route : p_routing)
+  for(const auto& route : p_routing)
   {
     WriteString(route);
   }
@@ -552,13 +548,13 @@ StoreMessage::WriteBody(FileBuffer* p_buffer)
   uchar* buffer = nullptr;
   size_t length = 0;
 
-  // Get a copy to overcome buffer defragmentation!
+  // Get a copy to overcome buffer de-fragmentation!
   if(p_buffer->GetBufferCopy(buffer,length))
   {
     WriteNumber64(length);
     if(length > 0)
     {
-      if(fwrite(buffer,1,length,m_file) != length)
+      if(!m_file.Write(buffer,length))
       {
         delete[] buffer;
         throw StdException(GetLastError());
@@ -588,7 +584,8 @@ MSGFieldType
 StoreMessage::ReadHeader()
 {
   uchar buffer = 0;
-  if(fread(&buffer,1,sizeof(uchar),m_file) != sizeof(uchar))
+  int read = 0;
+  if(!m_file.Read(&buffer,1,read))
   {
     throw StdException(GetLastError());
   }
@@ -599,7 +596,8 @@ unsigned char
 StoreMessage::ReadNumber8()
 {
   uchar buffer = 0;
-  if(fread(&buffer,1,sizeof(uchar),m_file) != sizeof(uchar))
+  int read = 0;
+  if(!m_file.Read(&buffer,1,read))
   {
     throw StdException(GetLastError());
   }
@@ -610,7 +608,8 @@ unsigned int
 StoreMessage::ReadNumber16()
 {
   ushort buffer = 0;
-  if(fread(&buffer,1,sizeof(ushort),m_file) != sizeof(ushort))
+  int read = 0;
+  if(!m_file.Read(&buffer,2,read))
   {
     throw StdException(GetLastError());
   }
@@ -621,7 +620,8 @@ unsigned int
 StoreMessage::ReadNumber32()
 {
   unsigned int buffer = 0;
-  if(fread(&buffer,1,sizeof(unsigned),m_file) != sizeof(unsigned))
+  int read = 0;
+  if(!m_file.Read(&buffer,4,read))
   {
     throw StdException(GetLastError());
   }
@@ -632,7 +632,8 @@ unsigned __int64
 StoreMessage::ReadNumber64()
 {
   unsigned __int64 buffer = 0;
-  if(fread(&buffer,1,sizeof(unsigned __int64),m_file) != sizeof(unsigned __int64))
+  int read = 0;
+  if(!m_file.Read(&buffer,8,read))
   {
     throw StdException(GetLastError());
   }
@@ -646,13 +647,15 @@ StoreMessage::ReadString()
   int length = ReadNumber32();
   if(length)
   {
-    char* buffer = string.GetBufferSetLength(length + 1);
-    if(fread(buffer,1,length,m_file) != (unsigned) length)
+    int read = 0;
+    std::string input;
+    input.append(length,' ');
+
+    if(!m_file.Read(const_cast<char*>(input.c_str()),length,read))
     {
       throw StdException(GetLastError());
     }
-    buffer[length] = 0;
-    string.ReleaseBufferSetLength(length + 1);
+    string = m_file.TranslateInputBuffer(input);
   }
   return string;
 }
@@ -816,9 +819,11 @@ StoreMessage::ReadBody(HTTPMessage* p_msg)
   size_t length = (size_t) ReadNumber64();
   if(length)
   {
+    int read = 0;
     unsigned char* buffer = new unsigned char[length];
-    if(fread(buffer,1,length,m_file) != length)
+    if(!m_file.Read(buffer,length,read))
     {
+      delete[] buffer;
       throw StdException(ERROR_FT_BODY);
     }
     p_msg->SetBody(buffer,(unsigned)length);

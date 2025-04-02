@@ -47,7 +47,7 @@
 // #define IDR_RESOURCENAME   80
 //
 
-static char g_staticAddress;
+static TCHAR g_staticAddress;
 
 // Load a compiled text file from our resources
 CString
@@ -65,7 +65,7 @@ CXHReadResourceData(int p_resId,CString type)
   if (list == 0)
   {
     CString error;
-    error.Format("Cannot find the resource [%d] of type [%s]", p_resId, type.GetString());
+    error.Format(_T("Cannot find the resource [%d] of type [%s]"), p_resId, type.GetString());
     throw StdException(error);
   }
 
@@ -74,7 +74,7 @@ CXHReadResourceData(int p_resId,CString type)
   if (glist == 0)
   {
     CString error;
-    error.Format("Cannot load the resource [%d] of type [%s]",p_resId,type.GetString());
+    error.Format(_T("Cannot load the resource [%d] of type [%s]"),p_resId,type.GetString());
     throw error;
   }
 
@@ -86,7 +86,7 @@ CXHReadResourceData(int p_resId,CString type)
   }
 
   // Lock resource for a pointer
-  char const* ptr = (char*)LockResource(glist);
+  TCHAR const* ptr = (TCHAR*)LockResource(glist);
 
   // Copy as a string
   CString result(ptr, dwSize);

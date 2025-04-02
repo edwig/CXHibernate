@@ -5,7 +5,7 @@
 //
 // Marlin Server: Internet server/client
 // 
-// Copyright (c) 2014-2022 ir. W.E. Huisman
+// Copyright (c) 2014-2024 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -32,10 +32,12 @@
 #include "WebServiceServer.h"
 #include "HTTPSite.h"
 
+#ifdef _AFX
 #ifdef _DEBUG
 #define new DEBUG_NEW
 #undef THIS_FILE
 static char THIS_FILE[] = __FILE__;
+#endif
 #endif
 
 // A JSON2SOAP handler is an override for the HTTP GET handler
@@ -49,7 +51,7 @@ SiteHandlerJson2Soap::PreHandle(HTTPMessage* p_message)
   // Guarantee to return to this 'Cleanup', even if we do a SEH!!
   m_site->SetCleanup(this);
 
-  if(p_message->GetContentType().Find("json") > 0)
+  if(p_message->GetContentType().Find(_T("json")) > 0)
   {
     // Create an EMPTY JSON/SOAP message for this thread, forcing version 1.2
     g_soapMessage = new SOAPMessage(p_message);
@@ -61,7 +63,7 @@ SiteHandlerJson2Soap::PreHandle(HTTPMessage* p_message)
     // IMPLEMENT YOURSELF: Write your own access mechanism.
     // Maybe by writing an override to this method and calling this one first..
   }
-  // returning true, to enter the default "Handle" of the (overrided) class
+  // returning true, to enter the default "Handle" of the (overridden) class
   return true;
 }
 
@@ -96,18 +98,15 @@ SiteHandlerJson2Soap::Handle(SOAPMessage* p_message)
   if(handler)
   {
     SiteHandlerSoap* soapHandler = reinterpret_cast<SiteHandlerSoap*>(handler);
-    if(soapHandler)
-    {
-      return soapHandler->Handle(p_message);
-    }
+    return soapHandler->Handle(p_message);
   }
 
   // Handler on a site without a SOAP POST handler
   if(p_message)
   {
     p_message->Reset();
-    p_message->SetFault("Critical","Server","Unimplemented"
-                       ,"INTERNAL: Unhandled request caught by base HTTPSite::SiteHandlerJson2Soap::Handle");
+    p_message->SetFault(_T("Critical"),_T("Server"),_T("Unimplemented")
+                       ,_T("INTERNAL: Unhandled request caught by base HTTPSite::SiteHandlerJson2Soap::Handle"));
   }
   return true;
 }

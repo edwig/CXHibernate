@@ -4,7 +4,7 @@
 //
 // BaseLibrary: Indispensable general objects and functions
 // 
-// Copyright (c) 2014-2022 ir. W.E. Huisman
+// Copyright (c) 2014-2025 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -28,7 +28,7 @@
 #pragma once
 #include <vector>
 
-// Max streaming serialize/deserialize limit
+// Max streaming serialize/de-serialize limit
 // Files bigger than this can only be putted/gotten by indirect file references
 // This is also the streaming limit for OData / REST interfaces
 #define STREAMING_LIMIT    (100*1024*1024)  // 100 Megabyte
@@ -40,8 +40,6 @@
 // Can be set through the Marlin.config reading of the HTTPServer
 extern unsigned long g_streaming_limit; // = STREAMING_LIMIT;
 extern unsigned long g_compress_limit;  // = COMPRESS_LIMIT;
-
-using uchar = unsigned char;
 
 typedef struct _bufferPart
 {
@@ -56,12 +54,12 @@ class FileBuffer
 {
 public:
   FileBuffer();
-  FileBuffer(XString p_fileName);
-  FileBuffer(uchar* p_buffer,size_t p_length);
-  FileBuffer(FileBuffer& p_buffer);
+  explicit FileBuffer(XString p_fileName);
+  explicit FileBuffer(uchar* p_buffer,size_t p_length);
+  explicit FileBuffer(FileBuffer& p_buffer);
  ~FileBuffer();
 
-  // Clean the filebuffer
+  // Clean the FileBuffer
   void    Reset();
   void    ResetFilename();
 
@@ -77,12 +75,13 @@ public:
   // SETTERS
 
   // Set the filename
-  void    SetFileName(XString& p_fileName);
+  void    SetFileName(const XString& p_fileName);
   // Set the buffer in one go
   void    SetBuffer(uchar* p_buffer,size_t p_length);
   // Add buffer part
   void    AddBuffer(uchar* p_buffer,size_t p_length);
   void    AddBufferCRLF(uchar* p_buffer,size_t p_length);
+  void    AddStringToBuffer(XString p_string,XString p_charset,bool p_crlf = true);
   // Allocate a one-buffer block
   bool    AllocateBuffer(size_t p_length);
 
@@ -121,11 +120,11 @@ private:
   bool    Defragment();
 
   // Data contents of the HTTP buffer
-  XString m_fileName;     // File to receive/send
-  HANDLE  m_file          { NULL };
-  size_t  m_binaryLength  { NULL };
-  uchar*  m_buffer        { nullptr };
-  Parts   m_parts;
+  XString  m_fileName;     // File to receive/send
+  HANDLE   m_file          { NULL };
+  size_t   m_binaryLength  { NULL };
+  uchar*   m_buffer        { nullptr };
+  Parts    m_parts;
 };
 
 inline bool
@@ -135,7 +134,7 @@ FileBuffer::GetHasBufferParts()
 }
 
 inline void    
-FileBuffer::SetFileName(XString& p_fileName)
+FileBuffer::SetFileName(const XString& p_fileName)
 {
   m_fileName = p_fileName;
 }

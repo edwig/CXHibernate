@@ -4,7 +4,7 @@
 //
 // BaseLibrary: Indispensable general objects and functions
 // 
-// Copyright (c) 2014-2022 ir. W.E. Huisman
+// Copyright (c) 2014-2025 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -27,28 +27,50 @@
 //
 #include "pch.h"
 #include "ServiceReporting.h"
+#include "EventLogRegistration.h"
 #include "AutoCritical.h"
 #include "GetLastErrorAsString.h"
 #include "Alert.h"
 #include "strsafe.h"
 
+#ifdef _AFX
 #ifdef _DEBUG
 #define new DEBUG_NEW
 #undef THIS_FILE
 static char THIS_FILE[] = __FILE__;
 #endif
+#endif
 
 // Each buffer in a event buffer array has a limit of 31K characters
-// See MSDN: ReportEvent function (31.839 characters)
-#define EVENTBUFFER  (31 * 1024)
+// See MSDN: ReportEvent function (31.839 bytes)
+#define EVENTBUFFER  ((31 * 1024) / sizeof(TCHAR))
 
-char*            g_eventBuffer = nullptr;
+PTCHAR           g_eventBuffer = nullptr;
 CRITICAL_SECTION g_eventBufferLock;
-char             g_svcname[SERVICE_NAME_LENGTH];
+TCHAR            g_svcname[SERVICE_NAME_LENGTH] = _T("");
 
-void
+static void
+SvcFreeEventBuffer()
+{
+  // Deallocate the logging buffer of the server
+  if(g_eventBuffer)
+  {
+    delete [] g_eventBuffer;
+    g_eventBuffer = nullptr;
+  }
+  DeleteCriticalSection(&g_eventBufferLock);
+}
+
+static void
 SvcStartEventBuffer()
 {
+  // Already there: nothing to be done
+  if(g_eventBuffer)
+  {
+    return;
+  }
+  g_eventBuffer = new TCHAR[EVENTBUFFER];
+
   // Initialize the logging lock
   InitializeCriticalSection(&g_eventBufferLock);
   // Deallocate our event buffer at the end
@@ -56,59 +78,28 @@ SvcStartEventBuffer()
 }
 
 void
-SvcFreeEventBuffer()
-{
-  // Deallocate the logging buffer of the server
-  if(g_eventBuffer)
-  {
-    free(g_eventBuffer);
-    g_eventBuffer = nullptr;
-  }
-  DeleteCriticalSection(&g_eventBufferLock);
-}
-
-void
-SvcAllocEventBuffer()
-{
-  // Already there: nothing to be done
-  if(g_eventBuffer)
-  {
-    return;
-  }
-  g_eventBuffer = (char*)malloc(EVENTBUFFER + 1);
-  if(g_eventBuffer == nullptr)
-  {
-    SvcReportSuccessEvent("ERROR: Cannot make a buffer for errors and events");
-  }
-  else
-  {
-    SvcStartEventBuffer();
-  }
-}
-
-void
 SvcReportInfoEvent(bool p_doFormat,LPCTSTR p_message,...)
 {
-  HANDLE hEventSource;
-  LPCTSTR lpszStrings[2];
+  // Be sure our event system is started
+  SvcStartEventBuffer();
 
-  SvcAllocEventBuffer();
+  AutoCritSec lock(&g_eventBufferLock);
   if(p_doFormat)
   {
     va_list vl;
     va_start(vl,p_message);
-    _vsnprintf_s(g_eventBuffer,EVENTBUFFER,_TRUNCATE,p_message,vl);
+    _vsntprintf_s(g_eventBuffer,EVENTBUFFER,_TRUNCATE,p_message,vl);
     va_end(vl);
   }
   else
   {
-    StringCchCopy(g_eventBuffer,EVENTBUFFER,p_message);
+    StringCchCopyN(g_eventBuffer,EVENTBUFFER,p_message,EVENTBUFFER - 1);
   }
 
-  hEventSource = OpenEventLog(nullptr,g_svcname);
-
+  HANDLE hEventSource = OpenEventLog(nullptr,g_svcname);
   if(hEventSource != nullptr)
   {
+    LPCTSTR lpszStrings[2];
     lpszStrings[0] = g_svcname;
     lpszStrings[1] = g_eventBuffer;
 
@@ -128,13 +119,14 @@ SvcReportInfoEvent(bool p_doFormat,LPCTSTR p_message,...)
 void
 SvcReportSuccessEvent(LPCTSTR p_message)
 {
-  HANDLE hEventSource;
-  LPCTSTR lpszStrings[2];
+  // Be sure our event system is started
+  SvcStartEventBuffer();
 
-  hEventSource = OpenEventLog(nullptr,g_svcname);
+  HANDLE hEventSource = OpenEventLog(nullptr,g_svcname);
 
   if(hEventSource != nullptr)
   {
+    LPCTSTR lpszStrings[2];
     lpszStrings[0] = g_svcname;
     lpszStrings[1] = p_message;
 
@@ -160,31 +152,34 @@ SvcReportSuccessEvent(LPCTSTR p_message)
 void
 SvcReportErrorEvent(int p_module,bool p_doFormat,LPCTSTR szFunction,LPCTSTR p_message,...)
 {
-  HANDLE  hEventSource = NULL;
-  LPCTSTR lpszStrings[4];
   TCHAR   buffer1[256];
   TCHAR   buffer2[256];
   int     lastError = GetLastError();
 
-  SvcAllocEventBuffer();
+  // Be sure our event system is started
+  SvcStartEventBuffer();
+
+  AutoCritSec lock(&g_eventBufferLock);
   if(p_doFormat)
   {
     va_list vl;
     va_start(vl,p_message);
-    _vsnprintf_s(g_eventBuffer,EVENTBUFFER,_TRUNCATE,p_message,vl);
+    _vsntprintf_s(g_eventBuffer,EVENTBUFFER,_TRUNCATE,p_message,vl);
     va_end(vl);
   }
   else
   {
-    StringCchCopy(g_eventBuffer,EVENTBUFFER,p_message);
+    StringCchCopyN(g_eventBuffer,EVENTBUFFER,p_message,EVENTBUFFER - 1);
   }
-  StringCchPrintf(buffer1, 256, "Function %s", szFunction);
-  StringCchPrintf(buffer2, 256, "Last OS error: [%d] %s", lastError, GetLastErrorAsString(lastError).GetString());
+  _stprintf_s(buffer1, 256, _T("Function %s"), szFunction);
+  _stprintf_s(buffer2, 256, _T("Last OS error: [%d] %s"),lastError,GetLastErrorAsString(lastError).GetString());
 
-  hEventSource = OpenEventLog(nullptr,g_svcname);
+  HANDLE hEventSource = OpenEventLog(nullptr,g_svcname);
 
   if(hEventSource != nullptr)
   {
+    LPCTSTR lpszStrings[4];
+
     lpszStrings[0] = g_svcname;
     lpszStrings[1] = g_eventBuffer;
     lpszStrings[2] = buffer1;
@@ -203,7 +198,7 @@ SvcReportErrorEvent(int p_module,bool p_doFormat,LPCTSTR szFunction,LPCTSTR p_me
   }
 
   // Create alert file if requested
-  if (g_alertConfigured)
+  if(p_module)
   {
     CreateAlert(szFunction,buffer2,g_eventBuffer,p_module);
   }

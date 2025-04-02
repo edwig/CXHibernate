@@ -13,31 +13,31 @@ static char THIS_FILE[] = __FILE__;
 #endif
 
 BEGIN_XML_SERIALIZE(Kitten,Cat)
-  CXO_XML_SERIALIZE(m_kit_color    ,"kit_color");
-  CXO_XML_SERIALIZE(m_immuun       ,"immuun");
-  CXO_XML_SERIALIZE(m_inLitter     ,"inLitter");
+  CXO_XML_SERIALIZE(m_kit_color    ,_T("kit_color"));
+  CXO_XML_SERIALIZE(m_immuun       ,_T("immuun"));
+  CXO_XML_SERIALIZE(m_inLitter     ,_T("inLitter"));
 END_XML_SERIALIZE
 
 BEGIN_XML_DESERIALIZE(Kitten,Cat)
-  CXO_XML_DESERIALIZE(m_kit_color  ,"kit_color");
-  CXO_XML_DESERIALIZE(m_immuun     ,"immuun");
-  CXO_XML_DESERIALIZE(m_inLitter   ,"inLitter");
+  CXO_XML_DESERIALIZE(m_kit_color  ,_T("kit_color"));
+  CXO_XML_DESERIALIZE(m_immuun     ,_T("immuun"));
+  CXO_XML_DESERIALIZE(m_inLitter   ,_T("inLitter"));
 END_XML_DESERIALIZE
 
 BEGIN_DBS_SERIALIZE(Kitten,Cat)
-  CXO_DBS_SERIALIZE(m_kit_color   ,"kit_color");
-  CXO_DBS_SERIALIZE(m_immuun      ,"immuun");
-  CXO_DBS_SERIALIZE(m_inLitter    ,"inLitter");
+  CXO_DBS_SERIALIZE(m_kit_color   ,_T("kit_color"));
+  CXO_DBS_SERIALIZE(m_immuun      ,_T("immuun"));
+  CXO_DBS_SERIALIZE(m_inLitter    ,_T("inLitter"));
 END_DBS_SERIALIZE
 
 BEGIN_DBS_DESERIALIZE(Kitten,Cat)
-  CXO_DBS_DESERIALIZE(m_kit_color ,"kit_color");
-  CXO_DBS_DESERIALIZE(m_immuun    ,"immuun");
-  CXO_DBS_DESERIALIZE(m_inLitter  ,"inLitter");
+  CXO_DBS_DESERIALIZE(m_kit_color ,_T("kit_color"));
+  CXO_DBS_DESERIALIZE(m_immuun    ,_T("immuun"));
+  CXO_DBS_DESERIALIZE(m_inLitter  ,_T("inLitter"));
 END_DBS_DESERIALIZE
 
 BEGIN_DESERIALIZE_GENERATOR(Kitten)
-  CXO_DBS_DESERIALIZE(m_id, "id");
+  CXO_DBS_DESERIALIZE(m_id, _T("id"));
 END_DESERIALIZE_GENERATOR
 
 // Static factory to create a new object if this class

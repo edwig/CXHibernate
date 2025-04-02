@@ -4,7 +4,7 @@
 //
 // BaseLibrary: Indispensable general objects and functions
 // 
-// Copyright (c) 2014-2022 ir. W.E. Huisman
+// Copyright (c) 2014-2025 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -45,7 +45,7 @@ private:
 class CritSection
 {
 public:
-  CritSection(Critical& p_section) : m_section(&p_section)
+  explicit CritSection(Critical& p_section) : m_section(&p_section)
   {
     p_section.Lock();
   }
@@ -62,7 +62,7 @@ private:
 class AutoCritSec
 {
 public:
-  AutoCritSec(CRITICAL_SECTION* section) : m_section(section)
+  explicit AutoCritSec(CRITICAL_SECTION* section) : m_section(section)
   {
     EnterCriticalSection(m_section);
   }
@@ -70,6 +70,8 @@ public:
   {
     LeaveCriticalSection(m_section);
   }
+  void Unlock() { LeaveCriticalSection(m_section); };
+  void Relock() { EnterCriticalSection(m_section); };
 private:
   CRITICAL_SECTION* m_section;
 };
@@ -77,7 +79,7 @@ private:
 class AutoTrySection
 {
 public:
-  AutoTrySection(CRITICAL_SECTION* section) : m_section(section)
+  explicit AutoTrySection(CRITICAL_SECTION* section) : m_section(section)
   {
     m_succeeded = TryEnterCriticalSection(m_section) != 0;
   }

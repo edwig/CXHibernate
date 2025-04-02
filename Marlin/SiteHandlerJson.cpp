@@ -4,7 +4,7 @@
 //
 // Marlin Server: Internet server/client
 // 
-// Copyright (c) 2014-2022 ir. W.E. Huisman
+// Copyright (c) 2014-2024 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -29,10 +29,12 @@
 #include "SiteHandlerJson.h"
 #include "JSONMessage.h"
 
+#ifdef _AFX
 #ifdef _DEBUG
 #define new DEBUG_NEW
 #undef THIS_FILE
 static char THIS_FILE[] = __FILE__;
+#endif
 #endif
 
 // Remember JSONMessage for this thread in the TLS
@@ -89,7 +91,7 @@ SiteHandlerJson::Handle(JSONMessage* p_message)
   {
     p_message->Reset();
     p_message->SetErrorstate(true);
-    p_message->SetLastError("INTERNAL: Unhandled JSON request caught by base HTTPSite::SIteHandlerJson::Handle");
+    p_message->SetLastError(_T("INTERNAL: Unhandled JSON request caught by base HTTPSite::SIteHandlerJson::Handle"));
   }
   return true;
 }

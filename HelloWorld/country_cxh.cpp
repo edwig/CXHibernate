@@ -13,35 +13,35 @@ static char THIS_FILE[] = __FILE__;
 #endif
 
 BEGIN_XML_SERIALIZE(country,CXObject)
-  CXO_XML_SERIALIZE(m_id              ,"id");
-  CXO_XML_SERIALIZE(m_name            ,"name");
-  CXO_XML_SERIALIZE(m_inhabitants     ,"inhabitants");
-  CXO_XML_SERIALIZE(m_continent       ,"continent");
+  CXO_XML_SERIALIZE(m_id              ,_T("id"));
+  CXO_XML_SERIALIZE(m_name            ,_T("name"));
+  CXO_XML_SERIALIZE(m_inhabitants     ,_T("inhabitants"));
+  CXO_XML_SERIALIZE(m_continent       ,_T("continent"));
 END_XML_SERIALIZE
 
 BEGIN_XML_DESERIALIZE(country,CXObject)
-  CXO_XML_DESERIALIZE(m_id            ,"id");
-  CXO_XML_DESERIALIZE(m_name          ,"name");
-  CXO_XML_DESERIALIZE(m_inhabitants   ,"inhabitants");
-  CXO_XML_DESERIALIZE(m_continent     ,"continent");
+  CXO_XML_DESERIALIZE(m_id            ,_T("id"));
+  CXO_XML_DESERIALIZE(m_name          ,_T("name"));
+  CXO_XML_DESERIALIZE(m_inhabitants   ,_T("inhabitants"));
+  CXO_XML_DESERIALIZE(m_continent     ,_T("continent"));
 END_XML_DESERIALIZE
 
 BEGIN_DBS_SERIALIZE(country,CXObject)
-  CXO_DBS_SERIALIZE(m_id              ,"id");
-  CXO_DBS_SERIALIZE(m_name            ,"name");
-  CXO_DBS_SERIALIZE(m_inhabitants     ,"inhabitants");
-  CXO_DBS_SERIALIZE(m_continent       ,"continent");
+  CXO_DBS_SERIALIZE(m_id              ,_T("id"));
+  CXO_DBS_SERIALIZE(m_name            ,_T("name"));
+  CXO_DBS_SERIALIZE(m_inhabitants     ,_T("inhabitants"));
+  CXO_DBS_SERIALIZE(m_continent       ,_T("continent"));
 END_DBS_SERIALIZE
 
 BEGIN_DBS_DESERIALIZE(country,CXObject)
-  CXO_DBS_DESERIALIZE(m_id            ,"id");
-  CXO_DBS_DESERIALIZE(m_name          ,"name");
-  CXO_DBS_DESERIALIZE(m_inhabitants   ,"inhabitants");
-  CXO_DBS_DESERIALIZE(m_continent     ,"continent");
+  CXO_DBS_DESERIALIZE(m_id            ,_T("id"));
+  CXO_DBS_DESERIALIZE(m_name          ,_T("name"));
+  CXO_DBS_DESERIALIZE(m_inhabitants   ,_T("inhabitants"));
+  CXO_DBS_DESERIALIZE(m_continent     ,_T("continent"));
 END_DBS_DESERIALIZE
 
 BEGIN_DESERIALIZE_GENERATOR(country)
-  CXO_DBS_DESERIALIZE(m_id, "id");
+  CXO_DBS_DESERIALIZE(m_id, _T("id"));
 END_DESERIALIZE_GENERATOR
 
 // Static factory to create a new object if this class

@@ -2,7 +2,7 @@
 //
 // SourceFile: XMLTemporal.cpp
 //
-// Copyright (c) 2014-2022 ir. W.E. Huisman
+// Copyright (c) 2014-2025 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -28,10 +28,12 @@
 #include "XMLTemporal.h"
 #include <time.h>
 
+#ifdef _AFX
 #ifdef _DEBUG
 #define new DEBUG_NEW
 #undef THIS_FILE
 static char THIS_FILE[] = __FILE__;
+#endif
 #endif
 
 // Number of days at the beginning of the month
@@ -82,25 +84,25 @@ XMLTemporal::ParseXMLDate(const XString& p_string,XMLTimestamp& p_moment)
   int UTCmi[2] = {0,0};
 
   // changed char to unsigned int for 64 bit implementation
-  char sep3,sep4,sep5,sep6,sep7,sep8;
+  TCHAR sep3,sep4,sep5,sep6,sep7,sep8;
 
-  int n = sscanf_s(p_string
-                  ,"%1d%1d%1d%1d-%1d%1d-%1d%1d%c%1d%1d%c%1d%1d%c%1d%1d%c%d%c%1d%1d%c%1d%1d"
-                  ,&ja[0],&ja[1],&ja[2],&ja[3]
-                  ,&ma[0],&ma[1]
-                  ,&da[0],&da[1]
-                  ,&sep3,(unsigned int) sizeof(char)
-                  ,&uu[0],&uu[1]
-                  ,&sep4,(unsigned int) sizeof(char)
-                  ,&mi[0],&mi[1]
-                  ,&sep5,(unsigned int) sizeof(char)
-                  ,&se[0],&se[1]
-                  ,&sep6,(unsigned int) sizeof(char)
-                  ,&fraction
-                  ,&sep7,(unsigned int) sizeof(char)
-                  ,&UTCuu[0],&UTCuu[1]
-                  ,&sep8,(unsigned int) sizeof(char)
-                  ,&UTCmi[0],&UTCmi[1]);
+  int n = _stscanf_s(p_string
+                    ,_T("%1d%1d%1d%1d-%1d%1d-%1d%1d%c%1d%1d%c%1d%1d%c%1d%1d%c%d%c%1d%1d%c%1d%1d")
+                    ,&ja[0],&ja[1],&ja[2],&ja[3]
+                    ,&ma[0],&ma[1]
+                    ,&da[0],&da[1]
+                    ,&sep3,(unsigned int) sizeof(TCHAR)
+                    ,&uu[0],&uu[1]
+                    ,&sep4,(unsigned int) sizeof(TCHAR)
+                    ,&mi[0],&mi[1]
+                    ,&sep5,(unsigned int) sizeof(TCHAR)
+                    ,&se[0],&se[1]
+                    ,&sep6,(unsigned int) sizeof(TCHAR)
+                    ,&fraction
+                    ,&sep7,(unsigned int) sizeof(TCHAR)
+                    ,&UTCuu[0],&UTCuu[1]
+                    ,&sep8,(unsigned int) sizeof(TCHAR)
+                    ,&UTCmi[0],&UTCmi[1]);
 
   int jaar    = ja[0] * 1000 + ja[1] * 100 + ja[2] * 10 + ja[3];
   int maand   = ma[0] * 10 + ma[1];
@@ -156,7 +158,7 @@ XMLTemporal::ParseXMLDate(const XString& p_string,XMLTimestamp& p_moment)
     case 20:  // Has "YYYY-MM-DDTHH:MM:SS.fractionZ" pattern
               UTC   = sep3 == 'T' && sep4 == ':' && sep5 == ':' && sep6 == '.' && sep7 == 'Z';
               break;
-    case 22:  // UTCuurBuffer in fractie
+    case 22:  // UTCuurBuffer in fraction
               // UTCminBuffer in UTCuurBuffer
               if(sep3 == 'T' && sep4 == ':'  && sep5 == ':' && 
                 (sep6 == '+' || sep6 == '-') && sep7 == ':' && 
@@ -263,10 +265,10 @@ XMLTime::ParseTime(XString p_value)
   }
 
   // Support different separators 
-  string.Replace(" ",":");
-  string.Replace("-",":");
-  string.Replace(".",":");
-  string.Replace("/",":");
+  string.Replace(_T(" "),_T(":"));
+  string.Replace(_T("-"),_T(":"));
+  string.Replace(_T("."),_T(":"));
+  string.Replace(_T("/"),_T(":"));
 
   // Clear the result
   m_theTime.m_hour = -1;
@@ -274,29 +276,29 @@ XMLTime::ParseTime(XString p_value)
   m_theTime.m_second = 0;
 
   //  Parse the string
-  int n = sscanf_s(string,"%d:%d:%d"
-                  ,&m_theTime.m_hour
-                  ,&m_theTime.m_minute
-                  ,&m_theTime.m_second);
+  int n = _stscanf_s(string,_T("%d:%d:%d")
+                    ,&m_theTime.m_hour
+                    ,&m_theTime.m_minute
+                    ,&m_theTime.m_second);
   if(n < 2)
   {
-    throw StdException("Wrong format for conversion to time. Must be in the format: hh:mm[:ss]");
+    throw StdException(_T("Wrong format for conversion to time. Must be in the format: hh:mm[:ss]"));
   }
 
   // Check for correct values
   if(m_theTime.m_hour < 0 || m_theTime.m_hour > 23)
   {
-    throw StdException("Incorrect time format: the value of the hour must be between 0 and 23 (inclusive)");
+    throw StdException(_T("Incorrect time format: the value of the hour must be between 0 and 23 (inclusive)"));
   }
 
   if(m_theTime.m_minute < 0 || m_theTime.m_minute > 59)
   {
-    throw StdException("Incorrect time format: the value of minutes must be between 0 and 59 (inclusive)");
+    throw StdException(_T("Incorrect time format: the value of minutes must be between 0 and 59 (inclusive)"));
   }
 
   if(m_theTime.m_second < 0 || m_theTime.m_second > 59)
   {
-    throw StdException("Incorrect time format: the value of the seconds must be between 0 and 59 (inclusive)");
+    throw StdException(_T("Incorrect time format: the value of the seconds must be between 0 and 59 (inclusive)"));
   }
   SetTime();
 }
@@ -314,19 +316,19 @@ XMLTime::ParseXMLTime(const XString& p_string)
 
   //  Parse the string
   // changed char to unsigned int for 64 bit implementation
-  char sep1,sep2,sep3,sep4,sep5;
-  int n = sscanf_s(p_string,"%1d%1d%c%1d%1d%c%1d%1d%c%d%c%1d%1d%c%1d%1d",
-                   &uu[0],&uu[1],
-                   &sep1,(unsigned int) sizeof(char),
-                   &mi[0],&mi[1],
-                   &sep2,(unsigned int) sizeof(char),
-                   &se[0],&se[1],
-                   &sep3,(unsigned int) sizeof(char),
-                   &fraction,
-                   &sep4,(unsigned int) sizeof(char),
-                   &UTCuu[0],&UTCuu[1],
-                   &sep5,(unsigned int) sizeof(char),
-                   &UTCmi[0],&UTCmi[1]);
+  TCHAR sep1,sep2,sep3,sep4,sep5;
+  int n = _stscanf_s(p_string,_T("%1u%1u%c%1u%1u%c%1u%1u%c%u%c%1u%1u%c%1u%1u"),
+                     &uu[0],&uu[1],
+                     &sep1,(unsigned int) sizeof(TCHAR),
+                     &mi[0],&mi[1],
+                     &sep2,(unsigned int) sizeof(TCHAR),
+                     &se[0],&se[1],
+                     &sep3,(unsigned int) sizeof(TCHAR),
+                     &fraction,
+                     &sep4,(unsigned int) sizeof(TCHAR),
+                     &UTCuu[0],&UTCuu[1],
+                     &sep5,(unsigned int) sizeof(TCHAR),
+                     &UTCmi[0],&UTCmi[1]);
 
   int uurBuffer = uu[0] * 10 + uu[1];
   int minBuffer = mi[0] * 10 + mi[1];
@@ -375,7 +377,7 @@ XMLTime::ParseXMLTime(const XString& p_string)
                       {
                         minutes = -minutes;
                       }
-                      m_value += minutes * ONE_MINUTE;
+                      m_value += (INT64)minutes * ONE_MINUTE;
                       Normalise();
                       UTC = true;
                     }
@@ -392,7 +394,7 @@ XMLTime::ParseXMLTime(const XString& p_string)
                       {
                         minutes = -minutes;
                       }
-                      m_value += minutes * ONE_MINUTE;
+                      m_value += (int64)minutes * ONE_MINUTE;
                       Normalise();
                       UTC = true;
                     }
@@ -405,7 +407,7 @@ XMLTime::ParseXMLTime(const XString& p_string)
       ::ZeroMemory(&tziCurrent,sizeof(tziCurrent));
       if(::GetTimeZoneInformation(&tziCurrent) != TIME_ZONE_ID_INVALID)
       {
-        m_value += -tziCurrent.Bias * ONE_MINUTE;
+        m_value += (INT64)-tziCurrent.Bias * ONE_MINUTE;
         Normalise();
       }
       return true;
@@ -434,15 +436,15 @@ XMLTime::SetTime()
      m_theTime.m_minute >= 0 && m_theTime.m_minute < 60 &&
      m_theTime.m_second >= 0 && m_theTime.m_second < 60)
   {
-    m_value = (m_theTime.m_hour   * ONE_HOUR  ) + 
-              (m_theTime.m_minute * ONE_MINUTE) +
-               m_theTime.m_second;
+    m_value = ((INT64)m_theTime.m_hour   * ONE_HOUR  ) + 
+              ((INT64)m_theTime.m_minute * ONE_MINUTE) +
+               (INT64)m_theTime.m_second;
   }
   else
   {
     // Tell it to the outside world
     XString error;
-    error.Format("Incorrect time %02d:%02d:%02d",m_theTime.m_hour,m_theTime.m_minute,m_theTime.m_second);
+    error.Format(_T("Incorrect time %02d:%02d:%02d"),m_theTime.m_hour,m_theTime.m_minute,m_theTime.m_second);
     // Reset the time to NULL
     // Then throw the error
     throw StdException(error);
@@ -475,7 +477,7 @@ XMLTime::Normalise()
 //////////////////////////////////////////////////////////////////////////
 
 XMLDate::XMLDate()
-        :XMLTemporal("")
+        :XMLTemporal(_T(""))
 {
 }
 
@@ -499,15 +501,13 @@ XMLDate::ParseDate(XString p_value)
     return true;
   }
 
-  if(!success)
+  XMLTimestamp mom;
+  if(ParseXMLDate(datum,mom))
   {
-    XMLTimestamp mom;
-    if(ParseXMLDate(datum,mom))
-    {
-      SetDate(mom.Year(),mom.Month(),mom.Day());
-      success = true;
-    }
+    SetDate(mom.Year(),mom.Month(),mom.Day());
+    success = true;
   }
+
   if(!success)
   {
     int jaar = 0;
@@ -516,9 +516,9 @@ XMLDate::ParseDate(XString p_value)
     if(!ParseDate(datum,&jaar,&maand,&dag))
     {
       // Wrong formatted date
-      throw StdException("Date has a wrong format");
+      throw StdException(_T("Date has a wrong format"));
     }
-    // Speciaal geval: Pronto doet dit
+    // Special case: Pronto does this
     // 00-00-00 -> wordt vandaag
     if(dag == 0 && maand == 0)
     {
@@ -527,8 +527,8 @@ XMLDate::ParseDate(XString p_value)
     }
     else
     {
-      // Doet de ZetMJD op de jaar/maand/dag waarden
-      // en doet dus de controle op de domeinwaarden en correctheid
+      // Set the MJD on the year/month/day values
+      // and thus performs check on domain values and correctness
       success = SetDate(jaar,maand,dag);
     }
   }
@@ -545,7 +545,7 @@ XMLDate::ParseDate(const XString& p_datum,int* p_jaar,int* p_maand,int* p_dag)
   datum.Replace('/',' ');
   datum.Replace('.',' ');
 
-  int num = sscanf_s(datum,"%d %d %d",p_jaar,p_maand,p_dag);
+  int num = _stscanf_s(datum,_T("%d %d %d"),p_jaar,p_maand,p_dag);
 
   // Need at x-y-z pattern 
   bool result = (num == 3);
@@ -563,10 +563,10 @@ void
 XMLDate::Today()
 {
   _tzset();
-  time_t ltime;
-  time(&ltime);
+  __time64_t ltime;
+  _time64(&ltime);
   struct tm now;
-  localtime_s(&now,&ltime);
+  _localtime64_s(&now,&ltime);
 
   // Return as SQLDate object
   SetDate(now.tm_year + 1900,now.tm_mon + 1,now.tm_mday);
@@ -583,13 +583,13 @@ XMLDate::SetDate(int p_year,int p_month,int p_day)
   return SetMJD();
 }
 
-// Calucalate the DateValue m_mjd for a date
+// Calculate the DateValue m_mjd for a date
 bool
 XMLDate::SetMJD()
 {
-  int year  = m_date.m_year;
-  int month = m_date.m_month;
-  int day   = m_date.m_day;
+  long year  = m_date.m_year;
+  long month = m_date.m_month;
+  long day   = m_date.m_day;
 
   // Validate year, month and day by the ODBC definition
   if (year  > 0 && year  < 10000 &&
@@ -597,7 +597,7 @@ XMLDate::SetMJD()
       day   > 0 && day   < 32)
   {
     // Check on the Gregorian definition of months
-    // Checks on leapyears and gets the days-in-the-month
+    // Checks on leap years and gets the days-in-the-month
     bool leapyear = ((year & 3) == 0) &&
                     ((year % 100) != 0 || (year % 400) == 0);
 
@@ -607,10 +607,10 @@ XMLDate::SetMJD()
     // Finish validating the date
     if (day <= daysInMonth)
     {
-      // Calculate Astronomical Modified Juliaanse Day Nummer (MJD)
+      // Calculate Astronomical Modified Julian Day Number (MJD)
       // Method P.D-Smith: Practical Astronomy
-      // Pagi 9: Paragraaf 4: Julian day numbers.
-      // See alsoo:
+      // Page 9: Paragraph 4: Julian day numbers.
+      // See also:
       // Robin.M. Green: Spherical Astronomy, page 250 and next.
       if(month < 3)
       {
@@ -626,11 +626,11 @@ XMLDate::SetMJD()
         gregorianB = 2 - gregorianA + (gregorianA / 4);
       }
       factorC = (long)(365.25  * (double) year);
-      factorD = (long)(30.6001 * (double)(month + 1));
+      factorD = (long)(30.6001 * (double)((size_t)month + 1));
       // The correction factor (Modified JD) 
-      // Falls on 16 november 1858 12:00 hours (noon), 
-      // so subtract 679006 (17 november 1858 00:00:00 hour)
-      m_value = gregorianB + factorC + factorD + day - 679006;
+      // Falls on 16 November 1858 12:00 hours (noon), 
+      // so subtract 679006 (17 November 1858 00:00:00 hour)
+      m_value = (INT64)gregorianB + (INT64)factorC + (INT64)factorD + (INT64)day - (INT64)679006;
       return true;
     }
   }
@@ -646,7 +646,7 @@ XMLDate::SetMJD()
 //////////////////////////////////////////////////////////////////////////
 
 XMLTimestamp::XMLTimestamp()
-             :XMLTemporal("")
+             :XMLTemporal(_T(""))
 {
 }
 
@@ -657,7 +657,7 @@ XMLTimestamp::XMLTimestamp(XString p_value)
 }
 
 XMLTimestamp::XMLTimestamp(INT64 p_value)
-             :XMLTemporal("")
+             :XMLTemporal(_T(""))
 {
   m_value = p_value;
   Normalise();
@@ -667,9 +667,6 @@ void
 XMLTimestamp::ParseMoment(XString p_value)
 {
   XString string(p_value);
-  XString CurrentDate = "";
-  XString Sign = "";
-  XString ExtraTime = "";
 
   // Trim spaces from string
   string.Trim();
@@ -709,7 +706,7 @@ XMLTimestamp::ParseMoment(XString p_value)
   // See if we have a time only
   if(string.Find(':') > 0)
   {
-    // It is a timestring for today
+    // It is a time string for today
     XMLDate date;
     date.Today();
     XMLTime time(string);
@@ -719,7 +716,7 @@ XMLTimestamp::ParseMoment(XString p_value)
   }
   // It's a date only
   XMLDate date(string);
-  XMLTime time("");
+  XMLTime time(_T(""));
   SetTimestamp(date.Year(),date.Month(),date.Day(),
                time.Hour(),time.Minute(),time.Second());
 
@@ -757,65 +754,63 @@ XMLTimestamp::RecalculateValue()
   bool leapYear = ((year & 3) == 0) &&
                   ((year % 100) != 0 || (year % 400) == 0);
 
-  long daysInMonth = g_daysInTheMonth[month] - g_daysInTheMonth[month-1] +
+  int  daysInMonth = g_daysInTheMonth[month] - g_daysInTheMonth[month-1] +
                      ((leapYear && day == 29 && month == 2) ? 1 : 0);
 
   if (day <= 0 || day > daysInMonth)
   {
     m_value = 0;
     XString error;
-    error.Format("Day of the month must be between 1 and %d inclusive.",daysInMonth);
+    error.Format(_T("Day of the month must be between 1 and %d inclusive."),daysInMonth);
     throw StdException(error);
   }
   // Calculate the Astronomical Julian Day Number (JD)
   // Method P.D-Smith: Practical Astronomy
   // Page 9: Paragraph 4: Julian day numbers.
-  // See alsoo: Robin M. Green: Spherical Astronomy, page 250
+  // See also: Robin M. Green: Spherical Astronomy, page 250
   if(month < 3)
   {
     month += 12;
     --year;
   }
-  long gregorianA = 0;
   long gregorianB = 0;
   long factorC, factorD;
   if(year > 1582)
   {
-    gregorianA = year / 100;
+    long gregorianA = year / 100;
     gregorianB = 2 - gregorianA + (gregorianA / 4);
   }
   factorC = (long) (365.25  * (double)year);
-  factorD = (long) (30.6001 * (double)(month + 1));
+  factorD = (long) (30.6001 * (double)((size_t)month + 1));
   // The correction factor (Modified JD) 
-  // Falls on 16 november 1858 12:00 hours (noon), 
-  // so subtract 679006 (17 november 1858 00:00:00 hour)
-  m_value  = gregorianB + factorC + factorD + day - 679006;
+  // Falls on 16 November 1858 12:00 hours (noon), 
+  // so subtract 679006 (17 November 1858 00:00:00 hour)
+  m_value  = (INT64)gregorianB + factorC + factorD + day - (INT64)679006;
   m_value *= ONE_DAY;
-  m_value += m_timestamp.m_hour   * ONE_HOUR   +
-             m_timestamp.m_minute * ONE_MINUTE +
-             m_timestamp.m_second;
+  m_value += (INT64)m_timestamp.m_hour   * ONE_HOUR   +
+             (INT64)m_timestamp.m_minute * ONE_MINUTE +
+             (INT64)m_timestamp.m_second;
 }
 
 void
 XMLTimestamp::Normalise()
 {
-  long gregorianA = 0;
   long gregorianB = 0;
   long factorC = 0;
   long factorD = 0;
   long factorE = 0;
   long factorG = 0;
 
-  // Calculate Civil Day from the Modified Juliaanse Day Nummer (MJD)
+  // Calculate Civil Day from the Modified Julian Day Number (MJD)
   // Method P.D-Smith: Practical Astronomy
   // Page 11: Paragraph 5: Converting Julian day number to the calendar date
-  // See alsoo Robin M. Green: Spherical Astronomy, page 250 and next
+  // See also Robin M. Green: Spherical Astronomy, page 250 and next
 
-  // Correction factor is MJD (2,400,000.5) + 0.5 (17 nov 1858 instead of 16 nov 12:00 hours)
+  // Correction factor is MJD (2,400,000.5) + 0.5 (17 Nov 1858 instead of 16 Nov 12:00 hours)
   double JD = (double)((m_value / ONE_DAY) + 2400001);
   if(JD > 2299160)
   {
-    gregorianA = (long) ((JD - 1867216.25) / 36524.25);
+    long gregorianA = (long) ((JD - 1867216.25) / 36524.25);
     gregorianB = (long) (JD + 1 + gregorianA - (gregorianA / 4));
   }
   else
@@ -825,7 +820,7 @@ XMLTimestamp::Normalise()
   factorC = gregorianB + 1524;
   factorD = (long) (((double)factorC - 122.1) / 365.25);
   factorE = (long)  ((double)factorD * 365.25);
-  factorG = (long) (((double)(factorC - factorE)) / 30.6001);
+  factorG = (long) (((double)((size_t)factorC - (size_t)factorE)) / 30.6001);
   m_timestamp.m_day   = (char)   (factorC - factorE - (int)((double)factorG * 30.6001));
   m_timestamp.m_month = (char)  ((factorG > 13) ? factorG - 13 : factorG - 1);
   m_timestamp.m_year  = (short) ((m_timestamp.m_month > 2) ? factorD - 4716 : factorD - 4715);
@@ -852,32 +847,32 @@ XMLTimestamp::Validate()
   if(m_timestamp.m_year <= 0 || m_timestamp.m_year >= 10000)
   {
     m_value = 0;
-    throw StdException("Year must be between 1 and 9999 inclusive.");
+    throw StdException(_T("Year must be between 1 and 9999 inclusive."));
   }
   if(m_timestamp.m_month <= 0 || m_timestamp.m_month >= 13)
   {
     m_value = 0;
-    throw StdException("Month must be between 1 and 12 inclusive.");
+    throw StdException(_T("Month must be between 1 and 12 inclusive."));
   }
   if(m_timestamp.m_hour < 0 || m_timestamp.m_hour >= 24)
   {
     m_value = 0;
-    throw StdException("Hour must be between 0 and 23 inclusive.");
+    throw StdException(_T("Hour must be between 0 and 23 inclusive."));
   }
   if(m_timestamp.m_minute < 0 || m_timestamp.m_minute >= 60)
   {
     m_value = 0;
-    throw StdException("Minute must be between 0 and 59 inclusive.");
+    throw StdException(_T("Minute must be between 0 and 59 inclusive."));
   }
   if(m_timestamp.m_second < 0 || m_timestamp.m_second >= 62)
   {
     m_value = 0;
-    throw StdException("Number of seconds must be between 0 and 61 inclusive.");
+    throw StdException(_T("Number of seconds must be between 0 and 61 inclusive."));
   }
   if(m_fraction < 0 || m_fraction > NANOSECONDS_PER_SEC)
   {
     m_value = 0;
-    throw StdException("Fraction of seconds must be between 0 and 999,999,999");
+    throw StdException(_T("Fraction of seconds must be between 0 and 999,999,999"));
   }
 }
 
@@ -886,7 +881,7 @@ XMLTimestamp::AddDays(int p_number) const
 {
   if(p_number)
   {
-    return XMLTimestamp((INT64)(m_value + (p_number * ONE_DAY)));
+    return XMLTimestamp((INT64)(m_value + ((INT64)p_number * ONE_DAY)));
   }
   return *this;
 }
@@ -896,7 +891,7 @@ XMLTimestamp::AddMinutes(int p_number) const
 {
   if(p_number)
   {
-    return XMLTimestamp((INT64)(m_value + p_number * ONE_MINUTE));
+    return XMLTimestamp((INT64)(m_value + (INT64)p_number * ONE_MINUTE));
   }
   return *this;
 }
@@ -905,7 +900,7 @@ XString
 XMLTimestamp::AsString()
 {
   XString string;
-  string.Format("%04d-%02d-%02dT%02d:%02d:%02d"
+  string.Format(_T("%04d-%02d-%02dT%02d:%02d:%02d")
                ,m_timestamp.m_year
                ,m_timestamp.m_month
                ,m_timestamp.m_day
@@ -914,8 +909,8 @@ XMLTimestamp::AsString()
                ,m_timestamp.m_second);
   if(m_fraction)
   {
-    string.AppendFormat(".%d",m_fraction);
-    string.TrimRight("0");
+    string.AppendFormat(_T(".%d"),m_fraction);
+    string.TrimRight(_T("0"));
   }
   return string;
 }
@@ -982,13 +977,13 @@ XMLDuration::XMLDuration(XString p_value)
 bool
 XMLDuration::ParseDuration(XString p_duration)
 {
-  bool negative    = false;
-  bool didTime     = false;
-  int  value       = 0;
-  int  fraction    = 0;
-  char marker      = 0;
-  char firstMarker = 0;
-  char lastMarker  = 0;
+  bool  negative    = false;
+  bool  didTime     = false;
+  int   value       = 0;
+  int   fraction    = 0;
+  TCHAR marker      = 0;
+  TCHAR firstMarker = 0;
+  TCHAR lastMarker  = 0;
   SQLINTERVAL type;
 
   // Set the current interval to NULL
@@ -996,14 +991,14 @@ XMLDuration::ParseDuration(XString p_duration)
 
   // Parse the negative sign
   p_duration.Trim();
-  if(p_duration.Left(1) == "-")
+  if(p_duration.Left(1) == _T("-"))
   {
     negative = true;
     p_duration = p_duration.Mid(1);
   }
 
   // Must see a 'P' for period
-  if(p_duration.Left(1) != "P")
+  if(p_duration.Left(1) != _T("P"))
   {
     return false; // Leave interval at NULL
   }
@@ -1020,7 +1015,7 @@ XMLDuration::ParseDuration(XString p_duration)
                 break;
       case 'H': if(!didTime)
                 {
-                  throw StdException("Illegal duriation period (hours without a 'T')");
+                  throw StdException(_T("Illegal duriation period (hours without a 'T')"));
                 }
                 m_interval.intval.day_second.hour = value;
                 break;
@@ -1036,7 +1031,7 @@ XMLDuration::ParseDuration(XString p_duration)
                 break;
       case 'S': if(!didTime)
                 {
-                  throw StdException("Illegal duration period (seconds without a 'T')");
+                  throw StdException(_T("Illegal duration period (seconds without a 'T')"));
                 }
                 m_interval.intval.day_second.second   = value;
                 m_interval.intval.day_second.fraction = fraction;
@@ -1071,7 +1066,7 @@ XMLDuration::ParseDuration(XString p_duration)
     // Beware: XML duration has combinations that are NOT compatible
     // with the SQL definition of an interval, like Month-to-Day
     XString error;
-    error.Format("XML duration period not compatible with SQL (%c to %c)",firstMarker,lastMarker);
+    error.Format(_T("XML duration period not compatible with SQL (%c to %c)"),firstMarker,lastMarker);
     throw StdException(error);
   }
 
@@ -1091,7 +1086,7 @@ bool
 XMLDuration::ScanDurationValue(XString& p_duration
                               ,int&     p_value
                               ,int&     p_fraction
-                              ,char&    p_marker
+                              ,TCHAR&   p_marker
                               ,bool&    p_didTime)
 {
   // Reset values
@@ -1139,7 +1134,7 @@ XMLDuration::ScanDurationValue(XString& p_duration
   // Scan a marker
   if(isalpha(p_duration.GetAt(0)))
   {
-    p_marker = p_duration.GetAt(0);
+    p_marker   = (TCHAR) p_duration.GetAt(0);
     p_duration = p_duration.Mid(1);
   }
 
@@ -1302,19 +1297,19 @@ XMLGregorianMD::ParseGregorianMD(XString p_value)
     negative = true;
     p_value = p_value.Mid(1);
   }
-  int num = sscanf_s(p_value,"%d-%d",&month,&day);
+  int num = _stscanf_s(p_value,_T("%d-%d"),&month,&day);
   if(num != 2)
   {
-    XString result = "Not a Gregorian month-day value: " + p_value;
+    XString result = _T("Not a Gregorian month-day value: ") + p_value;
     throw StdException(result);
   }
   else if(month < 1 || month > 12 ||
           day   < 1 || day   > 31)
   {
-    XString result = "Gregorian month-day overflow: " + p_value;
+    XString result = _T("Gregorian month-day overflow: ") + p_value;
     throw StdException(result);
   }
-  m_value = month * 31 + day;
+  m_value = (INT64)month * 31 + (INT64)day;
   if(negative)
   {
     m_value = - m_value;
@@ -1348,19 +1343,19 @@ XMLGregorianYM::ParseGregorianYM(XString p_value)
     p_value = p_value.Mid(1);
   }
 
-  int num = sscanf_s(p_value,"%d-%d",&year,&month);
+  int num = _stscanf_s(p_value,_T("%d-%d"),&year,&month);
   if(num != 2)
   {
-    result = "Not a Gregorian year-month value: " + p_value;
+    result = _T("Not a Gregorian year-month value: ") + p_value;
     throw StdException(result);
   }
   else if(year  < 0 || year  > 9999 ||
           month < 1 || month >   12  )
   {
-    result = "Gregorian year-month overflow: " + p_value;
+    result = _T("Gregorian year-month overflow: ") + p_value;
     throw StdException(result);
   }
-  m_value = year * 12 + month;
+  m_value = (INT64)year * 12 + (INT64)month;
   if(negative)
   {
     m_value = - m_value;

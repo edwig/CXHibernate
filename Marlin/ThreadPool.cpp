@@ -4,7 +4,7 @@
 //
 // Marlin Server: Internet server/client
 // 
-// Copyright (c) 2014-2022 ir. W.E. Huisman
+// Copyright (c) 2014-2024 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -31,10 +31,12 @@
 #include "CPULoad.h"
 #include "AutoCritical.h"
 
+#ifdef _AFX
 #ifdef _DEBUG
 #define new DEBUG_NEW
 #undef THIS_FILE
 static char THIS_FILE[] = __FILE__;
+#endif
 #endif
 
 // A means to be free to debug the ThreadPool in debug mode
@@ -72,14 +74,14 @@ THREADNAME_INFO;
 void SetThreadName(char* threadName, DWORD dwThreadID)
 {
   THREADNAME_INFO info;
-  info.dwType = 0x1000;
-  info.szName = threadName;
+  info.dwType     = 0x1000;
+  info.szName     = threadName;
   info.dwThreadID = dwThreadID;
-  info.dwFlags = 0;
+  info.dwFlags    = 0;
 
   __try
   {
-    RaiseException(MS_VC_EXCEPTION, 0, sizeof(info) / sizeof(ULONG_PTR), (ULONG_PTR*)&info);
+    RaiseException(MS_VC_EXCEPTION, 0, sizeof(info) / sizeof(ULONG_PTR),reinterpret_cast<ULONG_PTR*>(&info));
   }
   __except (EXCEPTION_EXECUTE_HANDLER)
   {
@@ -169,15 +171,15 @@ ThreadPool::InitThreadPool()
   if(m_processors > 0)
   {
     // Adjust maximum of threads for the number of processors
-    if(m_minThreads < 2 * m_processors)
+    if(m_minThreads < m_processors)
     {
-      m_minThreads = 2 * m_processors;
+      m_minThreads = m_processors;
     }
 
     // Adjust maximum of threads for the number of processors
-    if(m_maxThreads > 4 * m_processors)
+    if(m_maxThreads > ((4 * m_processors)/6))
     {
-      m_maxThreads = 4 * m_processors;
+      m_maxThreads = ((4 * m_processors)/6);
     }
   }
   // Create IO Completion Port
@@ -210,7 +212,7 @@ ThreadPool::CreateThreadPoolThread()
 
     // Now create our thread
     TP_TRACE0("Creating thread pool thread\n");
-    th->m_thread = (HANDLE) _beginthreadex(nullptr,m_stackSize,RunThread,(void*)th,0,&th->m_threadId);
+    th->m_thread = reinterpret_cast<HANDLE>(_beginthreadex(nullptr,m_stackSize,RunThread,reinterpret_cast<void*>(th),0,&th->m_threadId));
 
     if(th->m_thread == INVALID_HANDLE_VALUE)
     {
@@ -271,7 +273,7 @@ ThreadPool::IsThreadInThreadPool(unsigned p_threadID)
 {
   AutoLockTP lock(&m_critical);
 
-  for(auto& thread : m_threads)
+  for(const auto thread : m_threads)
   {
     if(thread->m_threadId == p_threadID)
     {
@@ -341,8 +343,8 @@ ThreadPool::ExtendMaximumThreads(AutoIncrementPoolMax& p_increment)
 {
   if(this == p_increment.m_pool)
   {
-    InterlockedIncrement((long*)&m_minThreads);
-    InterlockedIncrement((long*)&m_maxThreads);
+    InterlockedIncrement(reinterpret_cast<long*>(&m_minThreads));
+    InterlockedIncrement(reinterpret_cast<long*>(&m_maxThreads));
     TP_TRACE2("Number of minimum/maximum threads extended to: %d/%d\n",m_minThreads,m_maxThreads);
   }
 }
@@ -352,8 +354,8 @@ ThreadPool::RestoreMaximumThreads(AutoIncrementPoolMax& p_increment)
 {
   if(this == p_increment.m_pool)
   {
-    InterlockedDecrement((long*)&m_minThreads);
-    InterlockedDecrement((long*)&m_maxThreads);
+    InterlockedDecrement(reinterpret_cast<long*>(&m_minThreads));
+    InterlockedDecrement(reinterpret_cast<long*>(&m_maxThreads));
     TP_TRACE2("Number of minimum/maximum threads decreased to: %d/%d\n",m_minThreads,m_maxThreads);
   }
 }
@@ -505,7 +507,7 @@ ThreadPool::RunAThread(ThreadRegister* /*p_register*/)
       else
       {
         // 3: The completion key **IS** the callback mechanism
-        LPFN_CALLBACK callback = (LPFN_CALLBACK)key;
+        LPFN_CALLBACK callback = reinterpret_cast<LPFN_CALLBACK>(key);
         (*callback)(overlapped);
       }
     }
@@ -618,7 +620,7 @@ ThreadPool::CreateHeartbeat(LPFN_CALLBACK p_callback, void* p_argument, DWORD p_
 
   if(m_heartbeatEvent)
   {
-    HANDLE thread = (HANDLE)_beginthreadex(nullptr,m_stackSize,RunHeartBeat,(void*)this,0,NULL);
+    HANDLE thread = reinterpret_cast<HANDLE>(_beginthreadex(nullptr,m_stackSize,RunHeartBeat,reinterpret_cast<void*>(this),0,NULL));
     if(thread)
     {
       TP_TRACE0("Created a heartbeat thread!\n");
@@ -698,18 +700,20 @@ ThreadPool::SafeCallHeartbeat(LPFN_CALLBACK p_function,void* p_payload)
   catch(StdException& ex)
   {
     XString temporary;
-    temporary.GetEnvironmentVariable("TMP");
-    XString sceneOfTheCrime("Threadpool");
+    if(temporary.GetEnvironmentVariable(_T("TMP")))
+    {
+      XString sceneOfTheCrime(_T("Threadpool"));
 
-    if(ex.GetSafeExceptionCode())
-    {
-      // SEH Exception: Report the full stacktrace
-      ErrorReport::Report(ex.GetSafeExceptionCode(),ex.GetExceptionPointers(),temporary,sceneOfTheCrime);
-    }
-    else
-    {
-      // 'Normal' C++ exception: But we did forget to catch it
-      ErrorReport::Report(ex.GetErrorMessage(),0,temporary,sceneOfTheCrime);
+      if(ex.GetSafeExceptionCode())
+      {
+        // SEH Exception: Report the full stack trace
+        ErrorReport::Report(ex.GetSafeExceptionCode(),ex.GetExceptionPointers(),temporary,sceneOfTheCrime);
+      }
+      else
+      {
+        // 'Normal' C++ exception: But we did forget to catch it
+        ErrorReport::Report(ex.GetErrorMessage(),0,temporary,sceneOfTheCrime);
+      }
     }
   }
 }
@@ -819,6 +823,13 @@ ThreadPool::SleepThread(DWORD_PTR p_unique,void* p_payload)
   sleep->m_payload  = p_payload;
   sleep->m_event    = CreateEvent(NULL,FALSE,FALSE,NULL);
   sleep->m_abort    = false;
+
+  // Tight spot: cannot create a new event
+  if(sleep->m_event == NULL)
+  {
+    delete sleep;
+    return nullptr;
+  }
 
   // Add sleeping thread info the queue
   { AutoLockTP lock(&m_critical);
@@ -965,7 +976,7 @@ ThreadPool::WakeUpAllSleepers()
   {
     // Wake up all sleeping threads
     TP_TRACE1("Waking up %d sleeping threads\n",map.size());
-    for(auto& unique : map)
+    for(const auto& unique : map)
     {
       WakeUpThread(unique);
     }
@@ -1074,6 +1085,8 @@ ThreadPool::StopThreadPool()
     for(auto& thread : m_threads)
     {
       TP_TRACE1("!! TERMINATING thread: %d\n",ind);
+      // Since waiting on the thread did not work, we must preemptively terminate it.
+#pragma warning(disable:6258)
       TerminateThread(thread->m_thread,0);
     }
   }

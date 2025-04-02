@@ -2,7 +2,7 @@
 //
 // File: SQLMutation.h
 //
-// Copyright (c) 1998-2022 ir. W.E. Huisman
+// Copyright (c) 1998-2025 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy of 
@@ -71,13 +71,13 @@ class SQLMutation
 {
 public:
   SQLMutation();
-  SQLMutation(SQLVariant* p_base);
+  explicit SQLMutation(const SQLVariant* p_base);
  ~SQLMutation();
 
   // Add new mutated state of last known SQLVariant
-  void        Add(SQLVariant* p_extra,int p_mutationID = 0);
+  void        Add(const SQLVariant* p_extra,int p_mutationID = 0);
   // Possibly mutated variant
-  bool        Mutate(SQLVariant* p_mutate,int p_mutationID = 0);
+  bool        Mutate(const SQLVariant* p_mutate,int p_mutationID = 0);
   // Cancel mutation (remove from stack by canceling window)
   unsigned    Cancel(int p_mutationID);
   // Return the current top of stack: used as last-recent-state
@@ -94,7 +94,7 @@ public:
   bool        IsMutated();
   // Contains mixed mutations
   MutType     MixedMutations(int p_mutationID);
-  // Reduce the mutations, after a database synchronisation
+  // Reduce the mutations, after a database synchronization
   void        Reduce();
   // For reporting/analysis purposes: all mutationID's on the stack
   int         AllMixedMutations(MutationIDS& p_list,int p_mutationID);

@@ -2,7 +2,7 @@
 //
 // File: Database.h
 //
-// Copyright (c) 1998-2022 ir. W.E. Huisman
+// Copyright (c) 1998-2025 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy of 
@@ -47,7 +47,9 @@ namespace SQLComponents
 
 // After this much minutes, the database can no longer be
 // used from a database pool and will 'go-away'
-#define IDLE_MINUTES   5
+#define IDLE_MINUTES_DEFAULT   5    // Mostly enough
+#define IDLE_MINUTES_MIN       2    // Wait at least more than 1 minute
+#define IDLE_MINUTES_MAX      15    // Most network timeouts do not stretch past 15 minutes
 
 // Standard login timeout after which login will fail
 // Overrides the standard login timeout of the database
@@ -63,7 +65,6 @@ namespace SQLComponents
 // Microsoft has 1200 through 1249 reserved for Microsoft SQL Server Native Client driver usage.
 // Multiple Active Result Set (MARS) per connection
 // COPT_SS_MARS_ENABLED comes effectively from <sqlncli.h> from the MS-SQL Native client driver
-#define SQL_COPT_SS_MARS_ENABLED    1224  
 #define SQL_MARS_ENABLED_NO         0L
 #define SQL_MARS_ENABLED_YES        1L
 
@@ -81,10 +82,11 @@ typedef struct _datasourceInternal
   XString m_datasource;
   XString m_username;
   XString m_password;
-  bool    m_system;
-  bool    m_outputOMF;
-  bool    m_default;
-  bool    m_dataConnection;
+  XString m_options;
+  bool    m_system         { false };
+  bool    m_outputOMF      { false };
+  bool    m_default        { false };
+  bool    m_dataConnection { false };
 }
 DataSourceInternal;
 
@@ -94,7 +96,7 @@ typedef std::map<int,int>               RebindMap;
 typedef std::map<XString,XString>       ODBCOptions;
 typedef std::map<XString,XString>       Macros;
 
-typedef void (CALLBACK* LOGPRINT)(void*,const char*);
+typedef void (CALLBACK* LOGPRINT)(void*,LPCTSTR);
 typedef int  (CALLBACK* LOGLEVEL)(void*);
 
 // Forward declaration
@@ -111,7 +113,7 @@ class SQLDatabase
 {
 public:
   SQLDatabase();
-  SQLDatabase(HDBC p_hdbc);
+  explicit SQLDatabase(HDBC p_hdbc);
  ~SQLDatabase(); 
   void Reset();
 
@@ -121,6 +123,7 @@ public:
   bool           Open(XString const& p_datasource
                      ,XString const& p_username
                      ,XString const& p_password
+                     ,XString        p_options  = _T("")
                      ,bool           p_readOnly = false);
   // Open the database on basis of a connect string only
   bool           Open(XString const& p_connectString,bool p_readOnly = false);
@@ -128,6 +131,7 @@ public:
   bool           IsOpen();       // Is the database open?
   void           Close();        // Close it for further use
   bool           CollectInfo();  // Collect database info
+  bool           Ping();         // Keep alive sent and OK
 
   // OPTIONS FOR THE OPEN/CLOSE CYCLE
 
@@ -142,7 +146,7 @@ public:
   // Add a general ODBC option for use in the connection string
   void           AddConnectOption(XString p_keyword,XString p_value);
   // Setting the default database schema after login
-  bool           SetDefaultSchema(XString p_schema);
+  bool           SetDefaultSchema(XString p_user,XString p_schema);
 
   // GETTING/CONSTRUCTING the SQLInfo object
   SQLInfoDB*     GetSQLInfoDB();
@@ -160,6 +164,7 @@ public:
   void           SetDatasource(XString p_dsn);
   void           SetConnectionName(XString p_connectionName);
   void           SetUserName(XString p_user);
+  void           SetPoolIdleMinutes(int p_minutes);
   void           SetLastActionTime();
   bool           PastWaitingTime();
 
@@ -194,6 +199,7 @@ public:
   bool           GetReadOnly();
   int            GetLoginTimeout();
   bool           GetAutoCommitMode();
+  int            GetPoolIdleMinutes();
 
   // SUPPORT FOR SQLQuery
   HDBC           GetDBHandle();
@@ -228,7 +234,7 @@ public:
   XString        GetSQLDateString        (int p_day, int p_month, int p_year);
   XString        GetCurrentTimestampQualifier();
   XString        GetSQL_NewSerial(XString p_table,XString p_sequence);
-  XString        GetSQL_GenerateSerial(XString p_table);
+  XString        GetSQL_GenerateSerial(XString p_table,XString p_sequence = _T(""));
   int            GetSQL_EffectiveSerial(XString p_oid_string);
   XString        GetTimestampAsString(const SQLTimestamp& p_timestamp);
   XString        GetTimestampAsBoundString();
@@ -239,7 +245,7 @@ public:
 
   // Support of logging functions 
   void           RegisterLogContext(int p_level,LOGLEVEL p_loglevel,LOGPRINT p_logprinter,void* p_logContext);
-  void           LogPrint(const char* p_text);
+  void           LogPrint(LPCTSTR p_text);
   int            LogLevel();
   bool           WilLog();
   void           SetLoggingActivation(int p_loglevel);
@@ -275,9 +281,9 @@ protected:
   void           SetAttributesBeforeConnect();
   // Setting connection attributes AFTER connect
   void           SetAttributesAfterConnect(bool p_readOnly);
-  // Running the initialisations for the session
+  // Running the initializations for the session
   void           SetConnectionInitialisations();
-  // Find number of quotes up to the lastpos position
+  // Find number of quotes up to the last position
   int            FindQuotes(XString& p_statement,int p_lastpos);
   // Replace **ONE** macro in the statement text
   void           ReplaceMacro(XString& p_statement,int p_pos,int p_length,XString p_replace);
@@ -309,7 +315,8 @@ protected:
   int               m_driverMainVersion   { 0     };   
   bool              m_needLongDataLen     { false };
   bool              m_autoCommitMode      { true  };
-  DWORD             m_lastAction          { 0     };  // Last moment of usage (for database pool)
+  int               m_dbpoolIdleMinutes   { IDLE_MINUTES_DEFAULT };
+  ULONGLONG         m_lastAction          { 0     };  // Last moment of usage (for database pool)
   RebindMap         m_rebindParameters;                 // Rebinding of parameters for SQLBindParam
   RebindMap         m_rebindColumns;                    // Rebinding of result columns for SQLBindCol
   XString           m_sqlState;                         // Last SQLSTATE
@@ -522,6 +529,12 @@ inline void
 SQLDatabase::SetLoggingActivation(int p_loglevel)
 {
   m_logActive = p_loglevel;
+}
+
+inline int
+SQLDatabase::GetPoolIdleMinutes()
+{
+  return m_dbpoolIdleMinutes;
 }
 
 // End of namespace

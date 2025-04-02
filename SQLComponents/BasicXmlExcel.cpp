@@ -179,29 +179,29 @@ void
 BasicXmlWorksheet::Load(XMLMessage& p_msg,XMLElement* p_root)
 {
   // See if there is data in the worksheet
-  XMLElement* data = p_msg.FindElement(p_root,"sheetData");
+  XMLElement* data = p_msg.FindElement(p_root,_T("sheetData"));
   if(data == NULL)
   {
     return;
   }
   // Finding all the rows of data
-  XMLElement* row = p_msg.FindElement(data,"row");
+  XMLElement* row = p_msg.FindElement(data,_T("row"));
   while(row)
   {
     // Get the row number and preserve
-    XString rowName = p_msg.GetAttribute(row,"r");
-    int   rowNumber = p_msg.GetAttributeInteger(row,"r");
+    XString rowName = p_msg.GetAttribute(row,_T("r"));
+    int   rowNumber = p_msg.GetAttributeInteger(row,_T("r"));
     if(rowNumber > m_maxRow)
     {
       m_maxRow = rowNumber;
     }
 
     // Finding the columns
-    XMLElement* col = p_msg.FindElement(row,"c");
+    XMLElement* col = p_msg.FindElement(row,_T("c"));
     while(col)
     {
       // Getting the column name/number and preserve
-      XString colName = p_msg.GetAttribute(col,"r");
+      XString colName = p_msg.GetAttribute(col,_T("r"));
       int colNumber = CalculateColumnNumber(colName,rowName);
       if(colNumber > m_maxCol)
       {
@@ -209,64 +209,64 @@ BasicXmlWorksheet::Load(XMLMessage& p_msg,XMLElement* p_root)
       }
       // Find datatype
       bool isString = false;
-      XString dataType = p_msg.GetAttribute(col,"t");
+      XString dataType = p_msg.GetAttribute(col,_T("t"));
       if(dataType && dataType.GetAt(0) == 's')
       {
         isString = true;
       }
       // Find the value of the cell
-      XMLElement* val = p_msg.FindElement(col,"v");
+      XMLElement* val = p_msg.FindElement(col,_T("v"));
       if(val)
       {
         XString value = val->GetValue();
         BasicXmlCell* cell = NULL;
         if(isString)
         {
-          int stringNum = atoi(value);
+          int stringNum = _ttoi(value);
           cell = new BasicXmlCell(rowNumber,colNumber,stringNum,XCT_STRING);
         }
         else
         {
-          if(strchr(value,'.') != NULL)
+          if(_tcschr(value,'.') != NULL)
           {
             // Floating point
-            double fl = atof(value);
+            double fl = _ttof(value);
             cell = new BasicXmlCell(rowNumber,colNumber,fl);
           }
           else
           {
             // Integer number
-            int intNum = atoi(value);
-            //Het is een getal, maar nog controleren of het een datum is.
-            // met het s attribuut kan de style verwijzing worden opgevraagd.
-            dataType = p_msg.GetAttribute(col,"s");
+            int intNum = _ttoi(value);
+            // It is a number, now still check if it is a date
+            // // with the attribute we can get to the style reference
+            dataType = p_msg.GetAttribute(col,_T("s"));
             if(dataType && !dataType.IsEmpty())
             {
-              //Als de s waarde voorkomt in de style array met datumopmaak dan is het een datum :)              
+              // If the value is in the style array with a date formatting, it is a date :-)
               XString formatCode =  m_workbook->GetStyleCode(_ttoi(dataType));
-              if (formatCode.Compare("M/D/YY") == 0 ||
-                formatCode.Compare("[$-F800]dddd\\,\\ mmmm\\ dd\\,\\ yyyy") == 0 ||
-                formatCode.Compare("yyyy/mm/dd;@") == 0 ||
-                formatCode.Compare("d/m;@") == 0 ||
-                formatCode.Compare("d/mm/yy;@") == 0 ||
-                formatCode.Compare("dd/mm/yy;@") == 0 ||
-                formatCode.Compare("[$-413]d/mmm;@") == 0 ||
-                formatCode.Compare("[$-413]dd/mmm/yy;@") == 0 ||
-                formatCode.Compare("[$-413]mmm/yy;@") == 0 ||
-                formatCode.Compare("[$-413]mmmm/yy;@") == 0 ||
-                formatCode.Compare("[$-413]d\\ mmmm\\ yyyy;@") == 0 ||
-                formatCode.Compare("[$-413]d/mmm/yyyy;@") == 0 ||
-                formatCode.Compare("[$-413]d/mmm/yy;@") == 0 ||
-                formatCode.Compare("[$-413]mmmmm;@") == 0 ||
-                formatCode.Compare("[$-413]mmmmm/yy;@") == 0 ||
-                formatCode.Compare("m/d/yyyy;@") == 0
+              if (formatCode.Compare(_T("M/D/YY")) == 0 ||
+                  formatCode.Compare(_T("[$-F800]dddd\\,\\ mmmm\\ dd\\,\\ yyyy")) == 0 ||
+                  formatCode.Compare(_T("yyyy/mm/dd;@")) == 0 ||
+                  formatCode.Compare(_T("d/m;@")) == 0 ||
+                  formatCode.Compare(_T("d/mm/yy;@")) == 0 ||
+                  formatCode.Compare(_T("dd/mm/yy;@")) == 0 ||
+                  formatCode.Compare(_T("[$-413]d/mmm;@")) == 0 ||
+                  formatCode.Compare(_T("[$-413]dd/mmm/yy;@")) == 0 ||
+                  formatCode.Compare(_T("[$-413]mmm/yy;@")) == 0 ||
+                  formatCode.Compare(_T("[$-413]mmmm/yy;@")) == 0 ||
+                  formatCode.Compare(_T("[$-413]d\\ mmmm\\ yyyy;@")) == 0 ||
+                  formatCode.Compare(_T("[$-413]d/mmm/yyyy;@")) == 0 ||
+                  formatCode.Compare(_T("[$-413]d/mmm/yy;@")) == 0 ||
+                  formatCode.Compare(_T("[$-413]mmmmm;@")) == 0 ||
+                  formatCode.Compare(_T("[$-413]mmmmm/yy;@")) == 0 ||
+                  formatCode.Compare(_T("m/d/yyyy;@")) == 0
                 )
               {
                 cell = new BasicXmlCell(rowNumber, colNumber, intNum, XCT_DATE);
               }
               else
               {
-                //Toch geen datum dus laten we maar wel een cell met integer aanmaken :)
+                // Not a date after all, so we make an integer call :-(
                 cell = new BasicXmlCell(rowNumber, colNumber, intNum, XCT_INTEGER);
               }
             }
@@ -313,7 +313,7 @@ BasicXmlWorksheet::CalculateColumnNumber(XString p_column,XString p_row)
     return ((firstLetter - 65 + 1)*26 + (secondLetter - 65 + 1)); 
   }
   XString error;
-  error.Format("Invalid column alphabet name: %s",p_column.GetString());
+  error.Format(_T("Invalid column alphabet name: %s"),p_column.GetString());
   m_workbook->SetError(error);
   return 0;	
 }
@@ -332,31 +332,31 @@ BasicXmlWorksheet::GetCellValue(int p_row,int p_col)
 
     switch(type)
     {
-      case XCT_INTEGER:  if(cell->GetCellValue(intValue))
+      case XCT_INTEGER: if(cell->GetCellValue(intValue))
                         {
-                          value.Format("%d",intValue);
+                          value.Format(_T("%d"),intValue);
                         }
                         break;
       case XCT_DOUBLE:   if(cell->GetCellValue(dblValue))
                         {
-                          value.Format("%f",dblValue);
+                          value.Format(_T("%f"),dblValue);
                         }
                         break;
-      case XCT_STRING:   if(cell->GetCellString(intValue))
+      case XCT_STRING:  if(cell->GetCellString(intValue))
                         {
                           value = m_workbook->GetSharedString(intValue);
                         }
                         break;
       case XCT_DATE:    if(cell->GetCellValue(intValue))
                         {
-                          // Het omzetten van een int naar een string datum
+                          // Converting an integer to a string date
                           BSTR bstr = NULL;
                           VarBstrFromDate(intValue, LANG_USER_DEFAULT, VAR_FOURDIGITYEARS, &bstr); 
                           value = bstr;
                           SysFreeString(bstr);
                         }
                         break;
-      case XCT_EMPTY:    // Fall through
+      case XCT_EMPTY:   // Fall through
       default:          break;
     }
   }
@@ -374,12 +374,13 @@ BasicXmlExcel::BasicXmlExcel(XString p_filename)
 {
   m_namesRead = false;
   m_sheetRead = false;
+  const char passwd[2] = {0};
   // Try to open zipfile without a password
-  m_zip = OpenZip(m_filename,"");
+  m_zip = OpenZip(const_cast<TCHAR*>(m_filename.GetString()),passwd);
   if(m_zip == NULL)
   {
-    m_error.Format("Cannot open the file: %s",m_filename.GetString());
-    m_error.AppendFormat("\nOS Error: %d",GetLastError);
+    m_error.Format(_T("Cannot open the file: %s"),m_filename.GetString());
+    m_error.AppendFormat(_T("\nOS Error: %d"),GetLastError());
   }
 }
 
@@ -477,47 +478,58 @@ BasicXmlExcel::ReadSheetNames()
     res = GetZipItem(m_zip,ind,&ze);
     if(res != ZR_OK)
     {
-      m_error.Format("Cannot get entries from file: %s",m_filename.GetString());
+      m_error.Format(_T("Cannot get entries from file: %s"),m_filename.GetString());
       SetError(res);
       break;
     }
-    if(_stricmp(ze.name,"xl/workbook.xml") == 0)
+    if(_tcsicmp(ze.name,_T("xl/workbook.xml")) == 0)
     {
       int   bufflen = ze.unc_size + 1;
-      char* buffer  = (char*) malloc(bufflen);
+      char* buffer  = reinterpret_cast<char*>(malloc(bufflen));
+      if(!buffer)
+      {
+        SetError(ZR_MEMSIZE);
+        return;
+      }
       // workbook xml contains the names of the sheets
       res = UnzipItem(m_zip,ind,buffer,bufflen);
       if(res != ZR_OK)
       {
-        m_error.Format("Cannot read the workbook definition of: %s",m_filename.GetString());
+        m_error.Format(_T("Cannot read the workbook definition of: %s"),m_filename.GetString());
         SetError(res);
         free(buffer);
         break;
       }
       // delimit the buffer
       buffer[ze.unc_size] = 0;
-      XString sheetInfo(buffer);
+
+      // BUFFER IS IN UTF-8
+#ifdef UNICODE
+      XString sheetInfo = DecodeUTF8ZipItem(buffer);
+#else
+      XString sheetInfo = DecodeStringFromTheWire(buffer);
+#endif
 
       XMLMessage doc;
       doc.ParseMessage(sheetInfo);
       XMLElement* root = doc.GetRoot();
       if(root == NULL)
       {
-        m_error.Format("Workbook definition incorrect in: %s",m_filename.GetString());
+        m_error.Format(_T("Workbook definition incorrect in: %s"),m_filename.GetString());
         free(buffer);
         break;
       }
-      XMLElement* sheets = doc.FindElement(root,"sheets");
+      XMLElement* sheets = doc.FindElement(root,_T("sheets"));
       if(sheets == NULL)
       {
-        SetError("Workbook is empty. No worksheets in spreadsheet");
+        SetError(_T("Workbook is empty. No worksheets in spreadsheet"));
         free(buffer);
         break;
       }
       XMLElement* sheet  = doc.GetElementFirstChild(sheets);
       while(sheet)
       {
-        XString sheetname = doc.GetAttribute(sheet,"name");
+        XString sheetname = doc.GetAttribute(sheet,_T("name"));
         m_sheetnames.push_back(sheetname);
         // Get next sheet
         sheet = doc.GetElementSibling(sheet);
@@ -529,10 +541,26 @@ BasicXmlExcel::ReadSheetNames()
   }
 }
 
+#ifdef UNICODE
+XString
+BasicXmlExcel::DecodeUTF8ZipItem(char* p_buffer)
+{
+  XString info;
+
+  int length = MultiByteToWideChar(65001,0,(LPCCH) p_buffer,-1,NULL,NULL);
+  LPWSTR infobuf = info.GetBufferSetLength(length + 1);
+  // Doing the 'real' conversion
+  MultiByteToWideChar(65001,0,(LPCCH) p_buffer,-1,infobuf,length);
+  info.ReleaseBuffer();
+
+  return info;
+}
+#endif
+
 void
 BasicXmlExcel::SetError(ZRESULT p_result)
 {
-  char buffer[1024];
+  TCHAR buffer[1024];
   FormatZipMessage(p_result,buffer,1024);
   if(m_error.IsEmpty())
   {
@@ -540,11 +568,11 @@ BasicXmlExcel::SetError(ZRESULT p_result)
   }
   else
   {
-    m_error += " : ";
+    m_error += _T(" : ");
     m_error += XString(buffer);
   }
   m_error.Remove('\r');
-  m_error.Replace('\n',' ');
+  m_error.Replace(_T('\n'),' ');
 }
 
 void
@@ -556,11 +584,11 @@ BasicXmlExcel::SetError(XString p_error)
   }
   else
   {
-    m_error += " : ";
+    m_error += _T(" : ");
     m_error += p_error;
   }
   m_error.Remove('\r');
-  m_error.Replace('\n',' ');
+  m_error.Replace(_T('\n'),' ');
 }
 
 bool
@@ -569,7 +597,7 @@ BasicXmlExcel::Load()
   // Ignore return value from LoadStrings
   // After Office-2013 it shared-strings are not mandatory any more
   LoadStrings();
-  //De xlsx bestanden hebben intern een styles.xml, hier staat bijvoorbeeld een datumopmaak in beschreven.
+  // The XLSX files have an internal styles.xml, where we can find e.g. a date formatting
   LoadStyles();
   return LoadWorksheets();
 }
@@ -588,7 +616,7 @@ BasicXmlExcel::LoadStrings()
   ZIPENTRY ze;
   ZRESULT  res     = ZR_OK;
   int      entries = 0;
-  XString  sstName = "xl/sharedStrings.xml";
+  XString  sstName = _T("xl/sharedStrings.xml");
 
   // get the number of entries
   res = GetZipItem(m_zip,-1,&ze);
@@ -607,7 +635,7 @@ BasicXmlExcel::LoadStrings()
     res = GetZipItem(m_zip,ind,&ze);
     if(res != ZR_OK)
     {
-      m_error.Format("Cannot get entries from file: %s",m_filename.GetString());
+      m_error.Format(_T("Cannot get entries from file: %s"),m_filename.GetString());
       SetError(res);
       return false;
     }
@@ -615,30 +643,39 @@ BasicXmlExcel::LoadStrings()
     {
       int   bufflen = ze.unc_size + 1;
       char* buffer  = (char*) malloc(bufflen);
+      if(!buffer)
+      {
+        SetError(ZR_MEMSIZE);
+        return false;
+      }
       // workbook xml contains the names of the sheets
       res = UnzipItem(m_zip,ind,buffer,bufflen);
       if(res != ZR_OK)
       {
-        m_error.Format("Cannot read the shared-strings of: %s",m_filename.GetString());
+        m_error.Format(_T("Cannot read the shared-strings of: %s"),m_filename.GetString());
         SetError(res);
         free(buffer);
         return false;
       }
       // delimit the buffer
       buffer[ze.unc_size] = 0;
-      XString stringInfo(buffer);
-
+      // BUFFER IS IN UTF-8
+#ifdef UNICODE
+      XString stringInfo = DecodeUTF8ZipItem(buffer);
+#else
+      XString stringInfo = DecodeStringFromTheWire(buffer);
+#endif
       XMLMessage doc;
       doc.ParseMessage(stringInfo);
       XMLElement* root = doc.GetRoot();
       if(root == NULL)
       {
-        m_error.Format("Shared-strings definition incorrect in: %s",m_filename.GetString());
+        m_error.Format(_T("Shared-strings definition incorrect in: %s"),m_filename.GetString());
         free(buffer);
         return false;
       }
       // Reading the strings
-      XMLElement* si = doc.FindElement(root,"si");
+      XMLElement* si = doc.FindElement(root,_T("si"));
       while(si)
       {
         XMLElement* tt = doc.GetElementFirstChild(si);
@@ -670,7 +707,7 @@ BasicXmlExcel::LoadStyles()
   ZIPENTRY ze;
   ZRESULT  res     = ZR_OK;
   int      entries = 0;
-  XString  sstName = "xl/styles.xml";
+  XString  sstName = _T("xl/styles.xml");
 
   // get the number of entries
   res = GetZipItem(m_zip,-1,&ze);
@@ -689,7 +726,7 @@ BasicXmlExcel::LoadStyles()
     res = GetZipItem(m_zip,ind,&ze);
     if(res != ZR_OK)
     {
-      m_error.Format("Cannot get entries from file: %s",m_filename.GetString());
+      m_error.Format(_T("Cannot get entries from file: %s"),m_filename.GetString());
       SetError(res);
       return false;
     }
@@ -700,36 +737,41 @@ BasicXmlExcel::LoadStyles()
       res = UnzipItem(m_zip,ind,buffer,bufflen);
       if(res != ZR_OK)
       {
-        m_error.Format("Cannot read the styles of: %s",m_filename.GetString());
+        m_error.Format(_T("Cannot read the styles of: %s"),m_filename.GetString());
         SetError(res);
         free(buffer);
         return false;
       }
       // delimit the buffer
       buffer[ze.unc_size] = 0;
-      XString styleInfo(buffer);
 
+      // BUFFER IS IN UTF-8
+#ifdef UNICODE
+      XString styleInfo = DecodeUTF8ZipItem(buffer);
+#else
+      XString styleInfo = DecodeStringFromTheWire(buffer);
+#endif
       XMLMessage doc;
       doc.ParseMessage(styleInfo);
       XMLElement* root = doc.GetRoot();
       if(root == NULL)
       {
-        m_error.Format("Styles definition incorrect in: %s",m_filename.GetString());
+        m_error.Format(_T("Styles definition incorrect in: %s"),m_filename.GetString());
         free(buffer);
         return false;
       }
       std::vector<XString> styleFormats;
       // Reading the styles
-      //In het element cellxfs staan voor elke 's' attribuut waarde van een cell een formaat id
-      //hiermee kan in de volgende stap dan weer de formatcode opgezocht worden
-      XMLElement* cellformat = doc.FindElement(root,"cellXfs");
+      // The element 'cellxfs' have the 's' attribute values for a cell's formatting ID
+      // that we can use to look up the formatting code
+      XMLElement* cellformat = doc.FindElement(root,_T("cellXfs"));
       if (cellformat)
       {
         for (auto& elem : cellformat->GetChildren())
         {
           for (auto& attrib : elem->GetAttributes())
           {
-            if (attrib.m_name == "numFmtId")
+            if (attrib.m_name == _T("numFmtId"))
             {
               styleFormats.push_back(attrib.m_value);
               break;
@@ -737,35 +779,35 @@ BasicXmlExcel::LoadStyles()
           }
         }
       }
-      //voor alle cellformats de bijbehorende code zoeken.
+      // Find the cell formats for the corresponding code
       for (int i = 0; i < (int)styleFormats.size(); i++)
       {
-        //Er zijn een aantal standaardwaarden die niet apart in een code worden opgenomen, voor deze zelf een formatcode aanmaken
-        if (styleFormats[i] == "14" || styleFormats[i] == "15"||styleFormats[i] == "16"||styleFormats[i] == "17" )
+        // Some standard values do not have a separate code, so we make one for them
+        if (styleFormats[i] == _T("14") || styleFormats[i] == _T("15")||styleFormats[i] == _T("16")||styleFormats[i] == _T("17") )
         {
-          //Een datumformaat, welke maakt niet uit voor het omzetten van de datum naar string.
-          m_styles.insert(std::make_pair(i, "dd/mm/yy;@"));
+          // A date format, convert to string
+          m_styles.insert(std::make_pair(i, _T("dd/mm/yy;@")));
         }
         else
         {
-          XMLElement* nummerFormatId = doc.FindElementByAttribute("numFmtId", styleFormats[i]);
+          XMLElement* nummerFormatId = doc.FindElementByAttribute(_T("numFmtId"), styleFormats[i]);
           if (nummerFormatId)
           {
-            XMLAttribute* FormatCode = doc.FindAttribute(nummerFormatId, "formatCode");
+            XMLAttribute* FormatCode = doc.FindAttribute(nummerFormatId, _T("formatCode"));
             if (FormatCode)
             {
               m_styles.insert(std::make_pair(i, FormatCode->m_value));
             }
             else
             {
-              //Verwacht niet dat dit voor kan komen.
-              m_styles.insert(std::make_pair(i, "Geen formaat code gevonden" + styleFormats[i]));
+              // Should not happen!
+              m_styles.insert(std::make_pair(i, _T("No format code found: ") + styleFormats[i]));
             }
           }
           else
           {
-            //Verwacht niet dat dit voor kan komen.
-            m_styles.insert(std::make_pair(i, "Geen formaat code gevonden" + styleFormats[i]));
+            // SHould not happen!
+            m_styles.insert(std::make_pair(i, _T("No format code found: ") + styleFormats[i]));
           }
         }
       }
@@ -790,10 +832,8 @@ BasicXmlExcel::LoadWorksheets()
     return true;
   }
   // Make sure we have the sheetnames
-  if(m_sheetRead == false)
-  {
-    ReadSheetNames();
-  }
+  ReadSheetNames();
+
   // Variables
   ZIPENTRY ze;
   ZRESULT  res = ZR_OK;
@@ -814,7 +854,7 @@ BasicXmlExcel::LoadWorksheets()
   for(unsigned sheetnum = 0; sheetnum < m_sheetnames.size(); ++sheetnum)
   {
     XString sheetName;
-    sheetName.Format("xl/worksheets/sheet%u.xml",sheetnum + 1);
+    sheetName.Format(_T("xl/worksheets/sheet%u.xml"),sheetnum + 1);
 
     // Loop through all entries
     for(int ind = 0; ind < entries; ++ind)
@@ -822,7 +862,7 @@ BasicXmlExcel::LoadWorksheets()
       res = GetZipItem(m_zip,ind,&ze);
       if(res != ZR_OK)
       {
-        m_error.Format("Cannot get entries from file: %s",m_filename.GetString());
+        m_error.Format(_T("Cannot get entries from file: %s"),m_filename.GetString());
         SetError(res);
         return false;
       }
@@ -830,25 +870,34 @@ BasicXmlExcel::LoadWorksheets()
       {
         int   bufflen = ze.unc_size + 1;
         char* buffer  = (char*) malloc(bufflen);
+        if(!buffer)
+        {
+          SetError(ZR_MEMSIZE);
+          return false;
+        }
         // workbook xml contains the names of the sheets
         res = UnzipItem(m_zip,ind,buffer,bufflen);
         if(res != ZR_OK)
         {
-          m_error.Format("Cannot read the worksheet definition of: %s",m_filename.GetString());
+          m_error.Format(_T("Cannot read the worksheet definition of: %s"),m_filename.GetString());
           SetError(res);
           free(buffer);
           return false;
         }
         // delimit the buffer
         buffer[ze.unc_size] = 0;
-        XString sheetInfo(buffer);
-
+        // BUFFER IS IN UTF-8
+#ifdef UNICODE
+        XString sheetInfo = DecodeUTF8ZipItem(buffer);
+#else
+        XString sheetInfo = DecodeStringFromTheWire(buffer);
+#endif
         XMLMessage doc;
         doc.ParseMessage(sheetInfo);
         XMLElement* root = doc.GetRoot();
         if(root == NULL)
         {
-          m_error.Format("Worksheet definition incorrect in: %s",m_filename.GetString());
+          m_error.Format(_T("Worksheet definition incorrect in: %s"),m_filename.GetString());
           free(buffer);
           return false;
         }

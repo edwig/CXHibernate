@@ -4,7 +4,7 @@
 //
 // Marlin Server: Internet server/client
 // 
-// Copyright (c) 2014-2022 ir. W.E. Huisman
+// Copyright (c) 2014-2024 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -31,15 +31,15 @@
 class XMLParserImport : public XMLParser
 {
 public:
-  XMLParserImport(XMLMessage* p_message);
+  explicit XMLParserImport(XMLMessage* p_message);
 
 protected:
   virtual void  ParseAfterElement();
 
 private:
-  void ParseSchemaImport(XString p_location);
+  bool ParseSchemaImport(const XString& p_location);
 
-  bool ReadXSDFileFromURL(XString p_url);
-  bool ReadXSDLocalFile(XString p_filename);
-  bool ReadXSD(XString p_message);
+  bool ReadXSDFileFromURL(const XString& p_url);
+  bool ReadXSDLocalFile(const XString& p_filename);
+  bool ReadXSD(const XString& p_message);
 };

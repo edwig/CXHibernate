@@ -2,7 +2,7 @@
 //
 // File: SQLTransaction.h
 //
-// Copyright (c) 1998-2022 ir. W.E. Huisman
+// Copyright (c) 1998-2025 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy of 
@@ -37,7 +37,7 @@ class SQLTransaction
 {
 public:
   SQLTransaction(SQLDatabase* p_database, 
-                 const char*  p_name,
+                 LPCTSTR      p_name,
                  bool         p_startImmediate   = true, 
                  bool         p_isSubTransaction = false);
   SQLTransaction(HDBC p_hdbc, bool p_startImmediate);

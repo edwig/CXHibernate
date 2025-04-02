@@ -56,7 +56,7 @@ namespace HibernateTest
 		
 		TEST_METHOD(T01_SelectMaster)
 		{
-      Logger::WriteMessage("Getting a record from the MASTER table");
+      Logger::WriteMessage(_T("Getting a record from the MASTER table"));
 
       try
       {
@@ -65,23 +65,23 @@ namespace HibernateTest
         Master* master = (Master*) m_session->Load(Master::ClassName(),2);
 
         Assert::IsNotNull(master);
-        Logger::WriteMessage("Testing 2th master record");
+        Logger::WriteMessage(_T("Testing 2th master record"));
         PrintMaster(master);
       }
       catch(StdException& er)
       {
-        Logger::WriteMessage("ERROR: " + er.GetErrorMessage());
+        Logger::WriteMessage(_T("ERROR: ") + er.GetErrorMessage());
         Assert::Fail();
       }
 		}
 
     TEST_METHOD(T02_SelectDetails)
     {
-      Logger::WriteMessage("Getting all records from the DETAIL table with 'line > 1'");
+      Logger::WriteMessage(_T("Getting all records from the DETAIL table with 'line > 1'"));
       
       OpenSession();
 
-      Filter* filter = new Filter("line",OP_Greater,1);
+      Filter* filter = new Filter(_T("line"),OP_Greater,1);
 
       CXResultSet set = m_session->Load(Detail::ClassName(),filter);
       for(int ind = 0;ind < (int)set.size(); ++ind)
@@ -93,7 +93,7 @@ namespace HibernateTest
 
     TEST_METHOD(T03_UpdateTest)
     {
-      Logger::WriteMessage("Updating a record from the MASTER table");
+      Logger::WriteMessage(_T("Updating a record from the MASTER table"));
 
       OpenSession();
 
@@ -101,51 +101,51 @@ namespace HibernateTest
       Master* master = reinterpret_cast<Master*>(object);
 
       Assert::IsNotNull(master);
-      Logger::WriteMessage("Updating 1th master record");
+      Logger::WriteMessage(_T("Updating 1th master record"));
 
       // Keeping the old one (750.00)
       bcd old_total = master->GetTotal();
 
       // Setting new value
-      bcd total("935.12");
+      bcd total(_T("935.12"));
       master->SetTotal(total);
       bool res = m_session->Save(master);
       Assert::IsTrue(res);
 
-      CString value = TestRecordValue("master","id",1,"total");
-      Assert::AreEqual(value,"935.12");
+      CString value = TestRecordValue(_T("master"),_T("id"),1,_T("total"));
+      Assert::AreEqual(value,_T("935.12"));
 
       // Back to the old value
       master->SetTotal(old_total);
       res = m_session->Save(master);
       Assert::IsTrue(res);
 
-      value = TestRecordValue("master","id",1,"total");
+      value = TestRecordValue(_T("master"),_T("id"),1,_T("total"));
       Assert::AreEqual(value.GetString(),old_total.AsString().GetString());
     }
 
     void PrintMaster(Master* p_master)
     {
       CString text;
-      text.Format("Record ID      : %d", p_master->GetID());               Logger::WriteMessage(text);
-      text.Format("Invoice number : %d", p_master->GetInvoice());          Logger::WriteMessage(text);
-      text.Format("Description    : %s", p_master->GetDescription());      Logger::WriteMessage(text);
-      text.Format("Total amount   : %s", p_master->GetTotal().AsString()); Logger::WriteMessage(text);
+      text.Format(_T("Record ID      : %d"), p_master->GetID());               Logger::WriteMessage(text);
+      text.Format(_T("Invoice number : %d"), p_master->GetInvoice());          Logger::WriteMessage(text);
+      text.Format(_T("Description    : %s"), p_master->GetDescription());      Logger::WriteMessage(text);
+      text.Format(_T("Total amount   : %s"), p_master->GetTotal().AsString()); Logger::WriteMessage(text);
     }
 
     void PrintDetail(Detail* p_detail)
     {
       CString text;
-      text.Format("Record ID      : %d", p_detail->GetID());                Logger::WriteMessage(text);
-      text.Format("Master ID      : %d", p_detail->GetMasterID());          Logger::WriteMessage(text);
-      text.Format("Line number    : %d", p_detail->GetLine());              Logger::WriteMessage(text);
-      text.Format("Description    : %s", p_detail->GetDescription());       Logger::WriteMessage(text);
-      text.Format("Part amount    : %s", p_detail->GetAmount().AsString()); Logger::WriteMessage(text);
+      text.Format(_T("Record ID      : %d"), p_detail->GetID());                Logger::WriteMessage(text);
+      text.Format(_T("Master ID      : %d"), p_detail->GetMasterID());          Logger::WriteMessage(text);
+      text.Format(_T("Line number    : %d"), p_detail->GetLine());              Logger::WriteMessage(text);
+      text.Format(_T("Description    : %s"), p_detail->GetDescription());       Logger::WriteMessage(text);
+      text.Format(_T("Part amount    : %s"), p_detail->GetAmount().AsString()); Logger::WriteMessage(text);
     }
 
     TEST_METHOD(T04_InsertDelete)
     {
-      Logger::WriteMessage("Insert a record into the TEST_NUMBER table");
+      Logger::WriteMessage(_T("Insert a record into the TEST_NUMBER table"));
 
       OpenSession();
 
@@ -153,7 +153,7 @@ namespace HibernateTest
       // Do Not set the ID field: this will be done by the generator
       numbers->SetField1(42);
       numbers->SetField2(89975.123);
-      numbers->SetField3("300.77");
+      numbers->SetField3(bcd(_T("300.77")));
 
       // Insert this object in the database
       m_session->Insert(numbers);
@@ -161,31 +161,31 @@ namespace HibernateTest
       int id = numbers->GetID();
 
       // Test that it is in the database
-      int num = TestRecordCount("test_number","id",numbers->GetID());
+      int num = TestRecordCount(_T("test_number"),_T("id"),numbers->GetID());
       Assert::AreEqual(num,1);
-      Logger::WriteMessage("Test_number record inserted!");
+      Logger::WriteMessage(_T("Test_number record inserted!"));
 
       // Delete the object again and destroy the derived object!
       m_session->Delete(numbers);
 
       // Test that it is gone
-      num = TestRecordCount("test_number", "id", id);
+      num = TestRecordCount(_T("test_number"), _T("id"), id);
       Assert::AreEqual(num,0);
-      Logger::WriteMessage("Test_number record deleted again!");
+      Logger::WriteMessage(_T("Test_number record deleted again!"));
     }
 
     TEST_METHOD(T05_SelectToFilestore)
     {
-      Logger::WriteMessage("Getting all records from the DETAIL table and save in FILESTORE");
+      Logger::WriteMessage(_T("Getting all records from the DETAIL table and save in FILESTORE"));
       
       OpenSession();
 
       var one((long)1);
-      Filter* filter = new Filter("line", OP_GreaterEqual, &one);
+      Filter* filter = new Filter(_T("line"), OP_GreaterEqual, &one);
 
-      CXResultSet set = m_session->Load("detail",filter);
+      CXResultSet set = m_session->Load(_T("detail"),filter);
 
-      m_session->SetFilestore("C:\\WWW\\Testing");
+      m_session->SetFilestore(_T("C:\\WWW\\Testing"));
       m_session->ChangeRole(CXHRole::CXH_Filestore_role);
 
       for(auto& object : set)
@@ -196,12 +196,12 @@ namespace HibernateTest
 
     TEST_METHOD(T06_SelectFromFilestore)
     {
-      Logger::WriteMessage("Getting a record from the DETAIL table from the FILESTORE");
+      Logger::WriteMessage(_T("Getting a record from the DETAIL table from the FILESTORE"));
       
       OpenSession();
 
       var one(7);
-      m_session->SetFilestore("C:\\WWW\\Testing");
+      m_session->SetFilestore(_T("C:\\WWW\\Testing"));
 
       CXObject* object = m_session->Load(Detail::ClassName(),&one);
       Detail* detail = reinterpret_cast<Detail*>(object);
@@ -211,7 +211,7 @@ namespace HibernateTest
 
     TEST_METHOD(T07_DeleteFromFilestore)
     {
-      Logger::WriteMessage("Delete a record from the DETAIL table from the FILESTORE");
+      Logger::WriteMessage(_T("Delete a record from the DETAIL table from the FILESTORE"));
 
       OpenSession();
 
@@ -229,7 +229,7 @@ namespace HibernateTest
 
     TEST_METHOD(T08_WriteTableInfo)
     {
-      Logger::WriteMessage("Write meta info of tables");
+      Logger::WriteMessage(_T("Write meta info of tables"));
 
       OpenSession();
       
@@ -250,7 +250,7 @@ namespace HibernateTest
 
     TEST_METHOD(T09_LoadTableInfo)
     {
-      Logger::WriteMessage("Write meta info of tables");
+      Logger::WriteMessage(_T("Write meta info of tables"));
 
       OpenSession();
 
@@ -267,14 +267,14 @@ namespace HibernateTest
 
     TEST_METHOD(T10_FollowAssocToDetails)
     {
-      Logger::WriteMessage("Testing following an association to our details");
+      Logger::WriteMessage(_T("Testing following an association to our details"));
       try
       {
         OpenSession();
 
         Master* master = (Master*)m_session->Load(Master::ClassName(),2);
         Assert::IsNotNull(master);
-        Logger::WriteMessage("Testing 1th master record and it's details");
+        Logger::WriteMessage(_T("Testing 1th master record and it's details"));
         PrintMaster(master);
 
      // The following two lines are identical
@@ -285,7 +285,7 @@ namespace HibernateTest
         {
           Detail* detail = (Detail*)object;
           CString message;
-          message.Format("Detail: %d Master: %d : Detail line: %d Amount: %s"
+          message.Format(_T("Detail: %d Master: %d : Detail line: %d Amount: %s")
                          ,detail->GetID()
                          ,master->GetID()
                          ,detail->GetLine()
@@ -295,14 +295,14 @@ namespace HibernateTest
       }
       catch (StdException& er)
       {
-        Logger::WriteMessage("ERROR: " + er.GetErrorMessage());
+        Logger::WriteMessage(_T("ERROR: ") + er.GetErrorMessage());
         Assert::Fail();
       }
     }
 
     TEST_METHOD(T11_FollowAssocToMaster)
     {
-      Logger::WriteMessage("Testing following an association to our master record");
+      Logger::WriteMessage(_T("Testing following an association to our master record"));
 
       try
       {
@@ -315,18 +315,18 @@ namespace HibernateTest
         Assert::IsNotNull(master);
 
         CString message1;
-        message1.Format("Detail record [%d] of master [%d]. Description [%s] Amount: %s"
+        message1.Format(_T("Detail record [%d] of master [%d]. Description [%s] Amount: %s")
                         ,detail->GetID()
                         ,master->GetID()
                         ,detail->GetDescription().GetString()
                         ,detail->GetAmount().AsString().GetString());
         Logger::WriteMessage(message1);
-        Logger::WriteMessage("This is our master:");
+        Logger::WriteMessage(_T("This is our master:"));
         PrintMaster(master);
       }
       catch (StdException& er)
       {
-        Logger::WriteMessage("ERROR: " + er.GetErrorMessage());
+        Logger::WriteMessage(_T("ERROR: ") + er.GetErrorMessage());
         Assert::Fail();
       }
     }
@@ -345,14 +345,14 @@ namespace HibernateTest
         // Init in the correct language, before 'CreateSession' is called!!
         InitSQLComponents(LN_ENGLISH);
 
-        m_database.Open("hibtest","sysdba","altijd");
+        m_database.Open(_T("hibtest"),_T("sysdba"),_T("altijd"));
         if(m_database.IsOpen())
         {
-          hibernate.SetDefaultSchema("sysdba");
+          hibernate.SetDefaultSchema(_T("sysdba"));
           hibernate.SetStrategy(MapStrategy::Strategy_standalone);
           m_session = hibernate.CreateSession();
 
-          m_session->SetFilestore("C:\\WWW\\Testing");
+          m_session->SetFilestore(_T("C:\\WWW\\Testing"));
           m_session->SetDatabase(&m_database);
 
           if(m_session->FindClass(Master::ClassName()) == nullptr)
@@ -363,7 +363,7 @@ namespace HibernateTest
             CXClass* numbers = new CXClass(TestNumber::ClassName());
 
             // Test with different table name
-            numbers->GetTable()->SetSchemaTableType("","test_number","TABLE");
+            numbers->GetTable()->SetSchemaTableType(_T(""),_T("test_number"),_T("TABLE"));
 
             // Program the class structure (instead of configuration.cxh)
             DefineMaster(master);
@@ -392,41 +392,41 @@ namespace HibernateTest
 
     void DefineMaster(CXClass* p_class)
     {
-      p_class->AddAttribute(new CXAttribute("int",   "id",0,false,true));
-      p_class->AddAttribute(new CXAttribute("int",   "invoice"));
-      p_class->AddAttribute(new CXAttribute("string","description",250));
-      p_class->AddAttribute(new CXAttribute("bcd",   "total"));
+      p_class->AddAttribute(new CXAttribute(_T("int"),   _T("id"),0,false,true));
+      p_class->AddAttribute(new CXAttribute(_T("int"),   _T("invoice")));
+      p_class->AddAttribute(new CXAttribute(_T("string"),_T("description"),250));
+      p_class->AddAttribute(new CXAttribute(_T("bcd"),   _T("total")));
 
       CXIdentity primary;
-      primary.m_constraintName = "pk_master";
-      primary.m_attributes.push_back(p_class->FindAttribute("id"));
+      primary.m_constraintName = _T("pk_master");
+      primary.m_attributes.push_back(p_class->FindAttribute(_T("id")));
       p_class->AddIdentity(primary);
     }
 
     void DefineDetail(CXClass* p_class)
     {
-      p_class->AddAttribute(new CXAttribute("int",   "id",     0,false,true));
-      p_class->AddAttribute(new CXAttribute("int",   "mast_id",0,false,false,true));
-      p_class->AddAttribute(new CXAttribute("int",   "line"));
-      p_class->AddAttribute(new CXAttribute("string","description",250));
-      p_class->AddAttribute(new CXAttribute("bcd",   "amount"));
+      p_class->AddAttribute(new CXAttribute(_T("int"),   _T("id"),     0,false,true));
+      p_class->AddAttribute(new CXAttribute(_T("int"),   _T("mast_id"),0,false,false,true));
+      p_class->AddAttribute(new CXAttribute(_T("int"),   _T("line")));
+      p_class->AddAttribute(new CXAttribute(_T("string"),_T("description"),250));
+      p_class->AddAttribute(new CXAttribute(_T("bcd"),   _T("amount")));
 
       CXIdentity primary;
-      primary.m_constraintName = "pk_detail";
-      primary.m_attributes.push_back(p_class->FindAttribute("id"));
+      primary.m_constraintName = _T("pk_detail");
+      primary.m_attributes.push_back(p_class->FindAttribute(_T("id")));
       p_class->AddIdentity(primary);
     }
 
     void DefineNumbers(CXClass* p_class)
     {
-      p_class->AddAttribute(new CXAttribute("int",   "id",0,true,true));
-      p_class->AddAttribute(new CXAttribute("int",   "field1"));
-      p_class->AddAttribute(new CXAttribute("double","field2"));
-      p_class->AddAttribute(new CXAttribute("bcd",   "field3"));
+      p_class->AddAttribute(new CXAttribute(_T("int"),   _T("id"),0,true,true));
+      p_class->AddAttribute(new CXAttribute(_T("int"),   _T("field1")));
+      p_class->AddAttribute(new CXAttribute(_T("double"),_T("field2")));
+      p_class->AddAttribute(new CXAttribute(_T("bcd"),   _T("field3")));
 
       CXIdentity primary;
-      primary.m_constraintName = "pk_test_numbers";
-      primary.m_attributes.push_back(p_class->FindAttribute("id"));
+      primary.m_constraintName = _T("pk_test_numbers");
+      primary.m_attributes.push_back(p_class->FindAttribute(_T("id")));
       p_class->AddIdentity(primary);
     }
 
@@ -445,17 +445,17 @@ namespace HibernateTest
           if(m_session)
           {
             // Where we have our filestore
-            m_session->SetFilestore("C:\\WWW\\Testing");
+            m_session->SetFilestore(_T("C:\\WWW\\Testing"));
 
             // We are a database session
-            m_session->SetDatabaseConnection("hibtest","sysdba","altijd");
+            m_session->SetDatabaseConnection(_T("hibtest"),_T("sysdba"),_T("altijd"));
 
             return true;
           }
       }
       catch(StdException& er)
       {
-        Assert::AreEqual("",er.GetErrorMessage());
+        Assert::AreEqual(_T(""),er.GetErrorMessage());
       }
       return OpenSessionFULL();
     }
@@ -482,11 +482,11 @@ namespace HibernateTest
       try
       {
         CString sql;
-        sql.Format("SELECT COUNT(*)\n"
-                   "  FROM %s\n"
-                   " WHERE %s = ?",p_table,p_column);
+        sql.Format(_T("SELECT COUNT(*)\n")
+                   _T("  FROM %s\n")
+                   _T(" WHERE %s = ?"),p_table,p_column);
         SQLQuery query(database);
-        SQLTransaction trans(database,"count");
+        SQLTransaction trans(database,_T("count"));
 
         query.DoSQLStatement(sql,p_value);
         if(query.GetRecord())
@@ -497,7 +497,7 @@ namespace HibernateTest
       }
       catch(StdException& er)
       {
-        Logger::WriteMessage(CString("Failed: ") + er.GetErrorMessage());
+        Logger::WriteMessage(CString(_T("Failed: ")) + er.GetErrorMessage());
       }
       return result;
     }
@@ -509,16 +509,16 @@ namespace HibernateTest
       SQLDatabase* database = m_session->GetDatabase();
       if(database->IsOpen() == false)
       {
-        return "";
+        return _T("");
       }
       try
       {
         CString sql;
-        sql.Format("SELECT %s\n"
-                   "  FROM %s\n"
-                   " WHERE %s = ?",p_column,p_table,p_key);
+        sql.Format(_T("SELECT %s\n")
+                   _T("  FROM %s\n")
+                   _T(" WHERE %s = ?"),p_column,p_table,p_key);
         SQLQuery query(database);
-        SQLTransaction trans(database,"value");
+        SQLTransaction trans(database,_T("value"));
 
         query.DoSQLStatement(sql,p_value);
         if(query.GetRecord())
@@ -529,7 +529,7 @@ namespace HibernateTest
       }
       catch(StdException& er)
       {
-        Logger::WriteMessage(CString("Failed: ") + er.GetErrorMessage());
+        Logger::WriteMessage(CString(_T("Failed: ")) + er.GetErrorMessage());
       }
       return result;
     }

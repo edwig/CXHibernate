@@ -4,7 +4,7 @@
 //
 // BaseLibrary: Indispensable general objects and functions
 // 
-// Copyright (c) 2014-2022 ir. W.E. Huisman
+// Copyright (c) 2014-2025 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -49,15 +49,19 @@
 #include <vector>
 #include <algorithm>
 
+#ifdef _AFX
 #ifdef _DEBUG
 #define new DEBUG_NEW
 #undef THIS_FILE
 static char THIS_FILE[] = __FILE__;
 #endif
+#endif
 
+// CTOR is private: See static NewLogfile method
 LogAnalysis::LogAnalysis(XString p_name)
             :m_name(p_name)
 {
+  Acquire();
   InitializeCriticalSection(&m_lock);
 }
 
@@ -67,13 +71,53 @@ LogAnalysis::~LogAnalysis()
   DeleteCriticalSection(&m_lock);
 }
 
+/*static */
+LogAnalysis* 
+LogAnalysis::CreateLogfile(XString p_name)
+{
+  return new LogAnalysis(p_name);
+}
+
+/*static */bool
+LogAnalysis::DeleteLogfile(LogAnalysis* p_log)
+{
+  if(p_log)
+  {
+    return p_log->Release() <= 0;
+  }
+  return false;
+}
+
+long 
+LogAnalysis::Acquire()
+{
+  return InterlockedIncrement(&m_refcounter);
+}
+
+long
+LogAnalysis::Release()
+{
+  long refs = InterlockedDecrement(&m_refcounter);
+  if(refs <= 0)
+  {
+    delete this;
+  }
+  else if(refs == 1 && m_useWriter)
+  {
+    // Flushing the cache and ending all writing activity
+    // Writer will delete by releasing last reference counter
+    SetEvent(m_event);
+  }
+  return refs;
+}
+
 void
 LogAnalysis::Reset()
 {
   // Tell we closed 'normally'
   if(m_initialised)
   {
-    AnalysisLog("Analysis log is:",LogType::LOG_INFO,false,"Closed");
+    AnalysisLog(_T("Analysis log is:"),LogType::LOG_INFO,false,_T("Closed"));
   }
   else return;
 
@@ -120,10 +164,9 @@ LogAnalysis::Reset()
   }
 
   // Flush file to disk, after thread has ended
-  if(m_file)
+  if(m_file.GetIsOpen())
   {
-    CloseHandle(m_file);
-    m_file = NULL;
+    m_file.Close();
   }
   // Clear the list (any remains get freed)
   m_list.clear();
@@ -136,7 +179,8 @@ LogAnalysis::Reset()
   }
 
   // Reset loglevel
-  m_logLevel = HLL_NOLOG;
+  m_useWriter   = false;
+  m_logLevel    = HLL_NOLOG;
   m_initialised = false;
 }
 
@@ -157,7 +201,7 @@ LogAnalysis::CreateUserLogfile(XString p_filename)
     filepart = p_filename;
   }
   XString user(GetUserAccount(NameUnknown,true));
-  filepart += "_";
+  filepart += _T("_");
   filepart += user;
   filepart += extensie;
 
@@ -174,7 +218,7 @@ LogAnalysis::SetLogFilename(XString p_filename,bool p_perUser /*=false*/)
   if(m_logFileName.CompareNoCase(p_filename) != 0)
   {
     // See if a full reset is needed to flush and close the current file
-    if(m_file || m_initialised)
+    if(m_file.GetIsOpen() || m_initialised)
     {
       Reset();
     }
@@ -262,14 +306,14 @@ LogAnalysis::SetLogLevel(int p_logLevel)
       XString level;
       switch(p_logLevel)
       {
-        case HLL_NOLOG:     level = "No logging";        break;
-        case HLL_ERRORS:    level = "Errors & warnings"; break;
-        case HLL_LOGGING:   level = "Standard logging";  break;
-        case HLL_LOGBODY:   level = "Logging bodies";    break;
-        case HLL_TRACE:     level = "Tracing";           break;
-        case HLL_TRACEDUMP: level = "Tracing & hexdump"; break;
+        case HLL_NOLOG:     level = _T("No logging");        break;
+        case HLL_ERRORS:    level = _T("Errors & warnings"); break;
+        case HLL_LOGGING:   level = _T("Standard logging");  break;
+        case HLL_LOGBODY:   level = _T("Logging bodies");    break;
+        case HLL_TRACE:     level = _T("Tracing");           break;
+        case HLL_TRACEDUMP: level = _T("Tracing & hexdump"); break;
       }
-      AnalysisLog(__FUNCTION__,LogType::LOG_INFO,true,"Logging level set to [%d:%s]",m_logLevel,level.GetString());
+      AnalysisLog(_T(__FUNCTION__),LogType::LOG_INFO,true,_T("Logging level set to [%d:%s]"),m_logLevel,level.GetString());
     }
   }
 }
@@ -323,65 +367,49 @@ LogAnalysis::Initialisation()
   }
 
   // Open the logfile
-  m_file = CreateFile(m_logFileName
-                     ,GENERIC_WRITE
-                     ,FILE_SHARE_READ | FILE_SHARE_WRITE
-                     ,NULL              // Security
-                     ,CREATE_ALWAYS     // Always throw away old log
-                     ,FILE_ATTRIBUTE_NORMAL
-                     ,NULL);
-  if(m_file ==  INVALID_HANDLE_VALUE)
+  m_file.SetFilename(m_logFileName);
+  m_file.Open(winfile_write | open_trans_text | open_shared_write | open_shared_read
+             ,FAttributes::attrib_normal
+             ,Encoding::UTF8);
+  if(!m_file.GetIsOpen())
   {
     XString file;
-    if(file.GetEnvironmentVariable("TMP"))
+    if(file.GetEnvironmentVariable(_T("TMP")))
     {
-      if(file.Right(1) != "\\") file += "\\";
-      file += "Analysis.log";
+      if(file.Right(1) != _T("\\")) file += _T("\\");
+      file += _T("Analysis.log");
 
       // Open the logfile in shared writing mode
       // more applications can write to the file
-      m_file = CreateFile(file
-                         ,GENERIC_WRITE
-                         ,FILE_SHARE_READ | FILE_SHARE_WRITE
-                         ,NULL              // Security
-                         ,CREATE_ALWAYS     // Always throw away old log
-                         ,FILE_ATTRIBUTE_NORMAL
-                         ,NULL);
-      if(m_file == INVALID_HANDLE_VALUE)
-      {
-        // Give up. Cannot create a logfile
-        m_file = NULL;
-        m_logLevel = HLL_NOLOG;
-        return;
-      }
-      else
+      m_file.Open(winfile_write | open_trans_text | open_shared_write | open_shared_read
+                  ,FAttributes::attrib_normal
+                  ,Encoding::UTF8);
+      if(m_file.GetIsOpen())
       {
         // Alternative file created
         m_logFileName = file;
       }
+      else
+      {
+        // Give up. Cannot create a logfile
+        m_logLevel = HLL_NOLOG;
+        return;
+      }
     }
   }
 
-  if(m_file)
+  // Starting the log writing thread
+  if(m_useWriter)
   {
-    // Write a BOM to the logfile, so we can read logged UTF-8 strings
-    DWORD written = 0;		// Not optional for MS-Windows Server 2012!!
-    XString bom = ConstructBOM();
-    WriteFile(m_file,bom.GetString(),bom.GetLength(),&written,nullptr);
-
-    // Starting the log writing thread
-    if(m_useWriter)
-    {
-      RunLog();
-    }
+    RunLog();
   }
   // Tell that we are now running
-  AnalysisLog("Logfile now running for:", LogType::LOG_INFO,false,m_name);
+  AnalysisLog(_T("Logfile now running for:"), LogType::LOG_INFO,false,m_name.GetString());
 }
 
 // PRIMARY FUNCTION TO WRITE A LINE TO THE LOGFILE
 bool
-LogAnalysis::AnalysisLog(const char* p_function,LogType p_type,bool p_doFormat,const char* p_format,...)
+LogAnalysis::AnalysisLog(LPCTSTR p_function,LogType p_type,bool p_doFormat,LPCTSTR p_format,...)
 {
   // Multi threaded protection
   AutoCritSec lock(&m_lock);
@@ -407,7 +435,7 @@ LogAnalysis::AnalysisLog(const char* p_function,LogType p_type,bool p_doFormat,c
   int position = 0;
 
   // Set the type
-  char type = ' ';
+  TCHAR type = ' ';
   switch(p_type)
   {
     case LogType::LOG_TRACE:type = 'T'; break;
@@ -425,7 +453,7 @@ LogAnalysis::AnalysisLog(const char* p_function,LogType p_type,bool p_doFormat,c
     position = 26;  // Prefix string length
     _ftime64_s(&now);
     _localtime64_s(&today,&now.time);
-    logBuffer.Format("%4.4d-%2.2d-%2.2d %2.2d:%2.2d:%2.2d.%03d %c "
+    logBuffer.Format(_T("%4.4d-%2.2d-%2.2d %2.2d:%2.2d:%2.2d.%03d %c ")
                     ,today.tm_year + 1900
                     ,today.tm_mon  + 1
                     ,today.tm_mday
@@ -440,7 +468,7 @@ LogAnalysis::AnalysisLog(const char* p_function,LogType p_type,bool p_doFormat,c
   logBuffer += p_function;
   if(logBuffer.GetLength() < position + ANALYSIS_FUNCTION_SIZE)
   {
-    logBuffer.Append("                                                "
+    logBuffer.Append(_T("                                                ")
                     ,position + ANALYSIS_FUNCTION_SIZE - logBuffer.GetLength());
   }
 
@@ -458,9 +486,9 @@ LogAnalysis::AnalysisLog(const char* p_function,LogType p_type,bool p_doFormat,c
   }
 
   // Add end-of line
-  logBuffer += "\r\n";
+  logBuffer += _T("\n");
 
-  if(m_file)
+  if(m_file.GetIsOpen())
   {
     // Locked m_list gets a buffer
     m_list.push_back(logBuffer);
@@ -472,13 +500,13 @@ LogAnalysis::AnalysisLog(const char* p_function,LogType p_type,bool p_doFormat,c
       Flush(false);
     }
   }
-  else if(m_doEvents)
+  if(m_doEvents)
   {
     WriteEvent(m_eventLog,p_type,logBuffer);
     result = true;
   }
   // In case of an error, flush immediately!
-  if(m_file && p_type == LogType::LOG_ERROR)
+  if(m_file.GetIsOpen() && p_type == LogType::LOG_ERROR)
   {
     if(m_useWriter)
     {
@@ -499,15 +527,25 @@ LogAnalysis::WriteEvent(HANDLE p_eventLog,LogType p_type,XString& p_buffer)
   LPCTSTR lpszStrings[2];
   lpszStrings[0] = p_buffer.GetString();
   lpszStrings[1] = nullptr;
-  ReportEvent(p_eventLog,static_cast<WORD>(p_type),0,0,NULL,1,0,lpszStrings,0);
+
+  WORD type = EVENTLOG_INFORMATION_TYPE;
+  switch(p_type)
+  {
+    case LogType::LOG_TRACE:type = EVENTLOG_INFORMATION_TYPE; break;
+    case LogType::LOG_INFO: type = EVENTLOG_INFORMATION_TYPE; break;
+    case LogType::LOG_ERROR:type = EVENTLOG_ERROR_TYPE;       break;
+    case LogType::LOG_WARN: type = EVENTLOG_WARNING_TYPE;     break;
+  }
+
+  ReportEvent(p_eventLog,type,0,0,NULL,1,0,lpszStrings,0);
 }
 
 // Hexadecimal view of an object added to the logfile
 bool    
-LogAnalysis::AnalysisHex(const char* p_function,XString p_name,void* p_buffer,unsigned long p_length,unsigned p_linelength /*=16*/)
+LogAnalysis::AnalysisHex(LPCTSTR p_function,XString p_name,void* p_buffer,unsigned long p_length,unsigned p_linelength /*=16*/)
 {
   // Only dump in the logfile, not to the MS-Windows event log
-  if(!m_file || m_logLevel < HLL_TRACEDUMP)
+  if(!m_file.GetIsOpen() || m_logLevel < HLL_TRACEDUMP)
   {
     return false;
   }
@@ -526,7 +564,7 @@ LogAnalysis::AnalysisHex(const char* p_function,XString p_name,void* p_buffer,un
   AutoCritSec lock(&m_lock);
 
   // Name of the object
-  AnalysisLog(p_function,LogType::LOG_TRACE,true,"Hexadecimal view of: %s. Length: %d",p_name.GetString(),p_length);
+  AnalysisLog(p_function,LogType::LOG_TRACE,true,_T("Hexadecimal view of: %s. Length: %d"),p_name.GetString(),p_length);
 
   unsigned long  pos    = 0;
   unsigned char* buffer = static_cast<unsigned char*>(p_buffer);
@@ -541,7 +579,7 @@ LogAnalysis::AnalysisHex(const char* p_function,XString p_name,void* p_buffer,un
     while(pos < p_length && len < p_linelength)
     {
       // One byte at the time
-      hexadLine.AppendFormat("%2.2X ",*buffer);
+      hexadLine.AppendFormat(_T("%2.2X "),*buffer);
       if(*buffer)
       {
         asciiLine += *buffer;
@@ -555,13 +593,13 @@ LogAnalysis::AnalysisHex(const char* p_function,XString p_name,void* p_buffer,un
     // In case of an incomplete last line
     while(len++ < p_linelength)
     {
-      hexadLine += "   ";
+      hexadLine += _T("   ");
     }
-    asciiLine.Replace("\r","#");
-    asciiLine.Replace("\n","#");
+    asciiLine.Replace(_T("\r"),_T("#"));
+    asciiLine.Replace(_T("\n"),_T("#"));
 
     // Add to the list buffer
-    XString line(hexadLine + asciiLine + "\n");
+    XString line(hexadLine + asciiLine + _T("\n"));
     m_list.push_back(line);
   }
   // Large object now written to the buffer. Force write it
@@ -570,33 +608,37 @@ LogAnalysis::AnalysisHex(const char* p_function,XString p_name,void* p_buffer,un
   return true;
 }
 
-// Use sparingly!
-// Dump string buffer in the log
+// Dump string directly without formatting or headers
 void
-LogAnalysis::BareStringLog(const char* p_buffer,int p_length)
+LogAnalysis::BareStringLog(XString p_string)
 {
-  if (m_file)
+  if (m_file.GetIsOpen())
   {
     // Multi threaded protection
     AutoCritSec lock(&m_lock);
 
-    XString buffer;
-    char* pointer = buffer.GetBufferSetLength(p_length + 1);
-    memcpy_s(pointer, p_length + 1, p_buffer, p_length);
-    pointer[p_length] = 0;
-    buffer.ReleaseBufferSetLength(p_length);
-
-    // Test for newline
-    if (buffer.Right(1) != "\n")
-    {
-      buffer += "\n";
-    }
-
-    // Keep the line
-    m_list.push_back(buffer);
+    p_string += _T("\n");
+    m_list.push_back(p_string);
   }
 }
 
+void
+LogAnalysis::BareBufferLog(void* p_buffer,unsigned p_length)
+{
+  XString marker(_T(BUFFER_MARKER));
+  BYTE* copy = new BYTE[p_length];
+  memcpy(copy,p_buffer,p_length);
+
+  LogBuff buff;
+  buff.m_buffer = copy;
+  buff.m_length = p_length;
+
+  // Multi threaded protection
+  AutoCritSec lock(&m_lock);
+
+  m_buffers.push_back(buff);
+  m_list.push_back(marker);
+}
 
 // Force flushing of the logfile
 void
@@ -617,7 +659,7 @@ void
 LogAnalysis::Flush(bool p_all)
 {
   // See if we have a file at all
-  if(m_file == nullptr)
+  if(!m_file.GetIsOpen())
   {
     return;
   }
@@ -642,26 +684,32 @@ LogAnalysis::Flush(bool p_all)
       }
     }
   }
-  catch(StdException& /*er*/)
+  catch(StdException& er)
   {
     // Logfile failed. Where to log this??
-    // TRACE("%s\n",er.GetErrorMessage().GetString());
+    OutputDebugString(er.GetErrorMessage() + _T("\n"));
   }
-  FlushFileBuffers(m_file);
+  m_file.Flush();
 }
 
 // Write out a log line
 void
 LogAnalysis::WriteLog(XString& p_buffer)
 {
-  DWORD written = 0L;
-  if(!WriteFile(m_file
-               ,(void*)p_buffer.GetString()
-               ,(DWORD)p_buffer.GetLength()
-               ,&written
-               ,NULL))
+  if(p_buffer.Compare(_T(BUFFER_MARKER)) == 0)
   {
-    //ATLTRACE("Cannot write logfile. Error: %d\n",GetLastError());
+    if(!m_buffers.empty())
+    {
+      LogBuff buff = m_buffers.front();
+      m_file.Write(buff.m_buffer,buff.m_length);
+      m_file.Write((void*)"\r\n",2);
+      delete[] buff.m_buffer;
+      m_buffers.pop_front();
+    }
+  }
+  else if(!m_file.Write(p_buffer))
+  {
+    OutputDebugString(_T("Cannot write logfile. Error: ") + GetLastError());
   }
 }
 
@@ -670,76 +718,72 @@ LogAnalysis::WriteLog(XString& p_buffer)
 void
 LogAnalysis::ReadConfig()
 {
-  char buffer[256] = "";
-  XString fileName = GetExePath() + "Logfile.config";
+  XString line;
+  XString fileName = GetExePath() + _T("Logfile.config");
 
-  FILE* file = NULL;
-  fopen_s(&file,fileName,"r");
-  if(file)
+  WinFile file(fileName);
+  if(file.Open(winfile_read))
   {
-    while(fgets(buffer,255,file))
+    while(file.Read(line))
     {
-      size_t len = strlen(buffer);
-      while(len)
+      line.Remove('\r');
+      line.Remove('\n');
+
+      if(line.GetLength() > 0)
       {
-        --len;
-        if(buffer[len] == '\n' || buffer[len] == '\r')
+        // Look for a comment
+        TCHAR ch = (TCHAR) line.GetAt(0);
+        if(ch == ';' || ch == '#')
         {
-          buffer[len] = 0;
+          continue;
         }
-        else break;
-      }
-      // Look for a comment
-      if(buffer[0] == ';' || buffer[0] == '#')
-      {
-        continue;
-      }
-      if(_strnicmp(buffer,"logfile=",8) == 0)
-      {
-        m_logFileName = &buffer[8];
-        continue;
-      }
-      if(_strnicmp(buffer,"loglevel=",8) == 0)
-      {
-        int logLevel = atoi(&buffer[8]) > 0;
-        SetLogLevel(logLevel);
-        continue;
-      }
-      if(_strnicmp(buffer,"rotate=",7) == 0)
-      {
-        m_rotate = atoi(&buffer[7]) > 0;
-        continue;
-      }
-      if(_strnicmp(buffer,"timing=",7) == 0)
-      {
-        m_doTiming = atoi(&buffer[7]) > 0;
-        continue;
-      }
-      if(_strnicmp(buffer,"events=",7) == 0)
-      {
-        m_doEvents = atoi(&buffer[7]) > 0;
-        continue;
-      }
-      if(_strnicmp(buffer,"cache=",6) == 0)
-      {
-        int cache = atoi(&buffer[6]);
-        SetCache(cache);
-        continue;
-      }
-      if(_strnicmp(buffer,"interval=",9) == 0)
-      {
-        int interval = atoi(&buffer[9]) * CLOCKS_PER_SEC;
-        SetInterval(interval);
-        continue;
-      }
-      if(_strnicmp(buffer,"keep=",5) == 0)
-      {
-        int keep = atoi(&buffer[5]);
-        SetKeepfiles(keep);
-        continue;
+        if(line.Left(8).CompareNoCase(_T("logfile=")) == 0)
+        {
+          m_logFileName = line.Mid(8);
+        }
+        if(line.Left(9).CompareNoCase(_T("loglevel=")) == 0)
+        {
+          int loglevel = _ttoi(line.Mid(9));
+          SetLogLevel(loglevel);
+          continue;
+        }
+        if(line.Left(7).CompareNoCase(_T("rotate=")) == 0)
+        {
+          m_rotate = _ttoi(line.Mid(7));
+          continue;
+        }
+        if(line.Left(7).CompareNoCase(_T("timing=")) == 0)
+        {
+          m_doTiming = _ttoi(line.Mid(7));
+          continue;
+        }
+        if(line.Left(7).CompareNoCase(_T("events=")) == 0)
+        {
+          m_doEvents = _ttoi(line.Mid(7));
+          continue;
+        }
+        if(line.Left(6).CompareNoCase(_T("cache=")) == 0)
+        {
+          int cache = _ttoi(line.Mid(6));
+          SetCache(cache);
+          continue;
+        }
+        if(line.Left(9).CompareNoCase(_T("interval=")) == 0)
+        {
+          int interval = _ttoi(line.Mid(9)) * CLOCKS_PER_SEC;
+          SetInterval(interval);
+          continue;
+        }
+        if(line.Left(5).CompareNoCase(_T("keep=")) == 0)
+        {
+          int keep = _ttoi(line.Mid(5));
+          SetKeepfiles(keep);
+          continue;
+        }
+
       }
     }
-    fclose(file);
+    file.Close();
   }
 }
 
@@ -774,7 +818,7 @@ LogAnalysis::RunLog()
     m_event = CreateEvent(NULL,FALSE,FALSE,NULL);
     // Basis thread of the InOutPort
     unsigned int threadID;
-    if((m_logThread = (HANDLE)_beginthreadex(NULL,0,StartingTheLog,(void *)(this),0,&threadID)) == INVALID_HANDLE_VALUE)
+    if((m_logThread = reinterpret_cast<HANDLE>(_beginthreadex(NULL,0,StartingTheLog,(void *)(this),0,&threadID))) == INVALID_HANDLE_VALUE)
     {
       m_logThread = NULL;
       //ATLTRACE("Cannot make a thread for the LogAnalysis function\n");
@@ -783,12 +827,17 @@ LogAnalysis::RunLog()
 }
 
 // Running the main thread of the logfile
+// As long as it's initialized and we holds at lease 1 more
+// reference than just the writer thread.
 void
 LogAnalysis::RunLogAnalysis()
 {
   DWORD sync = 0;
 
-  while(m_initialised)
+  // Writing thread acquires a lock on the object
+  Acquire();
+
+  while(m_initialised && m_refcounter > 1)
   {
     DWORD res = WaitForSingleObjectEx(m_event,m_interval,true);
 
@@ -812,6 +861,10 @@ LogAnalysis::RunLogAnalysis()
 
   // Also ending this thread
   m_logThread = NULL;
+  m_useWriter = false;
+
+  // Release hold on the object
+  Release();
 }
 
 // Append date time to log's filename
@@ -821,13 +874,33 @@ LogAnalysis::RunLogAnalysis()
 void
 LogAnalysis::AppendDateTimeToFilename()
 {
+  XString file(m_logFileName);
+  XString extension;
+  XString pattern;
+
+  file.MakeLower();
+  int lastPoint = file.ReverseFind('.');
+  int lastSlash = file.ReverseFind('\\');
+  if(lastPoint > 0 && (lastPoint > lastSlash))
+  {
+    extension = file.Mid(lastPoint);
+    pattern   = _T("*") + extension;
+    file      = file.Left(lastPoint);
+  }
+  else
+  {
+    // No extension found in the logfile filename
+    return;
+  }
+
+  // Append timestamp to the filename (before extension)
   XString append;
   __timeb64 now;
   struct tm today;
 
   _ftime64_s(&now);
   _localtime64_s(&today,&now.time);
-  append.Format("_%4.4d%2.2d%2.2d_%2.2d%2.2d%2.2d_%03d.txt"
+  append.Format(_T("_%4.4d%2.2d%2.2d_%2.2d%2.2d%2.2d_%03d.txt")
                 ,today.tm_year + 1900
                 ,today.tm_mon  + 1
                 ,today.tm_mday
@@ -836,24 +909,20 @@ LogAnalysis::AppendDateTimeToFilename()
                 ,today.tm_sec
                 ,now.millitm);
 
-  // Finding the .txt extension
-  XString file(m_logFileName);
-  file.MakeLower();
-  int pos = file.Find(".txt");
-  if(pos > 0)
-  {
-    m_logFileName = m_logFileName.Left(pos);
-    RemoveLastMonthsFiles(today);
-    RemoveLogfilesKeeping();
-    m_logFileName += append;
-  }
+  // Perform the rotation by deleting older logfiles
+  // Remove files from two months ago and with a maximum of m_keepfiles
+  RemoveLastMonthsFiles(file,pattern,today);
+  RemoveLogfilesKeeping(file,pattern);
+
+  // Constructing the final logfile filename
+  m_logFileName = file + append;
 }
 
 // Contrary to the name, it removes the files from TWO months ago
 // This leaves time on the verge of a new month not to delete yesterdays files
 // But it will eventually cleanup the servers log directories.
 void
-LogAnalysis::RemoveLastMonthsFiles(struct tm& p_today)
+LogAnalysis::RemoveLastMonthsFiles(XString p_filename,XString p_pattern,struct tm& p_today)
 {
   // Go two months back
   p_today.tm_mon -= 2;
@@ -865,19 +934,19 @@ LogAnalysis::RemoveLastMonthsFiles(struct tm& p_today)
 
   // Append year and month and a pattern
   XString append;
-  append.Format("_%4.4d%2.2d"
+  append.Format(_T("_%4.4d%2.2d")
                 ,p_today.tm_year + 1900
                 ,p_today.tm_mon  + 1);
 
-  XString pattern = m_logFileName + append + "*.txt";
+  XString pattern = p_filename + append + p_pattern;
   WinFile file(pattern);
   XString direct = file.GetFilenamePartDirectory();
 
   // Walk through all the files in the pattern
   // Even works on relative file paths
   intptr_t nHandle = 0;
-  struct _finddata_t fileInfo;
-  nHandle = _findfirst((LPCSTR)pattern,&fileInfo);
+  struct _tfinddata_t fileInfo;
+  nHandle = _tfindfirst(pattern.GetString(),&fileInfo);
   if(nHandle != -1)
   {
     do
@@ -889,25 +958,25 @@ LogAnalysis::RemoveLastMonthsFiles(struct tm& p_today)
         DeleteFile(fileRemove);
       }
     }
-    while(_findnext(nHandle,&fileInfo) != -1);
+    while(_tfindnext(nHandle,&fileInfo) != -1);
   }
   _findclose(nHandle);
 }
 
 void
-LogAnalysis::RemoveLogfilesKeeping()
+LogAnalysis::RemoveLogfilesKeeping(XString p_filename,XString p_pattern)
 {
   std::vector<XString> map;
 
   // Getting a pattern to read in a directory
-  XString pattern = m_logFileName + "*.txt";
+  XString pattern = p_filename + p_pattern;
   WinFile filename(pattern);
   XString direct = filename.GetFilenamePartDirectory();
 
   // Read in all files
   intptr_t nHandle = 0;
-  struct _finddata_t fileInfo;
-  nHandle = _findfirst((LPCSTR)pattern,&fileInfo);
+  struct _tfinddata_t fileInfo;
+  nHandle = _tfindfirst(pattern.GetString(),&fileInfo);
   if(nHandle != -1)
   {
     do
@@ -919,7 +988,7 @@ LogAnalysis::RemoveLogfilesKeeping()
         map.push_back(fileName);
       }
     }
-    while(_findnext(nHandle,&fileInfo) != -1);
+    while(_tfindnext(nHandle,&fileInfo) != -1);
   }
   _findclose(nHandle);
 

@@ -39,43 +39,43 @@ static char THIS_FILE[] = __FILE__;
 
 // Bring the contents of the class to a SOAPMessage 
 BEGIN_XML_SERIALIZE(Detail,CXObject)
-    CXO_XML_SERIALIZE(m_id,         "id");
-    CXO_XML_SERIALIZE(m_mast_id,    "mast_id");
-    CXO_XML_SERIALIZE(m_line,       "line");
-    CXO_XML_SERIALIZE(m_description,"description");
-    CXO_XML_SERIALIZE(m_amount,     "amount");
+    CXO_XML_SERIALIZE(m_id,         _T("id"));
+    CXO_XML_SERIALIZE(m_mast_id,    _T("mast_id"));
+    CXO_XML_SERIALIZE(m_line,       _T("line"));
+    CXO_XML_SERIALIZE(m_description,_T("description"));
+    CXO_XML_SERIALIZE(m_amount,     _T("amount"));
 END_XML_SERIALIZE
 
 // Read the contents of an object from a SOAPMessage
 BEGIN_XML_DESERIALIZE(Detail,CXObject)
-  CXO_XML_DESERIALIZE(m_id,         "id");
-  CXO_XML_DESERIALIZE(m_mast_id,    "mast_id");
-  CXO_XML_DESERIALIZE(m_line,       "line");
-  CXO_XML_DESERIALIZE(m_description,"description");
-  CXO_XML_DESERIALIZE(m_amount,     "amount");
+  CXO_XML_DESERIALIZE(m_id,         _T("id"));
+  CXO_XML_DESERIALIZE(m_mast_id,    _T("mast_id"));
+  CXO_XML_DESERIALIZE(m_line,       _T("line"));
+  CXO_XML_DESERIALIZE(m_description,_T("description"));
+  CXO_XML_DESERIALIZE(m_amount,     _T("amount"));
 END_XML_DESERIALIZE
 
 //////////////////////////////////////////////////////////////////////////
 
 BEGIN_DBS_SERIALIZE(Detail,CXObject)
-    CXO_DBS_SERIALIZE(m_id,         "id");
-    CXO_DBS_SERIALIZE(m_mast_id,    "mast_id");
-    CXO_DBS_SERIALIZE(m_line,       "line");
-    CXO_DBS_SERIALIZE(m_description,"description");
-    CXO_DBS_SERIALIZE(m_amount,     "amount");
+    CXO_DBS_SERIALIZE(m_id,         _T("id"));
+    CXO_DBS_SERIALIZE(m_mast_id,    _T("mast_id"));
+    CXO_DBS_SERIALIZE(m_line,       _T("line"));
+    CXO_DBS_SERIALIZE(m_description,_T("description"));
+    CXO_DBS_SERIALIZE(m_amount,     _T("amount"));
 END_DBS_SERIALIZE
 
 
 BEGIN_DBS_DESERIALIZE(Detail,CXObject)
-  CXO_DBS_DESERIALIZE(m_id,         "id");
-  CXO_DBS_DESERIALIZE(m_mast_id,    "mast_id");
-  CXO_DBS_DESERIALIZE(m_line,       "line");
-  CXO_DBS_DESERIALIZE(m_description,"description");
-  CXO_DBS_DESERIALIZE(m_amount,     "amount");
+  CXO_DBS_DESERIALIZE(m_id,         _T("id"));
+  CXO_DBS_DESERIALIZE(m_mast_id,    _T("mast_id"));
+  CXO_DBS_DESERIALIZE(m_line,       _T("line"));
+  CXO_DBS_DESERIALIZE(m_description,_T("description"));
+  CXO_DBS_DESERIALIZE(m_amount,     _T("amount"));
 END_DBS_DESERIALIZE
 
 BEGIN_DESERIALIZE_GENERATOR(Detail)
-  CXO_DBS_DESERIALIZE(m_id, "id");
+  CXO_DBS_DESERIALIZE(m_id, _T("id"));
 END_DESERIALIZE_GENERATOR
 
 // Static factory to create a new object if this class

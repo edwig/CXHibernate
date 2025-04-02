@@ -4,7 +4,7 @@
 //
 // Marlin Server: Internet server/client
 // 
-// Copyright (c) 2014-2022 ir. W.E. Huisman
+// Copyright (c) 2014-2024 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -28,10 +28,12 @@
 #include "stdafx.h"
 #include "SiteHandlerSoap.h"
 
+#ifdef _AFX
 #ifdef _DEBUG
 #define new DEBUG_NEW
 #undef THIS_FILE
 static char THIS_FILE[] = __FILE__;
+#endif
 #endif
 
 // Remember SOAPMessage for this thread
@@ -75,15 +77,15 @@ SiteHandlerSoap::PreHandle(HTTPMessage* p_message)
     if(g_soapMessage->GetFaultCode().IsEmpty())
     {
       g_soapMessage->Reset();
-      g_soapMessage->SetFault("XML","Client","XML parsing error",msg);
-      SITE_ERRORLOG(ERROR_BAD_ARGUMENTS,"Expected a SOAP message, but no valid XML message found");
+      g_soapMessage->SetFault(_T("XML"),_T("Client"),_T("XML parsing error"),msg);
+      SITE_ERRORLOG(ERROR_BAD_ARGUMENTS,_T("Expected a SOAP message, but no valid XML message found"));
     }
     m_site->SendResponse(g_soapMessage);
     p_message->SetHasBeenAnswered();
     return false;
   }
 
-  SITE_DETAILLOGS("Received SOAP message: ",g_soapMessage->GetSoapAction());
+  SITE_DETAILLOGS(_T("Received SOAP message: "),g_soapMessage->GetSoapAction());
 
   // Check WS-Security token profile
   if(m_soapSecurity)
@@ -91,7 +93,7 @@ SiteHandlerSoap::PreHandle(HTTPMessage* p_message)
     if(!m_soapSecurity->CheckSecurity(g_soapMessage))
     {
       // Invalid user. Status denied message returned
-      SITE_ERRORLOG(ERROR_ACCESS_DENIED,"SOAP Message with WS-Security token profile, but no valid access");
+      SITE_ERRORLOG(ERROR_ACCESS_DENIED,_T("SOAP Message with WS-Security token profile, but no valid access"));
       p_message->SetStatus(HTTP_STATUS_DENIED);
       m_site->SendResponse(p_message);
       g_soapMessage->SetHasBeenAnswered();
@@ -120,7 +122,7 @@ SiteHandlerSoap::PreHandle(HTTPMessage* p_message)
   // IMPLEMENT YOURSELF: Write your own access mechanism.
   // Maybe by writing an override to this method and calling this one first..
   
-  // returning true, to enter the default "Handle" of the (overrided) class
+  // returning true, to enter the default "Handle" of the (overridden) class
   return true;
 }
 
@@ -150,7 +152,7 @@ SiteHandlerSoap::Handle(SOAPMessage* p_message)
   if(p_message)
   {
     p_message->Reset();
-    p_message->SetFault("Critical","Server","Unimplemented","INTERNAL: Unhandled request caught by base HTTPSite::SiteHandlerSoap::Handle");
+    p_message->SetFault(_T("Critical"),_T("Server"),_T("Unimplemented"),_T("INTERNAL: Unhandled request caught by base HTTPSite::SiteHandlerSoap::Handle"));
   }
   return true;
 }

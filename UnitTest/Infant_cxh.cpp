@@ -13,31 +13,31 @@ static char THIS_FILE[] = __FILE__;
 #endif
 
 BEGIN_XML_SERIALIZE(Infant,NaturalPerson)
-  CXO_XML_SERIALIZE(m_immunisation,"immunisation");
-  CXO_XML_SERIALIZE(m_complication,"complication");
-  CXO_XML_SERIALIZE(m_hospital    ,"hospital");
+  CXO_XML_SERIALIZE(m_immunisation,_T("immunisation"));
+  CXO_XML_SERIALIZE(m_complication,_T("complication"));
+  CXO_XML_SERIALIZE(m_hospital    ,_T("hospital"));
 END_XML_SERIALIZE
 
 BEGIN_XML_DESERIALIZE(Infant,NaturalPerson)
-  CXO_XML_DESERIALIZE(m_immunisation,"immunisation");
-  CXO_XML_DESERIALIZE(m_complication,"complication");
-  CXO_XML_DESERIALIZE(m_hospital    ,"hospital");
+  CXO_XML_DESERIALIZE(m_immunisation,_T("immunisation"));
+  CXO_XML_DESERIALIZE(m_complication,_T("complication"));
+  CXO_XML_DESERIALIZE(m_hospital    ,_T("hospital"));
 END_XML_DESERIALIZE
 
 BEGIN_DBS_SERIALIZE(Infant,NaturalPerson)
-  CXO_DBS_SERIALIZE(m_immunisation,"immunisation");
-  CXO_DBS_SERIALIZE(m_complication,"complication");
-  CXO_DBS_SERIALIZE(m_hospital    ,"hospital");
+  CXO_DBS_SERIALIZE(m_immunisation,_T("immunisation"));
+  CXO_DBS_SERIALIZE(m_complication,_T("complication"));
+  CXO_DBS_SERIALIZE(m_hospital    ,_T("hospital"));
 END_DBS_SERIALIZE
 
 BEGIN_DBS_DESERIALIZE(Infant,NaturalPerson)
-  CXO_DBS_DESERIALIZE(m_immunisation,"immunisation");
-  CXO_DBS_DESERIALIZE(m_complication,"complication");
-  CXO_DBS_DESERIALIZE(m_hospital    ,"hospital");
+  CXO_DBS_DESERIALIZE(m_immunisation,_T("immunisation"));
+  CXO_DBS_DESERIALIZE(m_complication,_T("complication"));
+  CXO_DBS_DESERIALIZE(m_hospital    ,_T("hospital"));
 END_DBS_DESERIALIZE
 
 BEGIN_DESERIALIZE_GENERATOR(Infant)
-  CXO_DBS_DESERIALIZE(m_id,"id");
+  CXO_DBS_DESERIALIZE(m_id,_T("id"));
 END_DESERIALIZE_GENERATOR
 
 // Static factory to create a new object if this class

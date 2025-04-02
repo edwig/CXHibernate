@@ -2,7 +2,7 @@
 //
 // File: SQLInfoInformix.cpp
 //
-// Copyright (c) 1998-2022 ir. W.E. Huisman
+// Copyright (c) 1998-2025 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy of 
@@ -48,6 +48,13 @@ SQLInfoInformix::~SQLInfoInformix()
 {
 }
 
+// RDBMS Uses INDENTITY or SEQUENCE interface
+void
+SQLInfoInformix::SetUseSequences(bool /*p_sequences*/)
+{
+  // Does nothing
+}
+
 //////////////////////////////////////////////////////////////////////////
 //
 // GENERALS (Strings & Booleans) 
@@ -67,7 +74,7 @@ XString
 SQLInfoInformix::GetRDBMSVendorName() const
 {
   // The name of the database vendor
-  return "IBM-Informix";
+  return _T("IBM-Informix");
 }
 
 // Get the physical database name
@@ -79,14 +86,14 @@ SQLInfoInformix::GetRDBMSPhysicalDatabaseName() const
   // only the name of the service of the DNS and not the 'real' database
   // That is why we read the database name from the sysmaster database
   // Beware that this only works for and above INFORMIX 7.x.y
-  XString query = "SELECT scs_currdb\n"
-                  "  FROM sysmaster:syssqlcurses\n"
-                  " WHERE scs_sessionid = DBINFO('sessionid')";
+  XString query = _T("SELECT scs_currdb\n")
+                  _T("  FROM sysmaster:syssqlcurses\n")
+                  _T(" WHERE scs_sessionid = DBINFO('sessionid')");
   SQLQuery qry(m_database);
   qry.DoSQLStatement(query);
   if(qry.GetRecord())
   {
-    return qry.GetColumn(1)->GetAsChar();
+    return qry.GetColumn(1)->GetAsString();
   }
   return XString("");
 }
@@ -131,6 +138,13 @@ SQLInfoInformix::GetRDBMSSupportsOrderByExpression() const
 // Supports the ODBC escape sequence {[?=] CALL procedure (?,?,?)}
 bool
 SQLInfoInformix::GetRDBMSSupportsODBCCallEscapes() const
+{
+  return true;
+}
+
+// Supports the ODBC call procedure with named parameters
+bool
+SQLInfoInformix::GetRDBMSSupportsODBCCallNamedParameters() const
 {
   return true;
 }
@@ -181,41 +195,48 @@ SQLInfoInformix::GetRDBMSNumericPrecisionScale(SQLULEN& /*p_precision*/, SQLSMAL
   // NO-OP
 }
 
+// Maximum for a VARCHAR to be handled without AT-EXEC data. Assume NVARCHAR is half that size!
+int
+SQLInfoInformix::GetRDBMSMaxVarchar() const
+{
+  return 255;
+}
+
 // KEYWORDS
 
 // Keyword for the current date and time
 XString
 SQLInfoInformix::GetKEYWORDCurrentTimestamp() const
 {
-  return "current";
+  return _T("current");
 }
 
 // String for the current date
 XString
 SQLInfoInformix::GetKEYWORDCurrentDate() const
 {
-  return "current_date";
+  return _T("current_date");
 }
 
 // Get the concatenation operator
 XString
 SQLInfoInformix::GetKEYWORDConcatanationOperator() const
 {
-  return "||";
+  return _T("||");
 }
 
 // Get quote character for strings
 XString
 SQLInfoInformix::GetKEYWORDQuoteCharacter() const
 {
-  return "\'";
+  return _T("\'");
 }
 
 // Get quote character around reserved words as an identifier
 XString
 SQLInfoInformix::GetKEYWORDReservedWordQuote() const
 {
-  return "\"";
+  return _T("\"");
 }
 
 // Get default NULL for parameter list input
@@ -223,42 +244,42 @@ XString
 SQLInfoInformix::GetKEYWORDParameterDefaultNULL() const
 {
   // Standard, no definition defines the NULL state
-  return "";
+  return _T("");
 }
 
 // Parameter is for INPUT and OUTPUT in parameter list
 XString
 SQLInfoInformix::GetKEYWORDParameterINOUT() const
 {
-  return "";
+  return _T("");
 }
 
 // Parameter is for OUTPUT only in parameter list
 XString
 SQLInfoInformix::GetKEYWORDParameterOUT() const
 {
-  return "";
+  return _T("");
 }
 
 // Get datatype of the IDENTITY primary key in a Network database
 XString
 SQLInfoInformix::GetKEYWORDNetworkPrimaryKeyType() const
 {
-  return "serial";
+  return _T("serial");
 }
 
 // Get datatype for timestamp (year to second)
 XString
 SQLInfoInformix::GetKEYWORDTypeTimestamp() const
 {
-  return "datetime year to second";
+  return _T("datetime year to second");
 }
 
 // Prefix for a parameter in a stored procedure
 XString
 SQLInfoInformix::GetKEYWORDParameterPrefix() const
 {
-  return "";
+  return _T("");
 }
 
 // Get select part to add new record identity to a table
@@ -267,28 +288,28 @@ XString
 SQLInfoInformix::GetKEYWORDIdentityString(XString& /*p_tablename*/,XString /*p_postfix*/ /*= "_seq"*/) const
 {
   // Insert 0 for a SERIAL column
-  return "0";
+  return _T("0");
 }
 
 // Gets the UPPER function
 XString
 SQLInfoInformix::GetKEYWORDUpper(XString& p_expression) const
 {
-  return "UPPER(" + p_expression + ")";
+  return _T("UPPER(") + p_expression + _T(")");
 }
 
 // Gets the construction for 1 minute ago
 XString
 SQLInfoInformix::GetKEYWORDInterval1MinuteAgo() const
 {
-  return "(CURRENT - INTERVAL (1) MINUTE TO MINUTE)";
+  return _T("(CURRENT - INTERVAL (1) MINUTE TO MINUTE)");
 }
 
 // Gets the Not-NULL-Value statement of the database
 XString
 SQLInfoInformix::GetKEYWORDStatementNVL(XString& p_test,XString& p_isnull) const
 {
-  return XString("NVL(") + p_test + "," + p_isnull + ")";
+  return XString(_T("NVL(")) + p_test + "," + p_isnull + _T(")");
 }
 
 // Gets the RDBMS definition of the datatype
@@ -303,14 +324,14 @@ XString
 SQLInfoInformix::GetKEYWORDCurrentUser() const
 {
   // 'USER' and 'CURRENT_USER' are both valid
-  return "USER";
+  return _T("USER");
 }
 
 // Connects to a default schema in the database/instance
 XString
-SQLInfoInformix::GetSQLDefaultSchema(XString /*p_schema*/) const
+SQLInfoInformix::GetSQLDefaultSchema(XString /*p_user*/,XString /*p_schema*/) const
 {
-  return "";
+  return _T("");
 }
 
 // Gets the construction for inline generating a key within an INSERT statement
@@ -318,7 +339,7 @@ XString
 SQLInfoInformix::GetSQLNewSerial(XString /*p_table*/, XString /*p_sequence*/) const
 {
   // Insert a zero in an SERIAL column
-  return "0";
+  return _T("0");
 }
 
 // Gets the construction / select for generating a new serial identity
@@ -326,34 +347,41 @@ XString
 SQLInfoInformix::GetSQLGenerateSerial(XString p_table) const
 {
   // Is generated by the database type SERIAL
-  return "0";
+  return _T("0");
+}
+
+XString
+SQLInfoInformix::GetSQLGenerateSequence(XString p_sequence) const
+{
+  // Not supported by MS-Access
+  return _T("");
 }
 
 // Gets the construction / select for the resulting effective generated serial
 XString 
 SQLInfoInformix::GetSQLEffectiveSerial(XString p_identity) const
 {
-  return "SELECT DBINFO('sqlca.sqlerrd1')\n"
-         "  FROM systables WHERE tabid = 1";
+  return _T("SELECT DBINFO('sqlca.sqlerrd1')\n")
+         _T("  FROM systables WHERE tabid = 1");
 }
 
 // Gets the sub transaction commands
 XString
 SQLInfoInformix::GetSQLStartSubTransaction(XString p_savepointName) const
 {
-  return XString("SAVEPOINT ") + p_savepointName;
+  return XString(_T("SAVEPOINT ")) + p_savepointName;
 }
 
 XString
 SQLInfoInformix::GetSQLCommitSubTransaction(XString p_savepointName) const
 {
-  return XString("COMMIT TRANSACTION ") + p_savepointName;
+  return XString(_T("COMMIT TRANSACTION ")) + p_savepointName;
 }
 
 XString
 SQLInfoInformix::GetSQLRollbackSubTransaction(XString p_savepointName) const
 {
-  return XString("ROLLBACK TO SAVEPOINT ") + p_savepointName;
+  return XString(_T("ROLLBACK TO SAVEPOINT ")) + p_savepointName;
 }
 
 // FROM-Part for a query to select only 1 (one) record / or empty!
@@ -361,16 +389,16 @@ XString
 SQLInfoInformix::GetSQLFromDualClause() const
 {
   // Systables entry in systables is guaranteed to always be there!
-  return " FROM systables WHERE tabid = 1";
+  return _T(" FROM systables WHERE tabid = 1");
 }
 
 // Get SQL to lock  a table 
 XString
-SQLInfoInformix::GetSQLLockTable(XString /*p_schema*/, XString p_tablename, bool p_exclusive) const
+SQLInfoInformix::GetSQLLockTable(XString /*p_schema*/, XString p_tablename,bool p_exclusive,int /*p_waittime*/) const
 {
-  XString query = "LOCK TABLE " + p_tablename + " IN ";
-  query += p_exclusive ? "EXCLUSIVE" : "SHARE";
-  query += " MODE";
+  XString query = _T("LOCK TABLE ") + p_tablename + _T(" IN ");
+  query += p_exclusive ? _T("EXCLUSIVE") : _T("SHARE");
+  query += _T(" MODE");
   return query;
 }
 
@@ -379,9 +407,9 @@ XString
 SQLInfoInformix::GetSQLOptimizeTable(XString /*p_schema*/,XString p_tablename) const
 {
   XString optim;
-  optim = "UPDATE STATISTICS LOW  FOR TABLE " + p_tablename + " DROP DISTRIBUTIONS;\n"
-          "<@>\n"
-          "UPDATE STATISTICS HIGH FOR TABLE " + p_tablename + ";\n";
+  optim = _T("UPDATE STATISTICS LOW  FOR TABLE ") + p_tablename + _T(" DROP DISTRIBUTIONS;\n")
+          _T("<@>\n")
+          _T("UPDATE STATISTICS HIGH FOR TABLE ") + p_tablename + _T(";\n");
   return optim;
 }
 
@@ -389,19 +417,42 @@ SQLInfoInformix::GetSQLOptimizeTable(XString /*p_schema*/,XString p_tablename) c
 XString
 SQLInfoInformix::GetSQLTopNRows(XString p_sql,int p_top,int p_skip /*= 0*/) const
 {
-  if(p_top > 0 && p_sql.Find("SELECT ") == 0)
+  if(p_top > 0 && p_sql.Find(_T("SELECT ")) == 0)
   {
     // INFORMIX: "SELECT [SKIP <skip>] FIRST <top> ....
-    XString selectFirst("SELECT ");
+    XString selectFirst(_T("SELECT "));
     if(p_skip)
     {
-      selectFirst.AppendFormat("SKIP %d ",p_skip);
+      selectFirst.AppendFormat(_T("SKIP %d "),p_skip);
     }
-    selectFirst.AppendFormat("FIRST %d ",p_top);
+    selectFirst.AppendFormat(_T("FIRST %d "),p_top);
 
-    p_sql.Replace("SELECT ",selectFirst);
+    p_sql.Replace(_T("SELECT "),selectFirst);
   }
   return p_sql;
+}
+
+// Expand a SELECT with an 'FOR UPDATE' lock clause
+XString
+SQLInfoInformix::GetSelectForUpdateTableClause(unsigned /*p_lockWaitTime*/) const
+{
+  return "";
+}
+
+XString
+SQLInfoInformix::GetSelectForUpdateTrailer(XString p_select,unsigned /*p_lockWaitTime*/) const
+{
+  return p_select + "\nFOR UPDATE";
+}
+
+// Query to perform a keep alive ping
+XString
+SQLInfoInformix::GetPing() const
+{
+  // Getting the time does a ping
+  return _T("SELECT current_timestamp\n")
+         _T("  FROM systables\n")
+         _T(" WHERE tabid = 1");
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -415,7 +466,7 @@ XString
 SQLInfoInformix::GetSQLString(const XString& p_string) const
 {
   XString str = p_string;
-  str.Replace("'","''");
+  str.Replace(_T("'"),_T("''"));
   XString kwoot = GetKEYWORDQuoteCharacter();
   return kwoot + str + kwoot;
 }
@@ -427,7 +478,7 @@ SQLInfoInformix::GetSQLDateString(int p_year,int p_month,int p_day) const
   // Informix used to be depended on the DBFORMAT parameter
   // This form is independent of it's setting!
   XString dateString;
-  dateString.Format("DATETIME(%04d-%02d-%02d) YEAR TO DAY",p_year,p_month,p_day);
+  dateString.Format(_T("DATETIME(%04d-%02d-%02d) YEAR TO DAY"),p_year,p_month,p_day);
   return dateString;
 }
 
@@ -436,7 +487,7 @@ XString
 SQLInfoInformix::GetSQLTimeString(int p_hour,int p_minute,int p_second) const
 {
   XString retval;
-  retval.Format("DATETIME (%02d:%02d:%02d) HOUR TO SECOND",p_hour,p_minute,p_second);
+  retval.Format(_T("DATETIME (%02d:%02d:%02d) HOUR TO SECOND"),p_hour,p_minute,p_second);
   return retval;
 }
 
@@ -447,7 +498,7 @@ SQLInfoInformix::GetSQLDateTimeString(int p_year,int p_month,int p_day,int p_hou
   // Informix used to be depended on the DBFORMAT parameter
   // This form is independent of it's setting!
   XString string;
-  string.Format("DATETIME(%04d-%02d-%02d %02d:%02d:%02d) YEAR TO SECOND"
+  string.Format(_T("DATETIME(%04d-%02d-%02d %02d:%02d:%02d) YEAR TO SECOND")
                 ,p_day,p_month,p_year
                 ,p_hour,p_minute,p_second);
   return string;
@@ -457,7 +508,7 @@ SQLInfoInformix::GetSQLDateTimeString(int p_year,int p_month,int p_day,int p_hou
 XString
 SQLInfoInformix::GetSQLDateTimeBoundString() const
 {
-  return "TO_DATE(?,'%d-%m-%Y %H:%M:%S')";
+  return _T("TO_DATE(?,'%d-%m-%Y %H:%M:%S')");
 }
 
 // Stripped data for the parameter binding
@@ -465,10 +516,30 @@ XString
 SQLInfoInformix::GetSQLDateTimeStrippedString(int p_year,int p_month,int p_day,int p_hour,int p_minute,int p_second) const
 {
   XString string;
-  string.Format("%04d-%02d-%02d %02d:%02d:%02d"
+  string.Format(_T("%04d-%02d-%02d %02d:%02d:%02d")
                 ,p_day,p_month,p_year
                 ,p_hour,p_minute,p_second);
   return string;
+}
+
+// Makes an catalog identifier string (possibly quoted on both sides)
+XString
+SQLInfoInformix::GetSQLDDLIdentifier(XString p_identifier) const
+{
+  return p_identifier;
+}
+
+// Get the name of a temp table (local temporary or global temporary)
+XString
+SQLInfoInformix::GetTempTablename(XString /*p_schema*/,XString p_tablename,bool /*p_local*/) const
+{
+  return p_tablename;
+}
+
+// Changes to parameters before binding to an ODBC HSTMT handle
+void
+SQLInfoInformix::DoBindParameterFixup(SQLSMALLINT& /*p_dataType*/,SQLSMALLINT& /*p_sqlDatatype*/,SQLULEN& /*p_columnSize*/,SQLSMALLINT& /*p_scale*/,SQLLEN& /*p_bufferSize*/,SQLLEN* /*p_indicator*/) const
+{
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -476,6 +547,7 @@ SQLInfoInformix::GetSQLDateTimeStrippedString(int p_year,int p_month,int p_day,i
 // CATALOG
 // o GetCATALOG<Object[s]><Function>
 //   Objects
+//   - Catalog
 //   - Table
 //   - Column
 //   - Index
@@ -502,7 +574,25 @@ XString
 SQLInfoInformix::GetCATALOGMetaTypes(int p_type) const
 {
   UNREFERENCED_PARAMETER(p_type);
-  return "";
+  return _T("");
+}
+
+XString
+SQLInfoInformix::GetCATALOGDefaultCharset() const
+{
+  return _T("iso-8859-1");
+}
+
+XString
+SQLInfoInformix::GetCATALOGDefaultCharsetNCV() const
+{
+  return _T("UTF-16");
+}
+
+XString
+SQLInfoInformix::GetCATALOGDefaultCollation() const
+{
+  return _T("-");
 }
 
 // Get SQL to check if a table already exists in the database
@@ -511,9 +601,9 @@ SQLInfoInformix::GetCATALOGTableExists(XString& p_schema,XString& p_tablename) c
 {
   p_schema.Empty(); // Do not bind as a parameter
   p_tablename.MakeLower();
-  XString query = "SELECT count(*)\n"
-                  "  FROM systables\n"
-                  " WHERE tabname = ?";
+  XString query = _T("SELECT count(*)\n")
+                  _T("  FROM systables\n")
+                  _T(" WHERE tabname = ?");
   return query;
 }
 
@@ -527,7 +617,7 @@ XString
 SQLInfoInformix::GetCATALOGTableAttributes(XString& /*p_schema*/,XString& /*p_tablename*/) const
 {
   // Getting the temp table status
-  return "";
+  return _T("");
 }
 
 XString
@@ -535,52 +625,52 @@ SQLInfoInformix::GetCATALOGTableSynonyms(XString& p_schema,XString& p_tablename)
 {
   p_schema.MakeLower();
   p_tablename.MakeLower();
-  XString sql = "SELECT Trim(DBINFO('dbname')) AS synonym_catalog\n"
-                "      ,Trim(tab.owner)   AS synonym_schema\n"
-                "      ,Trim(tab.tabname) AS synonym_table\n"
-                "      ,'SYNONYM'         AS object_type\n"
-                "      ,''                AS remarks\n"
-                "      ,Trim(tab.owner) || '.' || Trim(tab.tabname) AS fullname\n"
-                "      ,''                AS storage\n"
-                "      ,0                 AS temporary\n"
-                "  FROM systables tab\n"
-                " WHERE tabtype = 'S'\n";
+  XString sql = _T("SELECT Trim(DBINFO('dbname')) AS synonym_catalog\n"
+                   "      ,Trim(tab.owner)   AS synonym_schema\n"
+                   "      ,Trim(tab.tabname) AS synonym_table\n"
+                   "      ,'SYNONYM'         AS object_type\n"
+                   "      ,''                AS remarks\n"
+                   "      ,Trim(tab.owner) || '.' || Trim(tab.tabname) AS fullname\n"
+                   "      ,''                AS storage\n"
+                   "      ,0                 AS temporary\n"
+                   "  FROM systables tab\n"
+                   " WHERE tabtype = 'S'\n");
   if(!p_schema.IsEmpty())
   {
-    sql += "   AND owner = ?\n";
+    sql += _T("   AND owner = ?\n");
   }
   if(!p_tablename.IsEmpty())
   {
-    sql += "   and tabname ";
-    sql += p_tablename.Find('%') >= 0 ? "LIKE" : "=";
-    sql += " ?\n";
+    sql += _T("   and tabname ");
+    sql += p_tablename.Find('%') >= 0 ? _T("LIKE") : _T("=");
+    sql += _T(" ?\n");
   }
-  sql += " ORDER BY 1,2,3";
+  sql += _T(" ORDER BY 1,2,3");
   return sql;
 }
 
 XString
 SQLInfoInformix::GetCATALOGTableCatalog(XString& /*p_schema*/,XString& /*p_tablename*/) const
 {
-  return "";
+  return _T("");
 }
 
 XString
 SQLInfoInformix::GetCATALOGTableCreate(MetaTable& p_table,MetaColumn& /*p_column*/) const
 {
-  XString sql = "CREATE ";
+  XString sql = _T("CREATE ");
   if (p_table.m_temporary)
   {
-    sql += "TEMPORARY ";
+    sql += _T("TEMPORARY ");
   }
-  sql += "TABLE " + p_table.m_table;
+  sql += _T("TABLE ") + p_table.m_table;
   return sql;
 }
 
 XString
 SQLInfoInformix::GetCATALOGTableCreatePostfix(MetaTable& /*p_table*/,MetaColumn& /*p_column*/) const
 {
-  return "";
+  return _T("");
 }
 
 // Rename a database table 
@@ -588,26 +678,26 @@ XString
 SQLInfoInformix::GetCATALOGTableRename(XString /*p_schema*/,XString p_tablename,XString p_newname) const
 {
   // Beware: 'TABLE' keyword in the statement
-  XString sql("RENAME TABLE " + p_tablename + " TO " + p_newname);
+  XString sql(_T("RENAME TABLE ") + p_tablename + _T(" TO ") + p_newname);
   return sql;
 }
 
 XString
 SQLInfoInformix::GetCATALOGTableDrop(XString /*p_schema*/,XString p_tablename,bool p_ifExist /*= false*/,bool p_restrict /*= false*/,bool p_cascade /*= false*/) const
 {
-  XString sql("DROP TABLE ");
+  XString sql(_T("DROP TABLE "));
   if(p_ifExist)
   {
-    sql += "IF EXISTS ";
+    sql += _T("IF EXISTS ");
   }
   sql += p_tablename;
   if(p_restrict)
   {
-    sql += " RESTRICT";
+    sql += _T(" RESTRICT");
   }
   else if (p_cascade)
   {
-    sql += " CASCADE";
+    sql += _T(" CASCADE");
   }
   return sql;
 }
@@ -618,19 +708,19 @@ SQLInfoInformix::GetCATALOGTableDrop(XString /*p_schema*/,XString p_tablename,bo
 XString 
 SQLInfoInformix::GetCATALOGTemptableCreate(XString /*p_schema*/,XString p_tablename,XString p_select) const
 {
-  return p_select + " INTO TEMP " + p_tablename + " WITH NO LOG";
+  return p_select + _T(" INTO TEMP ") + p_tablename + _T(" WITH NO LOG");
 }
 
 XString 
 SQLInfoInformix::GetCATALOGTemptableIntoTemp(XString /*p_schema*/,XString p_tablename,XString p_select) const
 {
-  return p_select + " INTO TEMP " + p_tablename;
+  return p_select + _T(" INTO TEMP ") + p_tablename;
 }
 
 XString 
 SQLInfoInformix::GetCATALOGTemptableDrop(XString /*p_schema*/,XString p_tablename) const
 {
-  return "DROP TABLE " + p_tablename;
+  return _T("DROP TABLE ") + p_tablename;
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -641,12 +731,12 @@ SQLInfoInformix::GetCATALOGColumnExists(XString p_schema,XString p_tablename,XSt
 {
   p_tablename.MakeLower();
   p_columnname.MakeLower();
-  XString query = "SELECT count(*)\n"
-                  "  FROM systables  tab\n"
-                  "      ,syscolumns col\n"
-                  " WHERE tab.tabid = col.tabid\n"
-                  "   AND tab.tabname = '" + p_tablename  + "'\n"
-                  "   AND col.colname = '" + p_columnname + "'";
+  XString query = _T("SELECT count(*)\n")
+                  _T("  FROM systables  tab\n")
+                  _T("      ,syscolumns col\n")
+                  _T(" WHERE tab.tabid = col.tabid\n")
+                  _T("   AND tab.tabname = '") + p_tablename  + _T("'\n")
+                  _T("   AND col.colname = '") + p_columnname + _T("'");
   return query;
 }
 
@@ -654,21 +744,21 @@ XString
 SQLInfoInformix::GetCATALOGColumnList(XString& /*p_schema*/,XString& /*p_tablename*/) const
 {
   // Standard ODBC driver suffices
-  return "";
+  return _T("");
 }
 
 XString 
 SQLInfoInformix::GetCATALOGColumnAttributes(XString& /*p_schema*/,XString& /*p_tablename*/,XString& /*p_columnname*/) const
 {
   // Standard ODBC driver suffices
-  return "";
+  return _T("");
 }
 
 XString 
 SQLInfoInformix::GetCATALOGColumnCreate(MetaColumn& p_column) const
 {
-  XString sql = "ALTER TABLE "  + p_column.m_table  + "\n"
-                "  ADD COLUMN " + p_column.m_column + " " + p_column.m_typename;
+  XString sql = _T("ALTER TABLE ")  + p_column.m_table  + _T("\n")
+                _T("  ADD COLUMN ") + p_column.m_column + _T(" ") + p_column.m_typename;
   p_column.GetPrecisionAndScale(sql);
   p_column.GetNullable(sql);
   // m_default  not used
@@ -682,8 +772,8 @@ XString
 SQLInfoInformix::GetCATALOGColumnAlter(MetaColumn& p_column) const
 {
   // The MODIFY keyword is a-typical
-  XString sql = "ALTER  TABLE  " + p_column.m_table  + "\n"
-                "MODIFY COLUMN " + p_column.m_column + " " + p_column.m_typename;
+  XString sql = _T("ALTER  TABLE  ") + p_column.m_table  + _T("\n")
+                _T("MODIFY COLUMN ") + p_column.m_column + _T(" ") + p_column.m_typename;
   p_column.GetPrecisionAndScale(sql);
   p_column.GetNullable(sql);
   p_column.GetDefault(sql);
@@ -696,16 +786,16 @@ SQLInfoInformix::GetCATALOGColumnAlter(MetaColumn& p_column) const
 XString 
 SQLInfoInformix::GetCATALOGColumnRename(XString /*p_schema*/,XString p_tablename,XString p_columnname,XString p_newname,XString /*p_datatype*/) const
 {
-  XString sql("ALTER  TABLE  " + p_tablename + "\n"
-              "RENAME " + p_columnname + " TO " + p_newname + "\n");
+  XString sql(_T("ALTER  TABLE  ") + p_tablename + _T("\n")
+              _T("RENAME ") + p_columnname + _T(" TO ") + p_newname + _T("\n"));
   return sql;
 }
 
 XString
 SQLInfoInformix::GetCATALOGColumnDrop(XString p_schema,XString p_tablename,XString p_columnname) const
 {
-  XString sql("ALTER TABLE "  + p_tablename + "\n"
-              " DROP COLUMN " + p_columnname);
+  XString sql(_T("ALTER TABLE ")  + p_tablename + _T("\n")
+              _T(" DROP COLUMN ") + p_columnname);
   return sql;
 }
 
@@ -716,7 +806,7 @@ SQLInfoInformix::GetCATALOGColumnDrop(XString p_schema,XString p_tablename,XStri
 XString
 SQLInfoInformix::GetCATALOGIndexExists(XString p_schema,XString p_tablename,XString p_indexname) const
 {
-  return "";
+  return _T("");
 }
 
 XString
@@ -732,28 +822,28 @@ SQLInfoInformix::GetCATALOGIndexList(XString& p_schema,XString& p_tablename)   c
   {
     if(!query.IsEmpty())
     {
-      query += "\nUNION ALL\n";
+      query += _T("\nUNION ALL\n");
     }
-    query.AppendFormat("SELECT idx.idxname AS index_name\n"
-                       "      ,col.colname\n"
-                       "      ,%d   AS index_column\n"
-                       "      ,CASE WHEN idx.idxtype = 'D' THEN 0\n"
-                       "            WHEN idx.idxtype = 'U' THEN 1\n"
-                       "            ELSE 0 END AS is_unique\n"
-                       "      ,CASE WHEN idx.part%d < 0 THEN 1\n"
-                       "            ELSE 0 END AS descending\n"
-                       "  FROM sysindexes idx\n"
-                       "      ,systables  tab\n"
-                       "      ,syscolumns col\n"
-                       " WHERE tab.tabid = idx.tabid\n"
-                       "   AND tab.tabname = '%s'\n"
-                       "   AND col.tabid   = idx.tabid\n"
-                       "   AND col.colno   = abs(idx.part%d)\n"
-                       "   AND idx.idxname[1] != ' '"
-                       ,ind
-                       ,ind
-                       ,p_tablename.GetString()
-                       ,ind);
+    query.AppendFormat(_T("SELECT idx.idxname AS index_name\n"
+                          "      ,col.colname\n"
+                          "      ,%d   AS index_column\n"
+                          "      ,CASE WHEN idx.idxtype = 'D' THEN 0\n"
+                          "            WHEN idx.idxtype = 'U' THEN 1\n"
+                          "            ELSE 0 END AS is_unique\n"
+                          "      ,CASE WHEN idx.part%d < 0 THEN 1\n"
+                          "            ELSE 0 END AS descending\n"
+                          "  FROM sysindexes idx\n"
+                          "      ,systables  tab\n"
+                          "      ,syscolumns col\n"
+                          " WHERE tab.tabid = idx.tabid\n"
+                          "   AND tab.tabname = '%s'\n"
+                          "   AND col.tabid   = idx.tabid\n"
+                          "   AND col.colno   = abs(idx.part%d)\n"
+                          "   AND idx.idxname[1] != ' '")
+                          ,ind
+                          ,ind
+                          ,p_tablename.GetString()
+                          ,ind);
   }
 
   // Cannot use bounded parameters
@@ -764,11 +854,11 @@ SQLInfoInformix::GetCATALOGIndexList(XString& p_schema,XString& p_tablename)   c
 XString
 SQLInfoInformix::GetCATALOGIndexAttributes(XString& /*p_schema*/,XString& /*p_tablename*/,XString& /*p_indexname*/) const
 {
-  return "";
+  return _T("");
 }
 
 XString
-SQLInfoInformix::GetCATALOGIndexCreate(MIndicesMap& p_indices) const
+SQLInfoInformix::GetCATALOGIndexCreate(MIndicesMap& p_indices,bool /*p_duplicateNulls /*= false*/) const
 {
   // Get SQL to create an index for a table
   // CREATE [UNIQUE] INDEX [<schema>.]indexname ON [<schema>.]tablename(column [ASC|DESC] [,...]);
@@ -778,43 +868,43 @@ SQLInfoInformix::GetCATALOGIndexCreate(MIndicesMap& p_indices) const
     if(index.m_position == 1)
     {
       // New index
-      query = "CREATE ";
+      query = _T("CREATE ");
       if(index.m_nonunique == false)
       {
-        query += "UNIQUE ";
+        query += _T("UNIQUE ");
       }
-      query += "INDEX ";
+      query += _T("INDEX ");
       if(!index.m_schemaName.IsEmpty())
       {
-        query += index.m_schemaName + ".";
+        query += index.m_schemaName + _T(".");
       }
       query += index.m_indexName;
-      query += " ON ";
+      query += _T(" ON ");
       if(!index.m_schemaName.IsEmpty())
       {
-        query += index.m_schemaName + ".";
+        query += index.m_schemaName + _T(".");
       }
       query += index.m_tableName;
-      query += "(";
+      query += _T("(");
     }
     else
     {
-      query += ",";
+      query += _T(",");
     }
     query += index.m_columnName;
-    if(index.m_ascending != "A")
+    if(index.m_ascending != _T("A"))
     {
-      query += " DESC";
+      query += _T(" DESC");
     }
   }
-  query += ")";
+  query += _T(")");
   return query;
 }
 
 XString
 SQLInfoInformix::GetCATALOGIndexDrop(XString /*p_schema*/,XString /*p_tablename*/,XString p_indexname) const
 {
-  XString sql = "DROP INDEX " + p_indexname;
+  XString sql = _T("DROP INDEX ") + p_indexname;
   return sql;
 }
 
@@ -822,7 +912,7 @@ SQLInfoInformix::GetCATALOGIndexDrop(XString /*p_schema*/,XString /*p_tablename*
 XString
 SQLInfoInformix::GetCATALOGIndexFilter(MetaIndex& /*p_index*/) const
 {
-  return "";
+  return _T("");
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -832,12 +922,12 @@ XString
 SQLInfoInformix::GetCATALOGPrimaryExists(XString /*p_schema*/,XString p_tablename) const
 {
   p_tablename.MakeLower();
-  XString query = "SELECT COUNT(*)\n"
-                  "  FROM systables      tab\n"
-                  "      ,sysconstraints con\n"
-                  " WHERE tab.tabid      = con.tabid\n"
-                  "   AND tab.tabname    = '" + p_tablename + "'\n"
-                  "   AND con.constrtype = 'P'";
+  XString query = _T("SELECT COUNT(*)\n"
+                     "  FROM systables      tab\n"
+                     "      ,sysconstraints con\n"
+                     " WHERE tab.tabid      = con.tabid\n"
+                     "   AND tab.tabname    = '") + p_tablename + _T("'\n"
+                     "   AND con.constrtype = 'P'");
   return query;
 }
 
@@ -855,13 +945,13 @@ SQLInfoInformix::GetCATALOGPrimaryAttributes(XString& /*p_schema*/,XString& /*p_
 //                 "   AND con.tabid      = tab.tabid\n"
 //                 "   AND tab.tabname    = '" + p_tablename + "'";
 //   return sql;
-  return "";
+  return _T("");
 }
 
 XString
 SQLInfoInformix::GetCATALOGPrimaryCreate(MPrimaryMap& p_primaries) const
 {
-  XString query("ALTER TABLE ");
+  XString query(_T("ALTER TABLE "));
   XString constraintName;
 
   for(auto& prim : p_primaries)
@@ -870,20 +960,20 @@ SQLInfoInformix::GetCATALOGPrimaryCreate(MPrimaryMap& p_primaries) const
     {
       if(!prim.m_schema.IsEmpty())
       {
-        query += prim.m_schema + ".";
+        query += prim.m_schema + _T(".");
       }
-      query += prim.m_table + "\n";
-      query += "  ADD CONSTRAINT PRIMARY KEY (";
+      query += prim.m_table + _T("\n");
+      query += _T("  ADD CONSTRAINT PRIMARY KEY (");
     }
     else
     {
-      query += ",";
+      query += _T(",");
     }
     query += prim.m_columnName;
     constraintName = prim.m_constraintName;
   }
-  query += ")\n";
-  query += "      CONSTRAINT " + constraintName;
+  query += _T(")\n");
+  query += _T("      CONSTRAINT ") + constraintName;
 
   return query;
 }
@@ -891,8 +981,8 @@ SQLInfoInformix::GetCATALOGPrimaryCreate(MPrimaryMap& p_primaries) const
 XString
 SQLInfoInformix::GetCATALOGPrimaryDrop(XString /*p_schema*/,XString p_tablename,XString p_constraintname) const
 {
-  XString sql("ALTER TABLE " + p_tablename + "\n"
-              " DROP CONSTRAINT " + p_constraintname);
+  XString sql(_T("ALTER TABLE ") + p_tablename + _T("\n")
+              _T(" DROP CONSTRAINT ") + p_constraintname);
   return sql;
 }
 
@@ -906,15 +996,15 @@ SQLInfoInformix::GetCATALOGForeignExists(XString /*p_schema*/,XString p_tablenam
   p_constraintname.MakeLower();
 
   XString sql;
-  sql.Format("SELECT COUNT(*)\n"
-             "  FROM sysconstraints con\n"
-             "      ,systables      tab\n"
-             " WHERE tab.tabid      = con.tabid\n"
-             "   AND con.constrtype = 'R'\n"
-             "   AND tab.tablename  = '%s'\n"
-             "   AND con.constrname = '%s'"
-            ,p_tablename.GetString()
-            ,p_constraintname.GetString());
+  sql.Format(_T("SELECT COUNT(*)\n"
+                "  FROM sysconstraints con\n"
+                "      ,systables      tab\n"
+                " WHERE tab.tabid      = con.tabid\n"
+                "   AND con.constrtype = 'R'\n"
+                "   AND tab.tablename  = '%s'\n"
+                "   AND con.constrname = '%s'")
+               ,p_tablename.GetString()
+               ,p_constraintname.GetString());
   return sql;
 }
 
@@ -942,103 +1032,103 @@ SQLInfoInformix::GetCATALOGForeignAttributes(XString& p_schema
   for(int ind = 1;ind <= p_maxColumns; ++ind)
   {
     XString part;
-    part.Format("SELECT trim(DBINFO('dbname')) AS primary_catalog_name\n"
-                "      ,trim(pri.owner)        AS primary_schema_name\n"
-                "      ,trim(pri.tabname)      AS primary_table_name\n"
-                "      ,trim(DBINFO('dbname')) AS foreign_catalog_name\n"
-                "      ,trim(tab.owner)        AS foreign_schema_name\n"
-                "      ,trim(tab.tabname)      AS foreign_table_name\n"
-                "      ,trim(pcn.constrname)   AS primary_key_constraint\n"
-                "      ,trim(con.constrname)   AS foreign_key_constraint\n"
-                "      ,%d                     AS key_sequence\n"
-                "      ,trim(pcl.colname)      AS primary_column_name\n"
-                "      ,trim(col.colname)      AS foreign_column_name\n"
-                "      ,CASE WHEN ref.updrule = 'R' THEN 1\n"
-                "            WHEN ref.updrule = 'C' THEN 0\n"
-                "            WHEN ref.updrule = 'N' THEN 2\n"
-                "            WHEN ref.updrule = 'D' THEN 4\n"
-                "            ELSE 0\n"
-                "       END  AS update_rule\n"
-                "      ,CASE WHEN ref.delrule = 'R' THEN 1\n"
-                "            WHEN ref.delrule = 'C' THEN 0\n"
-                "            WHEN ref.delrule = 'N' THEN 2\n"
-                "            WHEN ref.delrule = 'D' THEN 4\n"
-                "            ELSE 0\n"
-                "       END  AS delete_rule\n"
-                "      ,1    AS deferrable\n"
-                "      ,CASE WHEN ref.matchtype = 'N' THEN 0\n"
-                "            WHEN ref.matchtype = 'P' THEN 1\n"
-                "            ELSE 0\n"
-                "       END  AS match_option\n"
-                "      ,0    AS initially_deferred\n"
-                "      ,1    AS enabled\n"
-                "  FROM sysconstraints con\n"
-                "      ,systables      tab\n"
-                "      ,syscolumns     col\n"
-                "      ,sysreferences  ref\n"
-                "      ,systables      pri\n"
-                "      ,sysindexes     idx\n"
-                "      ,sysconstraints pcn\n"
-                "      ,sysindexes     pix\n"
-                "      ,syscolumns     pcl\n"
-                " WHERE tab.tabid      = con.tabid\n"
-                "   AND con.constrid   = ref.constrid\n"
-                "   AND ref.ptabid     = pri.tabid\n"
-                "   AND con.idxname    = idx.idxname\n"
-                "   AND col.tabid      = tab.tabid\n"
-                "   AND col.colno      = idx.part%d\n"
-                "   AND pcn.tabid      = pri.tabid\n"
-                "   AND pix.idxname    = pcn.idxname\n"
-                "   AND pcl.tabid      = pri.tabid\n"
-                "   AND pcl.colno      = pix.part%d\n"
-                "   and con.constrtype = 'R'\n"
-                "   AND pcn.constrtype = 'P'\n"
-               ,ind
-               ,ind
-               ,ind);
+    part.Format(_T("SELECT trim(DBINFO('dbname')) AS primary_catalog_name\n"
+                   "      ,trim(pri.owner)        AS primary_schema_name\n"
+                   "      ,trim(pri.tabname)      AS primary_table_name\n"
+                   "      ,trim(DBINFO('dbname')) AS foreign_catalog_name\n"
+                   "      ,trim(tab.owner)        AS foreign_schema_name\n"
+                   "      ,trim(tab.tabname)      AS foreign_table_name\n"
+                   "      ,trim(pcn.constrname)   AS primary_key_constraint\n"
+                   "      ,trim(con.constrname)   AS foreign_key_constraint\n"
+                   "      ,%d                     AS key_sequence\n"
+                   "      ,trim(pcl.colname)      AS primary_column_name\n"
+                   "      ,trim(col.colname)      AS foreign_column_name\n"
+                   "      ,CASE WHEN ref.updrule = 'R' THEN 1\n"
+                   "            WHEN ref.updrule = 'C' THEN 0\n"
+                   "            WHEN ref.updrule = 'N' THEN 2\n"
+                   "            WHEN ref.updrule = 'D' THEN 4\n"
+                   "            ELSE 0\n"
+                   "       END  AS update_rule\n"
+                   "      ,CASE WHEN ref.delrule = 'R' THEN 1\n"
+                   "            WHEN ref.delrule = 'C' THEN 0\n"
+                   "            WHEN ref.delrule = 'N' THEN 2\n"
+                   "            WHEN ref.delrule = 'D' THEN 4\n"
+                   "            ELSE 0\n"
+                   "       END  AS delete_rule\n"
+                   "      ,1    AS deferrable\n"
+                   "      ,CASE WHEN ref.matchtype = 'N' THEN 0\n"
+                   "            WHEN ref.matchtype = 'P' THEN 1\n"
+                   "            ELSE 0\n"
+                   "       END  AS match_option\n"
+                   "      ,0    AS initially_deferred\n"
+                   "      ,1    AS enabled\n"
+                   "  FROM sysconstraints con\n"
+                   "      ,systables      tab\n"
+                   "      ,syscolumns     col\n"
+                   "      ,sysreferences  ref\n"
+                   "      ,systables      pri\n"
+                   "      ,sysindexes     idx\n"
+                   "      ,sysconstraints pcn\n"
+                   "      ,sysindexes     pix\n"
+                   "      ,syscolumns     pcl\n"
+                   " WHERE tab.tabid      = con.tabid\n"
+                   "   AND con.constrid   = ref.constrid\n"
+                   "   AND ref.ptabid     = pri.tabid\n"
+                   "   AND con.idxname    = idx.idxname\n"
+                   "   AND col.tabid      = tab.tabid\n"
+                   "   AND col.colno      = idx.part%d\n"
+                   "   AND pcn.tabid      = pri.tabid\n"
+                   "   AND pix.idxname    = pcn.idxname\n"
+                   "   AND pcl.tabid      = pri.tabid\n"
+                   "   AND pcl.colno      = pix.part%d\n"
+                   "   and con.constrtype = 'R'\n"
+                   "   AND pcn.constrtype = 'P'\n")
+                   ,ind
+                   ,ind
+                   ,ind);
     if(!p_schema.IsEmpty())
     {
       if(p_referenced)
       {
-        part += "   AND pri.owner      = '" + p_schema + "'\n";
+        part += _T("   AND pri.owner      = '") + p_schema + _T("'\n");
       }
       else
       {
-        part += "   AND tab.owner      = '" + p_schema + "'\n";
+        part += _T("   AND tab.owner      = '") + p_schema + _T("'\n");
       }
     }
     if(!p_tablename.IsEmpty())
     {
       if(p_referenced)
       {
-        part += "   AND pri.tabname    = '" + p_tablename + "'\n";
+        part += _T("   AND pri.tabname    = '") + p_tablename + _T("'\n");
       }
       else
       {
-        part += "   AND tab.tabname    = '" + p_tablename + "'\n";
+        part += _T("   AND tab.tabname    = '") + p_tablename + _T("'\n");
       }
     }
     if(!p_constraint.IsEmpty())
     {
       if(p_referenced)
       {
-        part += "    AND pcn.constrname = '" + p_constraint + "'\n";
+        part += _T("    AND pcn.constrname = '") + p_constraint + _T("'\n");
       }
       else
       {
-        part += "    AND con.constrname = '" + p_constraint + "'\n";
+        part += _T("    AND con.constrname = '") + p_constraint + _T("'\n");
       }
     }
     // Add to the query
     if(!query.IsEmpty())
     {
-      query += "\nUNION ALL\n\n";
+      query += _T("\nUNION ALL\n\n");
     }
     query += part;
   }
 
   // Add ordering up to column number
-  query += " ORDER BY 1,2,3,4,5,6,7,8,9";
+  query += _T(" ORDER BY 1,2,3,4,5,6,7,8,9");
 
   // Do not bind as parameters
   p_schema.Empty();
@@ -1054,54 +1144,54 @@ SQLInfoInformix::GetCATALOGForeignCreate(MForeignMap& p_foreigns) const
   // Get first record
   MetaForeign& foreign = p_foreigns.front();
 
-  // Construct the correct tablename
+  // Construct the correct table name
   XString table(foreign.m_fkTableName);
   XString primary(foreign.m_pkTableName);
   if(!foreign.m_fkSchemaName.IsEmpty())
   {
-    table = foreign.m_fkSchemaName + "." + table;
+    table = foreign.m_fkSchemaName + _T(".") + table;
   }
   if(!foreign.m_pkSchemaName.IsEmpty())
   {
-    primary = foreign.m_pkSchemaName + "." + primary;
+    primary = foreign.m_pkSchemaName + _T(".") + primary;
   }
 
   // The base foreign key command
-  XString query = "ALTER TABLE " + table + "\n"
-                  "  ADD CONSTRAINT FOREIGN KEY (";
+  XString query = _T("ALTER TABLE ") + table + _T("\n")
+                  _T("  ADD CONSTRAINT FOREIGN KEY (");
 
   // Add the foreign key columns
   bool extra = false;
-  for(auto& key : p_foreigns)
+  for(const auto& key : p_foreigns)
   {
-    if(extra) query += ",";
+    if(extra) query += _T(",");
     query += key.m_fkColumnName;
     extra  = true;
   }
 
   // Add references primary table
-  query += ")\n      REFERENCES " + primary + "(";
+  query += _T(")\n      REFERENCES ") + primary + _T("(");
 
   // Add the primary key columns
   extra = false;
-  for(auto& key : p_foreigns)
+  for(const auto& key : p_foreigns)
   {
-    if(extra) query += ",";
+    if(extra) query +=_T( ",");
     query += key.m_pkColumnName;
     extra  = true;
   }
-  query += ")\n";
-  query += "      CONSTRAINT " + foreign.m_foreignConstraint;
+  query += _T(")\n");
+  query += _T("      CONSTRAINT ") + foreign.m_foreignConstraint;
 
   // Add all relevant options
   switch(foreign.m_deferrable)
   {
-    case SQL_INITIALLY_DEFERRED:  query += "\n      NOVALIDATE"; break;
+    case SQL_INITIALLY_DEFERRED:  query += _T("\n      NOVALIDATE"); break;
     default:                      break;
   }
   switch(foreign.m_deleteRule)
   {
-    case SQL_CASCADE: query += "\n      ON DELETE CASCADE"; break;
+    case SQL_CASCADE: query += _T("\n      ON DELETE CASCADE"); break;
     default:          // In essence: ON DELETE RESTRICT, but that's already the default
                       break;
   }
@@ -1114,27 +1204,27 @@ SQLInfoInformix::GetCATALOGForeignAlter(MForeignMap& p_original, MForeignMap& p_
   // Make sure we have both
   if (p_original.empty() || p_requested.empty())
   {
-    return "";
+    return _T("");
   }
 
-  MetaForeign& original = p_original.front();
-  MetaForeign& requested = p_requested.front();
+  const MetaForeign& original = p_original.front();
+  const MetaForeign& requested = p_requested.front();
 
   // Construct the correct tablename (NO schema)
   XString table(original.m_fkTableName);
 
   // The base foreign key command
-  XString query = "ALTER TABLE " + table + "\n"
-                  "  SET CONSTRAINTS " + original.m_foreignConstraint + "\n";
+  XString query = _T("ALTER TABLE ") + table + _T("\n")
+                  _T("  SET CONSTRAINTS ") + original.m_foreignConstraint + _T("\n");
 
   // Add all relevant options
   if (original.m_initiallyDeferred != requested.m_initiallyDeferred)
   {
-    query += requested.m_initiallyDeferred ? "DEFERRED" : "IMMEDIATE";
+    query += requested.m_initiallyDeferred ? _T("DEFERRED") : _T("IMMEDIATE");
   }
   else if (original.m_enabled != requested.m_enabled)
   {
-    query += requested.m_enabled ? "ENABLED" : "DISABLED";
+    query += requested.m_enabled ? _T("ENABLED") : _T("DISABLED");
   }
   return query;
 }
@@ -1142,9 +1232,74 @@ SQLInfoInformix::GetCATALOGForeignAlter(MForeignMap& p_original, MForeignMap& p_
 XString
 SQLInfoInformix::GetCATALOGForeignDrop(XString /*p_schema*/,XString p_tablename,XString p_constraintname) const
 {
-  XString sql("ALTER TABLE " + p_tablename + "\n"
-              " DROP CONSTRAINT " + p_constraintname);
+  XString sql(_T("ALTER TABLE ") + p_tablename + _T("\n")
+              _T(" DROP CONSTRAINT ") + p_constraintname);
   return sql;
+}
+
+//////////////////////////
+// All default constraints
+XString
+SQLInfoInformix::GetCATALOGDefaultExists(XString& /*p_schema*/,XString& /*p_tablename*/,XString& /*p_column*/) const
+{
+  return _T("");
+}
+
+XString
+SQLInfoInformix::GetCATALOGDefaultList(XString& /*p_schema*/,XString& /*p_tablename*/) const
+{
+  return _T("");
+}
+
+XString
+SQLInfoInformix::GetCATALOGDefaultAttributes(XString& /*p_schema*/,XString& /*p_tablename*/,XString& /*p_column*/) const
+{
+  return _T("");
+}
+
+XString
+SQLInfoInformix::GetCATALOGDefaultCreate(XString /*p_schema*/,XString /*p_tablename*/,XString /*p_constraint*/,XString /*p_column*/,XString /*p_code*/) const
+{
+  return _T("");
+}
+
+XString
+SQLInfoInformix::GetCATALOGDefaultDrop(XString /*p_schema*/,XString /*p_tablename*/,XString /*p_constraint*/) const
+{
+  return _T("");
+}
+
+/////////////////////////
+// All check constraints
+
+XString
+SQLInfoInformix::GetCATALOGCheckExists(XString  /*p_schema*/,XString  /*p_tablename*/,XString  /*p_constraint*/) const
+{
+  return _T("");
+}
+
+XString
+SQLInfoInformix::GetCATALOGCheckList(XString  /*p_schema*/,XString  /*p_tablename*/) const
+{
+  return _T("");
+}
+
+XString
+SQLInfoInformix::GetCATALOGCheckAttributes(XString  /*p_schema*/,XString  /*p_tablename*/,XString  /*p_constraint*/) const
+{
+  return _T("");
+}
+
+XString
+SQLInfoInformix::GetCATALOGCheckCreate(XString  /*p_schema*/,XString  /*p_tablename*/,XString  /*p_constraint*/,XString /*p_condition*/) const
+{
+  return _T("");
+}
+
+XString
+SQLInfoInformix::GetCATALOGCheckDrop(XString  /*p_schema*/,XString  /*p_tablename*/,XString  /*p_constraint*/) const
+{
+  return _T("");
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -1153,7 +1308,7 @@ SQLInfoInformix::GetCATALOGForeignDrop(XString /*p_schema*/,XString p_tablename,
 XString
 SQLInfoInformix::GetCATALOGTriggerExists(XString p_schema, XString p_tablename, XString p_triggername) const
 {
-  return "";
+  return _T("");
 }
 
 XString
@@ -1170,54 +1325,54 @@ SQLInfoInformix::GetCATALOGTriggerAttributes(XString& p_schema,XString& p_tablen
   p_tablename.MakeLower();
   p_triggername.MakeLower();
   XString sql;
-  sql = "SELECT Trim(DBINFO('dbname')) AS trigger_catalog\n"
-        "      ,Trim(tri.owner)        AS trigger_schema\n"
-        "      ,trim(tab.tabname)      AS trigger_table\n"
-        "      ,Trim(tri.trigname)     AS trigger_name\n"
-        "      ,''    AS remarks\n"
-        "      ,0     AS position\n"
-        "      ,0     AS before\n"
-        "      ,CASE tri.event WHEN 'I' THEN 1 ELSE 0 END AS trigger_insert\n"
-        "      ,CASE tri.event WHEN 'U' THEN 1 ELSE 0 END AS trigger_update\n"
-        "      ,CASE tri.event WHEN 'D' THEN 1 ELSE 0 END AS trigger_delete\n"
-        "      ,0     AS trigger_select\n"
-        "      ,0     AS trigger_session\n"
-        "      ,0     AS trigger_transaction\n"
-        "      ,0     AS trigger_rollback\n"
-        "      ,'old as ' || tri.old || ' new as ' || tri.new  AS trigger_referencing\n"
-        "      ,1     AS enabled\n"
-        "      ,'<@>' AS source\n"
-        "  FROM systriggers tri\n"
-        "      ,systables   tab\n"
-        " WHERE tab.tabid = tri.tabid\n";
+  sql = _T("SELECT Trim(DBINFO('dbname')) AS trigger_catalog\n"
+           "      ,Trim(tri.owner)        AS trigger_schema\n"
+           "      ,trim(tab.tabname)      AS trigger_table\n"
+           "      ,Trim(tri.trigname)     AS trigger_name\n"
+           "      ,''    AS remarks\n"
+           "      ,0     AS position\n"
+           "      ,0     AS before\n"
+           "      ,CASE tri.event WHEN 'I' THEN 1 ELSE 0 END AS trigger_insert\n"
+           "      ,CASE tri.event WHEN 'U' THEN 1 ELSE 0 END AS trigger_update\n"
+           "      ,CASE tri.event WHEN 'D' THEN 1 ELSE 0 END AS trigger_delete\n"
+           "      ,0     AS trigger_select\n"
+           "      ,0     AS trigger_session\n"
+           "      ,0     AS trigger_transaction\n"
+           "      ,0     AS trigger_rollback\n"
+           "      ,'old as ' || tri.old || ' new as ' || tri.new  AS trigger_referencing\n"
+           "      ,1     AS enabled\n"
+           "      ,'<@>' AS source\n"
+           "  FROM systriggers tri\n"
+           "      ,systables   tab\n"
+           " WHERE tab.tabid = tri.tabid\n");
   if(!p_schema.IsEmpty())
   {
-    sql += "   AND tri.owner = ?\n";
+    sql += _T("   AND tri.owner = ?\n");
   }
   if(!p_tablename.IsEmpty())
   {
-    sql += "   AND tab.tabname = ?\n";
+    sql += _T("   AND tab.tabname = ?\n");
   }
   if(!p_triggername.IsEmpty())
   {
-    sql += "   AND tri.trigname ";
-    sql += p_triggername.Find('%') >= 0 ? "LIKE" : "=";
-    sql += " ?\n";
+    sql += _T("   AND tri.trigname ");
+    sql += p_triggername.Find('%') >= 0 ? _T("LIKE") : _T("=");
+    sql += _T(" ?\n");
   }
-  sql += " ORDER BY 1,2,3,4";
+  sql += _T(" ORDER BY 1,2,3,4");
   return sql;
 }
 
 XString
 SQLInfoInformix::GetCATALOGTriggerCreate(MetaTrigger& /*p_trigger*/) const
 {
-  return "";
+  return _T("");
 }
 
 XString
 SQLInfoInformix::GetCATALOGTriggerDrop(XString p_schema, XString p_tablename, XString p_triggername) const
 {
-  return "";
+  return _T("");
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -1228,13 +1383,12 @@ SQLInfoInformix::GetCATALOGSequenceExists(XString p_schema, XString p_sequence) 
 {
   p_schema.MakeLower();
   p_sequence.MakeLower();
-  XString sql = "SELECT COUNT(*)\n"
-                "  FROM syssequences seq\n"
-                "      ,sysdomains   dom\n"
-                " WHERE dom.id    = seq.id\n"
-                "   AND dom.owner = '" + p_schema   + "'\n"
-                "   AND dom.name  = '" + p_sequence + "'\n";
-              //"   AND dom.type  = 3"; ??
+  XString sql = _T("SELECT COUNT(*)\n"
+                   "  FROM syssequences seq\n"
+                   "      ,sysdomains   dom\n"
+                   " WHERE dom.id    = seq.id\n"
+                   "   AND dom.owner = '") + p_schema   + _T("'\n"
+                   "   AND dom.name  = '") + p_sequence + _T("'\n");
   return sql;
 }
 
@@ -1249,28 +1403,28 @@ SQLInfoInformix::GetCATALOGSequenceAttributes(XString& p_schema,XString& p_seque
 {
   p_schema.MakeLower();
   p_sequence.MakeLower();
-  XString sql = "SELECT trim(DBINFO('dbname')) as catalog_name\n"
-                "      ,trim(tab.owner)        as schema_name\n"
-                "      ,trim(tab.tabname)      as sequence_name\n"
-                "      ,seq.start_val as current_value\n"
-                "      ,0             as minimal_value\n"
-                "      ,seq.inc_val   as increment\n"
-                "      ,seq.cache     as cache\n"
-                "      ,seq.cycle     as cycle\n"
-                "      ,seq.order     as ordering\n"
-                "  FROM syssequences seq\n"
-                "      ,systables    tab\n"
-                " WHERE tab.tabid   = seq.tabid\n"
-                "   AND tab.tabtype = 'Q'\n";
+  XString sql = _T("SELECT trim(DBINFO('dbname')) as catalog_name\n"
+                   "      ,trim(tab.owner)        as schema_name\n"
+                   "      ,trim(tab.tabname)      as sequence_name\n"
+                   "      ,seq.start_val as current_value\n"
+                   "      ,0             as minimal_value\n"
+                   "      ,seq.inc_val   as increment\n"
+                   "      ,seq.cache     as cache\n"
+                   "      ,seq.cycle     as cycle\n"
+                   "      ,seq.order     as ordering\n"
+                   "  FROM syssequences seq\n"
+                   "      ,systables    tab\n"
+                   " WHERE tab.tabid   = seq.tabid\n"
+                   "   AND tab.tabtype = 'Q'\n");
   if(!p_schema.IsEmpty())
   {
-    sql += "   AND tab.owner = ?\n";
+    sql += _T("   AND tab.owner = ?\n");
   }
   if(!p_sequence.IsEmpty())
   {
-    sql += "   AND tab.tabname ";
-    sql += p_sequence.Find('%') >= 0 ? "LIKE" : "=";
-    sql += " ? \n";
+    sql += _T("   AND tab.tabname ");
+    sql += p_sequence.Find('%') >= 0 ? _T("LIKE") : _T("=");
+    sql += _T(" ? \n");
   }
   return sql;
 }
@@ -1278,25 +1432,25 @@ SQLInfoInformix::GetCATALOGSequenceAttributes(XString& p_schema,XString& p_seque
 XString
 SQLInfoInformix::GetCATALOGSequenceCreate(MetaSequence& p_sequence) const
 {
-  XString sql("CREATE SEQUENCE ");
+  XString sql(_T("CREATE SEQUENCE "));
 
   if (!p_sequence.m_schemaName.IsEmpty())
   {
-    sql += p_sequence.m_schemaName + ".";
+    sql += p_sequence.m_schemaName + _T(".");
   }
   sql += p_sequence.m_sequenceName;
-  sql.AppendFormat("\n START WITH %-12.0f", p_sequence.m_currentValue);
-  sql.AppendFormat("\n INCREMENT BY %d", p_sequence.m_increment);
+  sql.AppendFormat(_T("\n START WITH %-12.0f"), p_sequence.m_currentValue);
+  sql.AppendFormat(_T("\n INCREMENT BY %d"), p_sequence.m_increment);
 
-  sql += p_sequence.m_cycle ? "\n CYCLE" : "\n NOCYCLE";
-  sql += p_sequence.m_order ? "\n ORDER" : "\n NOORDER";
+  sql += p_sequence.m_cycle ? _T("\n CYCLE") : _T("\n NOCYCLE");
+  sql += p_sequence.m_order ? _T("\n ORDER") : _T("\n NOORDER");
   if (p_sequence.m_cache > 0)
   {
-    sql.AppendFormat("\n CACHE %d",p_sequence.m_cache);
+    sql.AppendFormat(_T("\n CACHE %d"),p_sequence.m_cache);
   }
   else
   {
-    sql += "\n NOCACHE";
+    sql += _T("\n NOCACHE");
   }
   return sql;
 }
@@ -1304,7 +1458,7 @@ SQLInfoInformix::GetCATALOGSequenceCreate(MetaSequence& p_sequence) const
 XString
 SQLInfoInformix::GetCATALOGSequenceDrop(XString /*p_schema*/, XString p_sequence) const
 {
-  XString sql("DROP SEQUENCE " + p_sequence);
+  XString sql(_T("DROP SEQUENCE ") + p_sequence);
   return sql;
 }
 
@@ -1317,81 +1471,116 @@ SQLInfoInformix::GetCATALOGViewExists(XString& p_schema,XString& p_viewname) con
   p_schema.Empty(); // do not bind as a parameter
   p_viewname.MakeLower();
 
-  XString sql = "SELECT count(*)\n"
-                "  FROM sysviews\n"
-                " WHERE viewname = ?";
+  XString sql = _T("SELECT count(*)\n"
+                   "  FROM sysviews\n"
+                   " WHERE viewname = ?");
   return sql;
 }
 
 XString 
 SQLInfoInformix::GetCATALOGViewList(XString& /*p_schema*/,XString& /*p_pattern*/) const
 {
-  return "";
+  return _T("");
 }
 
 XString 
 SQLInfoInformix::GetCATALOGViewAttributes(XString& /*p_schema*/,XString& /*p_viewname*/) const
 {
-  return "";
+  return _T("");
 }
 
 XString
 SQLInfoInformix::GetCATALOGViewText(XString& /*p_schema*/,XString& /*p_viewname*/) const
 {
   // Cannot query this, Use ODBC functions
-  return "";
+  return _T("");
 }
 
 XString
-SQLInfoInformix::GetCATALOGViewCreate(XString /*p_schema*/,XString p_viewname,XString p_contents) const
+SQLInfoInformix::GetCATALOGViewCreate(XString /*p_schema*/,XString p_viewname,XString p_contents,bool /*p_ifexists = true*/) const
 {
-  return "CREATE VIEW " + p_viewname + "\n" + p_contents;
+  return _T("CREATE VIEW ") + p_viewname + _T("\n") + p_contents;
 }
 
 XString 
 SQLInfoInformix::GetCATALOGViewRename(XString p_schema,XString p_viewname,XString p_newname)    const
 {
-  return "";
+  return _T("");
 }
 
 XString 
 SQLInfoInformix::GetCATALOGViewDrop(XString /*p_schema*/,XString p_viewname,XString& p_precursor) const
 {
   p_precursor.Empty();
-  return "DROP VIEW " + p_viewname;
+  return _T("DROP VIEW ") + p_viewname;
 }
 
 // All Privilege functions
 XString
 SQLInfoInformix::GetCATALOGTablePrivileges(XString& /*p_schema*/,XString& /*p_tablename*/) const
 {
-  return "";
+  return _T("");
 }
 
 XString 
 SQLInfoInformix::GetCATALOGColumnPrivileges(XString& /*p_schema*/,XString& /*p_tablename*/,XString& /*p_columnname*/) const
 {
-  return "";
+  return _T("");
 }
 
 XString 
-SQLInfoInformix::GetCatalogGrantPrivilege(XString /*p_schema*/,XString p_objectname,XString p_privilege,XString p_grantee,bool p_grantable)
+SQLInfoInformix::GetCATALOGSequencePrivilege(XString& /*p_schema*/,XString& /*p_sequence*/) const
+{
+  return _T("");
+}
+
+XString 
+SQLInfoInformix::GetCATALOGGrantPrivilege(XString /*p_schema*/,XString p_objectname,XString p_privilege,XString p_grantee,bool p_grantable)
 {
   XString sql;
-  sql.Format("GRANT %s ON %s TO %s",p_privilege.GetString(),p_objectname.GetString(),p_grantee.GetString());
+  sql.Format(_T("GRANT %s ON %s TO %s"),p_privilege.GetString(),p_objectname.GetString(),p_grantee.GetString());
   if(p_grantable)
   {
-    sql += " WITH GRANT OPTION";
+    sql += _T(" WITH GRANT OPTION");
   }
   return sql;
 }
 
 XString
-SQLInfoInformix::GetCatalogRevokePrivilege(XString p_schema,XString p_objectname,XString p_privilege,XString p_grantee)
+SQLInfoInformix::GetCATALOGRevokePrivilege(XString p_schema,XString p_objectname,XString p_privilege,XString p_grantee)
 {
   XString sql;
-  sql.Format("REVOKE %s ON %s FROM %s",p_privilege.GetString(),p_objectname.GetString(),p_grantee.GetString());
+  sql.Format(_T("REVOKE %s ON %s FROM %s"),p_privilege.GetString(),p_objectname.GetString(),p_grantee.GetString());
   return sql;
+}
+
+// All Synonym functions
+XString
+SQLInfoInformix::GetCATALOGSynonymList(XString& /*p_schema*/,XString& /*p_pattern*/) const
+{
+  // Not implemented yet
+  return _T("");
+}
+
+XString
+SQLInfoInformix::GetCATALOGSynonymAttributes(XString& /*p_schema*/,XString& /*p_synonym*/) const
+{
+  // Not implemented yet
+  return _T("");
+}
+
+XString
+SQLInfoInformix::GetCATALOGSynonymCreate(XString& /*p_schema*/,XString& /*p_synonym*/,XString /*p_forObject*/,bool /*p_private = true*/) const
+{
+  // Not implemented yet
+  return _T("");
+}
+
+XString
+SQLInfoInformix::GetCATALOGSynonymDrop(XString& /*p_schema*/,XString& /*p_synonym*/,bool /*p_private = true*/) const
+{
+  // Not implemented yet
+  return _T("");
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -1427,21 +1616,21 @@ XString
 SQLInfoInformix::GetPSMProcedureExists(XString /*p_schema*/, XString p_procedure) const
 {
   p_procedure.MakeLower();
-  return    "select count(*)\n"
+  return _T("select count(*)\n"
             "  from sysprocedures\n"
-            " where procname='" + p_procedure + "'";
+            " where procname='" + p_procedure + "'");
 }
 
 XString
 SQLInfoInformix::GetPSMProcedureList(XString& /*p_schema*/) const
 {
-  return "";
+  return _T("");
 }
 
 XString
 SQLInfoInformix::GetPSMProcedureAttributes(XString& /*p_schema*/,XString& /*p_procedure*/) const
 {
-  return "";
+  return _T("");
 //   p_procedure.MakeLower();
 //   XString sql = "SELECT sbody.data\n"
 //                 "  FROM sysprocbody sbody\n"
@@ -1460,62 +1649,68 @@ SQLInfoInformix::GetPSMProcedureSourcecode(XString p_schema, XString p_procedure
 
   // TRIGGER PART
   XString sql;
-  sql = "SELECT bod.datakey\n"
-        "      ,bod.seqno\n"
-        "      ,bod.data\n"
-        "  FROM systrigbody bod\n"
-        "      ,systriggers tri\n"
-        " WHERE bod.trigid = tri.trigid\n"
-        "   AND bod.datakey IN ('A','D')\n";
+  sql = _T("SELECT bod.datakey\n"
+           "      ,bod.seqno\n"
+           "      ,bod.data\n"
+           "  FROM systrigbody bod\n"
+           "      ,systriggers tri\n"
+           " WHERE bod.trigid = tri.trigid\n"
+           "   AND bod.datakey IN ('A','D')\n");
   if(!p_schema.IsEmpty())
   {
-    sql += "   AND tri.owner = '" + p_schema + "'\n";
+    sql += _T("   AND tri.owner = '") + p_schema + _T("'\n");
   }
   if(!p_procedure.IsEmpty())
   {
-    sql += "   AND tri.trigname = '" + p_procedure + "'\n";
+    sql += _T("   AND tri.trigname = '") + p_procedure + _T("'\n");
   }
   // UNION
-  sql += "UNION ALL\n";
+  sql += _T("UNION ALL\n");
   // PROCEDURE PART
-  sql += "  SELECT bod.datakey\n"
-         "      ,bod.seqno\n"
-         "      ,bod.data\n"
-         "  FROM sysprocbody   bod\n"
-         "      ,sysprocedures pro\n"
-         " WHERE bod.procid   = pro.procid\n"
-         "   AND bod.datakey  = 'T'\n";
+  sql += _T("  SELECT bod.datakey\n"
+            "      ,bod.seqno\n"
+            "      ,bod.data\n"
+            "  FROM sysprocbody   bod\n"
+            "      ,sysprocedures pro\n"
+            " WHERE bod.procid   = pro.procid\n"
+            "   AND bod.datakey  = 'T'\n");
   if(!p_schema.IsEmpty())
   {
-    sql += "   AND pro.owner    = '" + p_schema + "'\n";
+    sql += _T("   AND pro.owner    = '") + p_schema + _T("'\n");
   }
   if(!p_procedure.IsEmpty())
   {
-    sql += "   AND pro.procname = '" + p_procedure + "'\n";
+    sql += _T("   AND pro.procname = '") + p_procedure + _T("'\n");
   }
   // ORDERING
-  sql += " ORDER BY datakey DESC\n"
-         "         ,seqno";
+  sql += _T(" ORDER BY datakey DESC\n")
+         _T("         ,seqno");
   return sql;
 }
 
 XString
 SQLInfoInformix::GetPSMProcedureCreate(MetaProcedure& /*p_procedure*/) const
 {
-  return "";
+  return _T("");
 }
 
 XString
-SQLInfoInformix::GetPSMProcedureDrop(XString p_schema, XString p_procedure) const
+SQLInfoInformix::GetPSMProcedureDrop(XString p_schema, XString p_procedure,bool /* p_function /*=false*/) const
 {
-  return "";
+  return _T("");
 }
 
 XString
 SQLInfoInformix::GetPSMProcedureErrors(XString p_schema,XString p_procedure) const
 {
   // Informix does not support procedure errors
-  return "";
+  return _T("");
+}
+
+XString
+SQLInfoInformix::GetPSMProcedurePrivilege(XString& /*p_schema*/,XString& /*p_procedure*/) const
+{
+  return _T("");
 }
 
 // And it's parameters
@@ -1525,7 +1720,7 @@ SQLInfoInformix::GetPSMProcedureParameters(XString& p_schema,XString& p_procedur
   p_schema.MakeLower();
   p_procedure.MakeLower();
   XString sql;
-  sql = "SELECT Trim(DBINFO('dbname')) AS procedure_catalog\n"
+ sql=_T("SELECT Trim(DBINFO('dbname')) AS procedure_catalog\n"
         "      ,Trim(pro.owner)        AS procedure_schema\n"
         "      ,Trim(pro.procname)     AS procedure_name\n"
         "      ,Trim(col.paramname)    AS parameter_name\n"
@@ -1638,18 +1833,18 @@ SQLInfoInformix::GetPSMProcedureParameters(XString& p_schema,XString& p_procedur
         "      ,'YES'    AS isnullable\n"
         "  FROM sysproccolumns col\n"
         "      ,sysprocedures  pro\n"
-        " WHERE pro.procid   = col.procid\n";
+        " WHERE pro.procid   = col.procid\n");
   if(!p_schema.IsEmpty())
   {
-    sql += "   AND pro.owner    = ?\n";
+    sql += _T("   AND pro.owner    = ?\n");
   }
   if(!p_procedure.IsEmpty())
   {
-    sql += "   AND pro.procname ";
-    sql += p_procedure.Find('%') >= 0 ? "LIKE" : "=";
-    sql += " ?\n";
+    sql += _T("   AND pro.procname ");
+    sql += p_procedure.Find('%') >= 0 ? _T("LIKE") : _T("=");
+    sql += _T(" ?\n");
   }
-  sql += " ORDER BY 1,2,3,18";
+  sql += _T(" ORDER BY 1,2,3,18");
   return sql;
 }
 
@@ -1670,47 +1865,47 @@ SQLInfoInformix::GetPSMDeclaration(bool    /*p_first*/
                                   ,XString p_asColumn  /*= ""*/) const
 {
   XString line;
-  line.Format("DEFINE %s ",p_variable.GetString());
+  line.Format(_T("DEFINE %s "),p_variable.GetString());
 
   if(p_datatype)
   {
     // Getting type info and name
-    TypeInfo* info = GetTypeInfo(p_datatype);
+    const TypeInfo* info = GetTypeInfo(p_datatype);
     line += info->m_type_name;
 
     if(p_precision > 0)
     {
-      line.AppendFormat("(%d",p_precision);
+      line.AppendFormat(_T("(%d"),p_precision);
       if(p_scale > 0)
       {
-        line.AppendFormat("%d",p_scale);
+        line.AppendFormat(_T("%d"),p_scale);
       }
-      line += ")";
+      line += _T(")");
     }
 
     if(!p_default.IsEmpty())
     {
-      line += " DEFAULT " + p_default;
+      line += _T(" DEFAULT ") + p_default;
     }
   }
   else if(!p_asColumn)
   {
-    line += " LIKE " + p_asColumn;
+    line += _T(" LIKE ") + p_asColumn;
   }
-  line += ";\n";
+  line += _T(";\n");
   return line;
 }
 
 XString
 SQLInfoInformix::GetPSMAssignment(XString p_variable,XString p_statement /*=""*/) const
 {
-  XString line("LET ");
+  XString line(_T("LET "));
   line += p_variable;
-  line += " = ";
+  line += _T(" = ");
   if(!p_statement.IsEmpty())
   {
     line += p_statement;
-    line += ";";
+    line += _T(";");
   }
   return line;
 }
@@ -1718,60 +1913,60 @@ SQLInfoInformix::GetPSMAssignment(XString p_variable,XString p_statement /*=""*/
 XString
 SQLInfoInformix::GetPSMIF(XString p_condition) const
 {
-  return "IF (" + p_condition + ") THEN\n";
+  return _T("IF (") + p_condition + _T(") THEN\n");
 }
 
 XString
 SQLInfoInformix::GetPSMIFElse() const
 {
-  return "ELSE\n";
+  return _T("ELSE\n");
 }
 
 XString
 SQLInfoInformix::GetPSMIFEnd() const
 {
-  return "END IF;\n";
+  return _T("END IF;\n");
 }
 
 XString
 SQLInfoInformix::GetPSMWhile(XString p_condition) const
 {
-  return "WHILE (" + p_condition + ")\n";
+  return _T("WHILE (") + p_condition + _T(")\n");
 }
 
 XString
 SQLInfoInformix::GetPSMWhileEnd() const
 {
-  return "END WHILE;\n";
+  return _T("END WHILE;\n");
 }
 
 XString
 SQLInfoInformix::GetPSMLOOP() const
 {
-  return "LOOP\n";
+  return _T("LOOP\n");
 }
 
 XString
 SQLInfoInformix::GetPSMLOOPEnd() const
 {
-  return "END LOOP\n";
+  return _T("END LOOP\n");
 }
 
 XString
 SQLInfoInformix::GetPSMBREAK() const
 {
-  return "EXIT\n"; // [FOR][LOOP][WHILE][FOREACH]
+  return _T("EXIT\n"); // [FOR][LOOP][WHILE][FOREACH]
 }
 
 XString
 SQLInfoInformix::GetPSMRETURN(XString p_statement /*= ""*/) const
 {
-  XString line("RETURN");
+  XString line(_T("RETURN"));
   if(!p_statement.IsEmpty())
   {
-    line += " " + p_statement;
+    line += _T(" ") + p_statement;
   }
-  line += ";\n";
+  line += _T(";\n");
   return line;
 }
 
@@ -1780,14 +1975,14 @@ SQLInfoInformix::GetPSMExecute(XString p_procedure,MParameterMap& p_parameters) 
 {
   // EXECUTE PROCEDURE name[(:param[,:param …])] [RETURNING_VALUES:param[,:param …]];
   XString line;
-  line.Format("EXECUTE PROCEDURE %s (",p_procedure.GetString());
+  line.Format(_T("EXECUTE PROCEDURE %s ("),p_procedure.GetString());
   bool doReturning = false;
   bool doMore = false;
 
-  for(auto& param : p_parameters)
+  for(const auto& param : p_parameters)
   {
     // Extra ,
-    if(doMore) line += ",";
+    if(doMore) line += _T(",");
     doMore = true;
 
     // Append input and in/out parameters
@@ -1801,17 +1996,17 @@ SQLInfoInformix::GetPSMExecute(XString p_procedure,MParameterMap& p_parameters) 
       doReturning = true;
     }
   }
-  line += ")";
+  line += _T(")");
 
   // Do the returning clause
   if(doReturning)
   {
-    line += " INTO ";
+    line += _T(" INTO ");
     doMore = false;
-    for(auto& param : p_parameters)
+    for(const auto& param : p_parameters)
     {
       // Extra ,
-      if(doMore) line += ",";
+      if(doMore) line += _T(",");
       doMore = true;
 
       if(param.m_columnType == P_SQL_PARAM_OUTPUT || param.m_columnType == P_SQL_PARAM_INPUT_OUTPUT)
@@ -1820,7 +2015,7 @@ SQLInfoInformix::GetPSMExecute(XString p_procedure,MParameterMap& p_parameters) 
       }
     }
   }
-  line += ";\n";
+  line += _T(";\n");
   return line;
 }
 
@@ -1828,13 +2023,13 @@ SQLInfoInformix::GetPSMExecute(XString p_procedure,MParameterMap& p_parameters) 
 XString
 SQLInfoInformix::GetPSMCursorDeclaration(XString p_cursorname,XString p_select) const
 {
-  return "FOREACH " + p_cursorname + " FOR " + p_select + "\n";
+  return _T("FOREACH ") + p_cursorname + _T(" FOR ") + p_select + _T("\n");
 }
 
 XString
 SQLInfoInformix::GetPSMCursorFetch(XString /*p_cursorname*/,std::vector<XString>& /*p_columnnames*/,std::vector<XString>& /*p_variablenames*/) const
 {
-  return "";
+  return _T("");
 }
 
 // END FOREACH; !!
@@ -1846,19 +2041,19 @@ SQLInfoInformix::GetPSMCursorFetch(XString /*p_cursorname*/,std::vector<XString>
 XString
 SQLInfoInformix::GetPSMExceptionCatchNoData() const
 {
-  return "ON EXCEPTION (100)\n";
+  return _T("ON EXCEPTION (100)\n");
 }
 
 XString
 SQLInfoInformix::GetPSMExceptionCatch(XString p_sqlState) const
 {
-  return "ON EXCEPTION (" + p_sqlState + ")\n";
+  return _T("ON EXCEPTION (") + p_sqlState + _T(")\n");
 }
 
 XString
 SQLInfoInformix::GetPSMExceptionRaise(XString p_sqlState) const
 {
-  return "RAISE EXCEPTION " + p_sqlState;
+  return _T("RAISE EXCEPTION ") + p_sqlState;
   // "[,isam-error [,'error text']]
 }
 
@@ -1881,49 +2076,49 @@ SQLInfoInformix::GetPSMExceptionRaise(XString p_sqlState) const
 XString
 SQLInfoInformix::GetSESSIONMyself() const
 {
-  XString query = "SELECT sid\n"
-                  "      ,user\n"
-                  "      ,tty\n"
-                  "      ,current_timestamp\n"  // timestamp
-                  "      ,''\n"                 // remote address
-                  "      ,''\n"                 // remote process name
-                  "      ,''\n"                 // remote process ID
-                  "  FROM sysmaster:syssessions\n"
-                  " WHERE sid =\n"
-                  "     ( SELECT dbinfo('sessionid')\n"
-                  "         FROM systables\n"
-                  "        WHERE tabid=1)";
+  XString query = _T("SELECT sid\n"
+                     "      ,user\n"
+                     "      ,tty\n"
+                     "      ,current_timestamp\n"  // timestamp
+                     "      ,''\n"                 // remote address
+                     "      ,''\n"                 // remote process name
+                     "      ,''\n"                 // remote process ID
+                     "  FROM sysmaster:syssessions\n"
+                     " WHERE sid =\n"
+                     "     ( SELECT dbinfo('sessionid')\n"
+                     "         FROM systables\n"
+                     "        WHERE tabid=1)");
   return query;
 }
 
 XString
 SQLInfoInformix::GetSESSIONExists(XString p_sessionID) const
 {
-  return "SELECT COUNT(*)\n"
-         "  FROM sysmaster:syssessions\n"
-         " WHERE sid = " + p_sessionID;
+  return _T("SELECT COUNT(*)\n"
+            "  FROM sysmaster:syssessions\n"
+            " WHERE sid = ") + p_sessionID;
 }
 
 XString
 SQLInfoInformix::GetSESSIONList() const
 {
-  return GetSESSIONAttributes("");
+  return GetSESSIONAttributes(_T(""));
 }
 
 XString
 SQLInfoInformix::GetSESSIONAttributes(XString p_sessionID) const
 {
-  XString sql = "SELECT sid\n"
-                "      ,user\n"
-                "      ,tty\n"
-                "      ,current_timestamp\n"  // timestamp
-                "      ,''\n"                 // remote address
-                "      ,''\n"                 // remote process name
-                "      ,''\n"                 // remote process ID
-                "  FROM sysmaster:syssessions";
+  XString sql = _T("SELECT sid\n"
+                   "      ,user\n"
+                   "      ,tty\n"
+                   "      ,current_timestamp\n"  // timestamp
+                   "      ,''\n"                 // remote address
+                   "      ,''\n"                 // remote process name
+                   "      ,''\n"                 // remote process ID
+                   "  FROM sysmaster:syssessions");
   if (!p_sessionID.IsEmpty())
   {
-    sql += "\n WHERE sid = " + p_sessionID;
+    sql += _T("\n WHERE sid = ") + p_sessionID;
   }
   return sql;
 }
@@ -1934,13 +2129,13 @@ SQLInfoInformix::GetSESSIONAttributes(XString p_sessionID) const
 XString
 SQLInfoInformix::GetSESSIONConstraintsDeferred() const
 {
-  return "SET CONSTRAINTS ALL DEFERRED";
+  return _T("SET CONSTRAINTS ALL DEFERRED");
 }
 
 XString
 SQLInfoInformix::GetSESSIONConstraintsImmediate() const
 {
-  return "SET CONSTRAINTS ALL IMMEDIATE";
+  return _T("SET CONSTRAINTS ALL IMMEDIATE");
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -1959,7 +2154,7 @@ SQLInfoInformix::DoSQLCall(SQLQuery* /*p_query*/,XString& /*p_schema*/,XString& 
 
 // Calling a stored function with named parameters, returning a value
 SQLVariant*
-SQLInfoInformix::DoSQLCallNamedParameters(SQLQuery* /*p_query*/,XString& /*p_schema*/,XString& /*p_procedure*/)
+SQLInfoInformix::DoSQLCallNamedParameters(SQLQuery* /*p_query*/,XString& /*p_schema*/,XString& /*p_procedure*/,bool /*p_function = true*/)
 {
   return nullptr;
 }

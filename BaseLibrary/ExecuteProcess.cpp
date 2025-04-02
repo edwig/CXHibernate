@@ -4,7 +4,7 @@
 //
 // BaseLibrary: Indispensable general objects and functions
 // 
-// Copyright (c) 2014-2022 ir. W.E. Huisman
+// Copyright (c) 2014-2025 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -31,10 +31,12 @@
 #include "GetExePath.h"
 #include <io.h>
 
+#ifdef _AFX
 #ifdef _DEBUG
 #define new DEBUG_NEW
 #undef THIS_FILE
 static char THIS_FILE[] = __FILE__;
+#endif
 #endif
 
 // STARTING AN OS PROGRAM
@@ -77,10 +79,10 @@ int ExecuteProcess(XString  p_program
     XString path = GetExePath();
     program = path + p_program;
 
-    if(_access(program,04) == -1)
+    if(_taccess(program,04) == -1)
     {
       // We cannot find the program file
-      p_errormessage.AppendFormat("\nCannot find the program file: '%s'",p_program.GetString());
+      p_errormessage.AppendFormat(_T("\nCannot find the program file: '%s'"),p_program.GetString());
       return EXECUTE_NO_PROGRAM_FILE;
     }
   }
@@ -96,29 +98,29 @@ int ExecuteProcess(XString  p_program
   // For CreateProcess it must be a buffer and in writable memory too.
   // The buffer **MUST** provide for extra space, as CreateProcess may alter the contents!!
   LPCTSTR lpProgram = program.GetString();
-  char commandLine[MAX_COMMANDLINE];
+  TCHAR commandLine[MAX_COMMANDLINE];
 
   if(p_program.IsEmpty())
   {
     // Program must now be in the arguments list
     lpProgram = NULL;
-    strcpy_s(commandLine,MAX_COMMANDLINE,p_arguments);
+    _tcscpy_s(commandLine,MAX_COMMANDLINE,p_arguments);
   }
   else
   {
-    sprintf_s(commandLine,MAX_COMMANDLINE,"\"%s\" %s",lpProgram,p_arguments.GetString());
+    _stprintf_s(commandLine,MAX_COMMANDLINE,_T("\"%s\" %s"),lpProgram,p_arguments.GetString());
   }
   // Create the process and catch the return value if this succeeded
   BOOL res = CreateProcess(lpProgram              // Program to start or NULL
-                          ,(LPSTR)commandLine     // Command line with program or arguments only
-                          ,NULL         				  // Security
-                          ,NULL  				          // ThreadAttributes
+                          ,commandLine            // Command line with program or arguments only
+                          ,NULL                   // Security
+                          ,NULL                   // ThreadAttributes
                           ,FALSE                  // Inherit handles
                           ,NORMAL_PRIORITY_CLASS  // Priority
-                          ,NULL 				          // Environment
-                          ,NULL            				// Current directory
+                          ,NULL                   // Environment
+                          ,NULL            	      // Current directory
                           ,&startupInfo           // Startup info
-                          ,&processInfo		        // process info
+                          ,&processInfo           // process info
                           );
   int exitCode = EXECUTE_NOT_STARTED;
   if(res)
@@ -135,7 +137,7 @@ int ExecuteProcess(XString  p_program
     {
       if(WaitForInputIdle(processInfo.hProcess,WAIT_FOR_INPUT_IDLE))
       {
-        p_errormessage.AppendFormat("Waiting too long on the new program: %s\n",p_program.GetString());
+        p_errormessage.AppendFormat(_T("Waiting too long on the new program: %s\n"),p_program.GetString());
         exitCode = EXECUTE_NO_INPUT_IDLE;
         p_waitForExit = false;
       }
@@ -149,15 +151,14 @@ int ExecuteProcess(XString  p_program
       if (p_factor == 0)     p_factor = 1;
       if (p_factor > 100000) p_factor = 100000;
       waiting *= p_factor;
-      if (p_factor < 0)      p_factor = INFINITE;
 
       if(WaitForSingleObject(processInfo.hProcess,waiting) == WAIT_OBJECT_0)
       {
-        GetExitCodeProcess(processInfo.hProcess,(LPDWORD)&exitCode);
+        GetExitCodeProcess(processInfo.hProcess,reinterpret_cast<LPDWORD>(&exitCode));
       }
       else
       {
-        p_errormessage.AppendFormat("\nABORT: Waited too long on the program to finish: %s",p_program.GetString());
+        p_errormessage.AppendFormat(_T("\nABORT: Waited too long on the program to finish: %s"),p_program.GetString());
         exitCode = EXECUTE_TIMEOUT;
       }
     }
@@ -172,8 +173,8 @@ int ExecuteProcess(XString  p_program
   else
   {
     XString error = GetLastErrorAsString();
-    p_errormessage.AppendFormat("\nError while starting: %s",p_program.GetString());
-    p_errormessage.AppendFormat("\nOS Error: %s",error.GetString());
+    p_errormessage.AppendFormat(_T("\nError while starting: %s"),p_program.GetString());
+    p_errormessage.AppendFormat(_T("\nOS Error: %s"),error.GetString());
   }
   return exitCode;
 }

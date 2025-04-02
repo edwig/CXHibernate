@@ -4,7 +4,7 @@
 //
 // BaseLibrary: Indispensable general objects and functions
 // 
-// Copyright (c) 2014-2022 ir. W.E. Huisman
+// Copyright (c) 2014-2025 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -38,16 +38,18 @@
 #include "pch.h"
 #include "StdException.h"
 
+#ifdef _AFX
 #ifdef _DEBUG
 #define new DEBUG_NEW
 #undef THIS_FILE
 static char THIS_FILE[] = __FILE__;
 #endif
+#endif
 
 // Macro to help with the display switch in GetErrorMessage()
 #define CASE(seCode,errorstring) case EXCEPTION_##seCode: \
-										errorstring.Format(_T("Exception %s (0x%.8X) at address 0x%.8X."),_T(#seCode),EXCEPTION_##seCode,m_exceptionPointers->ExceptionRecord->ExceptionAddress); \
-										break;
+                    errorstring.Format(_T("Exception %s (0x%.8X) at address 0x%.8I64X."),_T(#seCode),(unsigned int)EXCEPTION_##seCode,(INT64)m_exceptionPointers->ExceptionRecord->ExceptionAddress); \
+                    break;
 
 // Setting our Safe-Exception-Translator function
 // So that the C++ runtime can call and create our StdException
@@ -68,11 +70,13 @@ StdException::StdException(unsigned p_safeExceptionCode,_EXCEPTION_POINTERS* p_e
 StdException::StdException(const StdException& p_other)
 {
   m_safeExceptionCode = p_other.m_safeExceptionCode;
-	m_exceptionPointers = p_other.m_exceptionPointers;
+  m_exceptionPointers = p_other.m_exceptionPointers;
+  m_applicationCode   = p_other.m_applicationCode;
+  m_applicationFault  = p_other.m_applicationFault;
 }
 
 // CTOR: Create exception from static text or XString
-StdException::StdException(const char* p_fault)
+StdException::StdException(const PTCHAR p_fault)
              :m_applicationFault(p_fault)
 {
 }
@@ -88,7 +92,7 @@ StdException::StdException(int p_errorCode)
 {
 }
 
-StdException::StdException(int p_errorCode, const char* p_fault)
+StdException::StdException(int p_errorCode,LPCTSTR p_fault)
              :m_applicationCode(p_errorCode)
              ,m_applicationFault(p_fault)
 {
@@ -96,35 +100,35 @@ StdException::StdException(int p_errorCode, const char* p_fault)
 
 // Return the Safe-Exception code
 unsigned
-StdException::GetSafeExceptionCode()
+StdException::GetSafeExceptionCode() const
 {
 	return m_safeExceptionCode;
 }
 
 // Return the application error code
 int
-StdException::GetApplicationCode()
+StdException::GetApplicationCode() const
 {
   return m_applicationCode;
 }
 
 // Return the application error text
 XString
-StdException::GetApplicationFault()
+StdException::GetApplicationFault() const
 {
   return m_applicationFault;
 }
 
 // Return the exception pointers (build stack traces etcetera)
 _EXCEPTION_POINTERS* 
-StdException::GetExceptionPointers()
+StdException::GetExceptionPointers() const
 {
 	return m_exceptionPointers;
 }
 
 // Address where the exception did occur
 void* 
-StdException::GetExceptionAddress()
+StdException::GetExceptionAddress() const
 {
   if(m_exceptionPointers)
   {
@@ -138,7 +142,7 @@ StdException::GetExceptionAddress()
 
 // Getting the resulting error as a string
 XString
-StdException::GetErrorMessage()
+StdException::GetErrorMessage() const
 {
   XString errorstring;
 
@@ -168,11 +172,11 @@ StdException::GetErrorMessage()
 		CASE(INVALID_HANDLE,          errorstring);
     case 0:   if(m_applicationCode)
               {
-                errorstring.Format("Error: %d", m_applicationCode);
+                errorstring.Format(_T("Error: %u"), m_applicationCode);
               }
               errorstring += m_applicationFault;
               break;
-	  default:  errorstring = "Unknown exception.";
+	  default:  errorstring = _T("Unknown exception.");
 		          break;
 	}
 	return errorstring;
@@ -181,7 +185,7 @@ StdException::GetErrorMessage()
 // The CException way of getting an error message
 // By copying it out of the object through a string pointer
 bool
-StdException::GetErrorMessage(char* p_error, unsigned p_maxSize, unsigned* p_helpContext /*= NULL*/)
+StdException::GetErrorMessage(PTCHAR p_error, unsigned p_maxSize, unsigned* p_helpContext /*= NULL*/) const
 {
   // Reset help context
   if (p_helpContext)
@@ -191,17 +195,16 @@ StdException::GetErrorMessage(char* p_error, unsigned p_maxSize, unsigned* p_hel
   // Get compound error message
   XString error = GetErrorMessage();
   // Copy it out
-  strncpy_s(p_error, p_maxSize, error.GetString(), error.GetLength() + 1);
+  _tcsncpy_s(p_error, p_maxSize, error.GetString(),(size_t) error.GetLength() + 1);
   return true;
 }
 
-#ifdef _ATL
+#ifdef _AFX
 XString
 MessageFromException(CException& p_exception)
 {
-  char buffer[4 * _MAX_PATH + 1];
+  TCHAR buffer[4 * _MAX_PATH + 1];
   p_exception.GetErrorMessage(buffer,4 * _MAX_PATH);
   return XString(buffer);
 }
 #endif
-

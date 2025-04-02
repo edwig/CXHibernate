@@ -4,7 +4,7 @@
 //
 // Marlin Server: Internet server/client
 // 
-// Copyright (c) 2014-2022 ir. W.E. Huisman
+// Copyright (c) 2014-2024 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -28,6 +28,7 @@
 #pragma once
 #include "HTTPClient.h"
 #include "LogAnalysis.h"
+#include <websocket.h>
 #include <deque>
 #include <map>
 
@@ -140,7 +141,7 @@ using WSFrameStack  = std::deque<WSFrame*>;
 using SocketParams  = std::map<XString,XString>;
 
 // Prototype for WebSocket callback handler
-typedef void(*LPFN_SOCKETHANDLER)(WebSocket* p_socket,WSFrame* p_event);
+typedef void(*LPFN_SOCKETHANDLER)(WebSocket* p_socket,const WSFrame* p_event);
 
 //////////////////////////////////////////////////////////////////////////
 //
@@ -151,7 +152,7 @@ typedef void(*LPFN_SOCKETHANDLER)(WebSocket* p_socket,WSFrame* p_event);
 class WebSocket
 {
 public:
-  WebSocket(XString p_uri);
+  explicit WebSocket(XString p_uri);
   virtual ~WebSocket();
 
   // FUNCTIONS
@@ -168,9 +169,13 @@ public:
   virtual bool WriteFragment(BYTE* p_buffer,DWORD p_length,Opcode p_opcode,bool p_last = true) = 0;
   // Register the server request for sending info
   virtual bool RegisterSocket(HTTPMessage* p_message) = 0;
-
+  // Send a ping/pong keep alive message
+  virtual bool SendKeepAlive() = 0;
   // Decoded close connection (use in 'OnClose')
-  bool GetCloseSocket(USHORT& p_code,XString& p_reason);
+  virtual bool GetCloseSocket(USHORT& p_code,XString& p_reason);
+  // Detected a closing status on read-completion
+  virtual void SetClosingStatus(USHORT p_code);
+
   // Socket still open?
   bool IsOpenForReading();
   bool IsOpenForWriting();
@@ -249,10 +254,10 @@ public:
   XString GetParameter(XString p_name);
 
   // LOGGING
-  void    DetailLog (const char* p_function,LogType p_type,const char* p_text);
-  void    DetailLogS(const char* p_function,LogType p_type,const char* p_text,const char* p_extra);
-  void    DetailLogV(const char* p_function,LogType p_type,const char* p_text,...);
-  void    ErrorLog  (const char* p_function,DWORD p_code,XString p_text);
+  void    DetailLog (LPCTSTR p_function,LogType p_type,LPCTSTR p_text);
+  void    DetailLogS(LPCTSTR p_function,LogType p_type,LPCTSTR p_text,LPCTSTR p_extra);
+  void    DetailLogV(LPCTSTR p_function,LogType p_type,LPCTSTR p_text,...);
+  void    ErrorLog  (LPCTSTR p_function,DWORD p_code,XString p_text);
 
   // Perform the server handshake
   virtual bool ServerHandshake(HTTPMessage* p_message);
@@ -395,4 +400,10 @@ inline void
 WebSocket::SetOnClose(LPFN_SOCKETHANDLER p_onClose)
 {
   m_onclose = p_onClose;
+}
+
+inline void
+WebSocket::SetClosingStatus(USHORT p_code)
+{
+  m_closingError = p_code;
 }

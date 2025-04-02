@@ -2,7 +2,7 @@
 //
 // File: SQLVariantOperator.cpp
 //
-// Copyright (c) 1998-2022 ir. W.E. Huisman
+// Copyright (c) 1998-2025 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy of 
@@ -27,6 +27,7 @@
 #include "SQLComponents.h"
 #include "SQLVariant.h"
 #include "SQLVariantOperator.h"
+#include "SQLDataType.h"
 #include "SQLDate.h"
 #include "SQLGuid.h"
 #include "bcd.h"
@@ -47,7 +48,8 @@ SQLConciseType SQLTypeToConciseType(int p_datatype)
 {
   switch(p_datatype)
   {
-    case SQL_C_CHAR:                      return CT_CHAR;
+    case SQL_C_CHAR:                      // fall through
+    case SQL_C_WCHAR:                     return CT_CHAR;
     case SQL_C_SHORT:                     // fall through
     case SQL_C_SSHORT:                    return CT_SSHORT;
     case SQL_C_USHORT:                    return CT_USHORT;
@@ -112,8 +114,13 @@ SQLVariant::operator=(const SQLVariant& p_original)
   if(m_datatype == SQL_C_CHAR  || m_datatype == SQL_C_BINARY )
   {
     // Make a new buffer and copy it
-    m_data.m_dataBINARY = (unsigned char*) malloc(m_binaryLength + 1);
-    memcpy(m_data.m_dataBINARY,p_original.m_data.m_dataBINARY,m_binaryLength + 1);
+    m_data.m_dataBINARY = new unsigned char[(size_t)m_binaryLength + 1];
+    memcpy(m_data.m_dataBINARY,p_original.m_data.m_dataBINARY,(size_t)m_binaryLength + 1);
+  }
+  else if(m_datatype == SQL_C_WCHAR)
+  {
+    m_data.m_dataWCHAR = new wchar_t[(size_t)m_binaryLength / 2 + 1];
+    memcpy(m_data.m_dataWCHAR,p_original.m_data.m_dataWCHAR,m_binaryLength + 2);
   }
   else
   {
@@ -123,30 +130,53 @@ SQLVariant::operator=(const SQLVariant& p_original)
   return *this;
 }
 
+// Undesired side effect if SQL_C_CHAR to SQL_C_WCHAR copy
 SQLVariant& 
-SQLVariant::operator=(const char* p_data)
+SQLVariant::operator=(LPCTSTR p_data)
 {
-  SetData(SQL_C_CHAR,p_data);
+  if(m_datatype == SQL_C_WCHAR)
+  {
+    SetData(SQL_C_WCHAR,p_data);
+  }
+  else
+  {
+    SetData(SQL_C_CHAR,p_data);
+  }
+  return *this;
+}
+
+// Undesired side effect if SQL_C_CHAR to SQL_C_WCHAR copy
+SQLVariant& 
+SQLVariant::operator=(const XString& p_data)
+{
+  if(m_datatype == SQL_C_WCHAR)
+  {
+    SetData(SQL_C_WCHAR,p_data.GetString());
+  }
+  else
+  {
+    SetData(SQL_C_CHAR,p_data.GetString());
+  }
+  return *this;
+}
+
+// Undesired side effect if SQL_C_CHAR to SQL_C_WCHAR copy
+SQLVariant& 
+SQLVariant::operator=(const XString p_data)
+{
+  if(m_datatype == SQL_C_WCHAR)
+  {
+    SetData(SQL_C_WCHAR,p_data.GetString());
+  }
+  else
+  {
+    SetData(SQL_C_CHAR,p_data.GetString());
+  }
   return *this;
 }
 
 SQLVariant& 
-SQLVariant::operator=(XString& p_data)
-{
-  SetData(SQL_C_CHAR,p_data.GetString());
-  return *this;
-}
-
-SQLVariant& 
-SQLVariant::operator=(XString p_data)
-{
-  SetData(SQL_C_CHAR, p_data.GetString());
-  return *this;
-}
-
-
-SQLVariant& 
-SQLVariant::operator=(short p_data)
+SQLVariant::operator=(const short p_data)
 {
   Init();
   m_datatype    = SQL_C_SSHORT;
@@ -158,7 +188,7 @@ SQLVariant::operator=(short p_data)
 }
 
 SQLVariant& 
-SQLVariant::operator=(unsigned short p_data)
+SQLVariant::operator=(const unsigned short p_data)
 {
   Init();
   m_datatype    = SQL_C_USHORT;
@@ -170,7 +200,7 @@ SQLVariant::operator=(unsigned short p_data)
 }
 
 SQLVariant& 
-SQLVariant::operator=(int p_data)
+SQLVariant::operator=(const int p_data)
 {
   Init();
   m_datatype    = SQL_C_SLONG;
@@ -182,7 +212,7 @@ SQLVariant::operator=(int p_data)
 }
 
 SQLVariant& 
-SQLVariant::operator=(unsigned int p_data)
+SQLVariant::operator=(const unsigned int p_data)
 {
   Init();
   m_datatype    = SQL_C_ULONG;
@@ -194,7 +224,7 @@ SQLVariant::operator=(unsigned int p_data)
 }
 
 SQLVariant& 
-SQLVariant::operator=(float p_data)
+SQLVariant::operator=(const float p_data)
 {
   Init();
   m_datatype    = SQL_C_FLOAT;
@@ -206,7 +236,7 @@ SQLVariant::operator=(float p_data)
 }
 
 SQLVariant& 
-SQLVariant::operator=(double p_data)
+SQLVariant::operator=(const double p_data)
 {
   Init();
   m_datatype    = SQL_C_DOUBLE;
@@ -218,7 +248,7 @@ SQLVariant::operator=(double p_data)
 }
 
 SQLVariant& 
-SQLVariant::operator=(bool p_data)
+SQLVariant::operator=(const bool p_data)
 {
   Init();
   m_datatype    = SQL_C_BIT;
@@ -230,7 +260,7 @@ SQLVariant::operator=(bool p_data)
 }
 
 SQLVariant& 
-SQLVariant::operator=(char p_data)
+SQLVariant::operator=(const char p_data)
 {
   Init();
   m_datatype    = SQL_C_STINYINT;
@@ -242,7 +272,7 @@ SQLVariant::operator=(char p_data)
 }
 
 SQLVariant& 
-SQLVariant::operator=(unsigned char p_data)
+SQLVariant::operator=(const unsigned char p_data)
 {
   Init();
   m_datatype    = SQL_C_UTINYINT;
@@ -254,7 +284,7 @@ SQLVariant::operator=(unsigned char p_data)
 }
 
 SQLVariant& 
-SQLVariant::operator=(__int64 p_data)
+SQLVariant::operator=(const __int64 p_data)
 {
   Init();
   m_datatype    = SQL_C_SBIGINT;
@@ -266,7 +296,7 @@ SQLVariant::operator=(__int64 p_data)
 }
 
 SQLVariant& 
-SQLVariant::operator=(unsigned __int64 p_data)
+SQLVariant::operator=(const unsigned __int64 p_data)
 {
   Init();
   m_datatype    = SQL_C_UBIGINT;
@@ -278,7 +308,7 @@ SQLVariant::operator=(unsigned __int64 p_data)
 }
 
 SQLVariant& 
-SQLVariant::operator=(SQL_NUMERIC_STRUCT* p_data)
+SQLVariant::operator=(const SQL_NUMERIC_STRUCT* p_data)
 {
   Init();
   m_datatype    = SQL_C_NUMERIC;
@@ -290,7 +320,7 @@ SQLVariant::operator=(SQL_NUMERIC_STRUCT* p_data)
 }
 
 SQLVariant& 
-SQLVariant::operator=(SQLGUID* p_data)
+SQLVariant::operator=(const SQLGUID* p_data)
 {
   Init();
   m_datatype    = SQL_C_GUID;
@@ -302,7 +332,7 @@ SQLVariant::operator=(SQLGUID* p_data)
 }
 
 SQLVariant& 
-SQLVariant::operator=(DATE_STRUCT* p_data)
+SQLVariant::operator=(const DATE_STRUCT* p_data)
 {
   Init();
   m_datatype    = SQL_C_DATE;
@@ -314,7 +344,7 @@ SQLVariant::operator=(DATE_STRUCT* p_data)
 }
 
 SQLVariant& 
-SQLVariant::operator=(TIME_STRUCT* p_data)
+SQLVariant::operator=(const TIME_STRUCT* p_data)
 {
   Init();
   m_datatype    = SQL_C_TIME;
@@ -326,7 +356,7 @@ SQLVariant::operator=(TIME_STRUCT* p_data)
 }
 
 SQLVariant& 
-SQLVariant::operator=(TIMESTAMP_STRUCT* p_data)
+SQLVariant::operator=(const TIMESTAMP_STRUCT* p_data)
 {
   Init();
   m_datatype    = SQL_C_TIMESTAMP;
@@ -337,7 +367,7 @@ SQLVariant::operator=(TIMESTAMP_STRUCT* p_data)
   return *this;
 }
 SQLVariant& 
-SQLVariant::operator=(SQL_INTERVAL_STRUCT* p_data)
+SQLVariant::operator=(const SQL_INTERVAL_STRUCT* p_data)
 {
   Init();
   m_datatype    = p_data->interval_type;
@@ -356,7 +386,7 @@ SQLVariant::operator=(SQL_INTERVAL_STRUCT* p_data)
 // Assignments from complex constructors
 
 SQLVariant& 
-SQLVariant::operator=(SQLDate& p_data)
+SQLVariant::operator=(const SQLDate& p_data)
 {
   Init();
   m_datatype    = SQL_C_DATE;
@@ -375,7 +405,7 @@ SQLVariant::operator=(SQLDate& p_data)
 }
 
 SQLVariant& 
-SQLVariant::operator=(SQLTime& p_data)
+SQLVariant::operator=(const SQLTime& p_data)
 {
   Init();
   m_datatype    = SQL_C_TIME;
@@ -395,7 +425,7 @@ SQLVariant::operator=(SQLTime& p_data)
 
 
 SQLVariant& 
-SQLVariant::operator=(SQLTimestamp& p_data)
+SQLVariant::operator=(const SQLTimestamp& p_data)
 {
   Init();
   m_datatype    = SQL_C_TIMESTAMP;
@@ -414,7 +444,7 @@ SQLVariant::operator=(SQLTimestamp& p_data)
 }
 
 SQLVariant& 
-SQLVariant::operator=(SQLInterval& p_data)
+SQLVariant::operator=(const SQLInterval& p_data)
 {
   Init();
   m_datatype    = p_data.GetIntervalType();
@@ -434,7 +464,7 @@ SQLVariant::operator=(SQLInterval& p_data)
 
 // SQLGuid
 SQLVariant& 
-SQLVariant::operator =(SQLGuid& p_guid)
+SQLVariant::operator =(const SQLGuid& p_guid)
 {
   Init();
   m_datatype    = SQL_C_GUID;
@@ -454,26 +484,14 @@ SQLVariant::operator =(SQLGuid& p_guid)
 
 // Binary Coded Decimal
 SQLVariant& 
-SQLVariant::operator=(bcd& p_bcd)
+SQLVariant::operator=(const bcd& p_bcd)
 {
   Init();
   m_datatype    = SQL_C_NUMERIC;
   m_sqlDatatype = SQL_NUMERIC;
   m_indicator   = 0;
 
-  int prec  = p_bcd.GetExponent() + 1;  // Exponent 0 = 1 digit before the decimal point
-  int scale = p_bcd.GetPrecision();     // Digits after the decimal point
-
-  // At least 1 digit before the decimal point
-  if(prec < 1)
-  {
-    prec = 1;
-  }
-  // precision scaling of a numeric = prec + scale
-  prec += scale;
-
   p_bcd.AsNumeric(&m_data.m_dataNUMERIC);
-
   return *this;
 }
 
@@ -493,14 +511,14 @@ SQLVariant::operator char()
   return GetAsSTinyInt();
 }
 
-SQLVariant::operator unsigned char()
+SQLVariant::operator uchar()
 {
   return GetAsUTinyInt();
 }
 
-SQLVariant::operator const char*()
+SQLVariant::operator LPCSTR()
 {
-  return (const char*)GetAsChar();
+  return (LPCSTR)GetAsChar();
 }
 
 SQLVariant::operator short()
@@ -580,7 +598,7 @@ SQLVariant::operator SQLGuid()
 
 SQLVariant::operator XString()
 {
-  return XString(GetAsChar());
+  return GetAsString();
 }
 
 SQLVariant::operator bcd()
@@ -598,22 +616,22 @@ void
 SQLVariant::ThrowErrorOperator(SQLVarOperator p_operator)
 {
   XString error;
-  const char* type = FindDatatype(m_datatype);
-  const char* oper = nullptr;
+  LPCTSTR type = SQLDataType::FindDatatype(m_datatype);
+  LPCTSTR oper = nullptr;
   switch (p_operator)
   {
-    case SVO_PreIncrement:    oper = "pre-increment";  break;
-    case SVO_PreDecrement:    oper = "pre-decrement";  break;
-    case SVO_PostIncrement:   oper = "post-increment"; break;
-    case SVO_PostDecrement:   oper = "post-decrement"; break;
-    case SVO_AssignAdd:       oper = "+=";             break;
-    case SVO_AssignSubtract:  oper = "-=";             break;
-    case SVO_AssignMultiply:  oper = "*=";             break;
-    case SVO_AssignDivide:    oper = "/=";             break;
-    case SVO_AssignModulo:    oper = "%=";             break;
-    default:                  oper = "unknown";        break;
+    case SVO_PreIncrement:    oper = _T("pre-increment");  break;
+    case SVO_PreDecrement:    oper = _T("pre-decrement");  break;
+    case SVO_PostIncrement:   oper = _T("post-increment"); break;
+    case SVO_PostDecrement:   oper = _T("post-decrement"); break;
+    case SVO_AssignAdd:       oper = _T("+=");             break;
+    case SVO_AssignSubtract:  oper = _T("-=");             break;
+    case SVO_AssignMultiply:  oper = _T("*=");             break;
+    case SVO_AssignDivide:    oper = _T("/=");             break;
+    case SVO_AssignModulo:    oper = _T("%=");             break;
+    default:                  oper = _T("unknown");        break;
   }
-  error.Format("Cannot execute %s operator on datatype: %s.",oper,type);
+  error.Format(_T("Cannot execute %s operator on datatype: %s."),oper,type);
   throw StdException(error);
 }
 
@@ -629,6 +647,7 @@ SQLVariant::operator++()
   switch(m_datatype)
   {
     case SQL_C_CHAR:                      // fall through
+    case SQL_C_WCHAR:                     // fall through
     case SQL_C_GUID:                      // fall through
     case SQL_C_BINARY:                    // fall through
     default:                              ThrowErrorOperator(SVO_PreIncrement);
@@ -771,6 +790,7 @@ SQLVariant::operator++(int p_val)
   switch(m_datatype)
   {
     case SQL_C_CHAR:                      // fall through
+    case SQL_C_WCHAR:                     // fall through
     case SQL_C_GUID:                      // fall through
     case SQL_C_BINARY:                    // fall through
     default:                              ThrowErrorOperator(SVO_PostIncrement);
@@ -905,6 +925,7 @@ SQLVariant::operator--()
   switch(m_datatype)
   {
     case SQL_C_CHAR:                      // fall through
+    case SQL_C_WCHAR:                     // fall through
     case SQL_C_GUID:                      // fall through
     case SQL_C_BINARY:                    // fall through
     default:                              ThrowErrorOperator(SVO_PreDecrement);
@@ -1047,6 +1068,7 @@ SQLVariant::operator--(int p_val)
   switch(m_datatype)
   {
     case SQL_C_CHAR:                      // fall through
+    case SQL_C_WCHAR:                     // fall through
     case SQL_C_GUID:                      // fall through
     case SQL_C_BINARY:                    // fall through
     default:                              ThrowErrorOperator(SVO_PostDecrement);

@@ -2,7 +2,7 @@
 //
 // File: DDLCreateTable.h
 //
-// Copyright (c) 1998-2022 ir. W.E. Huisman
+// Copyright (c) 1998-2025 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy of 
@@ -36,7 +36,7 @@ using DDLS = std::deque<XString>;
 class DDLCreateTable
 {
 public:
-  DDLCreateTable(SQLInfoDB* p_info);
+  explicit DDLCreateTable(SQLInfoDB* p_info,SQLInfoDB* p_target = nullptr);
 
   // Request DDL for "table" or "schema.table" 
   // Where "table" can be of type: "TABLE" / "VIEW"
@@ -55,20 +55,22 @@ public:
   DDLS    GetViewStatements(XString p_viewname);
 
   // Internal delivery of all table information
-  void    SetTableInfoTable    (MTableMap&     p_info);
-  void    SetTableInfoColumns  (MColumnMap&    p_info);
-  void    SetTableInfoIndices  (MIndicesMap&   p_info);
-  void    SetTableInfoPrimary  (MPrimaryMap&   p_info);
-  void    SetTableInfoForeign  (MForeignMap&   p_info);
-  void    SetTableInfoTrigger  (MTriggerMap&   p_info);
-  void    SetTableInfoSequence (MSequenceMap&  p_info);
-  void    SetTableInfoPrivilege(MPrivilegeMap& p_info);
+  void    SetTableInfoTable    (const MTableMap&     p_info);
+  void    SetTableInfoColumns  (const MColumnMap&    p_info);
+  void    SetTableInfoIndices  (const MIndicesMap&   p_info);
+  void    SetTableInfoPrimary  (const MPrimaryMap&   p_info);
+  void    SetTableInfoForeign  (const MForeignMap&   p_info);
+  void    SetTableInfoTrigger  (const MTriggerMap&   p_info);
+  void    SetTableInfoSequence (const MSequenceMap&  p_info);
+  void    SetTableInfoPrivilege(const MPrivilegeMap& p_info);
 
   // Setting of special members
   void    SetInfoDB(SQLInfoDB* p_info);
   void    SetTablesSchema(XString p_schema);
   void    SetTableTablespace(XString p_tablespace);
   void    SetIndexTablespace(XString p_tablespace);
+  void    SetOptionIndexDuplicateNulls(bool p_duplicate);
+  void    SetOptionDropIfExists(bool p_drop);
 
 private:
   // Primary formatting of 'create table' DDL
@@ -87,7 +89,7 @@ private:
 
   bool    FindSchemaName(XString p_tableName);
   void    StashTheLine(XString p_line);
-  XString ReplaceLengthPrecScale(XString p_template,int p_length,int p_precision,int p_scale);
+  XString ReplaceLengthPrecScale(TypeInfo* p_type,int p_length,int p_precision,int p_scale);
   XString FormatColumnName(XString p_column,int p_length);
   int     CalculateColumnLength(MColumnMap& p_columns);
   void    FindIndexFilter(MetaIndex& p_index);
@@ -95,11 +97,15 @@ private:
 
   // Private data for the DDL creation
   SQLInfoDB* m_info;
+  SQLInfoDB* m_target;
   XString    m_schema;
   XString    m_tableName;
   XString    m_indexTablespace;
   DDLS       m_statements;
   XString    m_createDDL;
+  // Various options for generation the tables
+  bool       m_indexDuplicateNulls { false };     // Duplicate NULL in indices allowed
+  bool       m_dropIfExists        { true  };     // How we generate a CREATE statement
 
   // Info gotten
   bool m_didTable      { false };

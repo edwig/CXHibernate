@@ -4,7 +4,7 @@
 //
 // Marlin Server: Internet server/client
 // 
-// Copyright (c) 2014-2022 ir. W.E. Huisman
+// Copyright (c) 2014-2024 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -41,10 +41,10 @@ public:
                 ,LPFN_CALLBACK      p_callback = nullptr);
 
   // MANDATORY: Explicitly starting after configuration of the site
-  virtual bool StartSite();
+  virtual bool StartSite() override;
 
   // OPTIONAL: Set the webroot of the site
-  virtual bool SetWebroot(XString p_webroot);
+  virtual bool SetWebroot(XString p_webroot) override;
 
 protected:
   // Initialize the site from automatic settings in the config

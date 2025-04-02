@@ -4,7 +4,7 @@
 //
 // Marlin Server: Internet server/client
 // 
-// Copyright (c) 2014-2022 ir. W.E. Huisman
+// Copyright (c) 2014-2024 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -28,106 +28,118 @@
 #include "stdafx.h"
 #include "PoolApp.h"
 #include "ServiceReporting.h"
+#include "..\Marlin\Version.h"
+#include <map>
 #include <io.h>
 
-#define MODULE_NAME  "Application"
-#define MODULE_PATH  "Directory"
-#define MODULE_EMAIL "AdministratorEmail"
+#ifdef _AFX
+#ifdef _DEBUG
+#define new DEBUG_NEW
+#undef THIS_FILE
+static char THIS_FILE[] = __FILE__;
+#endif
+#endif
+
+#define MODULE_NAME  _T("Application")
+#define MODULE_PATH  _T("Directory")
+#define MODULE_EMAIL _T("AdministratorEmail")
 
 // Logging macro for this file only
 #define DETAILLOG(text)    SvcReportInfoEvent(false,text);
-#define ERRORLOG(text)     SvcReportErrorEvent(0,false,__FUNCTION__,text);
+#define ERRORLOG(text)     SvcReportErrorEvent(0,false,_T(__FUNCTION__),text);
 
 // General error function
 void Unhealthy(XString p_error, HRESULT p_code);
 
-PoolApp::~PoolApp()
-{
-  // Only delete application if last site was deallocated
-  // If ServerApp::LoadSite() overloads forget to call base method
-  // the reference count can drop below zero
-  if (m_application && (*m_sitesInAppPool)(m_application) <= 0)
-  {
-    delete m_application;
-  }
-}
-
 bool
-PoolApp::LoadPoolApp(IHttpApplication* p_httpapp,XString p_webroot,XString p_physical,XString p_application)
+PoolApp::LoadPoolApp(IHttpApplication* p_httpapp
+                    ,XString p_configPath
+                    ,XString p_webroot
+                    ,XString p_physical
+                    ,XString p_application
+                    ,XString p_appSite)
 {
+  // Remember the original IIS Site name
+  m_appSite = p_appSite;
+
   // Read Web config from "physical-application-path" + "web.config"
-  XString baseWebConfig = p_physical + "web.config";
+  XString baseWebConfig = p_physical + _T("web.config");
   baseWebConfig.MakeLower();
-  m_config.ReadConfig(p_application,baseWebConfig);
+
+  WebConfigSettings(p_configPath);
 
   // Load the **real** application DLL from the settings of web.config
-  XString dllLocation = m_config.GetSetting(MODULE_NAME);
-  if(dllLocation.IsEmpty())
+  if(m_dllLocation.IsEmpty())
   {
-    Unhealthy("MarlinModule could **NOT** locate the 'Application' in web.config: " + baseWebConfig,ERROR_NOT_FOUND);
+    Unhealthy(_T("MarlinModule could **NOT** locate the 'Application' in web.config: ") + baseWebConfig,ERROR_NOT_FOUND);
     return false;
   }
 
-  XString dllPath = m_config.GetSetting(MODULE_PATH);
-  if(dllPath.IsEmpty())
+  if(m_dllPath.IsEmpty())
   {
-    Unhealthy("MarlinModule could **NOT** locate the 'Directory' in web.config: " + baseWebConfig,ERROR_NOT_FOUND);
+    Unhealthy(_T("MarlinModule could **NOT** locate the 'Directory' in web.config: ") + baseWebConfig,ERROR_NOT_FOUND);
     return false;
   }
+  if(m_dllPath.Left(2).Compare(_T("..")) == 0)
+  {
+    Unhealthy(_T("MarlinModule can **NOT** use a relative path in the 'Directory' in web.config: ") + baseWebConfig,ERROR_NOT_FOUND);
+    return false;
+  } 
 
   // Find our default administrator email to send a Error report to
-  XString adminEmail = m_config.GetSetting(MODULE_EMAIL);
-  if(adminEmail.IsEmpty())
+  if(m_adminEmail.IsEmpty())
   {
-    Unhealthy("MarlinModule could **NOT** locate the 'AdministratorEmail' in the web.config: " + baseWebConfig,ERROR_NOT_FOUND);
+    Unhealthy(_T("MarlinModule could **NOT** locate the 'AdministratorEmail' in the web.config: ") + baseWebConfig,ERROR_NOT_FOUND);
     return false;
   }
   else
   {
-    extern char g_adminEmail[];
-    strncpy_s(g_adminEmail,MAX_PATH - 1,adminEmail.GetString(),MAX_PATH - 1);
-    PRODUCT_ADMIN_EMAIL = g_adminEmail;
+    extern wchar_t g_IISAdminEmail[];
+    wcsncpy_s(g_IISAdminEmail,MAX_PATH - 1,m_adminEmail.GetString(),MAX_PATH - 1);
   }
 
   // Tell MS-Windows where to look while loading our DLL
-  dllPath = ConstructDLLLocation(p_physical,dllPath);
-  if(SetDllDirectory(dllPath) == FALSE)
+  m_dllPath = ConstructDLLLocation(p_physical,m_dllPath);
+  if(SetDllDirectory(m_dllPath) == FALSE)
   {
-    Unhealthy("MarlinModule could **NOT** append DLL-loading search path with: " + dllPath,ERROR_NOT_FOUND);
+    Unhealthy(_T("MarlinModule could **NOT** append DLL-loading search path with: ") + m_dllPath,ERROR_NOT_FOUND);
     return false;
   }
 
   // Ultimately check that the directory exists and that we have read rights on the application's DLL
-  if(!CheckApplicationPresent(dllPath, dllLocation))
+  if(!CheckApplicationPresent(m_dllPath, m_dllLocation))
   {
-    Unhealthy("MarlinModule could not access the application module DLL: " + dllLocation,ERROR_ACCESS_DENIED);
+    Unhealthy(_T("MarlinModule could not access the application module DLL: ") + m_dllLocation,ERROR_ACCESS_DENIED);
     return false;
   }
 
   // See if we must load the DLL application
-  if(AlreadyLoaded(dllLocation))
+  if(AlreadyLoaded(m_dllLocation))
   {
-    DETAILLOG("MarlinModule already loaded DLL [" + dllLocation + "] for application: " + p_application);
+    DETAILLOG(XString(_T("MarlinModule already loaded DLL [")) + m_dllLocation + XString(_T("] for application: ")) + p_application);
   }
   else
   {
     // Try to load the DLL
-    m_module = LoadLibrary(dllLocation);
+    m_module = LoadLibrary(m_dllLocation);
     if (m_module)
     {
-      m_marlinDLL = dllLocation;
-      DETAILLOG("MarlinModule loaded DLL from: " + dllLocation);
+      m_marlinDLL = m_dllLocation;
+      DETAILLOG(XString(_T("MarlinModule loaded DLL from: ")) + m_dllLocation);
     }
     else
     {
       HRESULT code = GetLastError();
-      XString error("MarlinModule could **NOT** load DLL from: " + dllLocation);
+      XString error(_T("MarlinModule could **NOT** load DLL from: ") + m_dllLocation);
       Unhealthy(error,code);
       return false;
     }
 
     // Getting the start address of the application factory
+    // Beware: GetProcAddress is one of the only MS-Windows API's that does *NOT* have 'A' and 'W' variants
     m_createServerApp = (CreateServerAppFunc)GetProcAddress(m_module,"CreateServerApp");
+    m_initServerApp   = (InitServerAppFunc)  GetProcAddress(m_module,"InitServerApp");
+    m_exitServerApp   = (ExitServerAppFunc)  GetProcAddress(m_module,"ExitServerApp");
     m_findSite        = (FindHTTPSiteFunc)   GetProcAddress(m_module,"FindHTTPSite");
     m_getHttpStream   = (GetHTTPStreamFunc)  GetProcAddress(m_module,"GetStreamFromRequest");
     m_getHttpMessage  = (GetHTTPMessageFunc) GetProcAddress(m_module,"GetHTTPMessageFromRequest");
@@ -136,6 +148,8 @@ PoolApp::LoadPoolApp(IHttpApplication* p_httpapp,XString p_webroot,XString p_phy
     m_minVersion      = (MinVersionFunc)     GetProcAddress(m_module,"MinMarlinVersion");
 
     if(m_createServerApp == nullptr ||
+       m_initServerApp   == nullptr ||
+       m_exitServerApp   == nullptr ||
        m_findSite        == nullptr ||
        m_getHttpStream   == nullptr ||
        m_getHttpMessage  == nullptr ||
@@ -143,8 +157,8 @@ PoolApp::LoadPoolApp(IHttpApplication* p_httpapp,XString p_webroot,XString p_phy
        m_sitesInAppPool  == nullptr ||
        m_minVersion      == nullptr )
     {
-      XString error("MarlinModule loaded ***INCORRECT*** DLL. Missing 'CreateServerApp', 'FindHTTPSite', 'GetStreamFromRequest', "
-                    "'GetHTTPMessageFromRequest', 'HandleHTTPMessage', 'SitesInApplicPool' or 'MinMarlinVersion'");
+      XString error(_T("MarlinModule loaded ***INCORRECT*** DLL. Missing 'CreateServerApp', 'InitServerApp', 'ExitServerApp', 'FindHTTPSite', 'GetStreamFromRequest', ")
+                    _T("'GetHTTPMessageFromRequest', 'HandleHTTPMessage', 'SitesInApplicPool' or 'MinMarlinVersion'"));
       Unhealthy(error,ERROR_NOT_FOUND);
       return false;
     }
@@ -152,12 +166,12 @@ PoolApp::LoadPoolApp(IHttpApplication* p_httpapp,XString p_webroot,XString p_phy
 
   // Let the server app factory create a new one for us
   // And store it in our representation of the active application pool
-  m_application = (*m_createServerApp)(g_iisServer                 // Microsoft IIS server object
+  m_application = (*m_createServerApp)(g_IISServer                 // Microsoft IIS server object
                                       ,p_webroot.GetString()       // The IIS registered webroot
                                       ,p_application.GetString()); // The application's name
   if(m_application == nullptr)
   {
-    XString error("NO APPLICATION CREATED IN THE APP-FACTORY!");
+    XString error(_T("NO APPLICATION CREATED IN THE APP-FACTORY!"));
     Unhealthy(error,ERROR_SERVICE_NOT_ACTIVE);
     return false;
   }
@@ -166,26 +180,18 @@ PoolApp::LoadPoolApp(IHttpApplication* p_httpapp,XString p_webroot,XString p_phy
   int version = MARLIN_VERSION_MAJOR * 10000 +   // Major version main
                 MARLIN_VERSION_MINOR *   100 +   // Minor version number
                 MARLIN_VERSION_SP;               // Service pack
+
   if(!(*m_minVersion)(m_application,version))
   {
-    XString error("ERROR WRONG VERSION Application: " + p_application);
+    XString error(_T("ERROR WRONG VERSION Application: ") + p_application);
     Unhealthy(error,ERROR_SERVICE_NOT_ACTIVE);
     return false;
   }
 
-  // Call the initialization
-  m_application->InitInstance();
-
-  // Try loading the sites from IIS in the application
-  m_application->LoadSites(p_httpapp,p_physical);
-
-  // Ready, so stop the timer
-  m_application->StopCounter();
-
-  // Check if everything went well
-  if(m_application->CorrectlyStarted() == false)
+  // Call the initialization of the application
+  if(!(*m_initServerApp)(m_application,p_httpapp,p_physical))
   {
-    XString error("ERROR STARTING Application: " + p_application);
+    XString error(_T("ERROR STARTING Application: ") + p_application);
     Unhealthy(error,ERROR_SERVICE_NOT_ACTIVE);
     return false;
   }
@@ -197,23 +203,26 @@ PoolApp::LoadPoolApp(IHttpApplication* p_httpapp,XString p_webroot,XString p_phy
 XString
 PoolApp::ConstructDLLLocation(XString p_rootpath, XString p_dllPath)
 {
-#ifdef _DEBUG
-  // ONLY FOR DEVELOPMENT TEAMS RUNNING OUTSIDE THE WEBROOT
-  if(p_dllPath.GetAt(0) == '@')
+  extern bool g_IISDebugMode;
+
+  if(g_IISDebugMode)
   {
-    return p_dllPath.Mid(1);
+    // ONLY FOR DEVELOPMENT TEAMS RUNNING OUTSIDE THE WEBROOT
+    if(p_dllPath.GetAt(0) == _T('@'))
+    {
+      return p_dllPath.Mid(1);
+    }
   }
-#endif
   // Default implementation
   XString pathname = p_rootpath;
-  if(pathname.Right(1) != "\\")
+  if(pathname.Right(1) != _T("\\"))
   {
-    pathname += "\\";
+    pathname += _T("\\");
   }
   pathname += p_dllPath;
-  if(pathname.Right(1) != "\\")
+  if(pathname.Right(1) != _T("\\"))
   {
-    pathname += "\\";
+    pathname += _T("\\");
   }
   return pathname;
 }
@@ -223,9 +232,9 @@ bool
 PoolApp::CheckApplicationPresent(XString& p_dllPath,XString& p_dllName)
 {
   // Check if the directory exists
-  if(_access(p_dllPath, 0) == -1)
+  if(_taccess(p_dllPath, 0) == -1)
   {
-    ERRORLOG("The directory does not exist: " + p_dllPath);
+    ERRORLOG(XString(_T("The directory does not exist: ")) + p_dllPath);
     return false;
   }
 
@@ -233,15 +242,15 @@ PoolApp::CheckApplicationPresent(XString& p_dllPath,XString& p_dllName)
   int pos = p_dllName.Find('\\');
   if (pos >= 0)
   {
-    ERRORLOG("The variable 'Application' must only be the name of the application DLL: " + p_dllName);
+    ERRORLOG(XString(_T("The variable 'Application' must only be the name of the application DLL: ")) + p_dllName);
     return false;
   }
 
   // Construct the complete path and check for presence
   p_dllName = p_dllPath + p_dllName;
-  if(_access(p_dllPath, 4) == -1)
+  if(_taccess(p_dllPath, 4) == -1)
   {
-    ERRORLOG("The application DLL cannot be read: " + p_dllName);
+    ERRORLOG(XString(_T("The application DLL cannot be read: ")) + p_dllName);
     return false;
   }
   return true;
@@ -262,8 +271,9 @@ PoolApp::AlreadyLoaded(XString p_path_to_dll)
       // Application module
       m_module          = app.second->m_module;
       m_createServerApp = app.second->m_createServerApp;
+      m_initServerApp   = app.second->m_initServerApp;
+      m_exitServerApp   = app.second->m_exitServerApp;
       // Function pointers
-      m_createServerApp = app.second->m_createServerApp;
       m_findSite        = app.second->m_findSite;
       m_getHttpStream   = app.second->m_getHttpStream;
       m_getHttpMessage  = app.second->m_getHttpMessage;
@@ -276,3 +286,70 @@ PoolApp::AlreadyLoaded(XString p_path_to_dll)
   return false;
 }
 
+bool
+PoolApp::WebConfigSettings(XString p_configPath)
+{
+  IAppHostAdminManager* manager = g_IISServer->GetAdminManager();
+
+  // Finding all application settings
+  IAppHostElement* handlersElement = nullptr;
+  if(manager->GetAdminSection(CComBSTR(L"appSettings"),CComBSTR(p_configPath),&handlersElement) == S_OK)
+  {
+    IAppHostElementCollection* handlersCollection = nullptr;
+    handlersElement->get_Collection(&handlersCollection);
+    if(handlersCollection)
+    {
+      DWORD dwElementCount = 0;
+      handlersCollection->get_Count(&dwElementCount);
+      for(USHORT dwElement = 0; dwElement < dwElementCount; ++dwElement)
+      {
+        VARIANT vtItemIndex;
+        vtItemIndex.vt   = VT_I2;
+        vtItemIndex.iVal = dwElement;
+
+        IAppHostElement* childElement = nullptr;
+        if(handlersCollection->get_Item(vtItemIndex,&childElement) == S_OK)
+        {
+          // Read key/value pairs
+          // <add key="Directory" value="@C:\Develop\Marlin\BinDebug_x64\" />
+          XString key;
+          XString value;
+
+          IAppHostProperty* propKey = nullptr;
+          VARIANT vkey;
+          vkey.bstrVal = 0;
+          IAppHostProperty* propValue = nullptr;
+          VARIANT vvalue;
+          vvalue.bstrVal = 0;
+
+          if(childElement->GetPropertyByName(CComBSTR(L"key"),&propKey) == S_OK && propKey->get_Value(&vkey) == S_OK && vkey.vt == VT_BSTR)
+          {
+            key = vkey.bstrVal;
+          }
+          if(childElement->GetPropertyByName(CComBSTR(L"value"),&propValue) == S_OK && propValue->get_Value(&vvalue) == S_OK && vvalue.vt == VT_BSTR)
+          {
+            value = vvalue.bstrVal;
+          }
+
+          if(key.CompareNoCase(_T("Directory")) == 0)
+          {
+            m_dllPath = value;
+          }
+          if(key.CompareNoCase(_T("Application")) == 0)
+          {
+            m_dllLocation = value;
+          }
+          if(key.CompareNoCase(_T("AdministratorEmail")) == 0)
+          {
+            m_adminEmail = value;
+          }
+          if(key.CompareNoCase(_T("XSSBlocking")) == 0)
+          {
+            m_xssBlocking = (value.CompareNoCase(_T("true")) == 0);
+          }
+        }
+      }
+    }
+  }
+  return !m_dllPath.IsEmpty() && !m_dllLocation.IsEmpty() && !m_adminEmail.IsEmpty();
+}

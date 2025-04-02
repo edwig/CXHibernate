@@ -33,9 +33,6 @@
     <ClInclude Include="CXServer.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="CXHibernate.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="CXClass.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -73,6 +70,9 @@
       <Filter>Configuration</Filter>
     </ClInclude>
     <ClInclude Include="framework.h">
+      <Filter>Configuration</Filter>
+    </ClInclude>
+    <ClInclude Include="CXHibernate.h">
       <Filter>Configuration</Filter>
     </ClInclude>
   </ItemGroup>

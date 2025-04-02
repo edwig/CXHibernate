@@ -4,7 +4,7 @@
 //
 // Marlin Server: Internet server/client
 // 
-// Copyright (c) 2014-2022 ir. W.E. Huisman
+// Copyright (c) 2014-2024 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -26,32 +26,48 @@
 // THE SOFTWARE.
 //
 #pragma once
-#include "ServerApp.h"
+#include <httpserv.h>
 
-// Forward reference
-class LogAnalysis;
-class HTTPServerIIS;
-class ErrorReport;
-class IHttpApplication;
+typedef void ServerApp;
+typedef void HTTPSite;
+typedef void HTTPMessage;
+
+// Exported functions that can be called from the MarlinModule
+typedef ServerApp*    (CALLBACK* CreateServerAppFunc)(IHttpServer*,PCWSTR,PCWSTR);
+typedef bool          (CALLBACK* InitServerAppFunc)  (ServerApp*,IHttpApplication* p_hhtpapp,PCWSTR p_physial);
+typedef void          (CALLBACK* ExitServerAppFunc)  (ServerApp*);
+typedef HTTPSite*     (CALLBACK* FindHTTPSiteFunc)   (ServerApp*,int port,PCWSTR p_url);
+typedef int           (CALLBACK* GetHTTPStreamFunc)  (ServerApp*,IHttpContext*,HTTPSite*,PHTTP_REQUEST);
+typedef HTTPMessage*  (CALLBACK* GetHTTPMessageFunc) (ServerApp*,IHttpContext*,HTTPSite*,PHTTP_REQUEST);
+typedef bool          (CALLBACK* HandleMessageFunc)  (ServerApp*,HTTPSite* p_site,HTTPMessage*);
+typedef int           (CALLBACK* SitesInApplicPool)  (ServerApp*);
+typedef bool          (CALLBACK* MinVersionFunc)     (ServerApp*,int version);
+
+// Our IIS Server
+extern IHttpServer* g_IISServer;
 
 // Helper class with a web application
 // Also contains the function pointers into our application DLL
 class PoolApp
 {
 public:
-  // Conditional destructor!!
-  ~PoolApp();
-
-  bool LoadPoolApp(IHttpApplication* p_httpapp,XString p_webroot,XString p_physical,XString p_application);
+  bool LoadPoolApp(IHttpApplication* p_httpapp
+                  ,XString p_configPath
+                  ,XString p_webroot
+                  ,XString p_physical
+                  ,XString p_application
+                  ,XString p_appSite);
 
   // DATA
-  WebConfigIIS        m_config;
+  XString             m_appSite;
   XString             m_marlinDLL;
   ServerApp*          m_application     { nullptr };
-  LogAnalysis*        m_analysisLog     { nullptr };
   HMODULE             m_module          { NULL    };
+  bool                m_xssBlocking     { false   };
   // DLL Loaded functions
   CreateServerAppFunc m_createServerApp { nullptr };
+  InitServerAppFunc   m_initServerApp   { nullptr };
+  ExitServerAppFunc   m_exitServerApp   { nullptr };
   FindHTTPSiteFunc    m_findSite        { nullptr };
   GetHTTPStreamFunc   m_getHttpStream   { nullptr };
   GetHTTPMessageFunc  m_getHttpMessage  { nullptr };
@@ -60,9 +76,14 @@ public:
   MinVersionFunc      m_minVersion      { nullptr };
 
 private:
+  bool    WebConfigSettings(XString p_configPath);
   XString ConstructDLLLocation(XString p_rootpath, XString p_dllPath);
   bool    CheckApplicationPresent(XString& p_dllPath, XString& p_dllName);
   bool    AlreadyLoaded(XString p_path_to_dll);
 
+  // Application settings
+  XString m_dllPath;                // mostly "<webroot>\<application>\bin"
+  XString m_dllLocation;            // Name of the DLL
+  XString m_adminEmail;             // Who to notify of an error
 };
 

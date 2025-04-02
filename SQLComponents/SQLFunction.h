@@ -2,7 +2,7 @@
 //
 // File: SQLFunction.h
 //
-// Copyright (c) 1998-2022 ir. W.E. Huisman
+// Copyright (c) 1998-2025 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy of 
@@ -115,6 +115,8 @@ typedef enum _sqlFunction
   ,FN_MIN
   ,FN_MAX
   ,FN_AVG
+  // EXTRA FUNCTIONS
+  ,FN_REGEXP_MATCH
 }
 SQLFunction;
 

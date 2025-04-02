@@ -1,6 +1,12 @@
 RELEASENOTES VERSIONS 1.X
 =========================
 
+Version 1.4.0 Date: 02-04-2025
+------------------------------
+1)  Updated tot the latest library versions
+2)  Added Unicode support
+3)  Full test of all x86 and x64 builds
+
 Version 1.3.0 Date: 24-03-2022
 ------------------------------
 1)  Updated to Marlin version 8.0.0

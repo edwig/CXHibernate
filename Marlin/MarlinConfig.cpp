@@ -4,7 +4,7 @@
 //
 // Marlin Server: Internet server/client
 // 
-// Copyright (c) 2014-2022 ir. W.E. Huisman
+// Copyright (c) 2014-2024 ir. W.E. Huisman
 // All rights reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -28,23 +28,26 @@
 #include "Stdafx.h"
 #include "MarlinConfig.h"
 #include "Crypto.h"
+#include <io.h>
 
+#ifdef _AFX
 #ifdef _DEBUG
 #define new DEBUG_NEW
 #undef THIS_FILE
 static char THIS_FILE[] = __FILE__;
 #endif
+#endif
 
 MarlinConfig::MarlinConfig()
 {
-  ReadConfig("Marlin.config");
+  ReadConfig(_T("Marlin.config"));
 }
 
 MarlinConfig::MarlinConfig(XString p_filename)
 {
   if(p_filename.IsEmpty())
   {
-    ReadConfig("Marlin.config");
+    ReadConfig(_T("Marlin.config"));
   }
   else
   {
@@ -57,12 +60,12 @@ MarlinConfig::~MarlinConfig()
   WriteConfig();
 }
 
-static char g_staticAddress;
+static const TCHAR g_staticAddress;
 
 /* static */ XString
 MarlinConfig::GetExeModule()
 {
-  char buffer[_MAX_PATH + 1];
+  TCHAR buffer[_MAX_PATH + 1];
 
   // Getting the module handle, if any
   // If it fails, the process names will be retrieved
@@ -87,7 +90,7 @@ MarlinConfig::GetExePath()
   int slashPosition = assembly.ReverseFind('\\');
   if(slashPosition == 0)
   {
-    return "";
+    return _T("");
   }
   return assembly.Left(slashPosition + 1);
 }
@@ -102,23 +105,23 @@ MarlinConfig::GetSiteConfig(XString p_prefixURL)
   XString pathName = MarlinConfig::GetExePath();
 
   XString name(p_prefixURL);
-  int pos = name.Find("//");
+  int pos = name.Find(_T("//"));
   if(pos)
   {
-    name = "Site" + name.Mid(pos + 2);
+    name = _T("Site") + name.Mid(pos + 2);
     name.Replace(':','-');
 //  name.Replace('+','-');    // Strong can appear in the filename
     name.Replace('*','!');    // Weak appears as '!' in the filename
     name.Replace('.','_');
     name.Replace('/','-');
     name.Replace('\\','-');
-    name.Replace("--","-");
+    name.Replace(_T("--"),_T("-"));
     name.TrimRight('-');
-    name += ".config";
+    name += _T(".config");
 
     return pathName + name;
   }
-  return "";
+  return _T("");
 }
 
 /* static */ XString
@@ -127,13 +130,13 @@ MarlinConfig::GetURLConfig(XString p_url)
   XString pathName = MarlinConfig::GetExePath();
 
   XString url(p_url);
-  int pos = url.Find("//");
+  int pos = url.Find(_T("//"));
   if(pos)
   {
     // Knock of the protocol
-    url = "URL" + url.Mid(pos+2);
+    url = _T("URL") + url.Mid(pos+2);
     // Knock of the query/anchor sequence
-    pos = url.Find("?");
+    pos = url.Find(_T("?"));
     if(pos > 0)
     {
       url = url.Left(pos);
@@ -145,7 +148,7 @@ MarlinConfig::GetURLConfig(XString p_url)
       url = url.Left(pos);
     }
     // For all you dumbs
-    url.Replace("\\","/");
+    url.Replace(_T("\\"),_T("/"));
     // Remove special chars
     url.Replace(':','-');
     url.Replace(']','-');
@@ -153,14 +156,32 @@ MarlinConfig::GetURLConfig(XString p_url)
     url.Replace('.','_');
     url.Replace('/','-');
     url.Replace('\\','-');
-    url.Replace("--","-");
+    url.Replace(_T("--"),_T("-"));
     url.TrimRight('-');
 
     // Create config file name
-    url+= ".config";
+    url+= _T(".config");
     return pathName + url;
   }
-  return "";
+  return _T("");
+}
+
+// Is the config file writable
+bool
+MarlinConfig::GetConfigWritable()
+{
+  if(_taccess(m_fileName,00) == -1)
+  {
+    // File does not exist. Assume that we can create it
+    // for instance in the ServerApplet config dialog
+    return true;
+  }
+  if(_taccess(m_fileName,06) == 0)
+  {
+    // Read AND write access tot the file
+    return true;
+  }
+  return false;
 }
 
 bool
@@ -182,14 +203,14 @@ MarlinConfig::ReadConfig(XString p_filename)
   if(XMLMessage::LoadFile(m_fileName))
   {
     XString rootName = m_root->GetName();
-    if(rootName.CompareNoCase("Configuration") == 0)
+    if(rootName.CompareNoCase(_T("Configuration")) == 0)
     {
       // A Configuration file
       return m_filled = true;
     }
   }
   Reset();
-  SetRootNodeName("Configuration");
+  SetRootNodeName(_T("Configuration"));
   return false;
 }
 
@@ -203,7 +224,7 @@ MarlinConfig::WriteConfig()
   // Check for new file
   if(m_fileName.IsEmpty())
   {
-    m_fileName = GetExePath() + "Marlin.config";
+    m_fileName = GetExePath() + _T("Marlin.config");
   }
 
   return XMLMessage::SaveFile(m_fileName);
@@ -255,13 +276,15 @@ MarlinConfig::SetSection(XString p_section)
     // Section already exists
     return false;
   }
-  if(AddElement(NULL,p_section,XDT_Complex,""))
+  if(AddElement(NULL,p_section,XDT_Complex,_T("")))
   {
     m_changed = true;
   }
   return true;
 }
 
+// Add a parameter to a section
+// To succeed, the section must exist already
 bool 
 MarlinConfig::SetParameter(XString p_section,XString p_parameter,XString p_value)
 {
@@ -294,7 +317,7 @@ MarlinConfig::SetParameter(XString p_section,XString p_parameter,int p_value)
   XString value;
   if(p_value)
   {
-    value.Format("%d",p_value);
+    value.Format(_T("%d"),p_value);
   }
   return SetParameter(p_section,p_parameter,value);
 }
@@ -302,7 +325,7 @@ MarlinConfig::SetParameter(XString p_section,XString p_parameter,int p_value)
 bool
 MarlinConfig::SetParameter(XString p_section,XString p_parameter,bool p_value)
 {
-  XString value = p_value ? "true" : "false";
+  XString value = p_value ? _T("true") : _T("false");
   return SetParameter(p_section,p_parameter,value);
 }
 
@@ -315,7 +338,7 @@ MarlinConfig::SetEncrypted(XString p_section,XString p_parameter,XString p_value
   {
     XString reverse(p_value);
     reverse.MakeReverse();
-    XString value = reverse + ":" + p_value;
+    XString value = reverse + _T(":") + p_value;
     encrypted = crypt.Encryption(value,MARLINCONFIG_WACHTWOORD);
   }
   return SetParameter(p_section,p_parameter,encrypted);
@@ -344,7 +367,7 @@ bool
 MarlinConfig::SetAttribute(XString p_section,XString p_parameter,XString p_attrib,int p_value)
 {
   XString value;
-  value.Format("%d",p_value);
+  value.Format(_T("%d"),p_value);
   return SetAttribute(p_section,p_parameter,p_attrib,value);
 }
 
@@ -352,7 +375,7 @@ bool
 MarlinConfig::SetAttribute(XString p_section,XString p_parameter,XString p_attrib,double p_value)
 {
   XString value;
-  value.Format("%G",p_value);
+  value.Format(_T("%G"),p_value);
   return SetAttribute(p_section,p_parameter,p_attrib,value);
 }
 
@@ -442,32 +465,32 @@ MarlinConfig::GetParameterString(XString p_section,XString p_parameter,XString p
 int
 MarlinConfig::GetParameterInteger(XString p_section,XString p_parameter,int p_default)
 {
-  XString param = GetParameterString(p_section,p_parameter,"");
+  XString param = GetParameterString(p_section,p_parameter,_T(""));
   if(param.IsEmpty())
   {
     return p_default;
   }
-  return atoi(param);
+  return _ttoi(param);
 }
 
 bool
 MarlinConfig::GetParameterBoolean(XString p_section,XString p_parameter,bool p_default)
 {
-  XString param = GetParameterString(p_section,p_parameter,"");
+  XString param = GetParameterString(p_section,p_parameter,_T(""));
   if(param.IsEmpty())
   {
     return p_default;
   }
-  if(param.CompareNoCase("true") == 0)
+  if(param.CompareNoCase(_T("true")) == 0)
   {
     return true;
   }
-  if(param.CompareNoCase("false") == 0)
+  if(param.CompareNoCase(_T("false")) == 0)
   {
     return false;
   }
   // Simply 0 or 1
-  return (atoi(param) > 0);
+  return (_ttoi(param) > 0);
 }
 
 XString 
@@ -478,7 +501,7 @@ MarlinConfig::GetEncryptedString (XString p_section,XString p_parameter,XString 
 
   try
   {
-    XString encrypted = GetParameterString(p_section,p_parameter,"");
+    XString encrypted = GetParameterString(p_section,p_parameter,_T(""));
     if(!encrypted.IsEmpty())
     {
       decrypted = crypt.Decryption(encrypted,MARLINCONFIG_WACHTWOORD);
@@ -512,8 +535,6 @@ MarlinConfig::GetEncryptedString (XString p_section,XString p_parameter,XString 
 XString 
 MarlinConfig::GetAttribute(XString p_section,XString p_parameter,XString p_attrib,XString p_default)
 {
-  XString val = p_default;
-
   XMLElement* section = FindElement(p_section);
   if(section)
   {
@@ -523,41 +544,37 @@ MarlinConfig::GetAttribute(XString p_section,XString p_parameter,XString p_attri
       return XMLMessage::GetAttribute(param,p_attrib);
     }
   }
-  return val;
+  return p_default;
 }
 
 int
 MarlinConfig::GetAttribute(XString p_section,XString p_parameter,XString p_attrib,int p_default)
 {
-  int val = p_default;
-
   XMLElement* section = FindElement(p_section);
   if(section)
   {
     XMLElement* param = FindElement(section,p_parameter);
     if(param)
     {
-      return atoi(XMLMessage::GetAttribute(param,p_attrib));
+      return _ttoi(XMLMessage::GetAttribute(param,p_attrib));
     }
   }
-  return val;
+  return p_default;
 }
 
 double
 MarlinConfig::GetAttribute(XString p_section,XString p_parameter,XString p_attrib,double p_default)
 {
-  double val = p_default;
-
   XMLElement* section = FindElement(p_section);
   if(section)
   {
     XMLElement* param = FindElement(section,p_parameter);
     if(param)
     {
-      return atof(XMLMessage::GetAttribute(param,p_attrib));
+      return _ttof(XMLMessage::GetAttribute(param,p_attrib));
     }
   }
-  return val;
+  return p_default;
 }
 
 // DISCOVERY

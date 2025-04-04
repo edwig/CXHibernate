@@ -41,6 +41,8 @@ SQLConnection;
 
 using ConnMap = std::map<XString,SQLConnection>;
 
+#define DEFAULT_ENCRYPTION_KEY _T("S~Q!L@C#$n%ne^&c*t(i)o<n>s/")
+
 class SQLConnections
 {
 public:
@@ -58,6 +60,7 @@ public:
 
   // SETTERS
   void        Reset();
+  void        SetEncryptionKey(XString p_key);
   bool        AddConnection(XString p_name,XString p_datasource,XString p_username,XString p_password,XString p_options);
   bool        DelConnection(XString p_name);
 
@@ -67,6 +70,7 @@ private:
 
   // All saved connections from "database.xml"
   ConnMap     m_connections;
+  XString     m_cryptKey;
 };
 
 }

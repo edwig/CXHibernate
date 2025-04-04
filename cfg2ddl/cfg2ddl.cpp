@@ -7,6 +7,7 @@
 #include <CXClass.h>
 #include <DDLCreateTable.h>
 #include <GetExePath.h>
+#include <SQLAutoDBS.h>
 #include <map>
 
 using SQLComponents::DDLCreateTable;
@@ -41,7 +42,8 @@ void WriteDDLFooter(FILE* p_file)
 void GenerateTable(FILE* p_file,CXSession* p_session,CXClass* p_class)
 {
   // Get info about flat table
-  SQLInfoDB* info = p_session->GetDatabase()->GetSQLInfoDB();
+  SQLAutoDBS dbs(*p_session->GetDatabasePool(),p_session->GetDatabaseConnection());
+  SQLInfoDB* info = dbs->GetSQLInfoDB();
   DDLCreateTable create(info);
   CXTable* table = p_class->GetTable();
 

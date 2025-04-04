@@ -29,7 +29,7 @@
 #include "CXObject.h"
 #include "CXRole.h"
 #include "CXSessionUse.h"
-#include <SQLDatabase.h>
+#include <SQLDatabasePool.h>
 #include <SQLDataSet.h>
 #include <SQLMetaInfo.h>
 #include <map>
@@ -68,12 +68,10 @@ public:
   // SETTERS
 
   // Specify a database connection
-  void          SetDatabaseCatalog(CString p_datasource);
-  void          SetDatabaseUsername(CString p_user);
-  void          SetDatabasePassword(CString p_password);
   void          SetDatabaseConnection(CString p_datasource,CString p_user,CString p_password);
+  void          SetDatabaseConnection(CString p_connectionName);
   // Alternate database 
-  void          SetDatabase(SQLDatabase* p_database);
+  void          SetDatabasePool(SQLDatabasePool* p_pool);
   // Setting an alternate filestore location
   void          SetFilestore(CString p_directory);
   // Setting an alternate internet location
@@ -81,22 +79,16 @@ public:
 
   // GETTERS
 
-  // Getting our database
-  SQLDatabase*  GetDatabase();
+  // Getting our database pool
+  SQLDatabasePool* GetDatabasePool();
+  // Getting the connection name
+  CString       GetDatabaseConnection();
   // Find if the database is correctly opened
   bool          GetDatabaseIsOpen();
   // Get a map to all classes
   ClassMap&     GetClasses();
   // Finding a class
   CXClass*      FindClass(CString p_name);
-
-  // TRANSACTIONS
-
-  // Get a master mutation ID, to put actions into one (1) commit
-  int           StartTransaction();
-  void          CommitTransaction();
-  void          RollbackTransaction();
-  bool          HasTransaction();
 
   // FILESTORE & SOAP interface
 
@@ -119,7 +111,7 @@ public:
   CXResultSet   Load  (CString p_className,SQLFilter*    p_filter);     // Multiple objects from one filter
   CXResultSet   Load  (CString p_className,SQLFilterSet& p_filters);    // Multiple objects from <n> filters
   bool          Save  (CXObject* p_object);
-  bool          Update(CXObject* p_object);
+  bool          Update(CXObject* p_object,SQLDatabase* p_dbs = nullptr);
   bool          Insert(CXObject* p_object);
   bool          Delete(CXObject* p_object);
   // Remove object from the result cache without any database/internet actions
@@ -164,7 +156,7 @@ private:
   CXResultSet   SelectObjectsFromFilestore(CString p_className,SQLFilterSet& p_filters);
   CXResultSet   SelectObjectsFromInternet (CString p_className,SQLFilterSet& p_filters);
   // DML operations in the database
-  bool          UpdateObjectInDatabase (CXObject* p_object);
+  bool          UpdateObjectInDatabase (CXObject* p_object,SQLDatabase* p_dbs = nullptr);
   bool          InsertObjectInDatabase (CXObject* p_object);
   bool          DeleteObjectInDatabase (CXObject* p_object);
   // DML operations in the filestore
@@ -188,22 +180,20 @@ private:
   bool          CallOnUpdate(CXObject* p_object);
   bool          CallOnDelete(CXObject* p_object);
 
-  CString       m_sessionKey;                  // As known by CXHibernate
-  CXHRole       m_role { CXH_Database_role};   // Master/Slave role of the session
-  CXHSessionUse m_use  { SESS_Use         };   // How to use our database
-  CString       m_baseDirectory;               // Base directory for filestore role
-  CString       m_url;                         // Internet URL where we get our data
-  bool          m_ownDatabase   { false   };   // We own / destroy this database
-  SQLDatabase*  m_database      { nullptr };   // Currently using database connection
-  CString       m_dbsCatalog;                  // Database to connect to
-  CString       m_dbsUser;                     // Database user to connect
-  CString       m_dbsPassword;                 // Password of our database user
-  ClassMap      m_classes;                     // All classes definitions that we know of
-  CXCache       m_cache;                       // All cached objects of all known tables
-  int           m_mutation      { 0       };   // Mutation id
-  MetaSession   m_metaInfo;                    // Database meta-session info
-  SQLTransaction*  m_transaction{ nullptr };   // Enveloping transaction for all updates
-  int              m_subtrans   { 0       };   // Sub-transaction
-  HTTPClient*      m_client     { nullptr };   // Client for internet role
-  CRITICAL_SECTION m_lock;                     // Lock for the caches and mappings
+  CString           m_sessionKey;                  // As known by CXHibernate
+  CXHRole           m_role { CXH_Database_role};   // Master/Slave role of the session
+  CXHSessionUse     m_use  { SESS_Use         };   // How to use our database
+  CString           m_baseDirectory;               // Base directory for filestore role
+  CString           m_url;                         // Internet URL where we get our data
+  bool              m_ownPool       { false   };   // We own / destroy this database
+  SQLDatabasePool*  m_databasePool  { nullptr };   // Database connection pool
+  XString           m_dbsConnection;               // Database connection name
+  CString           m_dbsCatalog;                  // Database to connect to
+  CString           m_dbsUser;                     // Database user to connect
+  CString           m_dbsPassword;                 // Password of our database user
+  ClassMap          m_classes;                     // All classes definitions that we know of
+  CXCache           m_cache;                       // All cached objects of all known tables
+  MetaSession       m_metaInfo;                    // Database meta-session info
+  HTTPClient*       m_client        { nullptr };   // Client for internet role
+  CRITICAL_SECTION  m_lock;                        // Lock for the caches and mappings
 };

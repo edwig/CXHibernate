@@ -54,6 +54,7 @@ public:
   SQLConnection*  GetConnection(XString p_name);
   SQLConnection*  GetConnection(unsigned p_number);
   XString         GetConnectionString(XString p_name);
+  int             GetConnectionsCount();
 
   // SETTERS
   void        Reset();

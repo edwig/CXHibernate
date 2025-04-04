@@ -31,6 +31,7 @@
 #include "Master.h"
 #include "Detail.h"
 #include "TestNumber.h"
+#include <SQLAutoDBS.h>
 #include <SQLComponents.h>
 #include <SQLVariant.h>
 #include <SQLQuery.h>
@@ -334,26 +335,19 @@ namespace HibernateTest
     // Open a CXHibernate session and add the 'master' and 'detail' tables
     bool OpenSessionFULL()
     {
-      // Check if already done
-      if(m_database.IsOpen())
-      {
-        return true;
-      }
-
       try
       {
         // Init in the correct language, before 'CreateSession' is called!!
         InitSQLComponents(LN_ENGLISH);
 
-        m_database.Open(_T("hibtest"),_T("sysdba"),_T("altijd"));
-        if(m_database.IsOpen())
+        m_session->SetDatabaseConnection(_T("hibtest"),_T("sysdba"),_T("altijd"));
+        if(m_session->GetDatabaseIsOpen())
         {
           hibernate.SetDefaultSchema(_T("sysdba"));
           hibernate.SetStrategy(MapStrategy::Strategy_standalone);
           m_session = hibernate.CreateSession();
 
           m_session->SetFilestore(_T("C:\\WWW\\Testing"));
-          m_session->SetDatabase(&m_database);
 
           if(m_session->FindClass(Master::ClassName()) == nullptr)
           {
@@ -462,8 +456,9 @@ namespace HibernateTest
 
     void ReadTableDefinition(CXClass* p_class)
     {
+      SQLAutoDBS database(*m_session->GetDatabasePool(),m_session->GetDatabaseConnection());
       CXTable* table = p_class->GetTable();
-      if(table->GetMetaInfoFromDatabase(m_database,true,true,true) == false)
+      if(table->GetMetaInfoFromDatabase(*database,true,true,true) == false)
       {
         Assert::Fail(L"Table structure of table not found and loaded!");
       }
@@ -474,7 +469,7 @@ namespace HibernateTest
     {
       int result = 0;
 
-      SQLDatabase* database = m_session->GetDatabase();
+      SQLAutoDBS database(*m_session->GetDatabasePool(),m_session->GetDatabaseConnection());
       if(database->IsOpen() == false)
       {
         return -1;
@@ -506,7 +501,7 @@ namespace HibernateTest
     {
       CString result;
 
-      SQLDatabase* database = m_session->GetDatabase();
+      SQLAutoDBS database(*m_session->GetDatabasePool(),m_session->GetDatabaseConnection());
       if(database->IsOpen() == false)
       {
         return _T("");
@@ -534,6 +529,5 @@ namespace HibernateTest
       return result;
     }
     CXSession*  m_session { nullptr };
-    SQLDatabase m_database;
 	};
 }

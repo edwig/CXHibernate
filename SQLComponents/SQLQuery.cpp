@@ -1297,20 +1297,6 @@ SQLQuery::BindColumns()
         BindColumnNumeric((SQLSMALLINT)bcol,var,SQL_RESULT_COL);
       }
     }
-    if(m_hasLongColumns && (bcol > m_hasLongColumns))
-    {
-      if(type == SQL_C_NUMERIC && 
-         m_database && ((m_database->GetSQLInfoDB()->GetGetDataExtensions() & SQL_GD_BOUND) == 0) && 
-         var->GetNumericScale() > 0 &&
-         !(var->GetNumericPrecision() == 38 && var->GetNumericScale() == 16))
-      {
-        // Cannot get a NUMERIC with decimals after a At-Exec column,
-        // because we cannot bind the precision and scale
-        m_lastError = _T("Cannot retrieve a NUMERIC after a (binary)large object.");
-        m_lastError.AppendFormat(_T(" Column: %d"),bcol);
-        throw StdException(m_lastError);
-      }
-    }
   }
 }
 

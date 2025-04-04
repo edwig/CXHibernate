@@ -29,10 +29,10 @@
 #include "CXClass.h"
 #include "CXPrimaryHash.h"
 #include "CXRole.h"
-#include "CXTransaction.h"
 #include <AutoCritical.h>
 #include <SQLQuery.h>
 #include <SQLTransaction.h>
+#include <SQLAutoDBS.h>
 #include <SOAPMessage.h>
 #include <HTTPClient.h>
 #include <io.h>
@@ -89,35 +89,21 @@ CXSession::CXSession(CString p_sessionKey,CString p_database,CString p_user,CStr
 {
   // Create the cache lock
   InitializeCriticalSection(&m_lock);
-
-  m_database = new SQLDatabase();
-  if(m_database->Open(p_database,p_user,p_password))
-  {
-    GetMetaSessionInfo();
-  }
-  m_database->RegisterLogContext(hibernate.GetLogLevel(),CXHLogLevel,CXHLogPrint,this);
+  SetDatabaseConnection(p_database,p_user,p_password);
 }
 
 // DTOR: Free all tables and records
 CXSession::~CXSession()
 {
-  // Rollback any hanging transaction
-  if(m_transaction)
-  {
-    m_transaction->Rollback();
-    delete m_transaction;
-    m_transaction = nullptr;
-  }
-
   // Destroy the caches
   ClearCache();
   ClearClasses();
 
   // Destroy database (if any)
-  if(m_database && m_ownDatabase)
+  if(m_databasePool && m_ownPool)
   {
-    delete m_database;
-    m_database = nullptr;
+    delete m_databasePool;
+    m_databasePool = nullptr;
   }
 
   // Destroy HTTP client
@@ -145,7 +131,7 @@ CXSession::CloseSession()
   else
   {
     // If still an open database: synchronize our caches
-    if(m_database && m_database->IsOpen())
+    if(m_databasePool && GetDatabaseIsOpen())
     {
       Synchronize();
     }
@@ -167,90 +153,81 @@ CXSession::ChangeRole(CXHRole p_role)
 bool 
 CXSession::GetDatabaseIsOpen()
 {
-  if(m_database)
+  SQLAutoDBS dbs(*m_databasePool,m_dbsConnection);
+
+  if(dbs.Valid())
   {
-    return m_database->IsOpen();
+    return dbs->IsOpen();
   }
   return false;
 }
 
 // Alternate database 
 void 
-CXSession::SetDatabase(SQLDatabase* p_database)
+CXSession::SetDatabasePool(SQLDatabasePool* p_pool)
 {
   AutoCritSec lock(&m_lock);
 
-  if(m_database && m_ownDatabase)
+  if(m_databasePool && m_ownPool)
   {
-    delete m_database;
+    delete m_databasePool;
   }
-  m_database = p_database;
-  m_ownDatabase = false;
+  m_databasePool = p_pool;
+  m_ownPool      = false;
   ChangeRole(CXH_Database_role);
-  m_database->RegisterLogContext(hibernate.GetLogLevel(),CXHLogLevel,CXHLogPrint,this);
 
   GetMetaSessionInfo();
 }
 
 // Getting our database
-SQLDatabase*
-CXSession::GetDatabase()
+SQLDatabasePool*
+CXSession::GetDatabasePool()
 {
-  AutoCritSec lock(&m_lock);
-
-  if(m_database)
+  if(m_databasePool)
   {
-    return m_database;
-  }
-  if(!m_dbsCatalog.IsEmpty())
-  {
-    m_ownDatabase = true;
-    m_database = new SQLDatabase();
-    m_database->RegisterLogContext(hibernate.GetLogLevel(),CXHLogLevel,CXHLogPrint,this);
-    m_database->Open(m_dbsCatalog,m_dbsUser,m_dbsPassword);
-    if(m_database->IsOpen())
+    // Do we need to create a schema?
+    if(m_use == SESS_Create)
     {
-      m_role = CXH_Database_role;
-      GetMetaSessionInfo();
-
-      // Do we need to create a schema?
-      if (m_use == SESS_Create)
-      {
-        TryCreateDatabase();
-      }
-      return m_database;
+      AutoCritSec lock(&m_lock);
+      TryCreateDatabase();
     }
+    return m_databasePool;
   }
-  throw StdException(_T("Connect a database to your CX-Hibernate session!"));
+  throw StdException(_T("Cannot connect a database to your CX-Hibernate session!"));
 }
 
-// Specify a database connection
-void
-CXSession::SetDatabaseCatalog(CString p_datasource)
+// Getting the connection name
+CString
+CXSession::GetDatabaseConnection()
 {
-  m_dbsCatalog = p_datasource;
+  return m_dbsConnection;
 }
 
-void
-CXSession::SetDatabaseUsername(CString p_user)
-{
-  m_dbsUser = p_user;
-}
-
-void
-CXSession::SetDatabasePassword(CString p_password)
-{
-  m_dbsPassword = p_password;
-}
-
+// Specify a single database connection in a pool
 void
 CXSession::SetDatabaseConnection(CString p_datasource,CString p_user,CString p_password)
 {
-  m_dbsCatalog  = p_datasource;
-  m_dbsUser     = p_user;
-  m_dbsPassword = p_password;
+  if(m_databasePool == nullptr)
+  {
+    m_databasePool = new SQLDatabasePool();
+    m_ownPool      = true;
+    m_databasePool->RegisterLogContext(hibernate.GetLogLevel(),CXHLogLevel,CXHLogPrint,this);
+  }
+  m_databasePool->AddConnection(p_datasource,p_datasource,p_user,p_password,_T(""));
+
+  m_dbsConnection = p_datasource;
+  m_dbsCatalog    = p_datasource;
+  m_dbsUser       = p_user;
+  m_dbsPassword   = p_password;
   // Clearly we want to do database exchanges
   m_role = CXH_Database_role;
+}
+
+// Specify default connection to use in the pool
+void
+CXSession::SetDatabaseConnection(CString p_connectionName)
+{
+  m_dbsConnection = p_connectionName;
 }
 
 // Setting an alternate filestore location
@@ -405,95 +382,6 @@ CXSession::SaveConfiguration(XMLMessage& p_config)
   {
     cl.second->SaveMetaInfo(p_config,nullptr);
   }
-}
-
-//////////////////////////////////////////////////////////////////////////
-//
-// MUTATIONS
-//
-//////////////////////////////////////////////////////////////////////////
-
-// Get a master mutation ID, to put actions into one (1) commit
-int
-CXSession::StartTransaction()
-{
-  // Lock the caches
-  AutoCritSec lock(&m_lock);
-
-  // On re-entry, and still in transaction
-  if(m_transaction)
-  {
-    // Create a sub transaction
-    ++m_subtrans;
-    return m_mutation;
-  }
-
-  // Create transaction and give new ID
-  m_transaction = new SQLTransaction(GetDatabase(),_T("mutation"));
-
-  // Reset the sub-transaction
-  m_subtrans = 0;
-  // This is our mutation ID
-  m_mutation = hibernate.GetNewMutation();
-
-  hibernate.Log(CXH_LOG_ACTIONS,true,_T("Started transaction [%d] for session [%s] "),m_mutation,m_sessionKey);
-  return m_mutation;
-}
-
-void
-CXSession::CommitTransaction()
-{
-  // Lock the caches
-  AutoCritSec lock(&m_lock);
-
-  // Commit of sub-transaction
-  if(m_subtrans)
-  {
-    --m_subtrans;
-    return;
-  }
-
-  // Same mutation and in-transaction: so commit
-  if(m_transaction)
-  {
-    m_transaction->Commit();
-    delete m_transaction;
-    m_transaction = nullptr;
-  }
-  else
-  {
-    throw StdException(_T("Not in transaction at Commit()"));
-  }
-  hibernate.Log(CXH_LOG_ACTIONS,true,_T("Commit of transaction [%d] for session [%s] "),m_mutation,m_sessionKey);
-}
-
-void
-CXSession::RollbackTransaction()
-{
-  // Lock the caches
-  AutoCritSec lock(&m_lock);
-
-  // See if we have a transaction
-  if(m_transaction == nullptr)
-  {
-    throw StdException(_T("Not in transaction at Rollback()"));
-  }
-
-  // Perform the rollback
-  m_transaction->Rollback();
-  delete m_transaction;
-  m_transaction = nullptr;
-
-  // Sub-transactions also rolled back
-  m_subtrans = 0;
-
-  hibernate.Log(CXH_LOG_ACTIONS,true,_T("Rollback transaction [%d] for session [%s] "),m_mutation,m_sessionKey);
-}
-
-bool
-CXSession::HasTransaction()
-{
-  return (m_transaction != nullptr);
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -675,7 +563,7 @@ CXSession::Save(CXObject* p_object)
 
 // Update an object
 bool
-CXSession::Update(CXObject* p_object)
+CXSession::Update(CXObject* p_object,SQLDatabase* p_dbs /*=nullptr*/)
 {
   bool result = false;
 
@@ -687,7 +575,7 @@ CXSession::Update(CXObject* p_object)
   {
     if(m_role == CXH_Database_role)
     {
-      result = UpdateObjectInDatabase(p_object);
+      result = UpdateObjectInDatabase(p_object,p_dbs);
     }
     else if(m_role == CXH_Internet_role)
     {
@@ -814,7 +702,8 @@ CXSession::Synchronize()
   }
 
   // Getting a new mutation
-  CXTransaction trans(this);
+  SQLAutoDBS dbs(*m_databasePool,m_dbsConnection);
+  SQLTransaction trans(dbs,_T("synchronize"));
 
   // Walk our object cache
   for(auto& objcache : m_cache)
@@ -1039,13 +928,14 @@ CXSession::ClearClasses(CString p_className /*= ""*/)
 void
 CXSession::GetMetaSessionInfo()
 {
-  if(m_database)
+  if(m_databasePool)
   {
     try
     {
-      CString sql = m_database->GetSQLInfoDB()->GetSESSIONMyself();
-      SQLQuery query(m_database);
-      SQLTransaction trans(m_database,_T("session"));
+      SQLAutoDBS dbs(*m_databasePool,m_dbsConnection);
+      CString sql = dbs->GetSQLInfoDB()->GetSESSIONMyself();
+      SQLQuery query(dbs);
+      SQLTransaction trans(dbs,_T("session"));
 
       query.DoSQLStatement(sql);
 
@@ -1189,7 +1079,8 @@ CXSession::FindObjectInDatabase(CString p_className,VariantSet& p_primary)
   // Find the class of the object
   CXClass* theClass = FindClass(p_className);
 
-  SQLRecord* record = theClass->SelectObjectInDatabase(GetDatabase(),nullptr,p_primary);
+  SQLAutoDBS dbs(*GetDatabasePool(),GetDatabaseConnection());
+  SQLRecord* record = theClass->SelectObjectInDatabase(dbs,nullptr,p_primary);
   if(record)
   {
     // Create our object by the creation factory
@@ -1316,13 +1207,14 @@ CXSession::SelectObjectsFromDatabase(CString p_className,SQLFilterSet& p_filters
   }
 
   // Connect our database
-  dset->SetDatabase(GetDatabase());
+  SQLAutoDBS dbs(*GetDatabasePool(),GetDatabaseConnection());
+  dset->SetDatabase(dbs);
 
   // Propagate our filters
   dset->SetFilters(&p_filters);
 
   // Create correct query
-  theClass->BuildDefaultSelectQuery(dset,GetDatabase()->GetSQLInfoDB());
+  theClass->BuildDefaultSelectQuery(dset,dbs->GetSQLInfoDB());
 
   // NOW GO OPEN our dataset
   bool selected = false;
@@ -1446,7 +1338,7 @@ CXSession::SelectObjectsFromInternet(CString p_className,SQLFilterSet& p_filters
 }
 
 bool
-CXSession::UpdateObjectInDatabase(CXObject* p_object)
+CXSession::UpdateObjectInDatabase(CXObject* p_object,SQLDatabase* p_dbs /*=nullptr*/)
 {
   CXClass* theClass = p_object->GetClass();
   if(theClass == nullptr)
@@ -1454,14 +1346,23 @@ CXSession::UpdateObjectInDatabase(CXObject* p_object)
     throw StdException(_T("Missing class on UPDATE of an object. Did you tinkle with the PrimaryKey?"));
   }
 
-  // New mutation ID for this update action
-  CXTransaction trans(this);
-
-  bool result = theClass->UpdateObjectInDatabase(GetDatabase(),nullptr,p_object,m_mutation);
-  if(result)
+  bool result(false);
+  if(p_dbs)
   {
-    // Commit our transaction in the database
-    trans.Commit();
+    result = theClass->UpdateObjectInDatabase(p_dbs,nullptr,p_object,0);
+  }
+  else
+  {
+    // New mutation ID for this update action
+    SQLAutoDBS dbs(*GetDatabasePool(),GetDatabaseConnection());
+    SQLTransaction trans(dbs,_T("update"));
+
+    result = theClass->UpdateObjectInDatabase(dbs,nullptr,p_object,0);
+    if(result)
+    {
+      // Commit our transaction in the database
+      trans.Commit();
+    }
   }
   return result;
 }
@@ -1512,9 +1413,10 @@ CXSession::InsertObjectInDatabase(CXObject* p_object)
   }
 
   // New mutation ID for this update action
-  CXTransaction trans(this);
+  SQLAutoDBS dbs(*GetDatabasePool(),GetDatabaseConnection());
+  SQLTransaction trans(dbs,_T("insert"));
 
-  bool saved = theClass->InsertObjectInDatabase(GetDatabase(),nullptr,p_object,m_mutation);
+  bool saved = theClass->InsertObjectInDatabase(dbs,nullptr,p_object,0);
   if(saved)
   {
     // Commit in the database
@@ -1577,10 +1479,11 @@ CXSession::DeleteObjectInDatabase(CXObject* p_object)
   }
 
   // New mutation ID for this update action
-  CXTransaction trans(this);
+  SQLAutoDBS dbs(*GetDatabasePool(),GetDatabaseConnection());
+  SQLTransaction trans(dbs,_T("delete"));
 
   // Go delete the record
-  bool deleted = theClass->DeleteObjectInDatabase(GetDatabase(),nullptr,p_object,m_mutation);
+  bool deleted = theClass->DeleteObjectInDatabase(dbs,nullptr,p_object,0);
   if(deleted)
   {
     // Commit in the database first
@@ -1755,7 +1658,7 @@ CXSession::SerializeDiscriminator(CXObject* p_object,SQLRecord* p_record)
   if(hibernate.GetStrategy() != MapStrategy::Strategy_standalone)
   {
     SQLVariant disc(p_object->GetDiscriminator());
-    p_record->SetField(_T("discriminator"),&disc,m_mutation);
+    p_record->SetField(_T("discriminator"),&disc,0);
   }
 }
 
@@ -1851,6 +1754,7 @@ CXSession::TryCreateDatabase()
   {
     // cl.second->TryCreateTable()
   }
+  m_use = CXHSessionUse::SESS_Use;
 }
 
 void

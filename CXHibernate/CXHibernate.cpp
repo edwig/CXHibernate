@@ -258,6 +258,34 @@ CXHibernate::GetConfiguration()
   return m_configFile;
 }
 
+// Setting a different logfile instead of our own
+void
+CXHibernate::SetLogfile(LogAnalysis* p_logfile)
+{
+  if(m_logfile == nullptr || m_logOwner == false)
+  {
+    m_logfile = p_logfile;
+    m_logOwner = false;
+  }
+  CloseLogfile();
+  m_logfile  = p_logfile;
+  m_logOwner = false;
+}
+
+// Setting a different loglevel
+void
+CXHibernate::SetLogLevel(int p_level)
+{
+  if(p_level >= CXH_LOG_NOTHING && p_level <= CXH_LOG_MAX)
+  {
+    m_loglevel = p_level;
+    if(m_logfile)
+    {
+      m_logfile->SetLogLevel(p_level);
+    }
+  }
+}
+
 // Register a create function for a class name
 void
 CXHibernate::RegisterCreateCXO(CString p_name,CreateCXO p_create)
@@ -494,6 +522,11 @@ CXHibernate::StartLogging(CString p_logfile,int p_level)
     m_logfile->SetLogLevel(p_level);
     m_logfile->SetLogRotation(true);
     m_logfile->AnalysisLog(_T(__FUNCTION__),LogType::LOG_INFO,false,_T("CX-Hibernate started"));
+    m_logOwner = true;
+  }
+  else
+  {
+    p_level = CXH_LOG_NOTHING;
   }
 }
 
@@ -501,12 +534,13 @@ CXHibernate::StartLogging(CString p_logfile,int p_level)
 void
 CXHibernate::CloseLogfile()
 {
-  if(m_logfile)
+  if(m_logfile && m_logOwner)
   {
     m_logfile->Reset();
 
     LogAnalysis::DeleteLogfile(m_logfile);
     m_logfile  = nullptr;
     m_loglevel = CXH_LOG_NOTHING;
+    m_logOwner = false;
   }
 }

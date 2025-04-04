@@ -60,9 +60,6 @@
     <ClInclude Include="CXResourceFile.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="CXTransaction.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="stdafx.h">
       <Filter>Configuration</Filter>
     </ClInclude>
@@ -73,7 +70,7 @@
       <Filter>Configuration</Filter>
     </ClInclude>
     <ClInclude Include="CXHibernate.h">
-      <Filter>Configuration</Filter>
+      <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

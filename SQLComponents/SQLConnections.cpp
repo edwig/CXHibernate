@@ -215,6 +215,12 @@ SQLConnections::SaveConnectionsFile(XString p_filename /*=""*/)
   return msg.SaveFile(p_filename);
 }
 
+int
+SQLConnections::GetConnectionsCount()
+{
+  return (int)m_connections.size();
+}
+
 //////////////////////////////////////////////////////////////////////////
 //
 // PRIVATE

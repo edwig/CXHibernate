@@ -62,7 +62,7 @@ class CXHibernate
 {
 public:
   CXHibernate();
-  ~CXHibernate();
+ ~CXHibernate();
 
   // FUNCTIONS
 
@@ -99,6 +99,10 @@ public:
   void          SetIncomplete(bool p_incomplete);
   // Setting a default configuration file (can be called once!)
   void          SetConfiguration(CString p_configFile);
+  // Setting a different logfile instead of our own
+  void          SetLogfile(LogAnalysis* p_logfile);
+  // Setting a different loglevel
+  void          SetLogLevel(int p_level);
 
   // GETTERS
 
@@ -135,6 +139,7 @@ private:
   // Logging for Hibernate
   int           m_loglevel { CXH_LOG_NOTHING };
   LogAnalysis*  m_logfile  { nullptr };
+  bool          m_logOwner { false };
   // DEFAULTS
   CString       m_default_catalog;      // Default catalog
   CString       m_default_schema;       // Default schema of all tables

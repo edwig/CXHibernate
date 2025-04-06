@@ -1228,7 +1228,7 @@ SQLDatabase::StartTransaction(SQLTransaction* p_transaction, bool p_startSubtran
       transName.AppendFormat(_T("ASP%d"),static_cast<int>(m_transactions.size()));
 
       // Set savepoint
-      XString startSubtrans = m_info->GetSQLStartSubTransaction(transName);
+      XString startSubtrans = GetSQLInfoDB()->GetSQLStartSubTransaction(transName);
       if(!startSubtrans.IsEmpty())
       {
         try

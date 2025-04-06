@@ -282,6 +282,31 @@ CXClass::FindAllDBSAttributes(bool p_superIncluded)
   return list;
 }
 
+WordList
+CXClass::GetPrimaryKeyAsList()
+{
+  // Superclass has precedence
+  if(m_super)
+  {
+    return m_super->GetPrimaryKeyAsList();
+  }
+  // Try the physical table first
+  WordList list = GetTable()->GetPrimaryKeyAsList();
+  if(!list.empty())
+  {
+    return list;
+  }
+  // If no primary key found, try the attributes
+  for(auto& attrib : m_attributes)
+  {
+    if(attrib->GetIsPrimary())
+    {
+      list.push_back(attrib->GetDatabaseColumn());
+    }
+  }
+  return list;
+}
+
 // Find the generator (if any)
 CXAttribute* 
 CXClass::FindGenerator()
@@ -432,6 +457,9 @@ CXClass::BuildDefaultSelectQuery(SQLDataSet* p_dataset,SQLInfoDB* p_info)
 
   // Set query on the dataset
   p_dataset->SetQuery(query);
+
+  WordList list = GetPrimaryKeyAsList();
+  p_dataset->SetPrimaryKeyColumn(list);
 }
 
 // Load filters in message for an internet selection
@@ -835,7 +863,7 @@ CXClass::AddSubClass(CXClass* p_subclass)
 
 // Create a filters set for a DataSet
 bool
-CXClass::CreateFilterSet(VariantSet& p_primary,SQLFilterSet&  p_filters)
+CXClass::CreateFilterSet(VariantSet& p_primary,SQLFilterSet& p_filters)
 {
   // Check if we have a primary key, or an empty key
   if(p_primary.empty())
@@ -844,7 +872,7 @@ CXClass::CreateFilterSet(VariantSet& p_primary,SQLFilterSet&  p_filters)
   }
 
   // Check if number of columns of the primary key matches the number of values
-  WordList list = GetTable()->GetPrimaryKeyAsList();
+  WordList list = GetPrimaryKeyAsList();
   if (list.size() != p_primary.size())
   {
     return false;

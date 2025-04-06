@@ -57,7 +57,7 @@ typedef enum _assocType
 CXAssocType;
 
 CXAssocType CXStringToAssocType(CString p_type);
-CString CXAssocTypeToSTring(CXAssocType p_type);
+CString     CXAssocTypeToSTring(CXAssocType p_type);
 
 typedef struct _assoc
 {

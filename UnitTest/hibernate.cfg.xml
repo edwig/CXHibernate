@@ -18,21 +18,23 @@
     <table>detail</table>
     <discriminator>det</discriminator>
     <attributes>
-      <attribute name="id" datatype="int" primary="true"/>
-      <attribute name="mast_id" datatype="int" foreign="true"/>
+      <attribute name="id" datatype="int" isprimary="true"/>
+      <attribute name="mast_id" datatype="int" isforeign="true"/>
       <attribute name="line" datatype="int"/>
       <attribute name="description" datatype="string" maxlength="250"/>
       <attribute name="amount" datatype="bcd"/>
     </attributes>
-  	<primarykey name="pk_detail">
+  	<identity name="pk_detail">
 	    <column name="id" />
-	  </primarykey>
-    <foreignkeys>
-	    <foreign name="fk_detail_master">
-	      <association_class>Master</association_class>
-	        <column name="mast_id" />
-	    </foreign>
-    </foreignkeys>
+	    <column name="mast_id" />
+	    <column name="line" />
+	</identity>
+	<associations>
+	  <association name="fk_detail_master" type="many-to-one">
+	    <association_class>master</association_class>
+		<attribute name="mast_id" />
+	  </association>
+	</associations>
     <indices>
       <index name="detail_line" unique="true" ascending="true">
         <attribute name="mast_id" />
@@ -40,7 +42,6 @@
         <filter />
       </index>
     </indices>
-    <generator name="detail_seq" start="1" />
     <access>
       <user name="public" rights="all" />
       <user name="pronto" rights="select" grantable="true" />
@@ -48,32 +49,40 @@
   </class>
   <class>
     <name>Master</name>
+	<schema>sysdba</schema>
     <table>MASTER</table>
     <discriminator>mas</discriminator>
     <attributes>
-      <attribute name="id" datatype="int" generator="true" primary="true"/>
+      <attribute name="id" datatype="int" generator="true" isprimary="true"/>
       <attribute name="invoice" datatype="int"/>
       <attribute name="description" datatype="string" maxlength="250"/>
       <attribute name="total" datatype="bcd"/>
     </attributes>
-	  <primarykey name="pk_master">
-	    <column name="id" />
-	  </primarykey>
-    <foreignkeys />
+    <identity name="pk_master">
+       <column name="id" />
+    </identity>
+	<associations>
+	  <association name="fk_detail_master" type="one-to-many">
+	    <association_class>detail</association_class>
+		<attribute name="mast_id" />
+	  </association>
+	</associations>
+	<generator name="master_seq" start="1"/>
   </class>
   <class>
     <name>TestNumber</name>
     <table>TEST_NUMBER</table>
     <discriminator>tst</discriminator>
     <attributes>
-      <attribute name="id" datatype="int" generator="true" primary="true"/>
+      <attribute name="id" datatype="int" generator="true" isprimary="true"/>
       <attribute name="field1" datatype="int"/>
       <attribute name="field2" datatype="double"/>
       <attribute name="field3" datatype="bcd"/>
     </attributes>
-	  <primarykey name="pk_test_number">
+	  <identity name="pk_test_number">
 	    <column name="id" />
-	  </primarykey>
+	  </identity>
     <foreignkeys />
+	<generator name="test_number_seq" start="1"/>
   </class>
 </hibernate>

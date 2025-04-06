@@ -291,13 +291,23 @@ SQLDatabasePool::AddParameterRebind(int p_sqlType,int p_cppType)
 bool
 SQLDatabasePool::AddConnection(XString p_name,XString p_datasource,XString p_username,XString p_password,XString p_options)
 {
-  return m_connections.AddConnection(p_name,p_datasource,p_username,p_password,p_options);
+  bool added = m_connections.AddConnection(p_name,p_datasource,p_username,p_password,p_options);
+  if(!m_isopen && added)
+  {
+    m_isopen = true;
+  }
+  return added;
 }
 
 bool
 SQLDatabasePool::DelConnection(XString p_name)
 {
-  return m_connections.DelConnection(p_name);
+  bool removed = m_connections.DelConnection(p_name);
+  if(m_isopen && removed && m_connections.GetConnectionsCount() == 0)
+  {
+    m_isopen = false;
+  }
+  return removed;
 }
 
 //////////////////////////////////////////////////////////////////////////

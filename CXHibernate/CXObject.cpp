@@ -711,7 +711,7 @@ CXObject::FillPrimaryKey(SQLRecord& p_record)
   }
 
   // Walk the list of primary key columns
-  WordList keys = m_class->GetTable()->GetPrimaryKeyAsList();
+  WordList keys = m_class->GetPrimaryKeyAsList();
   for (auto& key : keys)
   {
     SQLVariant* field = p_record.GetField(key);
@@ -733,7 +733,7 @@ CXObject::FillPrimaryKey(SOAPMessage& p_message, XMLElement* p_entity)
   }
 
   // Walk the list of primary key columns
-  WordList keys = m_class->GetTable()->GetPrimaryKeyAsList();
+  WordList keys = m_class->GetPrimaryKeyAsList();
   for(auto& key : keys)
   {
     key.MakeLower();
@@ -770,7 +770,7 @@ CXObject::LogClassAttributes(CXClass* p_class)
     var* value = m_record->GetField(attribute->GetName());
     if(value)
     {
-      hibernate.Log(CXH_LOG_DEBUG,true,_T("%d: %-32s:%s"),index,attribute->GetName(),value->GetAsChar());
+      hibernate.Log(CXH_LOG_DEBUG,true,_T("%d: %-32s:%s"),index,attribute->GetName(),value->GetAsString().GetString());
     }
     // Next attribute
     attribute = p_class->FindAttribute(++index);

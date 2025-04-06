@@ -103,6 +103,7 @@ namespace HibernateTest
 
       Assert::IsNotNull(master);
       Logger::WriteMessage(_T("Updating 1th master record"));
+      PrintMaster(master);
 
       // Keeping the old one (750.00)
       bcd old_total = master->GetTotal();
@@ -122,7 +123,8 @@ namespace HibernateTest
       Assert::IsTrue(res);
 
       value = TestRecordValue(_T("master"),_T("id"),1,_T("total"));
-      Assert::AreEqual(value.GetString(),old_total.AsString().GetString());
+      CString oldval = old_total.AsString();
+      Assert::AreEqual(_ttof(value),_ttof(oldval));
     }
 
     void PrintMaster(Master* p_master)
@@ -518,7 +520,7 @@ namespace HibernateTest
         query.DoSQLStatement(sql,p_value);
         if(query.GetRecord())
         {
-          result = query[1].GetAsChar();
+          result = query[1].GetAsString();
         }
         trans.Commit();
       }

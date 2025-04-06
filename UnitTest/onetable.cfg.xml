@@ -17,15 +17,15 @@
       <subclass>Supplier</subclass>
     </subclasses>
     <attributes>
-      <attribute name="id" datatype="int" isprimary="true"/>
+      <attribute name="id" datatype="int" isprimary="true" generator="true"/>
       <attribute name="name" datatype="string" maxlength="200" />
       <attribute name="adresline1" datatype="string" maxlength="250" />
       <attribute name="adresline2" datatype="string" maxlength="250"/>
       <attribute name="account_id" datatype="int"/>
     </attributes>
   	<identity name="pk_detail">
-	    <attribute name="id" />
-	  </identity>
+	  <attribute name="id" />
+	</identity>
     <generator name="subject_seq" start="1" />
   </class>
   <class>
@@ -47,9 +47,9 @@
     <super>Subject</super>
     <attributes>
       <attribute name="deliveryAddress" datatype="string" maxlength="200" />
-      <attribute name="balance"       datatype="bcd" />
-      <attribute name="open_orders"   datatype="bcd" />
-      <attribute name="open_billing" datatype="bcd"/>
+      <attribute name="balance"         datatype="bcd" />
+      <attribute name="open_orders"     datatype="bcd" />
+      <attribute name="open_billings"   datatype="bcd"/>
     </attributes>
   </class>
   <class>

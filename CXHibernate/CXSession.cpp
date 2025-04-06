@@ -212,6 +212,8 @@ CXSession::SetDatabaseConnection(CString p_datasource,CString p_user,CString p_p
     m_databasePool = new SQLDatabasePool();
     m_ownPool      = true;
     m_databasePool->RegisterLogContext(hibernate.GetLogLevel(),CXHLogLevel,CXHLogPrint,this);
+
+    m_databasePool->ReadConnections();
   }
   m_databasePool->AddConnection(p_datasource,p_datasource,p_user,p_password,_T(""));
 
@@ -1210,11 +1212,11 @@ CXSession::SelectObjectsFromDatabase(CString p_className,SQLFilterSet& p_filters
   SQLAutoDBS dbs(*GetDatabasePool(),GetDatabaseConnection());
   dset->SetDatabase(dbs);
 
-  // Propagate our filters
-  dset->SetFilters(&p_filters);
-
   // Create correct query
   theClass->BuildDefaultSelectQuery(dset,dbs->GetSQLInfoDB());
+
+  // Propagate our filters
+  dset->SetFilters(&p_filters);
 
   // NOW GO OPEN our dataset
   bool selected = false;

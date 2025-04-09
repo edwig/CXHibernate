@@ -1397,7 +1397,7 @@ CXClass::BuildSelectQueryOneTable(SQLInfoDB* p_info)
 {
   CString  columns(_T("SELECT "));
   CString  discrim   = GetRootClass()->GetDiscriminator();
-  CString  asalias   = _T(" as ") + discrim;
+  CString  asalias   = p_info->GetRDBMSSupportsAsInAlias() ?  _T(" as ") : _T(" ");
   WordList dbsNames  = FindAllDBSAttributes(true);
   bool     firstdone = false;
 
@@ -1415,7 +1415,7 @@ CXClass::BuildSelectQueryOneTable(SQLInfoDB* p_info)
   // Default query will be built as
   // "SELECT disc.columnname\n"
   // "  FROM table as disc"
-  CString query = columns + _T("  FROM ") + GetTable()->GetDMLTableName(p_info) + asalias;
+  CString query = columns + _T("  FROM ") + GetTable()->GetDMLTableName(p_info) + asalias + discrim;
 
   return query;
 }
@@ -1446,6 +1446,7 @@ CXClass::BuildSelectQuerySubTableRecursive(SQLInfoDB* p_info,CString& p_columns,
   {
     m_super->BuildSelectQuerySubTableRecursive(p_info,p_columns,p_frompart,p_firstdone);
   }
+  CString  asalias = p_info->GetRDBMSSupportsAsInAlias() ? _T(" as ") : _T(" ");
 
   // Build select part
   WordList dbsNames = FindAllDBSAttributes(false);
@@ -1461,11 +1462,11 @@ CXClass::BuildSelectQuerySubTableRecursive(SQLInfoDB* p_info,CString& p_columns,
 
   if(p_frompart.IsEmpty())
   {
-    p_frompart = _T("  FROM ") + GetTable()->GetDMLTableName(p_info) + _T(" as ") + m_discriminator;
+    p_frompart = _T("  FROM ") + GetTable()->GetDMLTableName(p_info) + asalias + m_discriminator;
   }
   else
   {
-    p_frompart += _T("\n       INNER JOIN ") + GetTable()->GetDMLTableName(p_info) + _T(" as ") + m_discriminator;
+    p_frompart += _T("\n       INNER JOIN ") + GetTable()->GetDMLTableName(p_info) + asalias + m_discriminator;
     p_frompart += _T(" ON (");
 
     // Link on the identities of the classes

@@ -160,6 +160,13 @@ SQLInfoMySQL::GetRDBMSSupportsFunctionalIndexes() const
   return true;
 }
 
+// Support for "as" in alias statements (FROM clause)
+bool
+SQLInfoMySQL::GetRDBMSSupportsAsInAlias() const
+{
+  return true;
+}
+
 // Gets the maximum length of an SQL statement
 unsigned long
 SQLInfoMySQL::GetRDBMSMaxStatementLength() const

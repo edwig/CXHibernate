@@ -48,7 +48,7 @@ typedef CXObject* (*CreateCXO)(void);
                                        }\
 CString classname::ClassName()\
 {\
-  return #classname;\
+  return _T(#classname);\
 }\
 __pragma(section (".ccxo$m",read))\
 __pragma(init_seg(".ccxo$m",cxoexit))\
@@ -57,7 +57,7 @@ class CXOReg##classname\
 public:\
   CXOReg##classname()\
   {\
-    hibernate.RegisterCreateCXO(#classname, CreateCXObject##classname);\
+    hibernate.RegisterCreateCXO(_T(#classname), CreateCXObject##classname);\
   }\
   ~CXOReg##classname() {};\
 };\
@@ -144,12 +144,12 @@ inline long GetElementlong(SOAPMessage& p_message, XMLElement* p_entity,CString 
 
 inline short GetElementshort(SOAPMessage& p_message,XMLElement* p_entity,CString p_column)
 {
-  return _ttoi(p_message.GetElement(p_entity,p_column));
+  return (short) _ttoi(p_message.GetElement(p_entity,p_column));
 }
 
 inline ushort GetElementushort(SOAPMessage& p_message,XMLElement* p_entity,CString p_column)
 {
-  return _ttoi(p_message.GetElement(p_entity,p_column));
+  return (ushort) _ttoi(p_message.GetElement(p_entity,p_column));
 }
 
 inline ulong GetElementulong(SOAPMessage& p_message,XMLElement* p_entity,CString p_column)

@@ -175,6 +175,13 @@ SQLInfoOracle::GetRDBMSSupportsFunctionalIndexes() const
   return true;
 }
 
+// Support for "as" in alias statements (FROM clause)
+bool
+SQLInfoOracle::GetRDBMSSupportsAsInAlias() const
+{
+  return false;
+}
+
 // Gets the maximum length of an SQL statement
 unsigned long
 SQLInfoOracle::GetRDBMSMaxStatementLength() const

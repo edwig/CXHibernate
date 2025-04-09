@@ -166,6 +166,13 @@ SQLInfoPostgreSQL::GetRDBMSSupportsFunctionalIndexes() const
   return false;
 }
 
+// Support for "as" in alias statements (FROM clause)
+bool
+SQLInfoPostgreSQL::GetRDBMSSupportsAsInAlias() const
+{
+  return true;
+}
+
 // Gets the maximum length of an SQL statement
 unsigned long
 SQLInfoPostgreSQL::GetRDBMSMaxStatementLength() const

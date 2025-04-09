@@ -158,6 +158,13 @@ SQLInfoFirebird::GetRDBMSSupportsFunctionalIndexes() const
   return false;
 }
 
+// Support for "as" in alias statements (FROM clause)
+bool
+SQLInfoFirebird::GetRDBMSSupportsAsInAlias() const
+{
+  return true;
+}
+
 // Gets the maximum length of an SQL statement
 unsigned long 
 SQLInfoFirebird::GetRDBMSMaxStatementLength() const

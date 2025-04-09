@@ -181,7 +181,7 @@ CXHibernate::CloseAllSessions()
   m_sessions.clear();
 
   // Flushing our logfile
-  if(m_logfile)
+  if(m_logfile && m_logOwner)
   {
     m_logfile->Reset();
     m_logfile->SetLogLevel(m_loglevel);
@@ -266,6 +266,7 @@ CXHibernate::SetLogfile(LogAnalysis* p_logfile)
   {
     m_logfile = p_logfile;
     m_logOwner = false;
+    return;
   }
   CloseLogfile();
   m_logfile  = p_logfile;

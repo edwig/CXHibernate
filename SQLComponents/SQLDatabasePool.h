@@ -90,6 +90,7 @@ public:
   int             LogLevel();
   bool            WilLog();
   void            SetLoggingActivation(int p_loglevel);
+  void            SetEncryptionKey(XString p_key);
 
 private:
   // Get OR make a logged in database connection
@@ -137,6 +138,12 @@ inline void
 SQLDatabasePool::SetLoggingActivation(int p_loglevel)
 {
   m_logActive = p_loglevel;
+}
+
+inline void
+SQLDatabasePool::SetEncryptionKey(XString p_key)
+{
+  m_connections.SetEncryptionKey(p_key);
 }
 
 }

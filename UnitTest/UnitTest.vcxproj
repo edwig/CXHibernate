@@ -187,6 +187,9 @@
       <AdditionalDependencies>odbc32.lib;Rpcrt4.lib;httpapi.lib;winhttp.lib;crypt32.lib;secur32.lib;websocket.lib;bcrypt.lib</AdditionalDependencies>
       <GenerateDebugInformation>DebugFull</GenerateDebugInformation>
     </Link>
+    <PostBuildEvent>
+      <Message>Copy configuration files</Message>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='DebugUnicode|x64'">
     <ClCompile>
@@ -209,6 +212,12 @@
       <AdditionalDependencies>odbc32.lib;Rpcrt4.lib;httpapi.lib;winhttp.lib;crypt32.lib;secur32.lib;websocket.lib;bcrypt.lib</AdditionalDependencies>
       <GenerateDebugInformation>DebugFull</GenerateDebugInformation>
     </Link>
+    <PostBuildEvent>
+      <Message>Copy configuration files</Message>
+      <Command>copy $(ProjectDir)hibernate.cfg.xml $(OutDir)
+copy $(ProjectDir)subtable.cfg.xml $(OutDir)
+copy $(ProjectDir)onetable.cfg.xml $(OutDir)</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -307,6 +316,9 @@
       <AdditionalLibraryDirectories>$(VCInstallDir)UnitTest\lib;$(SolutionDir)Lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalDependencies>odbc32.lib;Rpcrt4.lib;httpapi.lib;winhttp.lib;crypt32.lib;secur32.lib;websocket.lib;bcrypt.lib</AdditionalDependencies>
     </Link>
+    <PostBuildEvent>
+      <Message>Copy configuration files</Message>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='ReleaseUnicode|x64'">
     <ClCompile>
@@ -329,6 +341,9 @@
       <AdditionalLibraryDirectories>$(VCInstallDir)UnitTest\lib;$(SolutionDir)Lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalDependencies>odbc32.lib;Rpcrt4.lib;httpapi.lib;winhttp.lib;crypt32.lib;secur32.lib;websocket.lib;bcrypt.lib</AdditionalDependencies>
     </Link>
+    <PostBuildEvent>
+      <Message>Copy configuration files</Message>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="Animal.h" />

@@ -795,19 +795,7 @@ CXSession::CreateFilestoreName(CXTable* p_table, VariantSet& p_primary)
 bool
 CXSession::SaveSOAPMessage(SOAPMessage& p_message, CString p_fileName)
 {
-  bool result = false;
-  FILE* file = nullptr;
-  if (_tfopen_s(&file, p_fileName, _T("w")) == 0 && file)
-  {
-    CString contents = p_message.GetSoapMessage();
-    if (fwrite(contents.GetString(), contents.GetLength(), 1, file) == 1)
-    {
-      result = true;
-    }
-    // Close and flush the file
-    fclose(file);
-  }
-  return result;
+  return p_message.SaveFile(p_fileName);
 }
 
 // FOLLOW AN ASSOCIATION

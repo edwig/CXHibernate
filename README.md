@@ -3,6 +3,14 @@
 C++ Hibernate Framework after the example of the Java Hibernate
 and the C# .NET NHibernate projects.
 
+### Version 1.4.0
+- Now supporting Unicode builds
+- Now fully tested in Oracle 21c and Firebird 3.0/4.0/5.0
+- Upgraded to Marlin 8.4.1/ SQLCompoenents 2.3.2
+- Can now run on a commonly shared SQLDatabasePool in a larger application
+- Logging can now be integrated in the logging framework of a larger application
+- cfg2cpp tool can now also generate assocation following code
+
 ### Version 1.3.0
 - Upgraded to Marlin 8.0.0
 - Upgraded to SQLComponents 2.0.0

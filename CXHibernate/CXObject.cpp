@@ -75,6 +75,20 @@ CXObject::GetDiscriminator() const
   return m_class->GetDiscriminator();
 }
 
+// Is the object read only?
+// Most probably a view object or a duplicate read by following associations
+const bool
+CXObject::GetReadOnly() const
+{
+  return m_readOnly;
+}
+
+void
+CXObject::SetReadOnly(bool p_readonly)
+{
+  m_readOnly = p_readonly;
+}
+
 // See if the object has the same business key as the other
 // Can also be used to sort the objects on
 int

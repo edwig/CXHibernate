@@ -27,8 +27,8 @@
 #include <vector>
 #include <map>
 
-#define HIBERNATE_VERSION _T("1.4.0")
-#define HIBERNATE_DATE    _T("02-04-2025")
+#define HIBERNATE_VERSION _T("1.4.1")
+#define HIBERNATE_DATE    _T("10-04-2025")
 
 #define CXH_LOG_NOTHING       0   // Logging is OFF
 #define CXH_LOG_ERRORS        1   // Only error logging

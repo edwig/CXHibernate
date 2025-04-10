@@ -508,13 +508,6 @@ CXSession::Load(CString p_className,SQLFilterSet& p_filters)
 {
   CXResultSet set;
 
-  p_className.MakeLower();
-  ClearCache(p_className);
-
-  // Create a caching object in the cache
-  ObjectCache* objcache = new ObjectCache();
-  m_cache.insert(std::make_pair(p_className,objcache));
-
   if(m_role == CXH_Database_role)
   {
     set = SelectObjectsFromDatabase(p_className,p_filters);
@@ -550,9 +543,22 @@ CXSession::Load(CString p_className,SQLFilterSet& p_filters)
   return set;
 }
 
+void
+CXSession::CheckReadOnly(CXObject* p_object)
+{
+  if(p_object->GetReadOnly())
+  {
+    XString error;
+    error.Format(_T("Session [%s] Cannot save read-only object: %s"),m_sessionKey,p_object->Hashcode());
+    hibernate.Log(CXH_LOG_ERRORS,false,error);
+    throw StdException(error);
+  }
+}
+
 bool
 CXSession::Save(CXObject* p_object)
 {
+  CheckReadOnly(p_object);
   if(p_object->IsTransient())
   {
     return Insert(p_object);
@@ -568,6 +574,8 @@ bool
 CXSession::Update(CXObject* p_object,SQLDatabase* p_dbs /*=nullptr*/)
 {
   bool result = false;
+
+  CheckReadOnly(p_object);
 
   // Call OnUpdate trigger for the object
   bool canUpdate = CallOnUpdate(p_object);
@@ -606,6 +614,8 @@ bool
 CXSession::Insert(CXObject* p_object)
 {
   bool result = false;
+
+  CheckReadOnly(p_object);
 
   // Call the OnInsert trigger
   bool canInsert = CallOnInsert(p_object);
@@ -651,6 +661,8 @@ bool
 CXSession::Delete(CXObject* p_object)
 {
   bool result = false;
+
+  CheckReadOnly(p_object);
 
   // Call OnDelete trigger
   bool canDelete = CallOnDelete(p_object);
@@ -714,16 +726,19 @@ CXSession::Synchronize()
     for(auto& obj : objects)
     {
       CXObject*  object = obj.second;
-      SQLRecord* record = object->GetDatabaseRecord();
-      // Only relevant status is 'Updated'. Cannot be otherwise!
-      if(record && (record->GetStatus() & SQL_Record_Updated))
+      if(!object->GetReadOnly())
       {
-        SerializeDiscriminator(object,record);
-        object->Serialize(*record);
-        if(Update(object) == false)
+        SQLRecord* record = object->GetDatabaseRecord();
+        // Only relevant status is 'Updated'. Cannot be otherwise!
+        if(record && (record->GetStatus() & SQL_Record_Updated))
         {
-          // Implicit rollback transaction
-          return false;
+          SerializeDiscriminator(object,record);
+          object->Serialize(*record);
+          if(Update(object) == false)
+          {
+            // Implicit rollback transaction
+            return false;
+          }
         }
       }
     }
@@ -989,6 +1004,13 @@ CXSession::AddObjectInCache(CXObject* p_object)
   className.MakeLower();
 
   CXCache::iterator it = m_cache.find(className);
+  if(it == m_cache.end())
+  {
+    // Create a caching object in the cache
+    ObjectCache* objcache = new ObjectCache();
+    m_cache.insert(std::make_pair(className,objcache));
+    it = m_cache.find(className);
+  }
   if (it != m_cache.end())
   {
     ObjectCache::iterator tit = it->second->find(hash);
@@ -998,6 +1020,7 @@ CXSession::AddObjectInCache(CXObject* p_object)
       return true;
     }
     // Object already in the cache. Do not cache again!
+    p_object->SetReadOnly(true);
     return false;
   }
   throw StdException(_T("Cache not found for class: ") + className);
@@ -1208,8 +1231,10 @@ CXSession::SelectObjectsFromDatabase(CString p_className,SQLFilterSet& p_filters
 
   // NOW GO OPEN our dataset
   bool selected = false;
+  int  startreading = dset->GetNumberOfRecords();
   if(dset->IsOpen())
   {
+    dset->SetKeepDuplicates(true);
     selected = dset->Append();
   }
   else
@@ -1218,7 +1243,7 @@ CXSession::SelectObjectsFromDatabase(CString p_className,SQLFilterSet& p_filters
   }
   if(selected)
   {
-    int recnum = dset->First();
+    int recnum = startreading;
     while(recnum >= 0)
     {
       SQLRecord* record = dset->GetRecord(recnum);
@@ -1238,11 +1263,7 @@ CXSession::SelectObjectsFromDatabase(CString p_className,SQLFilterSet& p_filters
       // Add object to the cache
       if(object->IsPersistent())
       {
-        if(AddObjectInCache(object) == false)
-        {
-          // LOG!
-          delete object;
-        }
+        AddObjectInCache(object);
         // Keep in the return set
         set.push_back(object);
       }

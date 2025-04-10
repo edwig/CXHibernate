@@ -179,6 +179,8 @@ private:
   bool          CallOnInsert(CXObject* p_object);
   bool          CallOnUpdate(CXObject* p_object);
   bool          CallOnDelete(CXObject* p_object);
+ // Check if the object is read-only
+  void          CheckReadOnly(CXObject* p_object);
 
   CString           m_sessionKey;                  // As known by CXHibernate
   CXHRole           m_role { CXH_Database_role};   // Master/Slave role of the session

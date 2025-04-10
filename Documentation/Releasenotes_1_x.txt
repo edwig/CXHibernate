@@ -1,11 +1,23 @@
 RELEASENOTES VERSIONS 1.X
 =========================
 
+Version 1.4.1 Date: 10-04-2025
+------------------------------
+1)  Objects kan be read-only when read extra through FollowAssociation
+2)  AutoCXResultSet can be used to dispose result sets gotten by filtering
+3)  Read-only objects will throw when you try to save/update/delete them
+4)  Points 1 thru 3 make it possible to read extra objects in the same 
+    result set of the CXClass.
+
 Version 1.4.0 Date: 02-04-2025
 ------------------------------
-1)  Updated tot the latest library versions
+1)  Upgraded to Marlin 8.4.1/ SQLComponents 2.3.2
 2)  Added Unicode support
 3)  Full test of all x86 and x64 builds
+4)  Now fully tested in Oracle 21c and Firebird 3.0/4.0/5.0
+5)  Can now run on a commonly shared SQLDatabasePool in a larger application
+6)  Logging can now be integrated in the logging framework of a larger application
+7)  cfg2cpp tool can now also generate assocation following code
 
 Version 1.3.0 Date: 24-03-2022
 ------------------------------

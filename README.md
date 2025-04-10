@@ -3,6 +3,11 @@
 C++ Hibernate Framework after the example of the Java Hibernate
 and the C# .NET NHibernate projects.
 
+## Version 1.4.1
+- Objects kan be read-only when read extra through FollowAssociation
+- AutoCXResultSet can be used to dispose result sets gotten by filtering
+- Read-only objects will throw when you try to save/update/delete them
+
 ### Version 1.4.0
 - Now supporting Unicode builds
 - Now fully tested in Oracle 21c and Firebird 3.0/4.0/5.0

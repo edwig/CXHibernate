@@ -51,6 +51,8 @@ public:
   const CString   ClassName() const;
   // Discriminator of the class of the object
   const CString   GetDiscriminator() const;
+  // Is the object read only?
+  const bool      GetReadOnly() const;
 
   // Bring the contents of the class to a SOAPMessage or a SQLRecord
   virtual void    Serialize(SOAPMessage& p_message,XMLElement* p_entity);
@@ -82,6 +84,7 @@ public:
   bool            IsTransient();
   bool            IsPersistent();
   void            MakeTransient();
+  void            SetReadOnly(bool p_readonly);
 
   // Getting the class of this object
   CXClass*        GetClass();
@@ -169,6 +172,9 @@ protected:
   // Primary key value of the object
   VariantSet m_primaryKey;
 
+  // Object is read-only? (View or duplicate recod)
+  bool       m_readOnly { false };
+
 private:
   // Fill in the primary key of the object
   void FillPrimaryKey(SOAPMessage& p_message, XMLElement* p_entity);
@@ -184,6 +190,33 @@ private:
 //////////////////////////////////////////////////////////////////////////
 
 using CXResultSet = std::vector<CXObject*>;
+
+class AutoCXResultSet
+{
+public:
+  AutoCXResultSet(CXResultSet& p_set)
+  {
+    m_set = p_set;
+  }
+  ~AutoCXResultSet()
+  {
+    for(auto& object : m_set)
+    {
+      if(object->GetReadOnly())
+      {
+        delete object;
+      }
+    }
+  }
+  
+  CXResultSet& get()
+  {
+    return m_set;
+  }
+
+  CXResultSet m_set;
+};
+
 
 #include "CXObjectFactory.h"
 

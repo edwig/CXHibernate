@@ -52,6 +52,12 @@ public:
   CString GetDescription()   { return m_description; };
   bcd     GetAmount()        { return m_amount;      };
 
+  // SETTERS
+  void    SetDescription(CString description)
+  {
+    m_description = description;
+  };
+
   // Associations
   Master* GetMasterOfDetail(CXSession* p_session);
 

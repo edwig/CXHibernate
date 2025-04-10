@@ -334,6 +334,102 @@ namespace HibernateTest
       }
     }
 
+    TEST_METHOD(T12_ReadExtraDetails)
+    {
+      Logger::WriteMessage(_T("Testing following an association to our details"));
+      try
+      {
+        OpenSession();
+
+        Detail* detail = (Detail*)m_session->Load(Detail::ClassName(),1);
+        Master* master = (Master*)m_session->Load(Master::ClassName(),2);
+        Assert::IsNotNull(detail);
+        Assert::IsNotNull(master);
+        Logger::WriteMessage(_T("Testing 2th master record and it's details"));
+        PrintMaster(master);
+
+        detail->SetDescription(_T("This is a test"));
+
+        // Read 6 lines of details
+        CXResultSet set = m_session->FollowAssociation(master,Detail::ClassName(),master->GetID());
+        for(auto& object : set)
+        {
+          Detail* detail = (Detail*)object;
+          CString message;
+          message.Format(_T("Detail: %d Master: %d : Detail line: %d Amount: %s")
+                         ,detail->GetID()
+                         ,master->GetID()
+                         ,detail->GetLine()
+                         ,detail->GetAmount().AsString().GetString());
+          Logger::WriteMessage(message);
+        }
+
+        m_session->Save(detail);
+        Logger::WriteMessage(_T("Detail record updated"));  
+        m_session->RemoveObject(detail);
+        detail = (Detail*)m_session->Load(Detail::ClassName(),1);
+        Logger::WriteMessage(detail->GetDescription());
+
+        // Reset to the original value
+        detail->SetDescription(_T("First line of the first invoice"));
+        m_session->Save(detail);
+      }
+      catch(StdException& er)
+      {
+        Logger::WriteMessage(_T("ERROR: ") + er.GetErrorMessage());
+        Assert::Fail();
+      }
+    }
+
+    TEST_METHOD(T13_ReadOverlappingDetails)
+    {
+      Logger::WriteMessage(_T("Testing following an association to our details"));
+      try
+      {
+        OpenSession();
+
+        Detail* detail = (Detail*)m_session->Load(Detail::ClassName(),1);
+        Master* master = (Master*)m_session->Load(Master::ClassName(),1);
+        Assert::IsNotNull(detail);
+        Assert::IsNotNull(master);
+        Logger::WriteMessage(_T("Testing 1th master record and it's details"));
+        PrintMaster(master);
+
+        detail->SetDescription(_T("This is a test"));
+
+        // Read 6 lines of details
+        AutoCXResultSet set = m_session->FollowAssociation(master,Detail::ClassName(),master->GetID());
+        for(auto& object : set.get())
+        {
+          Detail* detail = (Detail*)object;
+          CString message;
+          message.Format(_T("Detail: %d Master: %d : Detail line: %d ReadOnly: %s Amount: %s")
+                         ,detail->GetID()
+                         ,master->GetID()
+                         ,detail->GetLine()
+                         ,detail->GetReadOnly() ? _T("true ") : _T("false")
+                         ,detail->GetAmount().AsString().GetString());
+          Logger::WriteMessage(message);
+        }
+
+        m_session->Save(detail);
+        Logger::WriteMessage(_T("Detail record updated"));
+        m_session->RemoveObject(detail);
+        detail = (Detail*)m_session->Load(Detail::ClassName(),1);
+        Logger::WriteMessage(detail->GetDescription());
+
+        // Reset to the original value
+        detail->SetDescription(_T("First line of the first invoice"));
+        m_session->Save(detail);
+        Logger::WriteMessage(detail->GetDescription());
+      }
+      catch(StdException& er)
+      {
+        Logger::WriteMessage(_T("ERROR: ") + er.GetErrorMessage());
+        Assert::Fail();
+      }
+    }
+
     // Open a CXHibernate session and add the 'master' and 'detail' tables
     bool OpenSessionFULL()
     {

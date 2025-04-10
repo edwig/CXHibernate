@@ -123,6 +123,15 @@ void WriteInterfaceHeader(FILE* p_file,CXClass* p_class)
   _ftprintf(p_file,_T("#include <SQLGuid.h>\n"));
   _ftprintf(p_file,_T("#include <SQLVariant.h>\n"));
   _ftprintf(p_file,_T("\n"));
+
+  int index = 0;
+  CXAssociation* assoc = p_class->FindAssociation(index);
+  while(assoc)
+  {
+    _ftprintf(p_file,_T("class %s;\n"),assoc->m_primaryTable.GetString());
+    assoc = p_class->FindAssociation(++index);
+  }
+  _ftprintf(p_file,_T("\n"));
 }
 
 void WriteInterfaceClass(FILE* p_file,CXClass* p_class)
@@ -208,7 +217,7 @@ void WriteInterfaceAssocs(FILE* p_file, CXClass* p_class)
     CString resulttype  = assoc->m_assocType == ASSOC_MANY_TO_ONE ? otherclass : CString(_T("CXResultSet"));
 
     _ftprintf(p_file,_T("  // Association %s to class %s\n"),type.GetString(),otherclass.GetString());
-    _ftprintf(p_file,_T("  %s* Get%s(CXSession* p_session);\n"),resulttype.GetString(),association.GetString());
+    _ftprintf(p_file,_T("  %s* Get_%s(CXSession* p_session);\n"),resulttype.GetString(),association.GetString());
     _ftprintf(p_file,_T("\n"));
 
     // next association
@@ -293,6 +302,15 @@ void WriteCPPHeader(FILE* p_file,CXClass* p_class)
     _ftprintf(p_file,_T("#include \"%s.h\"\n"),superclass.GetString());
   }
 
+  int index = 0;
+  CXAssociation* assoc = p_class->FindAssociation(index);
+  while(assoc)
+  {
+    _ftprintf(p_file,_T("#include \"%s.h\"\n"),assoc->m_primaryTable.GetString());
+    assoc = p_class->FindAssociation(++index);
+  }
+  _ftprintf(p_file,_T("#include <CXSession.h>\n"));
+
   _ftprintf(p_file,_T("\n"));
   _ftprintf(p_file,_T("#ifdef _DEBUG\n"));
   _ftprintf(p_file,_T("#define new DEBUG_NEW\n"));
@@ -337,16 +355,16 @@ void WriteAssocOneToMany(FILE* p_file,CXClass* p_class,CXAssociation* p_assoc)
 
   _ftprintf(p_file,_T("// Getting a one-to-many association's objects from %s\n"),classname.GetString());
   _ftprintf(p_file,_T("CXResultSet\n"));
-  _ftprintf(p_file,_T("%s::Get%s(CXSession* p_session)\n"),classname.GetString(),association.GetString());
+  _ftprintf(p_file,_T("%s::Get_%s(CXSession* p_session)\n"),classname.GetString(),association.GetString());
   _ftprintf(p_file,_T("{\n"));
   if(optimized)
   {
-    _ftprintf(p_file,_T("  return p_session->FollowAssociation(ClassName(),%s::ClassName(),m_%s);\n"),otherclass.GetString(),key.GetString());
+    _ftprintf(p_file,_T("  return p_session->FollowAssociation(this,%s::ClassName(),m_%s);\n"),otherclass.GetString(),key.GetString());
   }
   else
   {
     _ftprintf(p_file,_T("  VariantSet set = GetPrimaryKey();\n"));
-    _ftprintf(p_file,_T("  return p_session->FollowAssociation(ClassName(),%s::ClassName(),set);\n"),otherclass.GetString());
+    _ftprintf(p_file,_T("  return p_session->FollowAssociation(this,%s::ClassName(),set);\n"),otherclass.GetString());
   }
   _ftprintf(p_file,_T("}\n"));
   _ftprintf(p_file,_T("\n"));
@@ -375,22 +393,28 @@ void WriteAssocManyToOne(FILE* p_file,CXClass* p_class,CXAssociation* p_assoc)
 
   _ftprintf(p_file,_T("// Getting a many-to-one association's object from Master\n"));
   _ftprintf(p_file,_T("%s*\n"),otherclass.GetString());
-  _ftprintf(p_file,_T("%s::Get%s(CXSession* p_session)\n"),classname.GetString(),association.GetString());
+  _ftprintf(p_file,_T("%s::Get_%s(CXSession* p_session)\n"),classname.GetString(),association.GetString());
   _ftprintf(p_file,_T("{\n"));
   if(optimized)
   {
-    _ftprintf(p_file,_T("  CXResultSet set = p_session->FollowAssociation(ClassName(),%s::ClassName(),m_%s);\n"),otherclass.GetString(),key.GetString());
+    _ftprintf(p_file,_T("  CXResultSet set = p_session->FollowAssociation(this,%s::ClassName(),m_%s);\n"),otherclass.GetString(),key.GetString());
   }
   else
   {
+    _ftprintf(p_file,_T("  VariantSet values;\n"));
     int index = 1;
-    _ftprintf(p_file,_T("  VariantSet values\n"));
     for(auto& attrib : p_assoc->m_attributes)
     {
-      _ftprintf(p_file,_T("  SQLVariant var%d(m_%s)\n"),index,attrib->GetName().GetString());
-      _ftprintf(p_file,_T("  values.push_back(var%d);\n"),index);
+      _ftprintf(p_file,_T("  SQLVariant var%d(m_%s);\n"),index,attrib->GetName().GetString());
+      ++index;
     }
-    _ftprintf(p_file,_T("  CXResultSet set = p_session->FollowAssociation(ClassName(),%s::ClassName(),values);\n"),otherclass.GetString());
+    index = 1;
+    for(auto& attrib : p_assoc->m_attributes)
+    {
+      _ftprintf(p_file,_T("  values.push_back(&var%d);\n"),index);
+      ++index;
+    }
+    _ftprintf(p_file,_T("  CXResultSet set = p_session->FollowAssociation(this,%s::ClassName(),values);\n"),otherclass.GetString());
   }
   _ftprintf(p_file,_T("  if(set.size() == 1)\n"));
   _ftprintf(p_file,_T("  {\n"));

@@ -194,7 +194,7 @@ using CXResultSet = std::vector<CXObject*>;
 class AutoCXResultSet
 {
 public:
-  AutoCXResultSet(CXResultSet& p_set)
+  AutoCXResultSet(CXResultSet p_set)
   {
     m_set = p_set;
   }

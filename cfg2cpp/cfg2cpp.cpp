@@ -214,10 +214,10 @@ void WriteInterfaceAssocs(FILE* p_file, CXClass* p_class)
     CString type = CXAssocTypeToSTring(assoc->m_assocType);
     CString otherclass  = assoc->m_primaryTable;
     CString association = assoc->m_constraintName;
-    CString resulttype  = assoc->m_assocType == ASSOC_MANY_TO_ONE ? otherclass : CString(_T("CXResultSet"));
+    CString resulttype  = assoc->m_assocType == ASSOC_MANY_TO_ONE ? otherclass + _T("*") : CString(_T("CXResultSet"));
 
     _ftprintf(p_file,_T("  // Association %s to class %s\n"),type.GetString(),otherclass.GetString());
-    _ftprintf(p_file,_T("  %s* Get_%s(CXSession* p_session);\n"),resulttype.GetString(),association.GetString());
+    _ftprintf(p_file,_T("  %s Get_%s(CXSession* p_session);\n"),resulttype.GetString(),association.GetString());
     _ftprintf(p_file,_T("\n"));
 
     // next association
@@ -495,7 +495,7 @@ void PrintCXHDeSerialize(FILE* p_file,CXClass* p_class,CString p_type)
     _ftprintf(p_file,_T("  CXO_%sSERIALIZE(%-18s,%-18s);\n")
                   , p_type.GetString()
                   , (_T("m_") + attribute->GetName()).GetString()
-                  , (_T("\"") + attribute->GetDatabaseColumn() + _T("\"")).GetString());
+                  , (_T("_T(\"") + attribute->GetDatabaseColumn() + _T("\")")).GetString());
 
     // Next attribute
     attribute = p_class->FindAttribute(++index);
@@ -512,7 +512,22 @@ void PrintGenDeSerialize(FILE* p_file,CXClass* p_class)
     _ftprintf(p_file,_T("BEGIN_DESERIALIZE_GENERATOR(%s)\n"),p_class->GetName().GetString());
     _ftprintf(p_file,_T("  CXO_DBS_DESERIALIZE(%-18s,%-18s);\n")
                   ,(_T("m_") + gen->GetName()).GetString()
-                  ,(_T("\"") + gen->GetDatabaseColumn() + _T("\"")).GetString());
+                  ,(_T("_T(\"") + gen->GetDatabaseColumn() + _T("\")")).GetString());
+    _ftprintf(p_file,_T("END_DESERIALIZE_GENERATOR\n"));
+    _ftprintf(p_file,_T("\n"));
+  }
+  else
+  {
+    // Generate the whole primary key as the identity generator
+    WordList list = p_class->GetPrimaryKeyAsList();
+
+    _ftprintf(p_file,_T("BEGIN_DESERIALIZE_GENERATOR(%s)\n"),p_class->GetName().GetString());
+    for(auto& word : list)
+    {
+      _ftprintf(p_file,_T("  CXO_DBS_DESERIALIZE(%-18s,%-18s);\n")
+                ,(_T("m_") + word).GetString()
+                ,(_T("_T(\"") + word + _T("\")")).GetString());
+    }
     _ftprintf(p_file,_T("END_DESERIALIZE_GENERATOR\n"));
     _ftprintf(p_file,_T("\n"));
   }

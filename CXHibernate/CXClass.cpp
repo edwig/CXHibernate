@@ -27,6 +27,7 @@
 #include "stdafx.h"
 #include "CXHibernate.h"
 #include "CXClass.h"
+#include "CXObjectSets.h"
 #include <algorithm>
 
 #ifdef _DEBUG

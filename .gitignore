@@ -26,7 +26,9 @@ bld/
 [Ll]og/
 [Ll]ib/
 BIN_Debug_x64/
+BIN_DebugUnicode_x64/
 BIN_Release_x64/
+BIN_ReleaseUnicode_x64/
 
 # Visual Studio 2015 cache/options directory
 .vs/

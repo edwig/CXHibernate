@@ -35,6 +35,10 @@ class SOAPMessage;
 class XMLElement;
 class CXTable;
 class CXClass;
+class CXSession;
+class CXObject;
+
+using CXResultSet = std::vector<CXObject*>;
 
 class CXObject
 {
@@ -183,60 +187,3 @@ private:
   void LogClassAttributes(CXClass* p_class);
 };
 
-//////////////////////////////////////////////////////////////////////////
-//
-// ResultSets come back from database select operations
-//
-//////////////////////////////////////////////////////////////////////////
-
-using CXResultSet = std::vector<CXObject*>;
-
-class AutoCXResultSet
-{
-public:
-  AutoCXResultSet(CXResultSet p_set)
-  {
-    m_set = p_set;
-  }
-  ~AutoCXResultSet()
-  {
-    for(auto& object : m_set)
-    {
-      if(object->GetReadOnly())
-      {
-        delete object;
-      }
-    }
-  }
-  
-  CXResultSet& get()
-  {
-    return m_set;
-  }
-
-  CXResultSet m_set;
-};
-
-
-#include "CXObjectFactory.h"
-
-//////////////////////////////////////////////////////////////////////////
-//
-// Auto class to reset the record in the object
-//
-class AutoObjectRecord
-{
-public:
-  AutoObjectRecord(CXObject* p_object,SQLRecord* p_record)
-  {
-    m_object = p_object;
-    m_record = p_object->TempReplaceRecord(p_record);
-  }
-  ~AutoObjectRecord()
-  {
-    m_object->TempReplaceRecord(m_record);
-  }
-private:
-  CXObject*  m_object;
-  SQLRecord* m_record;
-};

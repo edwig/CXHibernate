@@ -153,6 +153,7 @@ public:
   // Forget just one record AND reset current cursor to first position
   bool         ForgetObject(int p_primary,              bool p_force = false); // Forget 1 record and primary is an INTEGER     (Fast!!)
   bool         ForgetObject(const VariantSet& p_primary,bool p_force = false); // Forget 1 record and primary is a compound key (Slower)
+  bool         ForgetRecord(SQLRecord* p_record,bool p_force);
 
   // SETTERS
 
@@ -295,7 +296,6 @@ protected:
   XString      MakePrimaryKey(const SQLRecord*  p_record);
   XString      MakePrimaryKey(const VariantSet& p_primary);
   // Forget about a record
-  bool         ForgetRecord(SQLRecord* p_record,bool p_force);
   void         ForgetPrimaryObject(const SQLRecord* p_record);
   // Init the high performance counter
   void         InitCounter();

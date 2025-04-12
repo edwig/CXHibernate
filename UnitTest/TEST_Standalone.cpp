@@ -25,12 +25,15 @@
 // Version number:  0.0.1
 //
 #include "stdafx.h"
-#include "CppUnitTest.h"
-#include "CXSession.h"
-#include "CXClass.h"
+// test 
 #include "Master.h"
 #include "Detail.h"
 #include "TestNumber.h"
+// Libraries
+#include <CppUnitTest.h>
+#include <CXSession.h>
+#include <CXClass.h>
+#include <CXObjectSets.h>
 #include <SQLAutoDBS.h>
 #include <SQLComponents.h>
 #include <SQLVariant.h>
@@ -398,7 +401,7 @@ namespace HibernateTest
         detail->SetDescription(_T("This is a test"));
 
         // Read 6 lines of details
-        AutoCXResultSet set = m_session->FollowAssociation(master,Detail::ClassName(),master->GetID());
+        AutoCXResultSet set(m_session,m_session->FollowAssociation(master,Detail::ClassName(),master->GetID()));
         for(auto& object : set.get())
         {
           Detail* detail = (Detail*)object;

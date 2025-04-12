@@ -7,6 +7,8 @@ and the C# .NET NHibernate projects.
 - Objects kan be read-only when read extra through FollowAssociation
 - AutoCXResultSet can be used to dispose result sets gotten by filtering
 - Read-only objects will throw when you try to save/update/delete them
+- CXSession::RemoveObjects -> Remove a set of objects from the object cache
+- CXSession::Synchronize(classname) -> Synchronize just one class
 
 ### Version 1.4.0
 - Now supporting Unicode builds

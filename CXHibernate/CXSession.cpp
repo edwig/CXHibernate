@@ -122,6 +122,7 @@ void
 CXSession::CloseSession()
 {
   hibernate.Log(CXH_LOG_ACTIONS,true,_T("Close session: %s"),m_sessionKey);
+  AutoCritSec lock(&m_lock);
 
   // If create/drop cycle testing, try to drop the database
   if(m_use == SESS_Create)
@@ -207,6 +208,8 @@ CXSession::GetDatabaseConnection()
 void
 CXSession::SetDatabaseConnection(CString p_datasource,CString p_user,CString p_password)
 {
+  AutoCritSec lock(&m_lock);
+
   if(m_databasePool == nullptr)
   {
     m_databasePool = new SQLDatabasePool();
@@ -375,6 +378,8 @@ CXSession::LoadConfiguration(XMLMessage& p_config)
 void
 CXSession::SaveConfiguration(XMLMessage& p_config)
 {
+  AutoCritSec lock(&m_lock);
+
   // Save session parameters
   p_config.AddElement(nullptr,_T("session_role"),XDT_String,CXRoleToString(m_role));
   p_config.AddElement(nullptr,_T("database_use"),XDT_String,CXSessionUseToString(m_use));
@@ -705,6 +710,59 @@ CXSession::RemoveObject(CXObject* p_object)
   return RemoveObjectFromCache(p_object);
 }
 
+bool
+CXSession::RemoveObjects(CXResultSet& p_resultSet)
+{
+  AutoCritSec lock(&m_lock);
+
+  size_t size = p_resultSet.size();
+  for(auto& object : p_resultSet)
+  {
+    if(RemoveObject(object))
+    {
+      --size;
+    }
+  }
+  return (size == 0);
+}
+
+// Flush all objects and dataset for the class
+bool
+CXSession::Flush(CString p_className,bool p_save /*=false*/)\
+{
+  AutoCritSec lock(&m_lock);
+
+  // Synchronize first
+  if(p_save)
+  {
+    Synchronize(p_className);
+  }
+
+  // Find the ObjectCache
+  p_className.MakeLower();
+  CXCache::iterator it = m_cache.find(p_className);
+  if(it == m_cache.end())
+  {
+    return false;
+  }
+
+  // Remove the objects and the cache
+  ObjectCache* objects = it->second;
+  for(auto& object : *objects)
+  {
+    RemoveObject(object.second);
+  }
+  m_cache.erase(it);
+
+  // Close the dataset
+  CXClass* theClass = FindClass(p_className);
+  if(theClass)
+  {
+    theClass->GetDataSet()->Close();
+  }
+  return true;
+}
+
 // Complete cache synchronize with the database, saving all results
 bool
 CXSession::Synchronize()
@@ -714,6 +772,8 @@ CXSession::Synchronize()
   {
     return false;
   }
+
+  AutoCritSec lock(&m_lock);
 
   // Getting a new mutation
   SQLAutoDBS dbs(*m_databasePool,m_dbsConnection);
@@ -726,6 +786,54 @@ CXSession::Synchronize()
     for(auto& obj : objects)
     {
       CXObject*  object = obj.second;
+      if(!object->GetReadOnly())
+      {
+        SQLRecord* record = object->GetDatabaseRecord();
+        // Only relevant status is 'Updated'. Cannot be otherwise!
+        if(record && (record->GetStatus() & SQL_Record_Updated))
+        {
+          SerializeDiscriminator(object,record);
+          object->Serialize(*record);
+          if(Update(object) == false)
+          {
+            // Implicit rollback transaction
+            return false;
+          }
+        }
+      }
+    }
+  }
+
+  // Commit in the database
+  trans.Commit();
+  return true;
+}
+
+bool
+CXSession::Synchronize(CString p_className)
+{
+  // See if we do a database role
+  if(m_role != CXH_Database_role)
+  {
+    return false;
+  }
+
+  AutoCritSec lock(&m_lock);
+
+  // Getting a new mutation
+  SQLAutoDBS dbs(*m_databasePool,m_dbsConnection);
+  SQLTransaction trans(dbs,_T("synchronize"));
+
+  // Walk our object cache
+  p_className.MakeLower();
+  CXCache::iterator ch = m_cache.find(p_className);
+
+  if(ch != m_cache.end())
+  {
+    ObjectCache& objects = *(ch->second);
+    for(auto& obj : objects)
+    {
+      CXObject* object = obj.second;
       if(!object->GetReadOnly())
       {
         SQLRecord* record = object->GetDatabaseRecord();
@@ -1032,23 +1140,37 @@ CXSession::RemoveObjectFromCache(CXObject* p_object)
 {
   // Lock the caches
   AutoCritSec lock(&m_lock);
+  bool removedFromCache = false;
 
-  CString hash = p_object->Hashcode();
-  CString tableName = p_object->GetClass()->GetTable()->GetTableName();
-  tableName.MakeLower();
-
-  CXCache::iterator it = m_cache.find(tableName);
-  if (it != m_cache.end())
+  // Try to remove the primary record from the hibernate cache
+  if(p_object->GetReadOnly() == false)
   {
-    ObjectCache* tcache = it->second;
-    ObjectCache::iterator tit = tcache->find(hash);
-    if(tit != tcache->end())
+    CString hash = p_object->Hashcode();
+    CString tableName = p_object->GetClass()->GetTable()->GetTableName();
+    tableName.MakeLower();
+
+    CXCache::iterator it = m_cache.find(tableName);
+    if(it != m_cache.end())
     {
-      // Destroy the CXObject derived object
-      delete tit->second;
-      tcache->erase(tit);
-      return true;
+      ObjectCache* tcache = it->second;
+      ObjectCache::iterator tit = tcache->find(hash);
+      if(tit != tcache->end())
+      {
+        // Destroy the CXObject derived object
+        tcache->erase(tit);
+        removedFromCache = true;
+      }
     }
+  }
+  // Try to remove the object from the dataset
+  // Also works for read-only objects!
+  CXClass* cxclass = p_object->GetClass();
+  bool removed = cxclass->GetDataSet()->ForgetRecord(p_object->GetDatabaseRecord(),true);
+
+  if(removed || removedFromCache)
+  {
+    delete p_object;
+    return true;
   }
   return false;
 }

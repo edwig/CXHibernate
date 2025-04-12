@@ -353,6 +353,7 @@
     <ClInclude Include="CXDataType.h" />
     <ClInclude Include="CXHibernate.h" />
     <ClInclude Include="CXModelWord.h" />
+    <ClInclude Include="CXObjectSets.h" />
     <ClInclude Include="CXResourceFile.h" />
     <ClInclude Include="CXRole.h" />
     <ClInclude Include="CXObject.h" />

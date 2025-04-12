@@ -72,6 +72,9 @@
     <ClInclude Include="CXHibernate.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="CXObjectSets.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="CXHibernate.cpp">

@@ -189,6 +189,9 @@
     </Link>
     <PostBuildEvent>
       <Message>Copy configuration files</Message>
+      <Command>copy $(ProjectDir)hibernate.cfg.xml $(OutDir)
+copy $(ProjectDir)onetable.cfg.xml $(OutDir)
+copy $(ProjectDir)subtable.cfg.xml $(OutDir)</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='DebugUnicode|x64'">
@@ -215,8 +218,8 @@
     <PostBuildEvent>
       <Message>Copy configuration files</Message>
       <Command>copy $(ProjectDir)hibernate.cfg.xml $(OutDir)
-copy $(ProjectDir)subtable.cfg.xml $(OutDir)
-copy $(ProjectDir)onetable.cfg.xml $(OutDir)</Command>
+copy $(ProjectDir)onetable.cfg.xml $(OutDir)
+copy $(ProjectDir)subtable.cfg.xml $(OutDir)</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
@@ -318,6 +321,9 @@ copy $(ProjectDir)onetable.cfg.xml $(OutDir)</Command>
     </Link>
     <PostBuildEvent>
       <Message>Copy configuration files</Message>
+      <Command>copy $(ProjectDir)hibernate.cfg.xml $(OutDir)
+copy $(ProjectDir)onetable.cfg.xml $(OutDir)
+copy $(ProjectDir)subtable.cfg.xml $(OutDir)</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='ReleaseUnicode|x64'">
@@ -343,6 +349,9 @@ copy $(ProjectDir)onetable.cfg.xml $(OutDir)</Command>
     </Link>
     <PostBuildEvent>
       <Message>Copy configuration files</Message>
+      <Command>copy $(ProjectDir)hibernate.cfg.xml $(OutDir)
+copy $(ProjectDir)onetable.cfg.xml $(OutDir)
+copy $(ProjectDir)subtable.cfg.xml $(OutDir)</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>

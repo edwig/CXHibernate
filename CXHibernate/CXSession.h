@@ -116,8 +116,12 @@ public:
   bool          Delete(CXObject* p_object);
   // Remove object from the result cache without any database/internet actions
   bool          RemoveObject(CXObject* p_object);
+  bool          RemoveObjects(CXResultSet& p_resultSet);
   // Complete cache synchronize with the database, saving all results
   bool          Synchronize();
+  bool          Synchronize(CString p_classname);
+  // Flush all objects and dataset for the class
+  bool          Flush(CString p_className,bool p_save = false);
 
   // Getting the result of an association
   CXResultSet   FollowAssociation(CXObject* p_object,CString p_toClass,int         p_value,CString p_associationName = _T(""));

@@ -179,9 +179,11 @@ public:
   virtual void SetFilter(const SQLFilter& p_filter);
   // Set GROUP BY 
   virtual void SetGroupBy(XString p_groupby);
-  virtual void AddGroupby(XString p_property);
+  virtual void AddGroupby(XString p_groupby);
   // Set ORDER BY
   virtual void SetOrderBy(XString p_orderby);
+  virtual void AddOrderBy(XString p_orderby);
+
   // Set HAVING
   virtual void SetHavings(SQLFilterSet* p_havings);
   // Set SQL-QUERY:  a new full query (Supersedes SetSelection, -Where, -groupby, -orderby and -having)

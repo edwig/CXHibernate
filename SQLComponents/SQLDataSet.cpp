@@ -444,13 +444,23 @@ SQLDataSet::SetOrderBy(XString p_orderby)
 }
 
 void
-SQLDataSet::AddGroupby(XString p_property)
+SQLDataSet::AddGroupby(XString p_groupby)
 {
   if(!m_groupby.IsEmpty())
   {
     m_groupby += ", ";
   }
-  m_groupby += p_property;
+  m_groupby += p_groupby;
+}
+
+void
+SQLDataSet::AddOrderBy(XString p_orderby)
+{
+  if(!m_orderby.IsEmpty())
+  {
+    m_orderby += ", ";
+  }
+  m_orderby += p_orderby;
 }
 
 void

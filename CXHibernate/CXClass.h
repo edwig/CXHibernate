@@ -99,7 +99,7 @@ public:
   void        BuildClassTable(CXSession* p_session);
 
   // Build default SELECT query
-  void        BuildDefaultSelectQuery(SQLDataSet* p_dataset,SQLInfoDB* p_info);
+  void        BuildDefaultSelectQuery(SQLDataSet* p_dataset,SQLInfoDB* p_info,CString p_orderBy = _T(""));
   // Load filters in message for an internet selection
   void        BuildPrimaryKeyFilter(SOAPMessage& p_message,XMLElement* p_entity,VariantSet& p_primary);
   // Build filter for primary key or association selection

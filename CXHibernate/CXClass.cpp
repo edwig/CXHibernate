@@ -443,7 +443,7 @@ CXClass::LoadMetaInfo(CXSession* p_session,XMLMessage& p_message,XMLElement* p_e
 
 // Build default SELECT query
 void
-CXClass::BuildDefaultSelectQuery(SQLDataSet* p_dataset,SQLInfoDB* p_info)
+CXClass::BuildDefaultSelectQuery(SQLDataSet* p_dataset,SQLInfoDB* p_info,CString p_orderBy /*=_T("")*/)
 {
   CString query;
 
@@ -458,6 +458,7 @@ CXClass::BuildDefaultSelectQuery(SQLDataSet* p_dataset,SQLInfoDB* p_info)
 
   // Set query on the dataset
   p_dataset->SetQuery(query);
+  p_dataset->AddOrderBy(p_orderBy);
 
   WordList list = GetPrimaryKeyAsList();
   p_dataset->SetPrimaryKeyColumn(list);

@@ -35,6 +35,7 @@
 #include <SQLAutoDBS.h>
 #include <SOAPMessage.h>
 #include <HTTPClient.h>
+#include <ServiceReporting.h>
 #include <io.h>
 
 #ifdef _DEBUG
@@ -233,6 +234,14 @@ void
 CXSession::SetDatabaseConnection(CString p_connectionName)
 {
   m_dbsConnection = p_connectionName;
+}
+
+void
+CXSession::SetDatabaseLogger(LOGLEVEL p_loglevel,LOGPRINT p_logger,void* p_context)
+{
+  m_printCallback = p_logger;
+  m_levelCallback = p_loglevel;
+  m_callbkContext = p_context;
 }
 
 // Setting an alternate filestore location
@@ -500,30 +509,30 @@ CXSession::Load(CString p_className,VariantSet& p_primary)
 }
 
 CXResultSet
-CXSession::Load(CString p_tableName,SQLFilter* p_filter)
+CXSession::Load(CString p_tableName,SQLFilter* p_filter, CString p_orderBy /*= _T("")*/)
 {
   SQLFilterSet set;
   set.AddFilter(p_filter);
 
-  return Load(p_tableName,set);
+  return Load(p_tableName,set,p_orderBy);
 }
 
 CXResultSet
-CXSession::Load(CString p_className,SQLFilterSet& p_filters)
+CXSession::Load(CString p_className,SQLFilterSet& p_filters, CString p_orderBy /*= _T("")*/)
 {
   CXResultSet set;
 
   if(m_role == CXH_Database_role)
   {
-    set = SelectObjectsFromDatabase(p_className,p_filters);
+    set = SelectObjectsFromDatabase(p_className,p_filters,p_orderBy);
   }
   else if(m_role == CXH_Internet_role)
   {
-    set = SelectObjectsFromInternet(p_className,p_filters);
+    set = SelectObjectsFromInternet(p_className,p_filters,p_orderBy);
   }
   else // CXH_Filestore_role
   {
-    set = SelectObjectsFromFilestore(p_className,p_filters);
+    set = SelectObjectsFromFilestore(p_className,p_filters,p_orderBy);
   }
 
   // Call OnLoad for all objects in the set
@@ -778,6 +787,7 @@ CXSession::Synchronize()
   // Getting a new mutation
   SQLAutoDBS dbs(*m_databasePool,m_dbsConnection);
   SQLTransaction trans(dbs,_T("synchronize"));
+  dbs->RegisterLogContext(hibernate.GetLogLevel(),m_levelCallback,m_printCallback,m_callbkContext);
 
   // Walk our object cache
   for(auto& objcache : m_cache)
@@ -1046,6 +1056,7 @@ CXSession::GetMetaSessionInfo()
     try
     {
       SQLAutoDBS dbs(*m_databasePool,m_dbsConnection);
+      dbs->RegisterLogContext(hibernate.GetLogLevel(),m_levelCallback,m_printCallback,m_callbkContext);
       CString sql = dbs->GetSQLInfoDB()->GetSESSIONMyself();
       SQLQuery query(dbs);
       SQLTransaction trans(dbs,_T("session"));
@@ -1067,6 +1078,7 @@ CXSession::GetMetaSessionInfo()
     catch(StdException& er)
     {
       // Error in silence ?
+      SvcReportErrorEvent(0,true,_T(__FUNCTION__),_T("Error getting database session info: %s"),er.GetErrorMessage());
       UNREFERENCED_PARAMETER(er);
     }
   }
@@ -1215,6 +1227,8 @@ CXSession::FindObjectInDatabase(CString p_className,VariantSet& p_primary)
   CXClass* theClass = FindClass(p_className);
 
   SQLAutoDBS dbs(*GetDatabasePool(),GetDatabaseConnection());
+  dbs->RegisterLogContext(hibernate.GetLogLevel(),m_levelCallback,m_printCallback,m_callbkContext);
+
   SQLRecord* record = theClass->SelectObjectInDatabase(dbs,nullptr,p_primary);
   if(record)
   {
@@ -1320,7 +1334,7 @@ CXSession::LoadObjectFromXML(SOAPMessage& p_message,XMLElement* p_entity,CXClass
 }
 
 CXResultSet
-CXSession::SelectObjectsFromDatabase(CString p_className,SQLFilterSet& p_filters)
+CXSession::SelectObjectsFromDatabase(CString p_className,SQLFilterSet& p_filters, CString p_orderBy /*= _T("")*/)
 {
   CXResultSet set;
 
@@ -1343,10 +1357,11 @@ CXSession::SelectObjectsFromDatabase(CString p_className,SQLFilterSet& p_filters
 
   // Connect our database
   SQLAutoDBS dbs(*GetDatabasePool(),GetDatabaseConnection());
+  dbs->RegisterLogContext(hibernate.GetLogLevel(),m_levelCallback,m_printCallback,m_callbkContext);
   dset->SetDatabase(dbs);
 
   // Create correct query
-  theClass->BuildDefaultSelectQuery(dset,dbs->GetSQLInfoDB());
+  theClass->BuildDefaultSelectQuery(dset,dbs->GetSQLInfoDB(),p_orderBy);
 
   // Propagate our filters
   dset->SetFilters(&p_filters);
@@ -1405,13 +1420,13 @@ CXSession::SelectObjectsFromDatabase(CString p_className,SQLFilterSet& p_filters
 }
 
 CXResultSet
-CXSession::SelectObjectsFromFilestore(CString p_className,SQLFilterSet& p_filters)
+CXSession::SelectObjectsFromFilestore(CString p_className,SQLFilterSet& p_filters,CString p_orderBy /*= _T("")*/)
 {
   throw StdException(_T("Cannot select multiple objects from the filestore"));
 }
 
 CXResultSet
-CXSession::SelectObjectsFromInternet(CString p_className,SQLFilterSet& p_filters)
+CXSession::SelectObjectsFromInternet(CString p_className,SQLFilterSet& p_filters,CString p_orderBy /*= _T("")*/)
 {
   CXResultSet set;
   CXClass* theClass = FindClass(p_className);
@@ -1488,6 +1503,8 @@ CXSession::UpdateObjectInDatabase(CXObject* p_object,SQLDatabase* p_dbs /*=nullp
   {
     // New mutation ID for this update action
     SQLAutoDBS dbs(*GetDatabasePool(),GetDatabaseConnection());
+    dbs->RegisterLogContext(hibernate.GetLogLevel(),m_levelCallback,m_printCallback,m_callbkContext);
+
     SQLTransaction trans(dbs,_T("update"));
 
     result = theClass->UpdateObjectInDatabase(dbs,nullptr,p_object,0);
@@ -1547,6 +1564,7 @@ CXSession::InsertObjectInDatabase(CXObject* p_object)
 
   // New mutation ID for this update action
   SQLAutoDBS dbs(*GetDatabasePool(),GetDatabaseConnection());
+  dbs->RegisterLogContext(hibernate.GetLogLevel(),m_levelCallback,m_printCallback,m_callbkContext);
   SQLTransaction trans(dbs,_T("insert"));
 
   bool saved = theClass->InsertObjectInDatabase(dbs,nullptr,p_object,0);
@@ -1613,6 +1631,7 @@ CXSession::DeleteObjectInDatabase(CXObject* p_object)
 
   // New mutation ID for this update action
   SQLAutoDBS dbs(*GetDatabasePool(),GetDatabaseConnection());
+  dbs->RegisterLogContext(hibernate.GetLogLevel(),m_levelCallback,m_printCallback,m_callbkContext);
   SQLTransaction trans(dbs,_T("delete"));
 
   // Go delete the record

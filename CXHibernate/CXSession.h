@@ -70,6 +70,7 @@ public:
   // Specify a database connection
   void          SetDatabaseConnection(CString p_datasource,CString p_user,CString p_password);
   void          SetDatabaseConnection(CString p_connectionName);
+  void          SetDatabaseLogger(LOGLEVEL p_loglevel,LOGPRINT p_logger,void* p_context);
   // Alternate database 
   void          SetDatabasePool(SQLDatabasePool* p_pool);
   // Setting an alternate filestore location
@@ -108,8 +109,8 @@ public:
   CXObject*     Load  (CString p_className,CString       p_primary);    // One primary type string
   CXObject*     Load  (CString p_className,SQLVariant*   p_primary);    // One primary of other type than integer
   CXObject*     Load  (CString p_className,VariantSet&   p_primary);    // One primary of other type than integer
-  CXResultSet   Load  (CString p_className,SQLFilter*    p_filter);     // Multiple objects from one filter
-  CXResultSet   Load  (CString p_className,SQLFilterSet& p_filters);    // Multiple objects from <n> filters
+  CXResultSet   Load  (CString p_className,SQLFilter*    p_filter,  CString p_orderBy = _T(""));    // Multiple objects from one filter
+  CXResultSet   Load  (CString p_className,SQLFilterSet& p_filters, CString p_orderBy = _T(""));    // Multiple objects from <n> filters
   bool          Save  (CXObject* p_object);
   bool          Update(CXObject* p_object,SQLDatabase* p_dbs = nullptr);
   bool          Insert(CXObject* p_object);
@@ -156,9 +157,9 @@ private:
   CXObject*     FindObjectOnInternet (CString p_className,VariantSet& p_primary);
 
   // SELECT objects
-  CXResultSet   SelectObjectsFromDatabase (CString p_className,SQLFilterSet& p_filters);
-  CXResultSet   SelectObjectsFromFilestore(CString p_className,SQLFilterSet& p_filters);
-  CXResultSet   SelectObjectsFromInternet (CString p_className,SQLFilterSet& p_filters);
+  CXResultSet   SelectObjectsFromDatabase (CString p_className,SQLFilterSet& p_filters,CString p_orderBy = _T(""));
+  CXResultSet   SelectObjectsFromFilestore(CString p_className,SQLFilterSet& p_filters,CString p_orderBy = _T(""));
+  CXResultSet   SelectObjectsFromInternet (CString p_className,SQLFilterSet& p_filters,CString p_orderBy = _T(""));
   // DML operations in the database
   bool          UpdateObjectInDatabase (CXObject* p_object,SQLDatabase* p_dbs = nullptr);
   bool          InsertObjectInDatabase (CXObject* p_object);
@@ -201,5 +202,9 @@ private:
   CXCache           m_cache;                       // All cached objects of all known tables
   MetaSession       m_metaInfo;                    // Database meta-session info
   HTTPClient*       m_client        { nullptr };   // Client for internet role
+
+  LOGPRINT          m_printCallback { nullptr };   // Printing a line to the logger
+  LOGLEVEL          m_levelCallback { nullptr };   // Getting the log level
+  void*             m_callbkContext { nullptr };   // Context for the logger
   CRITICAL_SECTION  m_lock;                        // Lock for the caches and mappings
 };

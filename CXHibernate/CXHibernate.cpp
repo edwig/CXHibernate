@@ -347,7 +347,7 @@ CXHibernate::Log(int p_level,bool p_format,LPCTSTR p_text,...)
     text = p_text;
   }
   // Stow it
-  m_logfile->AnalysisLog(_T("Hibernate"),LogType::LOG_INFO,false,text);
+  m_logfile->AnalysisLog(_T("CXHibernate"),LogType::LOG_INFO,false,text);
 }
 
 // Getting the loglevel

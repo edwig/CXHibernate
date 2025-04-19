@@ -43,19 +43,30 @@ public:
   AutoCXResultSet(CXSession* p_session,CXResultSet p_set)
   {
     m_session = p_session;
-    m_set = p_set;
+    m_set     = p_set;
+    m_all     = false;
   }
   ~AutoCXResultSet()
   {
     for(auto& object : m_set)
     {
       // ONLY REMOVE THE DUPLICATE RECORDS !!
-      // (Do not call "RemoveOjbects")
-      if(object->GetReadOnly())
+      // OR WHEN WE 'OPT-IN' FOR REMOVAL
+      if(object->GetReadOnly() || m_all)
       {
         m_session->RemoveObject(object);
       }
     }
+  }
+
+  void Replace(CXResultSet p_set)
+  {
+    m_set = p_set;
+  }
+
+  void RemoveAll(bool p_all)
+  {
+    m_all = p_all;
   }
 
   CXResultSet& get()
@@ -63,8 +74,9 @@ public:
     return m_set;
   }
 
-  CXSession* m_session;
+  CXSession*  m_session;
   CXResultSet m_set;
+  bool        m_all;
 };
 
 //////////////////////////////////////////////////////////////////////////

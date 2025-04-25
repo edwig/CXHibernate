@@ -1158,10 +1158,10 @@ CXSession::RemoveObjectFromCache(CXObject* p_object)
   if(p_object->GetReadOnly() == false)
   {
     CString hash = p_object->Hashcode();
-    CString tableName = p_object->GetClass()->GetTable()->GetTableName();
-    tableName.MakeLower();
+    CString className = p_object->GetClass()->GetName();
+    className.MakeLower();
 
-    CXCache::iterator it = m_cache.find(tableName);
+    CXCache::iterator it = m_cache.find(className);
     if(it != m_cache.end())
     {
       ObjectCache* tcache = it->second;
